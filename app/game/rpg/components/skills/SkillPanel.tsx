@@ -4,28 +4,14 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import Image from 'next/image'
 import { useGameStore } from '../../stores/gameStore'
 import type { SkillWithLearnedState, CharacterClass } from '../../types'
-import { gameAsset } from '@/lib/helpers/assets'
+import { getRpgSkillImageUrl } from '../../utils/assetUrls'
 
 /** 技能图标 */
-function SkillIcon({
-  skillId,
-  icon,
-  name,
-}: {
-  skillId: number
-  icon?: string | null
-  name: string
-}) {
+function SkillIcon({ icon, name }: { icon?: string | null; name: string }) {
   const fallback = icon && icon.length <= 4 ? icon : (name?.[0] ?? '?')
   const iconFile = icon && /\.(png|jpe?g|webp|gif|svg)$/i.test(icon) ? icon : null
-  const [preferIconFile, setPreferIconFile] = useState(iconFile != null)
-  const [useIdFallback, setUseIdFallback] = useState(true)
-  const src =
-    preferIconFile && iconFile
-      ? gameAsset(iconFile.startsWith('/') ? iconFile : `/game/rpg/skills/${iconFile}`)
-      : useIdFallback
-        ? gameAsset(`/game/rpg/skills/skill_${skillId}.png`)
-        : ''
+  const [useImg, setUseImg] = useState(iconFile != null)
+  const src = useImg && iconFile ? getRpgSkillImageUrl(iconFile) : ''
   return (
     <span className="bg-muted relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded text-lg">
       {src ? (
@@ -35,13 +21,7 @@ function SkillIcon({
           fill
           className="object-cover"
           sizes="40px"
-          onError={() => {
-            if (preferIconFile) {
-              setPreferIconFile(false)
-              return
-            }
-            setUseIdFallback(false)
-          }}
+          onError={() => setUseImg(false)}
         />
       ) : (
         fallback
@@ -106,7 +86,7 @@ function SkillCard({
       className={cardClass}
       onClick={() => !isLearned && !isLocked && canLearn && onLearn(skill)}
     >
-      <SkillIcon skillId={skill.id} icon={skill.icon} name={skill.name || ''} />
+      <SkillIcon icon={skill.icon} name={skill.name || ''} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-foreground text-sm font-medium">{skill.name}</span>

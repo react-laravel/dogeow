@@ -13,22 +13,20 @@ const MONSTER_TYPE_BORDER_COLORS: Record<MonsterType, string> = {
   boss: 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1.0)]',
 }
 
-/** 怪物图标：优先使用后端返回的 icon 文件名，缺失时再回退旧的 monster_{id}.png。 */
+/** 怪物图标：仅使用后端返回的英文 icon 文件名，缺失时回退为文字占位。 */
 export function MonsterIcon({
-  monsterId,
   icon,
   name,
   size = 'md',
   monsterType = 'normal',
 }: {
-  monsterId?: number
   icon?: string | null
   name: string
   size?: 'sm' | 'md' | 'lg'
   monsterType?: MonsterType
 }) {
   const fallback = name && name[0] ? name[0] : '?'
-  const src = getRpgMonsterImageUrl(icon, monsterId)
+  const src = getRpgMonsterImageUrl(icon)
   const [useImg, setUseImg] = useState(true)
   const sizeClass =
     size === 'sm'

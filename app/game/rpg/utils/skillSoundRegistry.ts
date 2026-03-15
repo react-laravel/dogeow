@@ -1,5 +1,6 @@
 import skillSoundManifestData from '../data/skill-sound-manifest.json'
 import type { SkillUsedEntry } from '../types'
+import { gameAsset } from '@/lib/helpers/assets'
 
 export interface SkillSoundManifestEntry {
   skillName: string
@@ -10,7 +11,7 @@ export interface SkillSoundManifestEntry {
   promptEn: string
 }
 
-const SKILL_SOUND_BASE_PATH = '/game/rpg/sfx/skills'
+const SKILL_SOUND_BASE_PATH = '/game/rpg/sfx'
 
 export const skillSoundManifest = skillSoundManifestData as SkillSoundManifestEntry[]
 
@@ -23,7 +24,7 @@ for (const entry of skillSoundManifest) {
   }
 }
 
-const toSkillSoundUrl = (fileName: string) => `${SKILL_SOUND_BASE_PATH}/${fileName}`
+const toSkillSoundUrl = (fileName: string) => gameAsset(`${SKILL_SOUND_BASE_PATH}/${fileName}`)
 
 export function getSkillSoundUrl(
   skill?: Pick<SkillUsedEntry, 'name' | 'effect_key'> | null

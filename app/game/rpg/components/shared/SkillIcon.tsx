@@ -2,28 +2,14 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { gameAsset } from '@/lib/helpers/assets'
+import { getRpgSkillImageUrl } from '../../utils/assetUrls'
 
-/** 技能图标：优先使用数据库里的 icon 文件名，其次回退到旧的 skill_{id}.png。 */
-export function SkillIcon({
-  icon,
-  name,
-  skillId,
-}: {
-  icon?: string | null
-  name: string
-  skillId?: number
-}) {
+/** 技能图标：仅使用数据库里的英文 icon 文件名，缺失时回退为文字占位。 */
+export function SkillIcon({ icon, name }: { icon?: string | null; name: string }) {
   const fallback = icon && icon.length <= 4 ? icon : name && name[0] ? name[0] : '?'
   const iconFile = icon && /\.(png|jpe?g|webp|gif|svg)$/i.test(icon) ? icon : null
-  const [preferIconFile, setPreferIconFile] = useState(iconFile != null)
-  const [useIdFallback, setUseIdFallback] = useState(skillId != null)
-  const src =
-    preferIconFile && iconFile
-      ? gameAsset(iconFile.startsWith('/') ? iconFile : `/game/rpg/skills/${iconFile}`)
-      : useIdFallback && skillId != null
-        ? gameAsset(`/game/rpg/skills/skill_${skillId}.png`)
-        : ''
+  const [useImg, setUseImg] = useState(iconFile != null)
+  const src = useImg && iconFile ? getRpgSkillImageUrl(iconFile) : ''
   return (
     <span className="bg-muted relative flex h-8 w-8 items-center justify-center overflow-hidden rounded text-base sm:h-9 sm:w-9">
       {src ? (
@@ -33,13 +19,7 @@ export function SkillIcon({
           fill
           className="object-cover"
           sizes="36px"
-          onError={() => {
-            if (preferIconFile) {
-              setPreferIconFile(false)
-              return
-            }
-            setUseIdFallback(false)
-          }}
+          onError={() => setUseImg(false)}
         />
       ) : (
         fallback

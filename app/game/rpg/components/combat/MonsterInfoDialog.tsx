@@ -34,11 +34,11 @@ export function MonsterInfoDialog({ monster, onClose }: MonsterInfoDialogProps) 
                   className="relative h-[200px] w-[200px] shrink-0 cursor-zoom-in"
                   onClick={e => {
                     e.stopPropagation()
-                    setViewingImage(getRpgMonsterImageUrl(monster.icon, monster.id, true))
+                    setViewingImage(getRpgMonsterImageUrl(monster.icon, true))
                   }}
                 >
                   <Image
-                    src={getRpgMonsterImageUrl(monster.icon, monster.id, true)}
+                    src={getRpgMonsterImageUrl(monster.icon, true)}
                     alt=""
                     fill
                     className="object-contain"
