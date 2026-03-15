@@ -344,7 +344,7 @@ export function CompendiumPanel() {
                   } ${isDiscovered ? '' : 'cursor-not-allowed'}`}
                 >
                   {isDiscovered ? (
-                    <MonsterIcon monsterId={monster.id} icon={monster.icon} className="h-10 w-10" />
+                    <MonsterIcon icon={monster.icon} className="h-10 w-10" />
                   ) : (
                     <span className="flex h-10 w-10 items-center justify-center text-2xl">❓</span>
                   )}
@@ -377,17 +377,11 @@ export function CompendiumPanel() {
                       className="relative h-[200px] w-[200px] shrink-0 cursor-zoom-in"
                       onClick={e => {
                         e.stopPropagation()
-                        setViewingImage(
-                          getRpgMonsterImageUrl(selectedMonster?.icon, selectedMonster?.id, true)
-                        )
+                        setViewingImage(getRpgMonsterImageUrl(selectedMonster?.icon, true))
                       }}
                     >
                       <Image
-                        src={getRpgMonsterImageUrl(
-                          selectedMonster?.icon,
-                          selectedMonster?.id,
-                          true
-                        )}
+                        src={getRpgMonsterImageUrl(selectedMonster?.icon, true)}
                         alt=""
                         fill
                         className="object-contain"
@@ -538,17 +532,9 @@ function ItemTipIcon({ item, onClick }: { item: CompendiumItem; onClick?: () => 
 }
 
 /** 怪物图标 */
-function MonsterIcon({
-  monsterId,
-  icon,
-  className,
-}: {
-  monsterId: number
-  icon?: string | null
-  className?: string
-}) {
+function MonsterIcon({ icon, className }: { icon?: string | null; className?: string }) {
   const [useImg, setUseImg] = useState(true)
-  const src = getRpgMonsterImageUrl(icon, monsterId)
+  const src = getRpgMonsterImageUrl(icon)
   return (
     <span className={`relative inline-flex items-center justify-center ${className ?? ''}`}>
       {useImg ? (
