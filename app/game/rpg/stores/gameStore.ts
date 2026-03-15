@@ -66,7 +66,7 @@ interface GameState {
       name: string
       type: string
       level: number
-      icon?: string
+      icon?: string | null
       hp?: number
       max_hp?: number
     }
@@ -1040,6 +1040,7 @@ const store: StateCreator<GameState> = (set, get) => ({
           name: string
           type: string
           level: number
+          icon?: string | null
           hp: number
           max_hp: number
         }
@@ -1052,6 +1053,7 @@ const store: StateCreator<GameState> = (set, get) => ({
                 name: response.current_combat_monster.name,
                 type: response.current_combat_monster.type,
                 level: response.current_combat_monster.level,
+                icon: response.current_combat_monster.icon,
                 hp: response.current_combat_monster.hp,
                 max_hp: response.current_combat_monster.max_hp,
               },
