@@ -260,12 +260,7 @@ export function CombatPanel() {
                         {map.monsters?.length ? (
                           <div className="mt-1 flex gap-1">
                             {map.monsters.slice(0, 4).map(m => (
-                              <MapCardMonsterAvatar
-                                key={m.id}
-                                monsterId={m.id}
-                                icon={m.icon}
-                                name={m.name}
-                              />
+                              <MapCardMonsterAvatar key={m.id} icon={m.icon} name={m.name} />
                             ))}
                           </div>
                         ) : null}
@@ -325,13 +320,14 @@ export function CombatPanel() {
                     monsters={combatResult?.monsters ?? currentCombatMonsterFromStatus?.monsters}
                     isFighting={isFighting}
                     isLoading={isLoading}
-                    // 角色死亡时(isFighting可能是true但currentHp<=0)，点击只是复活，不自动开始战斗
+                    // 角色死亡时(currentHp<=0)，点击只是复活，不自动开始战斗
+                    // 优先检查死亡状态，因为死亡时 isFighting 可能已经是 false
                     onCombatToggle={
-                      isFighting
-                        ? (currentHp ?? 0) > 0
+                      (currentHp ?? 0) <= 0
+                        ? handleRevive
+                        : isFighting
                           ? handleStopCombat
-                          : handleRevive
-                        : handleStartCombat
+                          : handleStartCombat
                     }
                     skillUsed={combatResult?.skills_used?.[0]}
                     skillTargetPositions={combatResult?.skill_target_positions}
