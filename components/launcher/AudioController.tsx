@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
-import { buildAudioUrl as buildAudioUrlHelper } from './audio/utils'
+import { buildAudioUrl as buildAudioUrlHelper, isMobileDevice } from './audio/utils'
 import { shouldUpdatePlayingStateOnPause } from './audio/playbackStateUtils'
 
 interface AudioControllerProps {
@@ -41,6 +41,8 @@ export function AudioController({
 }: AudioControllerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
+  const shouldUseWebAudioRef = useRef<boolean | null>(null)
+  const wasPlayingBeforeHiddenRef = useRef(false)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
@@ -58,9 +60,24 @@ export function AudioController({
     [apiUrl]
   )
 
+  const shouldUseWebAudio = useCallback(() => {
+    if (shouldUseWebAudioRef.current !== null) {
+      return shouldUseWebAudioRef.current
+    }
+
+    try {
+      shouldUseWebAudioRef.current = !isMobileDevice()
+    } catch {
+      shouldUseWebAudioRef.current = true
+    }
+
+    return shouldUseWebAudioRef.current
+  }, [])
+
   // 初始化 Web Audio API（用于音频可视化）
   const initAudioContext = useCallback(() => {
     if (!audioRef.current || audioContextRef.current) return
+    if (!shouldUseWebAudio()) return
 
     try {
       const AudioContextClass =
@@ -117,7 +134,7 @@ export function AudioController({
       // 忽略错误，音频可视化是可选的
       console.warn('Web Audio API 初始化失败（可视化功能不可用）:', error)
     }
-  }, [isMuted, volume])
+  }, [isMuted, volume, shouldUseWebAudio])
 
   // 设置音频源
   const setupMediaSource = useCallback(() => {
@@ -486,18 +503,28 @@ export function AudioController({
     const handleVisibilityChange = async () => {
       if (!audioRef.current) return
 
+      if (document.hidden) {
+        wasPlayingBeforeHiddenRef.current = isPlaying || !audioRef.current.paused
+        return
+      }
+
+      const shouldResumePlayback = wasPlayingBeforeHiddenRef.current || isPlaying
+      if (!shouldResumePlayback) {
+        return
+      }
+
+      wasPlayingBeforeHiddenRef.current = false
+
       // 页面重新可见时恢复播放
-      if (!document.hidden && isPlaying) {
-        try {
-          // 确保 AudioContext 处于运行状态
-          if (audioContextRef.current?.state === 'suspended') {
-            await audioContextRef.current.resume()
-          }
-          // 恢复音频播放
-          await audioRef.current.play()
-        } catch (err) {
-          console.warn('恢复播放失败:', err)
+      try {
+        // 确保 AudioContext 处于运行状态
+        if (audioContextRef.current?.state === 'suspended') {
+          await audioContextRef.current.resume()
         }
+        // 恢复音频播放
+        await audioRef.current.play()
+      } catch (err) {
+        console.warn('恢复播放失败:', err)
       }
     }
 

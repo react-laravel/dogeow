@@ -20,10 +20,13 @@ export function useMediaSession({
 }: UseMediaSessionProps) {
   // 使用 ref 跟踪上次播放状态，避免不必要的更新
   const prevIsPlayingRef = useRef(isPlaying)
+  const isPlayingRef = useRef(isPlaying)
 
   // Media Session API 支持
   useEffect(() => {
     if (!('mediaSession' in navigator)) return
+
+    isPlayingRef.current = isPlaying
 
     // 更新元数据
     if (currentTrack && availableTracks && availableTracks.length > 0) {
@@ -40,11 +43,11 @@ export function useMediaSession({
       }
     }
 
-    // 只在播放状态变化时更新 playbackState
+    // 首次和变更时都同步 playbackState
     if (prevIsPlayingRef.current !== isPlaying) {
       prevIsPlayingRef.current = isPlaying
-      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
     }
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
   }, [currentTrack, availableTracks, isPlaying])
 
   // 设置动作处理程序（只在挂载时设置一次）
@@ -52,11 +55,15 @@ export function useMediaSession({
     if (!('mediaSession' in navigator)) return
 
     navigator.mediaSession.setActionHandler('play', () => {
-      togglePlay()
+      if (!isPlayingRef.current) {
+        togglePlay()
+      }
     })
 
     navigator.mediaSession.setActionHandler('pause', () => {
-      togglePlay()
+      if (isPlayingRef.current) {
+        togglePlay()
+      }
     })
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {
