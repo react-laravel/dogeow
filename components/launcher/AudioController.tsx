@@ -474,6 +474,32 @@ export function AudioController({
     }
   }, [setIsPlaying])
 
+  // 处理页面可见性变化（锁屏、切换app）
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!audioRef.current) return
+
+      // 页面重新可见时恢复播放
+      if (!document.hidden && isPlaying) {
+        try {
+          // 确保 AudioContext 处于运行状态
+          if (audioContextRef.current?.state === 'suspended') {
+            await audioContextRef.current.resume()
+          }
+          // 恢复音频播放
+          await audioRef.current.play()
+        } catch (err) {
+          console.warn('恢复播放失败:', err)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isPlaying])
+
   // 静音只影响最终输出，不应暂停播放或中断可视化
   const toggleMute = useCallback(() => {
     const nextMuted = !isMuted

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { MusicTrack } from '@/stores/musicStore'
 
 interface UseMediaSessionProps {
@@ -18,60 +18,86 @@ export function useMediaSession({
   switchToPrevTrack,
   switchToNextTrack,
 }: UseMediaSessionProps) {
+  // 使用 ref 跟踪上次播放状态，避免不必要的更新
+  const prevIsPlayingRef = useRef(isPlaying)
+
   // Media Session API 支持
   useEffect(() => {
-    if ('mediaSession' in navigator) {
-      const updateMediaSession = () => {
-        if (currentTrack && availableTracks && availableTracks.length > 0) {
-          const currentTrackInfo = availableTracks.find(track => track.path === currentTrack)
+    if (!('mediaSession' in navigator)) return
 
-          if (currentTrackInfo) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-              title: currentTrackInfo.name || '未知歌曲',
-              artist: '本地音乐播放器',
-              album: '本地音乐',
-            })
-          }
-        }
+    // 更新元数据
+    if (currentTrack && availableTracks && availableTracks.length > 0) {
+      const currentTrackInfo = availableTracks.find(track => track.path === currentTrack)
 
-        // 设置媒体会话动作处理程序
-        navigator.mediaSession.setActionHandler('play', () => {
-          togglePlay()
+      if (currentTrackInfo) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: currentTrackInfo.name || '未知歌曲',
+          artist: '本地音乐播放器',
+          album: '本地音乐',
+          // 可以添加封面图
+          // artwork: [{ src: '/cover.jpg', sizes: '512x512', type: 'image/jpeg' }]
         })
-
-        navigator.mediaSession.setActionHandler('pause', () => {
-          togglePlay()
-        })
-
-        navigator.mediaSession.setActionHandler('previoustrack', () => {
-          switchToPrevTrack()
-        })
-
-        navigator.mediaSession.setActionHandler('nexttrack', () => {
-          switchToNextTrack()
-        })
-
-        // 更新播放状态
-        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
-      }
-
-      updateMediaSession()
-
-      // 监听播放状态变化
-      const handlePlayStateChange = () => {
-        if ('mediaSession' in navigator) {
-          navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
-        }
-      }
-
-      // 这里我们需要监听状态变化，但由于没有直接的状态监听器，我们使用定时器
-      const interval = setInterval(() => {
-        handlePlayStateChange()
-      }, 1000)
-
-      return () => {
-        clearInterval(interval)
       }
     }
-  }, [currentTrack, availableTracks, isPlaying, togglePlay, switchToPrevTrack, switchToNextTrack])
+
+    // 只在播放状态变化时更新 playbackState
+    if (prevIsPlayingRef.current !== isPlaying) {
+      prevIsPlayingRef.current = isPlaying
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+    }
+  }, [currentTrack, availableTracks, isPlaying])
+
+  // 设置动作处理程序（只在挂载时设置一次）
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      togglePlay()
+    })
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      togglePlay()
+    })
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      switchToPrevTrack()
+    })
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      switchToNextTrack()
+    })
+
+    // 清理函数
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null)
+      navigator.mediaSession.setActionHandler('pause', null)
+      navigator.mediaSession.setActionHandler('previoustrack', null)
+      navigator.mediaSession.setActionHandler('nexttrack', null)
+    }
+  }, [togglePlay, switchToPrevTrack, switchToNextTrack])
+
+  // 监听系统媒体控制事件
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+
+    const handleAction = (action: string) => {
+      switch (action) {
+        case 'play':
+        case 'pause':
+          togglePlay()
+          break
+        case 'previoustrack':
+          switchToPrevTrack()
+          break
+        case 'nexttrack':
+          switchToNextTrack()
+          break
+      }
+    }
+
+    // 这些已经通过 setActionHandler 处理了
+    // 但可以添加额外的事件监听
+
+    return () => {}
+  }, [togglePlay, switchToPrevTrack, switchToNextTrack])
 }
