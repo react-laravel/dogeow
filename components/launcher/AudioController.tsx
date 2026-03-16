@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
 import { buildAudioUrl as buildAudioUrlHelper } from './audio/utils'
+import { shouldUpdatePlayingStateOnPause } from './audio/playbackStateUtils'
 
 interface AudioControllerProps {
   volume: number
@@ -460,7 +461,13 @@ export function AudioController({
 
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => {
-      if (!audio.ended) {
+      const isDocumentHidden = typeof document !== 'undefined' && document.hidden
+      if (
+        shouldUpdatePlayingStateOnPause({
+          isEnded: audio.ended,
+          isDocumentHidden,
+        })
+      ) {
         setIsPlaying(false)
       }
     }
