@@ -2,10 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Calendar, FileText, Globe, MapPin, Monitor, Smartphone } from 'lucide-react'
+import {
+  Calendar,
+  CreditCard,
+  FileText,
+  Globe,
+  MapPin,
+  Monitor,
+  RefreshCw,
+  Smartphone,
+} from 'lucide-react'
 import useSWR from 'swr'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { PageContainer, PageTitle } from '@/components/layout'
+import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/ui/loading-state'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -55,7 +65,7 @@ interface DashboardCardProps {
   className?: string
 }
 
-type DashboardSection = 'location' | 'logs'
+type DashboardSection = 'location' | 'logs' | 'minimax'
 
 function DashboardCard({
   title,
@@ -96,9 +106,6 @@ export default function Dashboard() {
       <PageContainer maxWidth="6xl" className="mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <header className="mb-6 space-y-1 sm:mb-8">
           <PageTitle className="text-2xl sm:text-3xl">仪表盘</PageTitle>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            集中查看当前设备网络信息和服务端运行状态。
-          </p>
         </header>
 
         <Tabs
@@ -107,7 +114,7 @@ export default function Dashboard() {
           className="mx-auto max-w-5xl"
         >
           <TabsList
-            className={cn('grid h-auto w-full gap-1 p-1', isAdmin ? 'grid-cols-2' : 'grid-cols-1')}
+            className={cn('grid h-auto w-full gap-1 p-1', isAdmin ? 'grid-cols-3' : 'grid-cols-1')}
           >
             <TabsTrigger value="location" className="h-10">
               我的位置
@@ -115,6 +122,11 @@ export default function Dashboard() {
             {isAdmin && (
               <TabsTrigger value="logs" className="h-10">
                 Laravel 日志
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="minimax" className="h-10">
+                MiniMax 订阅
               </TabsTrigger>
             )}
           </TabsList>
@@ -137,6 +149,18 @@ export default function Dashboard() {
                 icon={FileText}
               >
                 <LogPanel />
+              </DashboardCard>
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="minimax" className="mt-4">
+              <DashboardCard
+                title="MiniMax 订阅"
+                description="查看 MiniMax API 订阅用量信息"
+                icon={CreditCard}
+              >
+                <MiniMaxPanel />
               </DashboardCard>
             </TabsContent>
           )}
@@ -352,6 +376,349 @@ function LogPanel() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+interface MiniMaxModelRemain {
+  model_name: string
+  remains_time: number
+  current_interval_total_count: number
+  current_interval_usage_count: number
+  current_weekly_total_count: number
+  current_weekly_usage_count: number
+  weekly_remains_time: number
+  start_time: number
+  end_time: number
+  weekly_start_time: number
+  weekly_end_time: number
+}
+
+interface MiniMaxSubscriptionResponse {
+  model_remains: MiniMaxModelRemain[]
+  base_resp?: { status_code: number; status_msg: string }
+}
+
+interface MiniMaxSubscriptionDetailResponse {
+  current_subscribe?: {
+    current_subscribe_end_time?: string
+    current_subscribe_title?: string
+    current_credit_reload_time?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+interface MiniMaxBillingRecord {
+  consume_token: string | number
+  created_at: number
+  consume_time?: string
+  [key: string]: unknown
+}
+
+interface MiniMaxBillingResponse {
+  charge_records?: MiniMaxBillingRecord[]
+  total_cnt?: number
+  [key: string]: unknown
+}
+
+function MiniMaxPanel() {
+  const fetcher = async <T,>(url: string): Promise<T> =>
+    apiRequest<T>(url, 'GET', undefined, { handleError: false }) as Promise<T>
+
+  const {
+    data: subData,
+    isLoading: subLoading,
+    error: subError,
+    mutate: mutateSub,
+  } = useSWR<MiniMaxSubscriptionResponse>('/minimax/subscription', fetcher, {
+    refreshInterval: 60000,
+  })
+  const { data: detailData, mutate: mutateDetail } = useSWR<MiniMaxSubscriptionDetailResponse>(
+    '/minimax/subscription-detail',
+    fetcher,
+    { revalidateOnFocus: false, refreshInterval: 60000 }
+  )
+  const { data: billingData, mutate: mutateBilling } = useSWR<MiniMaxBillingResponse>(
+    '/minimax/billing',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      refreshInterval: 60000,
+    }
+  )
+
+  const handleRefresh = () => {
+    mutateSub()
+    mutateDetail()
+    mutateBilling()
+  }
+
+  const isLoading = subLoading
+  const error = subError
+
+  const models = subData?.model_remains ?? []
+  const sub = models[0]
+
+  const fmtTime = (ms: number): string => {
+    const s = Math.floor(ms / 1000)
+    const d = Math.floor(s / 86400)
+    const h = Math.floor((s % 86400) / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    if (d > 0) return `${d}天${h}小时`
+    if (h > 0) return `${h}小时${m}分`
+    return `${m}分`
+  }
+
+  const fmtTs = (ms: number): string => {
+    try {
+      return new Date(ms).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+    } catch {
+      return String(ms)
+    }
+  }
+
+  const fmtDate = (v: string | number | undefined): string => {
+    if (!v) return '—'
+    try {
+      if (typeof v === 'string' && v.includes('/')) {
+        // "04/17/2026" format → parse manually
+        const [mm, dd, yyyy] = v.split('/')
+        const d = new Date(`${yyyy}-${mm}-${dd}T00:00:00+08:00`)
+        return d.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+      }
+      const d = new Date(Number(v))
+      return d.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+    } catch {
+      return String(v)
+    }
+  }
+
+  const fmtTokens = (n: number): string => {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+    return n.toLocaleString()
+  }
+
+  // usage_count 字段实际上是剩余次数
+  const cycleTotal = sub?.current_interval_total_count ?? 0
+  const cycleRemain = sub?.current_interval_usage_count ?? 0
+  const cycleUsed = cycleTotal - cycleRemain
+  const cyclePct = cycleTotal > 0 ? ((cycleUsed / cycleTotal) * 100).toFixed(1) : '0'
+
+  const weekTotal = sub?.current_weekly_total_count ?? 0
+  const weekRemain = sub?.current_weekly_usage_count ?? 0
+  const weekUsed = weekTotal - weekRemain
+  const weekPct = weekTotal > 0 ? ((weekUsed / weekTotal) * 100).toFixed(1) : '0'
+
+  // 套餐到期时间
+  const subscribeEnd = detailData?.current_subscribe?.current_subscribe_end_time
+  const subscribeEndStr = fmtDate(subscribeEnd)
+  const subscribeDaysLeft = useMemo(() => {
+    if (!subscribeEnd) return null
+    // eslint-disable-next-line react-hooks/purity -- snapshot of current time for display, intentionally not reactive
+    const now = Date.now()
+    try {
+      if (typeof subscribeEnd === 'string' && subscribeEnd.includes('/')) {
+        const [mm, dd, yyyy] = subscribeEnd.split('/')
+        const expiry = new Date(`${yyyy}-${mm}-${dd}T00:00:00+08:00`)
+        return Math.ceil((expiry.getTime() - now) / 86400000)
+      }
+      return Math.ceil((new Date(Number(subscribeEnd)).getTime() - now) / 86400000)
+    } catch {
+      return null
+    }
+  }, [subscribeEnd])
+
+  // Token 消耗：从账单记录聚合（created_at 是秒级时间戳，账单延迟约1-2天）
+  const billingRecords = billingData?.charge_records ?? []
+
+  // 近7天消耗
+  const sevenDaysAgo = useMemo(
+    // eslint-disable-next-line react-hooks/purity -- snapshot of current time for display, intentionally not reactive
+    () => Date.now() - 7 * 24 * 60 * 60 * 1000,
+    []
+  )
+  const weeklyTokens = useMemo(
+    () =>
+      billingRecords
+        .filter(r => r.created_at * 1000 >= sevenDaysAgo)
+        .reduce((sum, r) => sum + (Number(r.consume_token) || 0), 0),
+    [billingRecords, sevenDaysAgo]
+  )
+
+  // 数据截至日期
+  const lastRecord = billingRecords[0]
+  const lastRecordDate = lastRecord?.consume_time ? lastRecord.consume_time.split(' ')[0] : null
+
+  return (
+    <div className="space-y-4">
+      {isLoading && <LoadingState message="加载 MiniMax 订阅信息..." size="sm" />}
+      {!isLoading && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            刷新
+          </Button>
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          {error instanceof Error ? error.message : '获取订阅信息失败'}
+        </div>
+      )}
+
+      {/* 套餐到期时间 - 醒目卡片 */}
+      {subscribeEndStr !== '—' && (
+        <div className="rounded-2xl border bg-muted/30 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-xs text-muted-foreground">
+                {detailData?.current_subscribe?.current_subscribe_title ?? '套餐到期时间'}
+              </div>
+              <div className="mt-0.5 text-base font-semibold sm:text-lg">{subscribeEndStr}</div>
+            </div>
+            {subscribeDaysLeft !== null && (
+              <span
+                className={cn(
+                  'rounded-full px-3 py-1 text-sm font-medium',
+                  subscribeDaysLeft <= 3
+                    ? 'text-destructive'
+                    : subscribeDaysLeft <= 7
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-muted-foreground'
+                )}
+              >
+                {subscribeDaysLeft > 0 ? `还有 ${subscribeDaysLeft} 天` : '今日到期'}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {sub && (
+        <>
+          {/* 周期用量 - 突出显示 */}
+          <div className="rounded-2xl border bg-muted/30 p-4">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground">本周期</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-2xl font-bold sm:text-3xl">
+                  {cycleRemain.toLocaleString()}
+                </span>
+                <span className="text-muted-foreground text-sm">次剩余</span>
+              </div>
+            </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-primary/10">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${Math.min(parseFloat(cyclePct), 100)}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {cycleUsed.toLocaleString()}/{cycleTotal.toLocaleString()}
+              </span>
+              <span className="text-xs text-muted-foreground">已用 {cyclePct}%</span>
+            </div>
+          </div>
+
+          {/* 本周用量 - 突出显示 */}
+          <div className="rounded-2xl border bg-muted/30 p-4">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground">本周</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-2xl font-bold sm:text-3xl">
+                  {weekRemain.toLocaleString()}
+                </span>
+                <span className="text-muted-foreground text-sm">次剩余</span>
+              </div>
+            </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-primary/10">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${Math.min(parseFloat(weekPct), 100)}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {weekUsed.toLocaleString()}/{weekTotal.toLocaleString()}
+              </span>
+              <span className="text-xs text-muted-foreground">已用 {weekPct}%</span>
+            </div>
+          </div>
+
+          {/* Token 消耗 */}
+          {billingData && billingRecords.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border bg-muted/30 p-3 text-center">
+                <div className="text-muted-foreground text-xs">近7天 Token</div>
+                <div className="text-primary mt-1 text-base font-bold">
+                  {fmtTokens(weeklyTokens)}
+                </div>
+              </div>
+              <div className="rounded-xl border bg-muted/30 p-3 text-center">
+                <div className="text-muted-foreground text-xs">数据截至</div>
+                <div className="text-primary mt-1 text-base font-bold">{lastRecordDate ?? '—'}</div>
+              </div>
+              <div className="col-span-2 rounded-xl border bg-muted/30 p-3 text-center sm:col-span-1">
+                <div className="text-muted-foreground text-xs">支持模型数</div>
+                <div className="text-primary mt-1 text-base font-bold">{models.length}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border bg-muted/30 p-3 text-center">
+                <div className="text-muted-foreground text-xs">支持模型数</div>
+                <div className="text-primary mt-1 text-base font-bold">{models.length}</div>
+              </div>
+            </div>
+          )}
+
+          {/* 次要信息 */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border bg-muted/30 p-3 text-center">
+              <div className="text-muted-foreground text-xs">周期剩余时间</div>
+              <div className="text-primary mt-1 text-base font-bold">
+                {fmtTime(sub.remains_time)}
+              </div>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-3 text-center">
+              <div className="text-muted-foreground text-xs">本周剩余时间</div>
+              <div className="text-primary mt-1 text-base font-bold">
+                {fmtTime(sub.weekly_remains_time)}
+              </div>
+            </div>
+          </div>
+
+          {/* 模型列表 */}
+          {models.length > 0 && (
+            <div>
+              <div className="text-muted-foreground mb-2 text-xs font-medium">支持的模型</div>
+              <div className="flex flex-wrap gap-1.5">
+                {models.map(m => (
+                  <span
+                    key={m.model_name}
+                    className="bg-muted text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs font-mono"
+                  >
+                    {m.model_name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {!isLoading && !error && models.length === 0 && (
+        <div className="text-muted-foreground text-sm">暂无订阅信息</div>
+      )}
     </div>
   )
 }

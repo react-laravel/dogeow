@@ -5,7 +5,15 @@ export interface ChatMessageImage {
 }
 
 export interface ChatMessage {
+  id?: string
   role: 'system' | 'user' | 'assistant'
   content: string
   images?: ChatMessageImage[]
+  audioUrl?: string
+  videoUrl?: string
+  musicUrl?: string
+  /** 显示生成占位符（生成中时为 true，完成后删除该字段） */
+  generatingImage?: boolean
+  generatingVideo?: boolean
+  generatingMusic?: boolean
 }

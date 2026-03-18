@@ -70,6 +70,19 @@ interface UseAiChatReturn {
   handleSend: () => void
   handleClear: () => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
+  ttsEnabled: boolean
+  setTtsEnabled: (value: boolean) => void
+  isGeneratingMedia: boolean
+  generationError: string | undefined
+  handleGenerateImage: (
+    prompt: string,
+    onImageGenerated?: (url: string, prompt: string) => void
+  ) => void
+  handleGenerateVideo: (
+    prompt: string,
+    onVideoGenerated?: (fileId: string, url: string, prompt: string) => void
+  ) => void
+  handleGenerateMusic: (prompt: string, lyrics: string) => void
 }
 
 interface OllamaModelListItem {
@@ -119,6 +132,13 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasLoadedOllamaModelsRef = useRef(false)
   const isOllamaModelsRequestInFlightRef = useRef(false)
+
+  // TTS state
+  const [ttsEnabled, setTtsEnabled] = useState(false)
+
+  // Media generation state
+  const [isGeneratingMedia, setIsGeneratingMedia] = useState(false)
+  const [generationError, setGenerationError] = useState<string | undefined>(undefined)
 
   // 过滤掉 system 消息用于显示
   const displayMessages = messages.filter(m => m.role !== 'system')
@@ -308,13 +328,37 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
       // 流结束，添加 assistant 消息
       if (accumulatedContent) {
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: accumulatedContent,
-          },
-        ])
+        const assistantMsg: ChatMessage = {
+          role: 'assistant',
+          content: accumulatedContent,
+        }
+        setMessages(prev => [...prev, assistantMsg])
+
+        // TTS: generate audio for the response
+        if (ttsEnabled) {
+          try {
+            const ttsRes = await fetch('/api/minimax/tts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: accumulatedContent }),
+            })
+            if (ttsRes.ok) {
+              const ttsData = await ttsRes.json()
+              if (ttsData.success && ttsData.audioUrl) {
+                setMessages(prev => {
+                  const updated = [...prev]
+                  updated[updated.length - 1] = {
+                    ...updated[updated.length - 1],
+                    audioUrl: ttsData.audioUrl,
+                  }
+                  return updated
+                })
+              }
+            }
+          } catch {
+            // TTS errors are non-fatal
+          }
+        }
       }
       setCompletion('')
       setIsLoading(false)
@@ -345,7 +389,179 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     } finally {
       abortControllerRef.current = null
     }
-  }, [prompt, messages, images, isUploadingImages, isLoading, model, provider, clearImages])
+  }, [
+    prompt,
+    messages,
+    images,
+    isUploadingImages,
+    isLoading,
+    model,
+    provider,
+    clearImages,
+    ttsEnabled,
+  ])
+
+  // 生成图片
+  const handleGenerateImage = useCallback(
+    async (prompt: string, onImageGenerated?: (url: string, prompt: string) => void) => {
+      setGenerationError(undefined)
+      setIsGeneratingMedia(true)
+
+      // 立即插入占位消息
+      const placeholderId = crypto.randomUUID()
+      setMessages(prev => [
+        ...prev,
+        {
+          id: placeholderId,
+          role: 'assistant',
+          content: `正在为你生成图片：${prompt}`,
+          generatingImage: true,
+        },
+      ])
+
+      try {
+        const res = await fetch('/api/minimax/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.success) {
+          setGenerationError(data.error ?? '图片生成失败')
+          setMessages(prev => prev.filter(m => m.id !== placeholderId))
+          return
+        }
+        const imageUrl: string = data.imageUrls?.[0]
+        if (!imageUrl) {
+          setGenerationError('未返回图片')
+          setMessages(prev => prev.filter(m => m.id !== placeholderId))
+          return
+        }
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === placeholderId
+              ? {
+                  ...m,
+                  id: undefined,
+                  content: '已为你生成图片：',
+                  images: [{ url: imageUrl }],
+                  generatingImage: false,
+                }
+              : m
+          )
+        )
+        onImageGenerated?.(imageUrl, prompt)
+      } catch {
+        setGenerationError('图片生成请求失败')
+        setMessages(prev => prev.filter(m => m.id !== placeholderId))
+      } finally {
+        setIsGeneratingMedia(false)
+      }
+    },
+    []
+  )
+
+  // 生成视频
+  const handleGenerateVideo = useCallback(
+    async (
+      prompt: string,
+      onVideoGenerated?: (fileId: string, url: string, prompt: string) => void
+    ) => {
+      setGenerationError(undefined)
+      setIsGeneratingMedia(true)
+
+      const placeholderId = crypto.randomUUID()
+      setMessages(prev => [
+        ...prev,
+        {
+          id: placeholderId,
+          role: 'assistant',
+          content: `正在为你生成视频：${prompt}`,
+          generatingVideo: true,
+        },
+      ])
+
+      try {
+        const res = await fetch('/api/minimax/video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.success) {
+          setGenerationError(data.error ?? '视频生成失败')
+          setMessages(prev => prev.filter(m => m.id !== placeholderId))
+          return
+        }
+        const videoUrl: string = data.videoUrl
+        const taskId: string = data.taskId
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === placeholderId
+              ? {
+                  ...m,
+                  id: undefined,
+                  content: '已为你生成视频：',
+                  videoUrl,
+                  generatingVideo: false,
+                }
+              : m
+          )
+        )
+        onVideoGenerated?.(taskId, videoUrl, prompt)
+      } catch {
+        setGenerationError('视频生成请求失败')
+        setMessages(prev => prev.filter(m => m.id !== placeholderId))
+      } finally {
+        setIsGeneratingMedia(false)
+      }
+    },
+    []
+  )
+
+  // 生成音乐
+  const handleGenerateMusic = useCallback(async (prompt: string, lyrics: string) => {
+    setGenerationError(undefined)
+    setIsGeneratingMedia(true)
+
+    const placeholderId = crypto.randomUUID()
+    setMessages(prev => [
+      ...prev,
+      {
+        id: placeholderId,
+        role: 'assistant',
+        content: `正在为你生成音乐：${prompt}`,
+        generatingMusic: true,
+      },
+    ])
+
+    try {
+      const res = await fetch('/api/minimax/music', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, lyrics }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setGenerationError(data.error ?? '音乐生成失败')
+        setMessages(prev => prev.filter(m => m.id !== placeholderId))
+        return
+      }
+      const musicUrl: string = data.musicUrl
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === placeholderId
+            ? { ...m, id: undefined, content: '已为你生成音乐：', musicUrl, generatingMusic: false }
+            : m
+        )
+      )
+    } catch {
+      setGenerationError('音乐生成请求失败')
+      setMessages(prev => prev.filter(m => m.id !== placeholderId))
+    } finally {
+      setIsGeneratingMedia(false)
+    }
+  }, [])
 
   // 当 provider 改变时保存到 localStorage
   useEffect(() => {
@@ -405,6 +621,13 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     handleSend,
     handleClear,
     messagesEndRef,
+    ttsEnabled,
+    setTtsEnabled,
+    isGeneratingMedia,
+    generationError,
+    handleGenerateImage,
+    handleGenerateVideo,
+    handleGenerateMusic,
   }
 }
 

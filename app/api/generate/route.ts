@@ -55,7 +55,7 @@ async function handleChatRequest(body: GenerateRequestBody, chatMessages: ChatMe
   }
 
   if (actualProvider === 'minimax') {
-    const minimaxResponse = await callMiniMaxAPI(chatMessages)
+    const minimaxResponse = await callMiniMaxAPI(chatMessages, images)
     return createMiniMaxStreamResponse(minimaxResponse)
   }
 
