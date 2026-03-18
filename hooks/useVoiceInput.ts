@@ -84,6 +84,8 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const finalTranscriptRef = useRef('')
+  // 追踪本次会话中累积的最终文本（不清空，重启时重置）
+  const sessionFinalRef = useRef('')
 
   // 初始化语音识别
   useEffect(() => {
@@ -99,6 +101,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     recognition.maxAlternatives = 1
 
     // 识别结果处理
+    // 注意：读取 sessionFinalRef.current 直接获取最新值，不依赖闭包捕获的值
     recognition.onresult = (event: SpeechRecognitionResultEvent) => {
       let interim = ''
       let final = ''
@@ -110,6 +113,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
         if (result.isFinal) {
           final += transcriptText
           finalTranscriptRef.current += transcriptText
+          sessionFinalRef.current += transcriptText
         } else {
           interim += transcriptText
         }
@@ -117,13 +121,13 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
       if (interim) {
         setInterimTranscript(interim)
-        onTranscript?.(interim, false)
+        onTranscript?.(sessionFinalRef.current + interim, false)
       }
 
       if (final) {
         setTranscript(finalTranscriptRef.current)
         setInterimTranscript('')
-        onTranscript?.(finalTranscriptRef.current, true)
+        onTranscript?.(sessionFinalRef.current, true)
       }
     }
 
@@ -196,6 +200,8 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
     try {
       finalTranscriptRef.current = transcript
+      // 重置本次会话的累积文本（新会话从零开始）
+      sessionFinalRef.current = ''
       setInterimTranscript('')
       recognitionRef.current.start()
       toast.success('开始语音识别...')
@@ -228,6 +234,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     setTranscript('')
     setInterimTranscript('')
     finalTranscriptRef.current = ''
+    sessionFinalRef.current = ''
     setError(null)
   }, [])
 

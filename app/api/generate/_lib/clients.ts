@@ -86,20 +86,70 @@ export const callGitHubModelsAPI = async (messages: ChatMessage[]): Promise<Resp
   return res
 }
 
-export const callMiniMaxAPI = async (messages: ChatMessage[]): Promise<Response> => {
+export const callMiniMaxAPI = async (
+  messages: ChatMessage[],
+  images?: string[]
+): Promise<Response> => {
   if (!ANTHROPIC_AUTH_TOKEN) {
     throw new Error('MiniMax Token 未配置，请设置 ANTHROPIC_AUTH_TOKEN 环境变量')
   }
 
+  const hasImages = images && images.length > 0
+
+  // Fetch images and convert to base64
+  const imageBlocks: Array<{
+    type: 'image'
+    source: { type: 'base64'; media_type: string; data: string }
+  }> = []
+  if (hasImages) {
+    for (const imageUrl of images) {
+      try {
+        const imgRes = await fetch(imageUrl)
+        const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg'
+        const arrayBuffer = await imgRes.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        imageBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: contentType,
+            data: base64,
+          },
+        })
+      } catch {
+        // Skip failed image fetches, continue with others
+      }
+    }
+  }
+
   const anthropicMessages = messages
     .filter(m => m.role !== 'system')
-    .map(m => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content,
-    }))
+    .map(m => {
+      if (hasImages && m.role === 'user') {
+        return {
+          role: 'user' as const,
+          content: [
+            ...(imageBlocks.length > 0 ? imageBlocks : []),
+            { type: 'text' as const, text: m.content },
+          ],
+        }
+      }
+      return {
+        role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+        content: m.content,
+      }
+    })
 
   const systemMessage =
     messages.find(m => m.role === 'system')?.content ?? '你是一个有用的AI助理，请用中文回答问题。'
+
+  const body: Record<string, unknown> = {
+    model: ANTHROPIC_MODEL,
+    messages: anthropicMessages,
+    system: systemMessage,
+    stream: true,
+    max_tokens: 4096,
+  }
 
   const res = await fetch(`${ANTHROPIC_BASE_URL}/v1/messages`, {
     method: 'POST',
@@ -109,13 +159,7 @@ export const callMiniMaxAPI = async (messages: ChatMessage[]): Promise<Response>
       Authorization: `Bearer ${ANTHROPIC_AUTH_TOKEN}`,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      messages: anthropicMessages,
-      system: systemMessage,
-      stream: true,
-      max_tokens: 4096,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
