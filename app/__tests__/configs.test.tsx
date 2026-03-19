@@ -83,7 +83,17 @@ describe('App Configs', () => {
     })
 
     it('should have all expected tile names', () => {
-      const expectedNames = ['thing', 'lab', 'file', 'tool', 'nav', 'note', 'game', 'chat']
+      const expectedNames = [
+        'thing',
+        'lab',
+        'file',
+        'tool',
+        'nav',
+        'note',
+        'game',
+        'chat',
+        'roleplay',
+      ]
       const actualNames = configs.tiles.map(tile => tile.name)
 
       expectedNames.forEach(name => {
@@ -117,7 +127,7 @@ describe('App Configs', () => {
       getTranslatedConfigs(mockTranslation)
 
       configs.tiles.forEach(tile => {
-        expect(mockTranslation).toHaveBeenCalledWith(tile.nameKey)
+        expect(mockTranslation).toHaveBeenCalledWith(tile.nameKey, tile.name)
       })
     })
 
@@ -128,7 +138,7 @@ describe('App Configs', () => {
 
       translatedConfigs.tiles.forEach((tile, index) => {
         const originalTile = configs.tiles[index]
-        expect(tile.name).toBe(originalTile.name)
+        expect(tile.name).toBe(`translated_${originalTile.nameKey}`)
         expect(tile.href).toBe(originalTile.href)
         expect(tile.color).toBe(originalTile.color)
         expect(tile.needLogin).toBe(originalTile.needLogin)
@@ -144,9 +154,13 @@ describe('App Configs', () => {
     it('should call translation function for each tile', () => {
       getTranslatedConfigs(mockTranslation)
 
-      expect(mockTranslation).toHaveBeenCalledTimes(configs.tiles.length)
+      const tileCalls = mockTranslation.mock.calls.filter(([key]) =>
+        configs.tiles.some(tile => tile.nameKey === key)
+      )
+
+      expect(tileCalls).toHaveLength(configs.tiles.length)
       configs.tiles.forEach(tile => {
-        expect(mockTranslation).toHaveBeenCalledWith(tile.nameKey)
+        expect(mockTranslation).toHaveBeenCalledWith(tile.nameKey, tile.name)
       })
     })
   })

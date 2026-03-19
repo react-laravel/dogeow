@@ -2,14 +2,14 @@
 
 export const MINIMAX_API_BASE_URL = process.env.MINIMAX_API_BASE_URL ?? 'https://api.minimaxi.com'
 
-// The ANTHROPIC_AUTH_TOKEN from settings.json works for both
-// the Anthropic-compatible endpoint AND the native MiniMax API
-export const MINIMAX_API_KEY = process.env.ANTHROPIC_AUTH_TOKEN ?? ''
+export const MINIMAX_TOKEN_API_KEY = process.env.MINIMAX_TOKEN_API_KEY?.trim() ?? ''
 
-export const MINIMAX_API_HEADERS = {
-  Authorization: `Bearer ${MINIMAX_API_KEY}`,
+const createMiniMaxHeaders = (apiKey: string) => ({
+  Authorization: `Bearer ${apiKey}`,
   'MM-API-Source': 'DogeOW-WebUI',
-}
+})
+
+export const MINIMAX_TOKEN_API_HEADERS = createMiniMaxHeaders(MINIMAX_TOKEN_API_KEY)
 
 export const MINIMAX_TTS_MODEL = process.env.MINIMAX_TTS_MODEL ?? 'speech-2.6-hd'
 export const MINIMAX_VIDEO_MODEL = process.env.MINIMAX_VIDEO_MODEL ?? 'MiniMax-Hailuo-02'

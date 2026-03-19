@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MINIMAX_API_BASE_URL, MINIMAX_API_KEY, MINIMAX_API_HEADERS } from '../_lib/config'
+import {
+  MINIMAX_API_BASE_URL,
+  MINIMAX_TOKEN_API_HEADERS,
+  MINIMAX_TOKEN_API_KEY,
+} from '../_lib/config'
 
 export interface MiniMaxFile {
   id: string
@@ -17,9 +21,14 @@ export interface FilesListResponse {
 }
 
 export async function GET(request: NextRequest) {
-  if (!MINIMAX_API_KEY) {
+  if (!MINIMAX_TOKEN_API_KEY) {
     return NextResponse.json(
-      { success: false, error: 'MiniMax API Key 未配置', files: [], has_more: false },
+      {
+        success: false,
+        error: 'MiniMax Token API Key 未配置，请设置 MINIMAX_TOKEN_API_KEY',
+        files: [],
+        has_more: false,
+      },
       { status: 500 }
     )
   }
@@ -34,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(`${MINIMAX_API_BASE_URL}/v1/files/list?${params.toString()}`, {
       method: 'GET',
-      headers: MINIMAX_API_HEADERS,
+      headers: MINIMAX_TOKEN_API_HEADERS,
     })
 
     const data = await response.json()

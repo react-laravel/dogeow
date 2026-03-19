@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   MINIMAX_API_BASE_URL,
-  MINIMAX_API_KEY,
-  MINIMAX_API_HEADERS,
+  MINIMAX_TOKEN_API_KEY,
+  MINIMAX_TOKEN_API_HEADERS,
   MINIMAX_MUSIC_MODEL,
 } from '../_lib/config'
 
@@ -13,8 +13,11 @@ export interface MusicRequest {
 }
 
 export async function POST(request: NextRequest) {
-  if (!MINIMAX_API_KEY) {
-    return NextResponse.json({ error: 'MiniMax API Key 未配置' }, { status: 500 })
+  if (!MINIMAX_TOKEN_API_KEY) {
+    return NextResponse.json(
+      { error: 'MiniMax Token API Key 未配置，请设置 MINIMAX_TOKEN_API_KEY' },
+      { status: 500 }
+    )
   }
 
   let body: MusicRequest
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${MINIMAX_API_BASE_URL}/v1/music_generation`, {
       method: 'POST',
       headers: {
-        ...MINIMAX_API_HEADERS,
+        ...MINIMAX_TOKEN_API_HEADERS,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
