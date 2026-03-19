@@ -665,6 +665,9 @@ function MiniMaxPanel({
                   {cycleRemain.toLocaleString()}
                 </span>
                 <span className="text-muted-foreground text-sm">次剩余</span>
+                <span className="text-xs text-muted-foreground">
+                  剩余 {fmtTime(subModel?.remains_time ?? 0)}
+                </span>
               </div>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-primary/10">
@@ -679,9 +682,6 @@ function MiniMaxPanel({
               </span>
               <span className="text-xs text-muted-foreground">已用 {cyclePct}%</span>
             </div>
-            <div className="mt-1.5 text-center text-xs text-muted-foreground">
-              剩余 {fmtTime(subModel?.remains_time ?? 0)}
-            </div>
           </div>
 
           {/* 本周用量 - 突出显示 */}
@@ -693,6 +693,9 @@ function MiniMaxPanel({
                   {weekRemain.toLocaleString()}
                 </span>
                 <span className="text-muted-foreground text-sm">次剩余</span>
+                <span className="text-xs text-muted-foreground">
+                  剩余 {fmtTime(subModel?.weekly_remains_time ?? 0)}
+                </span>
               </div>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-primary/10">
@@ -706,9 +709,6 @@ function MiniMaxPanel({
                 {weekUsed.toLocaleString()}/{weekTotal.toLocaleString()}
               </span>
               <span className="text-xs text-muted-foreground">已用 {weekPct}%</span>
-            </div>
-            <div className="mt-1.5 text-center text-xs text-muted-foreground">
-              剩余 {fmtTime(subModel?.weekly_remains_time ?? 0)}
             </div>
           </div>
 
