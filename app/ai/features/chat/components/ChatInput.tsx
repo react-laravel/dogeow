@@ -195,12 +195,16 @@ export const ChatInput = React.memo<ChatInputProps>(
       [prompt, onPromptChange]
     )
 
+    // 获取浏览器语言设置，用于语音识别
+    const browserLanguage = typeof navigator !== 'undefined' ? navigator.language : 'zh-CN'
+
     const { isListening, startListening, stopListening } = useVoiceInput({
       onTranscript: handleTranscript,
       continuous: false,
+      language: browserLanguage,
     })
 
-    const voiceButton = chatMode === 'ai' && (
+    const voiceButton = chatMode === 'ai' && provider === 'minimax' && (
       <Button
         variant="outline"
         size="icon"

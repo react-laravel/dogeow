@@ -353,6 +353,9 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
                   }
                   return updated
                 })
+                // Auto-play the TTS audio
+                const audio = new Audio(ttsData.audioUrl)
+                await audio.play()
               }
             }
           } catch {
@@ -473,12 +476,14 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       setIsGeneratingMedia(true)
 
       const placeholderId = crypto.randomUUID()
+      const videoSlotId = `${placeholderId}-video`
       setMessages(prev => [
         ...prev,
         {
           id: placeholderId,
           role: 'assistant',
           content: `正在为你生成视频：${prompt}`,
+          videos: [{ id: videoSlotId, isPlaceholder: true }],
           generatingVideo: true,
         },
       ])
@@ -500,13 +505,14 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
         setMessages(prev =>
           prev.map(m =>
             m.id === placeholderId
-              ? {
-                  ...m,
-                  id: undefined,
-                  content: '已为你生成视频：',
-                  videoUrl,
-                  generatingVideo: false,
-                }
+              ? (() => {
+                  const { id: _messageId, generatingVideo: _generatingVideo, ...restMessage } = m
+                  return {
+                    ...restMessage,
+                    content: '已为你生成视频：',
+                    videos: [{ id: videoSlotId, url: videoUrl }],
+                  }
+                })()
               : m
           )
         )
@@ -527,12 +533,14 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     setIsGeneratingMedia(true)
 
     const placeholderId = crypto.randomUUID()
+    const musicSlotId = `${placeholderId}-music`
     setMessages(prev => [
       ...prev,
       {
         id: placeholderId,
         role: 'assistant',
         content: `正在为你生成音乐：${prompt}`,
+        musics: [{ id: musicSlotId, isPlaceholder: true }],
         generatingMusic: true,
       },
     ])
@@ -553,7 +561,14 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       setMessages(prev =>
         prev.map(m =>
           m.id === placeholderId
-            ? { ...m, id: undefined, content: '已为你生成音乐：', musicUrl, generatingMusic: false }
+            ? (() => {
+                const { id: _messageId, generatingMusic: _generatingMusic, ...restMessage } = m
+                return {
+                  ...restMessage,
+                  content: '已为你生成音乐：',
+                  musics: [{ id: musicSlotId, url: musicUrl }],
+                }
+              })()
             : m
         )
       )

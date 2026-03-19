@@ -1,5 +1,5 @@
 import React from 'react'
-import { ImageIcon, User } from 'lucide-react'
+import { ImageIcon, User, VideoIcon, Music } from 'lucide-react'
 import Image from 'next/image'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ChatMessage } from '../types'
@@ -13,7 +13,11 @@ interface ChatMessageItemProps {
 export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, variant = 'page' }) => {
   const isUser = message.role === 'user'
   const messageImages = message.images ?? []
+  const messageVideos = message.videos ?? []
+  const messageMusics = message.musics ?? []
   const hasImages = messageImages.length > 0
+  const hasVideos = messageVideos.length > 0
+  const hasMusics = messageMusics.length > 0
 
   const imageNodes = messageImages.map((item, index) => {
     const key = item.id ?? item.url ?? `placeholder-${index}`
@@ -46,6 +50,55 @@ export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, vari
     )
   })
 
+  const videoNodes = messageVideos.map((item, index) => {
+    const key = item.id ?? item.url ?? `placeholder-${index}`
+
+    if (item.isPlaceholder || !item.url) {
+      return (
+        <div
+          key={key}
+          className="border-border bg-background/60 relative h-32 w-56 overflow-hidden rounded-md border border-dashed"
+        >
+          <Skeleton className="h-full w-full rounded-none" />
+          <div className="text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <VideoIcon className="h-5 w-5" />
+            <span className="text-[11px]">视频生成中</span>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <video
+        key={key}
+        src={item.url}
+        controls
+        className="h-32 w-56 rounded-md border object-cover"
+      />
+    )
+  })
+
+  const musicNodes = messageMusics.map((item, index) => {
+    const key = item.id ?? item.url ?? `placeholder-${index}`
+
+    if (item.isPlaceholder || !item.url) {
+      return (
+        <div
+          key={key}
+          className="border-border bg-background/60 relative h-16 w-48 overflow-hidden rounded-md border border-dashed"
+        >
+          <Skeleton className="h-full w-full rounded-none" />
+          <div className="text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <Music className="h-5 w-5" />
+            <span className="text-[11px]">音乐生成中</span>
+          </div>
+        </div>
+      )
+    }
+
+    return <audio key={key} src={item.url} controls className="h-12 w-48" />
+  })
+
   if (variant === 'dialog') {
     return (
       <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -61,6 +114,16 @@ export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, vari
             {hasImages && (
               <div className={`flex flex-wrap gap-2 ${message.content ? 'mb-2' : ''}`}>
                 {imageNodes}
+              </div>
+            )}
+            {hasVideos && (
+              <div className={`flex flex-wrap gap-2 ${message.content ? 'mb-2' : ''}`}>
+                {videoNodes}
+              </div>
+            )}
+            {hasMusics && (
+              <div className={`flex flex-wrap gap-2 ${message.content ? 'mb-2' : ''}`}>
+                {musicNodes}
               </div>
             )}
             {message.content && (
