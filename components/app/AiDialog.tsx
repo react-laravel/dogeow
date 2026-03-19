@@ -237,15 +237,14 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           />
         </div>
         {/* 知识库模式下的 AI Provider 选择 */}
-        {chatMode === 'knowledge' && knowledgeProvider && setKnowledgeProvider && (
+        {chatMode === 'knowledge' && knowledgeProvider !== undefined && (
           <Button
             variant={knowledgeProvider === 'minimax' ? 'default' : 'outline'}
             size="sm"
             className="h-7 text-xs gap-1"
             onClick={() =>
-              setKnowledgeProvider(knowledgeProvider === 'ollama' ? 'minimax' : 'ollama')
+              knowledgeChat.setProvider(knowledgeProvider === 'ollama' ? 'minimax' : 'ollama')
             }
-            disabled={isLoading}
           >
             {knowledgeProvider === 'ollama' ? '🤖 Ollama' : '☁️ MiniMax'}
           </Button>
