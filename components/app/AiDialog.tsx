@@ -7,14 +7,6 @@ import { zhCN } from 'date-fns/locale'
 import useSWR from 'swr'
 import { MessageSquarePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useAiChat } from '@/app/ai/features/chat/hooks/useAiChat'
 import { useImageHistory } from '@/app/ai/features/chat/hooks/useImageHistory'
 import { useKnowledgeChat } from '@/app/ai/features/knowledge/hooks/useKnowledgeChat'
@@ -246,24 +238,17 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
         </div>
         {/* 知识库模式下的 AI Provider 选择 */}
         {chatMode === 'knowledge' && knowledgeProvider && setKnowledgeProvider && (
-          <div className="flex items-center gap-2">
-            <Label htmlFor="knowledge-provider" className="text-xs">
-              AI:
-            </Label>
-            <Select
-              value={knowledgeProvider}
-              onValueChange={setKnowledgeProvider}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="knowledge-provider" className="h-7 w-28 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ollama">Ollama</SelectItem>
-                <SelectItem value="minimax">MiniMax</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Button
+            variant={knowledgeProvider === 'minimax' ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() =>
+              setKnowledgeProvider(knowledgeProvider === 'ollama' ? 'minimax' : 'ollama')
+            }
+            disabled={isLoading}
+          >
+            {knowledgeProvider === 'ollama' ? '🤖 Ollama' : '☁️ MiniMax'}
+          </Button>
         )}
         <Button
           variant="ghost"
