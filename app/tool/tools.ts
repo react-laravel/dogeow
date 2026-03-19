@@ -8,16 +8,7 @@ import MoonDiceGame from './components/MoonDiceGame'
 import RepoWatchTool from './components/RepoWatchTool'
 
 // 工具类别定义
-export type ToolCategory =
-  | '日期时间'
-  | '文本处理'
-  | '编码转换'
-  | '格式化'
-  | '计算工具'
-  | '网络工具'
-  | '开发辅助'
-  | '多媒体'
-  | '其他'
+export type ToolCategory = '日期时间' | '文本处理' | '编码转换' | '开发辅助' | '其他'
 
 // 工具接口定义
 export interface Tool {
@@ -50,36 +41,12 @@ export const tools: Tool[] = [
     tags: ['时区', '城市', '时间'],
   },
   {
-    id: 'word-counter',
-    title: '字数统计',
-    description: '统计文本长度、字数与行数',
-    component: ToolPlaceholder,
-    category: '文本处理',
-    tags: ['文本', '统计', '字数'],
-  },
-  {
-    id: 'markdown-preview',
-    title: 'Markdown 预览',
-    description: 'Markdown 即时预览与导出',
-    component: ToolPlaceholder,
-    category: '文本处理',
-    tags: ['Markdown', '预览', '转换'],
-  },
-  {
     id: 'text-diff',
     title: '文本对比',
     description: '左右对比两段文本，高亮删除（红）与新增（绿）',
     component: TextDiff,
     category: '文本处理',
     tags: ['文本', '对比', 'diff', '差异'],
-  },
-  {
-    id: 'base64',
-    title: 'Base64 编解码',
-    description: '文本与 Base64 互转',
-    component: ToolPlaceholder,
-    category: '编码转换',
-    tags: ['Base64', '编码', '解码'],
   },
   {
     id: 'base64-image',
@@ -90,92 +57,12 @@ export const tools: Tool[] = [
     tags: ['Base64', '图片', '编码', '解码'],
   },
   {
-    id: 'url-encode',
-    title: 'URL 编解码',
-    description: 'URL 编码与解码',
-    component: ToolPlaceholder,
-    category: '编码转换',
-    tags: ['URL', '编码', '解码'],
-  },
-  {
-    id: 'json-format',
-    title: 'JSON 格式化',
-    description: '美化、压缩与校验 JSON',
-    component: ToolPlaceholder,
-    category: '格式化',
-    tags: ['JSON', '格式化', '校验'],
-  },
-  {
-    id: 'sql-format',
-    title: 'SQL 格式化',
-    description: '格式化 SQL 语句',
-    component: ToolPlaceholder,
-    category: '格式化',
-    tags: ['SQL', '格式化', '语句'],
-  },
-  {
-    id: 'bmi-calculator',
-    title: 'BMI 计算器',
-    description: '根据身高体重计算 BMI',
-    component: ToolPlaceholder,
-    category: '计算工具',
-    tags: ['BMI', '健康', '计算'],
-  },
-  {
-    id: 'unit-converter',
-    title: '单位换算',
-    description: '常用单位之间换算',
-    component: ToolPlaceholder,
-    category: '计算工具',
-    tags: ['单位', '换算', '长度'],
-  },
-  {
-    id: 'ip-lookup',
-    title: 'IP 查询',
-    description: '查询 IP 归属地与信息',
-    component: ToolPlaceholder,
-    category: '网络工具',
-    tags: ['IP', '网络', '查询'],
-  },
-  {
-    id: 'ua-parser',
-    title: 'UA 解析',
-    description: '解析 User-Agent 信息',
-    component: ToolPlaceholder,
-    category: '网络工具',
-    tags: ['UA', '浏览器', '解析'],
-  },
-  {
     id: 'repo-watch',
     title: '依赖更新追踪',
     description: '',
     component: RepoWatchTool,
     category: '开发辅助',
     tags: ['GitHub', 'composer', 'package.json', '依赖更新', 'npm', 'packagist'],
-  },
-  {
-    id: 'regex-tester',
-    title: '正则测试',
-    description: '正则表达式测试与调试',
-    component: ToolPlaceholder,
-    category: '开发辅助',
-    tags: ['正则', '测试', '调试'],
-  },
-  {
-    id: 'image-compress',
-    title: '图片压缩',
-    description: '快速压缩图片体积',
-    component: ToolPlaceholder,
-    category: '多媒体',
-    tags: ['图片', '压缩', '多媒体'],
-  },
-  {
-    id: 'random-generator',
-    title: '随机数生成',
-    description: '生成随机数字或字符串',
-    component: ToolPlaceholder,
-    category: '其他',
-    tags: ['随机', '生成', '工具'],
   },
   {
     id: 'moon-dice',
