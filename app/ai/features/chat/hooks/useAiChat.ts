@@ -409,12 +409,14 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
       // 立即插入占位消息
       const placeholderId = crypto.randomUUID()
+      const imageSlotId = `${placeholderId}-image`
       setMessages(prev => [
         ...prev,
         {
           id: placeholderId,
           role: 'assistant',
-          content: `正在为你生成图片：${prompt}`,
+          content: `图片提示词：${prompt}`,
+          images: [{ id: imageSlotId, isPlaceholder: true }],
           generatingImage: true,
         },
       ])
@@ -440,13 +442,13 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
         setMessages(prev =>
           prev.map(m =>
             m.id === placeholderId
-              ? {
-                  ...m,
-                  id: undefined,
-                  content: '已为你生成图片：',
-                  images: [{ url: imageUrl }],
-                  generatingImage: false,
-                }
+              ? (() => {
+                  const { id: _messageId, generatingImage: _generatingImage, ...restMessage } = m
+                  return {
+                    ...restMessage,
+                    images: [{ id: imageSlotId, url: imageUrl }],
+                  }
+                })()
               : m
           )
         )
