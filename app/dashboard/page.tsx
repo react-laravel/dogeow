@@ -738,13 +738,13 @@ function MiniMaxPanel({
             <div className="rounded-xl border bg-muted/30 p-3 text-center">
               <div className="text-muted-foreground text-xs">周期剩余时间</div>
               <div className="text-primary mt-1 text-base font-bold">
-                {fmtTime(subModel.remains_time)}
+                {fmtTime(subModel?.remains_time ?? 0)}
               </div>
             </div>
             <div className="rounded-xl border bg-muted/30 p-3 text-center">
               <div className="text-muted-foreground text-xs">本周剩余时间</div>
               <div className="text-primary mt-1 text-base font-bold">
-                {fmtTime(subModel.weekly_remains_time)}
+                {fmtTime(subModel?.weekly_remains_time ?? 0)}
               </div>
             </div>
           </div>
