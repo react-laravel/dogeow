@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchDocuments, loadAllDocuments } from '@/lib/knowledge/search'
 import { searchWithRAG } from '@/lib/knowledge/rag-search'
 import { getKnowledgeConfig, type KnowledgeSearchMethod } from '@/lib/knowledge/config'
+import { callMiniMaxAPI } from '@/app/api/generate/_lib/clients'
+import { createMiniMaxStreamResponse } from '@/app/api/generate/_lib/streams'
+
+type AIProvider = 'ollama' | 'minimax'
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -14,6 +18,7 @@ interface KnowledgeChatRequestBody {
   useContext?: boolean // 是否使用知识库上下文
   searchMethod?: KnowledgeSearchMethod // 搜索方法：'simple' 或 'rag'
   model?: string // Ollama 模型名称
+  provider?: AIProvider // AI 提供商：'ollama' 或 'minimax'
 }
 
 // Ollama配置
@@ -262,15 +267,16 @@ ${context}
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const {
-      messages,
-      query,
-      useContext = true,
-      searchMethod,
-      model,
-    }: KnowledgeChatRequestBody = await request.json()
+  const {
+    messages,
+    query,
+    useContext = true,
+    searchMethod,
+    model,
+    provider = 'ollama',
+  }: KnowledgeChatRequestBody = await request.json()
 
+  try {
     // 如果没有 messages，使用 query 创建单次对话
     let chatMessages: ChatMessage[] =
       messages && messages.length > 0
@@ -309,14 +315,22 @@ export async function POST(request: NextRequest) {
     }
     await ensureSystemPrompt()
 
-    // 只把最近几轮发给 Ollama：RAG 已用最后一条用户消息，历史全量发送浪费 token
+    // 只把最近几轮发给 AI：RAG 已用最后一条用户消息，历史全量发送浪费 token
     // 检索/embedding 模型只发一条（当前用户问题），对话模型保留最近 2 轮
-    const maxHistory = isEmbeddingModel(model ?? '') ? 1 : 4
+    const maxHistory = provider === 'minimax' ? 10 : isEmbeddingModel(model ?? '') ? 1 : 4
     const systemPart = chatMessages.filter(m => m.role === 'system')
     const conversationPart = chatMessages.filter(m => m.role !== 'system')
     chatMessages = [...systemPart, ...conversationPart.slice(-maxHistory)]
 
-    // 调用 Ollama API
+    // 根据 provider 选择调用不同的 AI
+    if (provider === 'minimax') {
+      console.log('[知识库] 使用 MiniMax AI')
+      const minimaxResponse = await callMiniMaxAPI(chatMessages)
+      return createMiniMaxStreamResponse(minimaxResponse)
+    }
+
+    // 默认使用 Ollama
+    console.log('[知识库] 使用 Ollama AI')
     const ollamaResponse = await callOllamaChatAPI(chatMessages, model)
 
     // 计算 prompt tokens
@@ -327,9 +341,15 @@ export async function POST(request: NextRequest) {
     console.error('知识库问答API错误:', error)
     let errorMessage = 'AI服务发生未知错误'
     if (error instanceof Error) {
-      errorMessage = error.message.includes('fetch')
-        ? 'AI服务暂时不可用，请确保Ollama服务正在运行'
-        : error.message
+      if (provider === 'minimax') {
+        errorMessage = error.message.includes('fetch')
+          ? 'MiniMax 服务暂时不可用，请检查网络或 API 配置'
+          : error.message
+      } else {
+        errorMessage = error.message.includes('fetch')
+          ? 'Ollama 服务暂时不可用，请确保 Ollama 正在运行'
+          : error.message
+      }
     }
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

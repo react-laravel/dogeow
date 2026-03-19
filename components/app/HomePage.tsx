@@ -3,6 +3,7 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import dynamic from 'next/dynamic'
 import { configs } from '@/app/configs'
+import { HomeRoleplayCard } from '@/components/app/HomeRoleplayCard'
 import { ThemedTileCard } from '@/components/app/ThemedTileCard'
 import { HomeTilesSkeleton } from '@/components/app/HomeTilesSkeleton'
 import { useTileManagement } from '@/hooks/useTileManagement'
@@ -103,6 +104,8 @@ export function HomePage() {
             {t('home.description', '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！')}
           </p>
         </header>
+
+        <HomeRoleplayCard />
 
         <section aria-label={t('home.section_tiles', '应用入口')}>
           {!isHydrated && layoutType === 'grid' ? (
