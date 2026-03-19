@@ -47,13 +47,9 @@ export const useTimeConversion = () => {
       }
       const result = format(date, dateFormat, { locale: zhCN })
       setDateTime(result)
-      toast.success('转换成功', {
-        description: `${timestamp} → ${result}`,
-      })
     } catch (error) {
       console.error('时间戳转换错误:', error)
       setDateTime(ERROR_MESSAGES.CONVERSION_ERROR)
-      toast.error('转换失败')
     }
   }, [timestamp, dateFormat])
 
@@ -84,13 +80,9 @@ export const useTimeConversion = () => {
       }
       const result = Math.floor(date.getTime() / 1000).toString()
       setOutputTimestamp(result)
-      toast.success('转换成功', {
-        description: `${inputDateTime} → ${result}`,
-      })
     } catch (error) {
       console.error('日期转换错误:', error)
       setOutputTimestamp(ERROR_MESSAGES.CONVERSION_ERROR)
-      toast.error('转换失败')
     }
   }, [inputDateTime])
 
@@ -128,6 +120,46 @@ export const useTimeConversion = () => {
     }
   }, [])
 
+  // 自动转换的时间戳
+  const handleTimestampChange = useCallback(
+    (value: string) => {
+      setTimestamp(value)
+      // 空时清空结果
+      if (!value.trim()) {
+        setDateTime('')
+        return
+      }
+      convertTimestampToDateTime()
+    },
+
+    [convertTimestampToDateTime]
+  )
+
+  // 自动转换的日期
+  const handleInputDateTimeChange = useCallback(
+    (value: string) => {
+      setInputDateTime(value)
+      if (!value.trim()) {
+        setOutputTimestamp('')
+        return
+      }
+      convertDateTimeToTimestamp()
+    },
+
+    [convertDateTimeToTimestamp]
+  )
+
+  // 日期格式变化时重新格式化已有结果
+  const handleDateFormatChange = useCallback(
+    (value: string) => {
+      setDateFormat(value)
+      if (timestamp.trim()) {
+        convertTimestampToDateTime()
+      }
+    },
+    [timestamp, convertTimestampToDateTime]
+  )
+
   return {
     timestamp,
     setTimestamp,
@@ -141,5 +173,8 @@ export const useTimeConversion = () => {
     convertDateTimeToTimestamp,
     useCurrentTimestamp,
     useCurrentDateTime,
+    handleTimestampChange,
+    handleInputDateTimeChange,
+    handleDateFormatChange,
   }
 }

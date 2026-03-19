@@ -13,21 +13,12 @@ interface DateToTimestampTabProps {
   outputTimestamp: string
   copyStates: { [k in CopyType]: boolean }
   onInputDateTimeChange: (value: string) => void
-  onConvert: () => void
   onUseCurrent: () => void
   onCopy: (text: string, type: CopyType) => void
 }
 
 export const DateToTimestampTab = memo<DateToTimestampTabProps>(
-  ({
-    inputDateTime,
-    outputTimestamp,
-    copyStates,
-    onInputDateTimeChange,
-    onConvert,
-    onUseCurrent,
-    onCopy,
-  }) => {
+  ({ inputDateTime, outputTimestamp, copyStates, onInputDateTimeChange, onUseCurrent, onCopy }) => {
     return (
       <Card className="border-border/60 bg-background/80 shadow-sm">
         <CardContent className="space-y-3 pt-4">
@@ -43,17 +34,12 @@ export const DateToTimestampTab = memo<DateToTimestampTabProps>(
                   value={inputDateTime}
                   onChange={e => onInputDateTimeChange(e.target.value)}
                   className="flex-1"
-                  onKeyDown={e => e.key === 'Enter' && onConvert()}
                 />
                 <Button onClick={onUseCurrent} variant="outline" className="whitespace-nowrap">
                   使用当前
                 </Button>
               </div>
             </div>
-
-            <Button onClick={onConvert} className="h-9 w-full" disabled={!inputDateTime.trim()}>
-              转换
-            </Button>
 
             <div className="space-y-1.5">
               <Label htmlFor="output-timestamp" className="text-sm font-medium">
@@ -65,7 +51,7 @@ export const DateToTimestampTab = memo<DateToTimestampTabProps>(
                   readOnly
                   value={outputTimestamp}
                   className="bg-muted/40 rounded-r-none"
-                  placeholder="转换结果将显示在这里"
+                  placeholder="输入日期自动转换"
                 />
                 <Button
                   variant="outline"

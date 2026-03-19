@@ -25,10 +25,11 @@ const TimeConverterContent: React.FC<TimeConverterProps> = () => {
     inputDateTime,
     setInputDateTime,
     outputTimestamp,
-    convertTimestampToDateTime,
-    convertDateTimeToTimestamp,
     useCurrentTimestamp,
     useCurrentDateTime,
+    handleTimestampChange,
+    handleInputDateTimeChange,
+    handleDateFormatChange,
   } = useTimeConversion()
 
   React.useEffect(() => {
@@ -89,9 +90,8 @@ const TimeConverterContent: React.FC<TimeConverterProps> = () => {
             dateTime={dateTime}
             dateFormat={dateFormat}
             copyStates={copyStates}
-            onTimestampChange={setTimestamp}
-            onDateFormatChange={setDateFormat}
-            onConvert={convertTimestampToDateTime}
+            onTimestampChange={handleTimestampChange}
+            onDateFormatChange={handleDateFormatChange}
             onUseCurrent={useCurrentTimestamp}
             onCopy={copyToClipboard}
           />
@@ -102,8 +102,7 @@ const TimeConverterContent: React.FC<TimeConverterProps> = () => {
             inputDateTime={inputDateTime}
             outputTimestamp={outputTimestamp}
             copyStates={copyStates}
-            onInputDateTimeChange={setInputDateTime}
-            onConvert={convertDateTimeToTimestamp}
+            onInputDateTimeChange={handleInputDateTimeChange}
             onUseCurrent={useCurrentDateTime}
             onCopy={copyToClipboard}
           />
