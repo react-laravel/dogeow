@@ -48,7 +48,11 @@ const loadSavedCities = (): City[] => {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed
     }
   } catch {}
-  return POPULAR_CITIES.slice(0, 4)
+  return [
+    { name: 'Beijing', timezone: 'Asia/Shanghai', label: '北京' },
+    { name: 'New York', timezone: 'America/New_York', label: '纽约' },
+    { name: 'London', timezone: 'Europe/London', label: '伦敦' },
+  ]
 }
 
 const saveCities = (cities: City[]) => {
