@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import {
   Calendar,
@@ -223,8 +224,18 @@ function DashboardCard({
 export default function Dashboard() {
   const { isAuthenticated } = useAuthStore()
   const isAdmin = useMemo(() => isAdminSync(), [])
-  const [activeSection, setActiveSection] = useState<DashboardSection>('location')
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // 从 URL 读取当前 section，默认 location
+  const activeSection = (searchParams.get('section') as DashboardSection) || 'location'
+
+  const setActiveSection = (section: DashboardSection) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('section', section)
+    router.push(`?${params.toString()}`, { scroll: false })
+  }
 
   // 共享 SWR hooks
   const { sub, detail, billing } = useMiniMaxSubscription()
