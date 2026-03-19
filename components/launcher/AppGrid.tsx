@@ -108,27 +108,23 @@ export function AppGrid({
   const musicIcon = isPlaying ? (
     <MusicEqualizerIcon analyserNode={analyserNode} isPlaying={isPlaying} />
   ) : (
-    <Music className="h-6 w-6 transition-colors" />
+    <Music className="h-4 w-4 transition-colors" />
   )
 
   // 定义按钮配置
   const buttons: AppGridButtonConfig[] = [
     {
-      icon: (
-        <div className={cn('transition-transform duration-300', isPlaying && 'scale-105')}>
-          {musicIcon}
-        </div>
-      ),
+      icon: <div className="transition-transform duration-300">{musicIcon}</div>,
       label: t('appgrid.music'),
       onClick: () => toggleDisplayMode('music'),
     },
     {
-      icon: <Bot className="h-5 w-5" />,
+      icon: <Bot className="h-4 w-4" />,
       label: 'AI 助理',
       onClick: () => onOpenAi?.(),
     },
     {
-      icon: <Search className="h-5 w-5" />,
+      icon: <Search className="h-4 w-4" />,
       label: '搜索',
       onClick: () => onToggleSearch?.(),
     },
