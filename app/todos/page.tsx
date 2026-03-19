@@ -125,15 +125,6 @@ function TodoItemRow({
     >
       <button
         type="button"
-        className="touch-none -ml-1 cursor-grab rounded p-1 text-muted-foreground outline-none hover:text-foreground active:cursor-grabbing"
-        aria-label="拖动排序"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
         onClick={onToggle}
         className="shrink-0 rounded-full p-0.5 text-muted-foreground outline-none hover:text-foreground focus:ring-2 focus:ring-primary"
         aria-label={isCompleted ? '标记未完成' : '标记完成'}
@@ -152,7 +143,7 @@ function TodoItemRow({
             onChange={e => onEditTitleChange(e.target.value)}
             onBlur={onTitleBlur}
             onKeyDown={e => e.key === 'Enter' && onTitleBlur()}
-            className="border-border w-full border-b bg-transparent py-0.5 text-sm focus:outline-none focus:ring-0"
+            className="w-full bg-transparent py-0.5 text-sm focus:outline-none focus:ring-0"
             autoFocus
             aria-label="编辑任务"
           />
@@ -169,6 +160,15 @@ function TodoItemRow({
           </button>
         )}
       </div>
+      <button
+        type="button"
+        className="touch-none -ml-1 cursor-grab rounded p-1 text-muted-foreground outline-none hover:text-foreground active:cursor-grabbing"
+        aria-label="拖动排序"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
     </div>
   )
 }
