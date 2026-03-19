@@ -630,12 +630,9 @@ function MiniMaxPanel({
       {subscribeEndStr !== '—' && (
         <div className="rounded-xl border bg-muted/30 p-3">
           <div className="flex items-baseline justify-between gap-x-1.5">
-            <div className="flex flex-wrap items-baseline gap-x-1.5">
-              <span className="text-muted-foreground text-xs">
-                {detailData?.current_subscribe?.current_subscribe_title ?? '套餐'}
-              </span>
-              <span className="text-muted-foreground text-xs">{subscribeEndStr}</span>
-            </div>
+            <span className="text-muted-foreground text-xs">
+              {detailData?.current_subscribe?.current_subscribe_title ?? '套餐'}
+            </span>
             {subscribeDaysLeft !== null && (
               <span
                 className={cn(
@@ -647,7 +644,9 @@ function MiniMaxPanel({
                       : 'text-muted-foreground'
                 )}
               >
-                {subscribeDaysLeft > 0 ? `还有 ${subscribeDaysLeft} 天` : '今日到期'}
+                {subscribeDaysLeft > 0
+                  ? `还有 ${subscribeDaysLeft} 天 (${subscribeEndStr})`
+                  : `今日到期 (${subscribeEndStr})`}
               </span>
             )}
           </div>
