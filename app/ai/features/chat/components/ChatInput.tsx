@@ -259,7 +259,7 @@ export const ChatInput = React.memo<ChatInputProps>(
             size="icon"
             className="h-10 w-10 border-2"
             onClick={onOpenImageHistory}
-            disabled={isLoading || !!isGeneratingMedia}
+            disabled={isLoading}
             aria-label="图片历史"
             title="图片历史"
           >
