@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Calendar,
+  ChevronDown,
   CreditCard,
   FileText,
   Globe,
@@ -25,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { isAdminSync } from '@/lib/auth'
 import { apiRequest } from '@/lib/api'
 import { cn } from '@/lib/helpers'
@@ -65,7 +65,30 @@ interface DashboardCardProps {
   className?: string
 }
 
-type DashboardSection = 'location' | 'logs' | 'minimax'
+function AccordionSection({
+  defaultOpen = false,
+  icon: Icon,
+  title,
+  children,
+}: {
+  defaultOpen?: boolean
+  icon: LucideIcon
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <details className="group rounded-2xl border bg-background [&_summary::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-4 select-none">
+        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="flex-1 text-sm font-medium">{title}</span>
+        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <div className="border-t px-4 pb-4 pt-3">{children}</div>
+    </details>
+  )
+}
 
 function DashboardCard({
   title,
@@ -93,9 +116,6 @@ function DashboardCard({
 export default function Dashboard() {
   const { isAuthenticated } = useAuthStore()
   const isAdmin = useMemo(() => isAdminSync(), [])
-  const [activeSection, setActiveSection] = useState<DashboardSection>('location')
-  const displaySection: DashboardSection =
-    !isAdmin && activeSection === 'logs' ? 'location' : activeSection
 
   if (!isAuthenticated) {
     return <div className="text-muted-foreground p-6">正在加载用户信息...</div>
@@ -108,63 +128,23 @@ export default function Dashboard() {
           <PageTitle className="text-2xl sm:text-3xl">仪表盘</PageTitle>
         </header>
 
-        <Tabs
-          value={displaySection}
-          onValueChange={value => setActiveSection(value as DashboardSection)}
-          className="mx-auto max-w-5xl"
-        >
-          <TabsList
-            className={cn('grid h-auto w-full gap-1 p-1', isAdmin ? 'grid-cols-3' : 'grid-cols-1')}
-          >
-            <TabsTrigger value="location" className="h-10">
-              我的位置
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="logs" className="h-10">
-                Laravel 日志
-              </TabsTrigger>
-            )}
-            {isAdmin && (
-              <TabsTrigger value="minimax" className="h-10">
-                MiniMax 订阅
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="location" className="mt-4">
-            <DashboardCard
-              title="我的位置"
-              description="查看 IP、地理位置和浏览器环境"
-              icon={MapPin}
-            >
-              <LocationPanel />
-            </DashboardCard>
-          </TabsContent>
+        <div className="mx-auto max-w-5xl space-y-2">
+          <AccordionSection defaultOpen icon={MapPin} title="我的位置">
+            <LocationPanel />
+          </AccordionSection>
 
           {isAdmin && (
-            <TabsContent value="logs" className="mt-4">
-              <DashboardCard
-                title="Laravel 日志"
-                description="选择日期并查看服务器日志内容"
-                icon={FileText}
-              >
-                <LogPanel />
-              </DashboardCard>
-            </TabsContent>
+            <AccordionSection icon={FileText} title="Laravel 日志">
+              <LogPanel />
+            </AccordionSection>
           )}
 
           {isAdmin && (
-            <TabsContent value="minimax" className="mt-4">
-              <DashboardCard
-                title="MiniMax 订阅"
-                description="查看 MiniMax API 订阅用量信息"
-                icon={CreditCard}
-              >
-                <MiniMaxPanel />
-              </DashboardCard>
-            </TabsContent>
+            <AccordionSection icon={CreditCard} title="MiniMax 订阅">
+              <MiniMaxPanel />
+            </AccordionSection>
           )}
-        </Tabs>
+        </div>
       </PageContainer>
     </ProtectedRoute>
   )
