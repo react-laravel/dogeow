@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadAllDocuments } from '@/lib/knowledge/search'
 import { buildVectorIndex, saveVectorIndex, loadVectorIndex } from '@/lib/knowledge/vector-store'
+import { requireAuth } from '../../_lib/auth-guard'
 
 /**
  * 构建向量索引的 API 端点
  * POST /api/knowledge/build-index
  */
 export async function POST(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   try {
     const { force = false } = await request.json().catch(() => ({ force: false }))
 
@@ -102,7 +107,11 @@ export async function POST(request: NextRequest) {
  * 获取索引状态
  * GET /api/knowledge/build-index
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   try {
     const index = loadVectorIndex()
     if (!index) {
