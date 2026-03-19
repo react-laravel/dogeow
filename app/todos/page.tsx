@@ -371,9 +371,9 @@ export default function TodosPage() {
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-              <ul className="divide-border divide-y" role="list">
+              <ul className="divide-border divide-y" role="list" suppressHydrationWarning>
                 {sortedTasks.map(task => (
-                  <li key={task.id} role="listitem">
+                  <li key={task.id} role="listitem" suppressHydrationWarning>
                     <TodoItemRow
                       task={task}
                       isCompleted={task.is_completed}
