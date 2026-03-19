@@ -6,11 +6,25 @@ export interface ChatMessageImage {
   isPlaceholder?: boolean
 }
 
+export interface ChatMessageVideo {
+  id?: string
+  url?: string
+  isPlaceholder?: boolean
+}
+
+export interface ChatMessageMusic {
+  id?: string
+  url?: string
+  isPlaceholder?: boolean
+}
+
 export interface ChatMessage {
   id?: string
   role: 'system' | 'user' | 'assistant'
   content: string
   images?: ChatMessageImage[]
+  videos?: ChatMessageVideo[]
+  musics?: ChatMessageMusic[]
   audioUrl?: string
   videoUrl?: string
   musicUrl?: string
