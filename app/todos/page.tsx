@@ -200,6 +200,11 @@ export default function TodosPage() {
   const [editTitle, setEditTitle] = useState('')
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    queueMicrotask(() => setMounted(true))
+  }, [])
 
   const list = lists[0]
   const tasks = list?.tasks ?? []
@@ -366,14 +371,16 @@ export default function TodosPage() {
 
       <section>
         <h2 className="text-foreground mb-3 text-base font-medium">代办事项</h2>
-        {sortedTasks.length === 0 ? (
+        {!mounted ? (
+          <p className="text-muted-foreground py-6 text-sm">加载中...</p>
+        ) : sortedTasks.length === 0 ? (
           <p className="text-muted-foreground py-6 text-sm">暂无事项，在上方添加一条吧</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-              <ul className="divide-border divide-y" role="list" suppressHydrationWarning>
+              <ul className="divide-border divide-y" role="list">
                 {sortedTasks.map(task => (
-                  <li key={task.id} role="listitem" suppressHydrationWarning>
+                  <li key={task.id} role="listitem">
                     <TodoItemRow
                       task={task}
                       isCompleted={task.is_completed}
