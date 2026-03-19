@@ -5,13 +5,12 @@ import {
   CheckSquare,
   ExternalLink,
   FolderGit2,
-  ArrowLeft,
   MoreHorizontal,
   Plus,
   RefreshCw,
-  Settings,
   Search,
   Square,
+  Trash2,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -39,6 +38,14 @@ import {
   type WatchLevel,
 } from '@/lib/api/repo-watch'
 
+type RepoSettingsPreview = Omit<RepoDependencyPreview, 'manifests'> & {
+  manifests: Array<{
+    ecosystem: 'npm' | 'composer'
+    path: string
+    dependencies: Array<RepoDependencyPreviewItem & { selected: boolean }>
+  }>
+}
+
 type SelectedDependency = RepoDependencyPreviewItem & {
   ecosystem: 'npm' | 'composer'
   manifest_path: string
@@ -46,7 +53,6 @@ type SelectedDependency = RepoDependencyPreviewItem & {
 }
 
 type VersionFilter = 'all' | WatchLevel
-type ToolView = 'packages' | 'repo-settings'
 
 const VERSION_FILTER_OPTIONS: Array<{ value: VersionFilter; label: string }> = [
   { value: 'all', label: '全部更新' },
@@ -105,7 +111,19 @@ const renderVersionDiff = (currentVersion?: string | null, latestVersion?: strin
   })
 }
 
-export default function RepoWatchTool() {
+type RepoWatchToolProps = {
+  showAddPanel: boolean
+  setShowAddPanel: (value: boolean | ((prev: boolean) => boolean)) => void
+  toolView: 'packages' | 'repo-settings'
+  setToolView: (view: 'packages' | 'repo-settings') => void
+}
+
+export default function RepoWatchTool({
+  showAddPanel,
+  setShowAddPanel,
+  toolView,
+  setToolView,
+}: RepoWatchToolProps) {
   const [url, setUrl] = useState('')
   const [preview, setPreview] = useState<RepoDependencyPreview | null>(null)
   const [dependencies, setDependencies] = useState<SelectedDependency[]>([])
@@ -113,19 +131,13 @@ export default function RepoWatchTool() {
   const [loadingList, setLoadingList] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [showAddPanel, setShowAddPanel] = useState(false)
   const [activeAction, setActiveAction] = useState<{
     id: number
     type: 'refresh' | 'cancel'
   } | null>(null)
   const [versionFilter, setVersionFilter] = useState<VersionFilter>('all')
   const [selectedRepoKey, setSelectedRepoKey] = useState<string>('all')
-  const [toolView, setToolView] = useState<ToolView>('packages')
-  const [repoSettingsPreview, setRepoSettingsPreview] = useState<RepoDependencyPreview | null>(null)
-  const [repoSettingsPreviewCache, setRepoSettingsPreviewCache] = useState<
-    Record<string, RepoDependencyPreview>
-  >({})
-  const [repoSettingsLoading, setRepoSettingsLoading] = useState(false)
+  const [repoSettingsPreview, setRepoSettingsPreview] = useState<RepoSettingsPreview | null>(null)
   const [repoSettingsActionKey, setRepoSettingsActionKey] = useState<string | null>(null)
 
   const loadWatchedPackages = useCallback(async () => {
@@ -225,42 +237,66 @@ export default function RepoWatchTool() {
     setPreview(null)
     setDependencies([])
     setUrl('')
-  }, [])
+  }, [setShowAddPanel])
 
   useEffect(() => {
-    const loadRepoSettings = async () => {
-      if (toolView !== 'repo-settings' || !selectedRepoSample?.source_url) {
+    const loadRepoSettings = () => {
+      if (toolView !== 'repo-settings' || !selectedRepoKey || selectedRepoKey === 'all') {
         return
       }
 
-      const cacheKey = selectedRepoSample.source_url
-      const cachedPreview = repoSettingsPreviewCache[cacheKey]
-      if (cachedPreview) {
-        setRepoSettingsPreview(cachedPreview)
-        setRepoSettingsLoading(false)
-        return
+      // 从 selectedRepoKey 解析仓库信息，即使 selectedRepoPackages 为空也显示仓库条目
+      const [owner, repo] = selectedRepoKey.split('/')
+      const repoSample = selectedRepoPackages[0] ?? {
+        source_provider: 'github',
+        source_owner: owner,
+        source_repo: repo,
+        source_url: `https://github.com/${owner}/${repo}`,
       }
 
-      setRepoSettingsLoading(true)
-      setRepoSettingsPreview(null)
+      const grouped = selectedRepoPackages.reduce<Record<string, WatchedPackage[]>>((acc, pkg) => {
+        const key = `${pkg.ecosystem}:${pkg.manifest_path || (pkg.ecosystem === 'npm' ? 'package.json' : 'composer.json')}`
+        if (!acc[key]) acc[key] = []
+        acc[key].push(pkg)
+        return acc
+      }, {})
 
-      try {
-        const result = await previewRepoDependencies(selectedRepoSample.source_url)
-        setRepoSettingsPreview(result)
-        setRepoSettingsPreviewCache(prev => ({
-          ...prev,
-          [cacheKey]: result,
-        }))
-      } catch (error) {
-        console.error('加载仓库设置依赖失败', error)
-        toast.error('加载仓库依赖失败，请重试')
-      } finally {
-        setRepoSettingsLoading(false)
-      }
+      const manifests = Object.entries(grouped)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, pkgs]) => {
+          const [ecosystem, path] = key.split(':') as ['npm' | 'composer', string]
+          return {
+            ecosystem,
+            path,
+            dependencies: pkgs.map(pkg => ({
+              package_name: pkg.package_name,
+              current_version_constraint: pkg.current_version_constraint,
+              normalized_current_version: pkg.normalized_current_version,
+              current_version_source: (pkg.metadata as Record<string, unknown>)
+                ?.current_version_source as 'lock' | 'manifest' | null,
+              dependency_group: (pkg.metadata as Record<string, unknown>)?.dependency_group as
+                | string
+                | null,
+              selected: true,
+            })),
+          }
+        })
+
+      setRepoSettingsPreview({
+        source: {
+          provider: repoSample.source_provider,
+          owner: repoSample.source_owner,
+          repo: repoSample.source_repo,
+          full_name: repoLabelOf(repoSample),
+          html_url: repoSample.source_url,
+          description: null,
+        },
+        manifests,
+      })
     }
 
-    void loadRepoSettings()
-  }, [repoSettingsPreviewCache, selectedRepoSample?.source_url, toolView])
+    loadRepoSettings()
+  }, [selectedRepoPackages, selectedRepoKey, toolView])
 
   const handleAnalyze = useCallback(async () => {
     if (!url.trim()) {
@@ -288,7 +324,7 @@ export default function RepoWatchTool() {
     } finally {
       setAnalyzing(false)
     }
-  }, [url])
+  }, [url, setShowAddPanel])
 
   const handleToggleDependency = useCallback((target: SelectedDependency, selected: boolean) => {
     setDependencies(prev =>
@@ -381,6 +417,24 @@ export default function RepoWatchTool() {
     }
   }, [])
 
+  const handleDeleteRepo = useCallback(async () => {
+    if (!selectedRepoKey || selectedRepoKey === 'all') return
+
+    const ids = selectedRepoPackages.map(pkg => pkg.id)
+    if (ids.length === 0) return
+
+    const deletedRepoKey = selectedRepoKey
+    try {
+      await deleteWatchedPackages(ids)
+      setWatchedPackages(prev => prev.filter(pkg => !ids.includes(pkg.id)))
+      // 删除后不清空 selectedRepoKey，让仓库仍保留在下拉中（只是为空）
+      setRepoSettingsPreview(null)
+      toast.success(`已删除 ${ids.length} 个依赖关注`)
+    } catch (error) {
+      toast.error('删除失败，请重试')
+    }
+  }, [selectedRepoKey, selectedRepoPackages])
+
   const handleToggleAllRepoSettings = useCallback(
     async (
       dependencies: Array<
@@ -448,6 +502,7 @@ export default function RepoWatchTool() {
         return
       }
 
+      // 取消全选：删除已关注的包，但不切换 selectedRepoKey，保留空仓库条目
       const watchedDependencies = dependencies
         .map(item =>
           selectedRepoWatchedMap.get(`${item.ecosystem}:${item.manifest_path}:${item.package_name}`)
@@ -464,6 +519,7 @@ export default function RepoWatchTool() {
         setWatchedPackages(prev =>
           prev.filter(item => !watchedDependencies.some(watched => watched.id === item.id))
         )
+        // 保留 selectedRepoKey，不切换到 'all'，这样空仓库仍显示在下拉中
         toast.success(`已取消关注 ${watchedDependencies.length} 个依赖`)
       } finally {
         setRepoSettingsActionKey(null)
@@ -540,7 +596,7 @@ export default function RepoWatchTool() {
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="font-medium">{item.package_name}</div>
+            <div className="font-medium">{item.publisher_display_name ?? item.package_name}</div>
             <Badge variant="outline">{item.ecosystem}</Badge>
             {item.latest_update_type ? (
               <Badge variant="outline">{item.latest_update_type}</Badge>
@@ -581,14 +637,14 @@ export default function RepoWatchTool() {
               )
             })()}
           </div>
-          <div className="text-xs text-muted-foreground">
-            最近检查：{formatDateTime(item.last_checked_at)}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-muted-foreground">
+              最近检查：{formatDateTime(item.last_checked_at)}
+            </span>
+            {!isRepoFiltered ? (
+              <span className="text-xs text-muted-foreground">来源：{repoLabelOf(item)}</span>
+            ) : null}
           </div>
-          {!isRepoFiltered ? (
-            <div className="pt-1 text-right text-xs text-muted-foreground">
-              来源仓库：{repoLabelOf(item)}
-            </div>
-          ) : null}
         </div>
 
         <DropdownMenu>
@@ -627,356 +683,394 @@ export default function RepoWatchTool() {
   )
 
   return (
-    <div className="space-y-6">
-      {watchedPackages.length === 0 ? (
-        <Card className="border-primary/20 bg-gradient-to-br from-background via-background to-primary/5">
-          {showAddPanel ? (
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <Input
-                  placeholder="例如 https://github.com/laravel/framework"
-                  value={url}
-                  onChange={event => setUrl(event.target.value)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      void handleAnalyze()
-                    }
-                  }}
-                />
-                <Button variant="outline" onClick={resetAddPanel}>
-                  取消
-                </Button>
-                <Button onClick={() => void handleAnalyze()} loading={analyzing}>
-                  <Search className="h-4 w-4" />
-                  解析仓库
-                </Button>
-              </div>
-            </CardContent>
-          ) : (
-            <CardContent className="py-10">
-              <EmptyState
-                icon={<FolderGit2 className="h-10 w-10" />}
-                title="还没有关注任何依赖"
-                description="先添加一个仓库，再从解析结果里勾选要关注的包。"
-              />
-            </CardContent>
-          )}
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>依赖更新追踪</CardTitle>
-              <Button
-                onClick={() => setShowAddPanel(current => !current)}
-                variant={showAddPanel ? 'outline' : 'default'}
-                className="ml-auto"
+    <div className="space-y-4">
+      {/* 列表视图 */}
+      {toolView === 'packages' ? (
+        <>
+          {/* 筛选栏 */}
+          {watchedPackages.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                value={selectedRepoKey}
+                onChange={event => setSelectedRepoKey(event.target.value)}
               >
-                <Plus className="h-4 w-4" />
-                添加仓库
-              </Button>
+                {repoOptions.map(item => (
+                  <option key={item} value={item}>
+                    {item === 'all' ? '全部仓库' : item === 'no-repo' ? '无仓库' : item}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                value={versionFilter}
+                onChange={event => setVersionFilter(event.target.value as VersionFilter)}
+              >
+                {VERSION_FILTER_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          </CardHeader>
+          ) : null}
+
+          {/* 添加仓库面板 */}
           {showAddPanel ? (
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <Input
-                  placeholder="例如 https://github.com/vercel/next.js"
-                  value={url}
-                  onChange={event => setUrl(event.target.value)}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">添加仓库</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="例如 https://github.com/laravel/framework"
+                    value={url}
+                    onChange={event => setUrl(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void handleAnalyze()
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button variant="outline" onClick={resetAddPanel}>
+                    取消
+                  </Button>
+                  <Button onClick={() => void handleAnalyze()} loading={analyzing}>
+                    <Search className="h-4 w-4" />
+                    解析
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* 空状态 */}
+          {!showAddPanel && watchedPackages.length === 0 && !preview ? (
+            <Card className="border-primary/20 bg-gradient-to-br from-background via-background to-primary/5">
+              <CardContent className="py-12">
+                <EmptyState
+                  icon={<FolderGit2 className="h-10 w-10" />}
+                  title="还没有关注任何依赖"
+                  description="点击上方「添加仓库」按钮，输入 GitHub 仓库地址开始追踪依赖更新。"
                 />
-                <Button variant="outline" onClick={resetAddPanel}>
-                  取消
-                </Button>
-                <Button onClick={() => void handleAnalyze()} loading={analyzing}>
-                  <Search className="h-4 w-4" />
-                  解析仓库
-                </Button>
-              </div>
-            </CardContent>
+              </CardContent>
+            </Card>
           ) : null}
-        </Card>
-      )}
 
-      {preview ? (
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <CardTitle>{preview.source.full_name}</CardTitle>
-                <CardDescription>{preview.source.description || '暂无仓库描述'}</CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => toggleAll(true)}>
-                  <CheckSquare className="h-4 w-4" />
-                  全选
-                </Button>
-                <Button variant="outline" onClick={() => toggleAll(false)}>
-                  <Square className="h-4 w-4" />
-                  取消全选
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href={preview.source.html_url} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                    打开仓库
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              已解析 {dependencies.length} 个依赖，当前选中 {selectedCount} 个。
-            </div>
-
-            {Object.entries(groupedDependencies).map(([groupKey, items]) => (
-              <div key={groupKey} className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge>{items[0]?.ecosystem}</Badge>
-                  <Badge variant="outline">{items[0]?.manifest_path}</Badge>
-                  <span className="text-sm text-muted-foreground">{items.length} 个包</span>
-                </div>
-
-                <div className="grid gap-3">
-                  {items.map(item => (
-                    <div
-                      key={`${item.ecosystem}-${item.package_name}`}
-                      className="grid gap-3 rounded-lg border p-3 md:grid-cols-[auto_minmax(0,1fr)]"
-                    >
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={item.selected}
-                          onChange={event => handleToggleDependency(item, event.target.checked)}
-                        />
-                        <span className="text-sm font-medium">关注</span>
-                      </label>
-
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{item.package_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          当前约束：{item.current_version_constraint || '未声明'} · 归属：
-                          {item.dependency_group || 'dependencies'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="outline" onClick={resetAddPanel}>
-                取消
-              </Button>
-              <Button onClick={() => void handleSave()} loading={saving}>
-                <CheckSquare className="h-4 w-4" />
-                保存关注
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {watchedPackages.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {toolView === 'repo-settings' ? (
-            <Button variant="outline" onClick={() => setToolView('packages')}>
-              <ArrowLeft className="h-4 w-4" />
-              返回列表
-            </Button>
-          ) : null}
-          <select
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            value={selectedRepoKey}
-            onChange={event => setSelectedRepoKey(event.target.value)}
-          >
-            {repoOptions.map(item => (
-              <option key={item} value={item}>
-                {item === 'all' ? '全部' : item === 'no-repo' ? '无仓库' : item}
-              </option>
-            ))}
-          </select>
-          <select
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            value={versionFilter}
-            onChange={event => setVersionFilter(event.target.value as VersionFilter)}
-          >
-            {VERSION_FILTER_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {selectedRepoSample && selectedRepoKey !== 'no-repo' ? (
-            <Button
-              variant={toolView === 'repo-settings' ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => setToolView('repo-settings')}
-              aria-label="仓库设置"
-              title="仓库设置"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {toolView === 'repo-settings' && selectedRepoSample ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>仓库设置</CardTitle>
-            <CardDescription className="flex items-center gap-2">
-              <span>当前仓库：{repoLabelOf(selectedRepoSample)}</span>
-              {selectedRepoSample.source_url ? (
-                <a
-                  href={selectedRepoSample.source_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                  aria-label="打开仓库"
-                  title="打开仓库"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              ) : null}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {repoSettingsLoading ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                正在加载仓库依赖...
-              </div>
-            ) : repoSettingsPreview ? (
-              <div className="space-y-4">
-                {repoSettingsPreview.manifests.map(manifest => (
-                  <div key={`${manifest.ecosystem}:${manifest.path}`} className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">{manifest.ecosystem}</Badge>
-                      <Badge variant="outline">{manifest.path}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {
-                          manifest.dependencies.filter(
-                            dependency =>
-                              !!selectedRepoWatchedMap.get(
-                                `${manifest.ecosystem}:${manifest.path}:${dependency.package_name}`
-                              )
-                          ).length
-                        }
-                        /{manifest.dependencies.length} 个包
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={repoSettingsActionKey === 'toggle-all'}
-                        onClick={() =>
-                          void handleToggleAllRepoSettings(
-                            manifest.dependencies.map(dependency => ({
-                              ...dependency,
-                              ecosystem: manifest.ecosystem,
-                              manifest_path: manifest.path,
-                            })),
-                            manifest.dependencies.some(
-                              dependency =>
-                                !selectedRepoWatchedMap.get(
-                                  `${manifest.ecosystem}:${manifest.path}:${dependency.package_name}`
-                                )
-                            )
-                          )
-                        }
+          {/* 解析预览 */}
+          {preview ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-2">
+                    <CardTitle className="text-base truncate">{preview.source.full_name}</CardTitle>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" asChild>
+                      <a
+                        href={preview.source.html_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="打开仓库"
                       >
-                        {manifest.dependencies.some(
-                          dependency =>
-                            !selectedRepoWatchedMap.get(
-                              `${manifest.ecosystem}:${manifest.path}:${dependency.package_name}`
-                            )
-                        )
-                          ? '全选'
-                          : '取消全选'}
-                      </Button>
-                    </div>
-                    <div className="grid gap-2">
-                      {manifest.dependencies.map(dependency => {
-                        const key = `${manifest.ecosystem}:${manifest.path}:${dependency.package_name}`
-                        const watchedPackage = selectedRepoWatchedMap.get(key)
-
-                        return (
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <Button size="sm" onClick={() => void handleSave()} loading={saving}>
+                      <CheckSquare className="h-4 w-4" />
+                      保存 ({selectedCount})
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => toggleAll(true)}
+                      aria-label="全选"
+                      title="全选"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => toggleAll(false)}
+                      aria-label="取消全选"
+                      title="取消全选"
+                    >
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <CardDescription className="truncate">
+                  {preview.source.description || '暂无仓库描述'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {Object.entries(groupedDependencies).map(([groupKey, items]) => {
+                  const selectedCount = items.filter(item => item.selected).length
+                  return (
+                    <div key={groupKey} className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          {items[0]?.ecosystem}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {items[0]?.manifest_path}
+                        </Badge>
+                        <span>
+                          {selectedCount}/{items.length}
+                        </span>
+                      </div>
+                      <div className="grid gap-1.5">
+                        {items.map(item => (
                           <label
-                            key={key}
-                            className="flex items-start gap-3 rounded-lg border px-3 py-2"
+                            key={`${item.ecosystem}-${item.package_name}`}
+                            className="flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-muted/50"
                           >
                             <input
                               type="checkbox"
-                              checked={!!watchedPackage}
-                              disabled={repoSettingsActionKey === key}
-                              onChange={() =>
-                                void handleToggleRepoSettingPackage(
-                                  {
-                                    ...dependency,
-                                    ecosystem: manifest.ecosystem,
-                                    manifest_path: manifest.path,
-                                    selected: !!watchedPackage,
-                                  },
-                                  watchedPackage
-                                )
-                              }
+                              checked={item.selected}
+                              onChange={event => handleToggleDependency(item, event.target.checked)}
+                              className="accent-primary"
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">{dependency.package_name}</span>
+                              <div className="truncate text-sm font-medium">
+                                {item.package_name}
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                当前约束：{dependency.current_version_constraint || '未声明'} ·
-                                当前基线：
-                                {dependency.normalized_current_version || '未知'} · 分组：
-                                {dependency.dependency_group || 'dependencies'}
+                              <div className="truncate text-xs text-muted-foreground">
+                                {item.current_version_constraint || '未声明'}
+                                {item.dependency_group ? ` · ${item.dependency_group}` : ''}
                               </div>
                             </div>
                           </label>
-                        )
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center text-sm text-muted-foreground">暂无仓库依赖数据</div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            {loadingList ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                正在加载关注列表...
-              </div>
+                  )
+                })}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={resetAddPanel}>
+                    取消
+                  </Button>
+                  <Button size="sm" onClick={() => void handleSave()} loading={saving}>
+                    <CheckSquare className="h-4 w-4" />
+                    保存 ({selectedCount})
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* 包列表 */}
+          {watchedPackages.length > 0 ? (
+            loadingList ? (
+              <Card>
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                  正在加载关注列表...
+                </CardContent>
+              </Card>
             ) : filteredWatchedPackages.length === 0 ? (
-              <EmptyState
-                icon={<FolderGit2 className="h-10 w-10" />}
-                title="当前筛选条件下没有结果"
-                description="你可以切换仓库范围、更新类型，或者继续添加新的仓库依赖。"
-              />
+              <Card>
+                <CardContent className="py-12">
+                  <EmptyState
+                    icon={<FolderGit2 className="h-8 w-8" />}
+                    title="当前筛选条件下没有结果"
+                    description="切换仓库范围或更新类型，或添加新的仓库依赖。"
+                  />
+                </CardContent>
+              </Card>
             ) : selectedRepoKey !== 'all' ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(groupedWatchedPackages).map(([repoKey, items]) => (
                   <Card key={repoKey} className="border-dashed">
-                    <CardHeader>
-                      <CardTitle className="text-base">
-                        {repoKey === 'no-repo' ? '无仓库' : repoKey}
-                      </CardTitle>
-                      <CardDescription>{items.length} 个已关注依赖</CardDescription>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">
+                          {repoKey === 'no-repo' ? '无仓库' : repoKey}
+                        </CardTitle>
+                        <span className="text-xs text-muted-foreground">{items.length} 个依赖</span>
+                      </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">{items.map(renderPackageCard)}</CardContent>
+                    <CardContent className="space-y-2">{items.map(renderPackageCard)}</CardContent>
                   </Card>
                 ))}
               </div>
             ) : (
-              <div className="space-y-3">{filteredWatchedPackages.map(renderPackageCard)}</div>
-            )}
-          </CardContent>
-        </Card>
+              <div className="space-y-2">{filteredWatchedPackages.map(renderPackageCard)}</div>
+            )
+          ) : null}
+        </>
+      ) : (
+        /* 仓库设置视图 */
+        <>
+          {/* 仓库选择 */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">选择仓库</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <select
+                className="border-input bg-background w-full h-9 rounded-md border px-3 text-sm"
+                value={selectedRepoKey}
+                onChange={event => setSelectedRepoKey(event.target.value)}
+              >
+                <option value="">选择一个仓库</option>
+                {repoOptions
+                  .filter(item => item !== 'all' && item !== 'no-repo')
+                  .map(item => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+              </select>
+            </CardContent>
+          </Card>
+
+          {/* 仓库设置内容 */}
+          {selectedRepoSample && selectedRepoKey !== 'all' ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base truncate">
+                      {repoLabelOf(selectedRepoSample)}
+                    </CardTitle>
+                    {selectedRepoSample.source_url ? (
+                      <a
+                        href={selectedRepoSample.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-muted-foreground flex items-center gap-1 text-xs transition-colors hover:text-foreground"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {selectedRepoSample.source_url}
+                      </a>
+                    ) : null}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={repoSettingsActionKey === 'toggle-all'}
+                    onClick={() =>
+                      void handleToggleAllRepoSettings(
+                        repoSettingsPreview?.manifests.flatMap(manifest =>
+                          manifest.dependencies.map(dep => ({
+                            ...dep,
+                            ecosystem: manifest.ecosystem,
+                            manifest_path: manifest.path,
+                          }))
+                        ) ?? [],
+                        !selectedRepoPackages.every(pkg =>
+                          repoSettingsPreview?.manifests.some(manifest =>
+                            manifest.dependencies.some(
+                              dep =>
+                                pkg.ecosystem === manifest.ecosystem &&
+                                pkg.manifest_path === manifest.path &&
+                                pkg.package_name === dep.package_name
+                            )
+                          )
+                        )
+                      )
+                    }
+                  >
+                    {selectedRepoPackages.length === 0 ? '全选' : '取消全选'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `确认删除「${selectedRepoKey}」下的所有依赖关注（共 ${selectedRepoPackages.length} 个）？`
+                        )
+                      ) {
+                        void handleDeleteRepo()
+                      }
+                    }}
+                    title="删除仓库"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {repoSettingsPreview ? (
+                  repoSettingsPreview.manifests.map(manifest => (
+                    <div key={`${manifest.ecosystem}:${manifest.path}`} className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          {manifest.ecosystem}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {manifest.path}
+                        </Badge>
+                        <span>
+                          {
+                            manifest.dependencies.filter(dep =>
+                              selectedRepoWatchedMap.has(
+                                `${manifest.ecosystem}:${manifest.path}:${dep.package_name}`
+                              )
+                            ).length
+                          }
+                          /{manifest.dependencies.length} 个包已关注
+                        </span>
+                      </div>
+                      <div className="grid gap-1">
+                        {manifest.dependencies.map(dep => {
+                          const key = `${manifest.ecosystem}:${manifest.path}:${dep.package_name}`
+                          const watched = selectedRepoWatchedMap.get(key)
+
+                          return (
+                            <label
+                              key={key}
+                              className="flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-muted/50"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={!!watched}
+                                disabled={repoSettingsActionKey === key}
+                                onChange={() =>
+                                  void handleToggleRepoSettingPackage(
+                                    {
+                                      ...dep,
+                                      ecosystem: manifest.ecosystem,
+                                      manifest_path: manifest.path,
+                                      selected: !!watched,
+                                    },
+                                    watched
+                                  )
+                                }
+                                className="accent-primary"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-medium">
+                                  {dep.package_name}
+                                </div>
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {dep.current_version_constraint || '未声明'}
+                                  {dep.dependency_group ? ` · ${dep.dependency_group}` : ''}
+                                </div>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    暂无仓库依赖数据
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </>
       )}
     </div>
   )

@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import type { ComponentType } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ChevronDown, Plus, ArrowLeft, Settings } from 'lucide-react'
 import { tools } from './tools'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { PageContainer } from '@/components/layout'
@@ -140,6 +142,10 @@ const useToolCategories = (
 export default function ToolPage() {
   const { filteredTools } = useToolSearch()
   const { activeTab, setActiveTab, handleToolSelect } = useToolSelection()
+  const [showAddPanel, setShowAddPanel] = useState(false)
+  const [repoWatchToolView, setRepoWatchToolView] = useState<'packages' | 'repo-settings'>(
+    'packages'
+  )
 
   // 根据 ID 获取当前活动工具
   const activeTool = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab])
@@ -161,8 +167,19 @@ export default function ToolPage() {
     }
   }, [filteredTools, activeTab, setActiveTab])
 
+  // 切换工具时重置状态 - 使用 queueMicrotask 避免 ESLint set-state-in-effect 规则
+  useEffect(() => {
+    if (activeTab !== 'repo-watch') {
+      queueMicrotask(() => {
+        setShowAddPanel(false)
+        setRepoWatchToolView('packages')
+      })
+    }
+  }, [activeTab])
+
   // 动态渲染组件
-  const ActiveComponent = activeTool?.component
+
+  const ActiveComponent = activeTool?.component as ComponentType<any> | undefined
 
   return (
     <ProtectedRoute>
@@ -187,6 +204,42 @@ export default function ToolPage() {
                       />
                     </button>
                     <h1 className="text-2xl font-bold tracking-tight">{activeTool.title}</h1>
+                    {activeTab === 'repo-watch' && (
+                      <div className="ml-auto flex items-center gap-2">
+                        <div className={repoWatchToolView === 'packages' ? undefined : 'hidden'}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRepoWatchToolView('repo-settings')}
+                          >
+                            <Settings className="h-4 w-4" />
+                            设置
+                          </Button>
+                        </div>
+                        <div className={repoWatchToolView === 'packages' ? undefined : 'hidden'}>
+                          <Button
+                            size="sm"
+                            variant={showAddPanel ? 'outline' : 'default'}
+                            onClick={() => setShowAddPanel(current => !current)}
+                          >
+                            <Plus className="h-4 w-4" />
+                            添加仓库
+                          </Button>
+                        </div>
+                        <div
+                          className={repoWatchToolView === 'repo-settings' ? undefined : 'hidden'}
+                        >
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRepoWatchToolView('packages')}
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                            返回列表
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <p className="text-muted-foreground">{activeTool.description}</p>
                   {isExpanded && (
@@ -242,7 +295,12 @@ export default function ToolPage() {
 
                 {/* 工具内容区域 */}
                 <div className="min-h-[300px]">
-                  <ActiveComponent />
+                  <ActiveComponent
+                    showAddPanel={showAddPanel}
+                    setShowAddPanel={setShowAddPanel}
+                    toolView={repoWatchToolView}
+                    setToolView={setRepoWatchToolView}
+                  />
                 </div>
               </div>
             ) : (
