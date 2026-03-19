@@ -64,15 +64,6 @@ function TodoItemInner({
     >
       <button
         type="button"
-        className="touch-none p-1 -ml-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground outline-none rounded"
-        aria-label="拖动排序"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
         onClick={onToggle}
         className="shrink-0 p-0.5 rounded-full text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         aria-label={isCompleted ? '标记未完成' : '标记完成'}
@@ -110,6 +101,15 @@ function TodoItemInner({
           </button>
         )}
       </div>
+      <button
+        type="button"
+        className="touch-none p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground outline-none rounded"
+        aria-label="拖动排序"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
     </div>
   )
 }
