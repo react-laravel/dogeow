@@ -626,20 +626,20 @@ function MiniMaxPanel({
         </div>
       )}
 
-      {/* 套餐到期时间 - 醒目卡片 */}
+      {/* 套餐到期时间 - 单行 */}
       {subscribeEndStr !== '—' && (
-        <div className="rounded-2xl border bg-muted/30 p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-xs text-muted-foreground">
-                {detailData?.current_subscribe?.current_subscribe_title ?? '套餐到期时间'}
-              </div>
-              <div className="mt-0.5 text-base font-semibold sm:text-lg">{subscribeEndStr}</div>
+        <div className="rounded-xl border bg-muted/30 p-3">
+          <div className="flex items-baseline justify-between gap-x-1.5">
+            <div className="flex flex-wrap items-baseline gap-x-1.5">
+              <span className="text-muted-foreground text-xs">
+                {detailData?.current_subscribe?.current_subscribe_title ?? '套餐'}
+              </span>
+              <span className="text-muted-foreground text-xs">{subscribeEndStr}</span>
             </div>
             {subscribeDaysLeft !== null && (
               <span
                 className={cn(
-                  'rounded-full px-3 py-1 text-sm font-medium',
+                  'rounded-full px-2.5 py-0.5 text-xs font-medium',
                   subscribeDaysLeft <= 3
                     ? 'text-destructive'
                     : subscribeDaysLeft <= 7
