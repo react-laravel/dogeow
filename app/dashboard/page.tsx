@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Calendar,
-  ChevronDown,
   CreditCard,
   FileText,
   Globe,
   MapPin,
+  Menu,
   Monitor,
   RefreshCw,
   Smartphone,
@@ -19,6 +19,7 @@ import { PageContainer, PageTitle } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/ui/loading-state'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
@@ -65,28 +66,42 @@ interface DashboardCardProps {
   className?: string
 }
 
-function AccordionSection({
-  defaultOpen = false,
-  icon: Icon,
-  title,
-  children,
-}: {
-  defaultOpen?: boolean
+type DashboardSection = 'location' | 'logs' | 'minimax'
+
+const NAV_ITEMS: Array<{
+  key: DashboardSection
   icon: LucideIcon
-  title: string
-  children: React.ReactNode
+  label: string
+}> = [
+  { key: 'location', icon: MapPin, label: '我的位置' },
+  { key: 'logs', icon: FileText, label: 'Laravel 日志' },
+  { key: 'minimax', icon: CreditCard, label: 'MiniMax 订阅' },
+]
+
+function DashboardNavItem({
+  icon: Icon,
+  label,
+  active,
+  onSelect,
+}: {
+  icon: LucideIcon
+  label: string
+  active?: boolean
+  onSelect: () => void
 }) {
   return (
-    <details className="group rounded-2xl border bg-background [&_summary::-webkit-details-marker]:hidden">
-      <summary className="flex cursor-pointer list-none items-center gap-3 p-4 select-none">
-        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className="flex-1 text-sm font-medium">{title}</span>
-        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-      </summary>
-      <div className="border-t px-4 pb-4 pt-3">{children}</div>
-    </details>
+    <button
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+        active
+          ? 'bg-primary/10 text-primary font-medium'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </button>
   )
 }
 
@@ -116,35 +131,64 @@ function DashboardCard({
 export default function Dashboard() {
   const { isAuthenticated } = useAuthStore()
   const isAdmin = useMemo(() => isAdminSync(), [])
+  const [activeSection, setActiveSection] = useState<DashboardSection>('location')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (!isAuthenticated) {
     return <div className="text-muted-foreground p-6">正在加载用户信息...</div>
   }
 
+  const visibleNavItems = NAV_ITEMS.filter(item => item.key === 'location' || isAdmin)
+
+  const activeNavLabel = visibleNavItems.find(n => n.key === activeSection)?.label ?? '仪表盘'
+
+  const activeContent = (() => {
+    switch (activeSection) {
+      case 'location':
+        return <LocationPanel />
+      case 'logs':
+        return <LogPanel />
+      case 'minimax':
+        return <MiniMaxPanel />
+    }
+  })()
+
   return (
     <ProtectedRoute>
       <PageContainer maxWidth="6xl" className="mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <header className="mb-6 space-y-1 sm:mb-8">
-          <PageTitle className="text-2xl sm:text-3xl">仪表盘</PageTitle>
+        {/* 顶部栏 */}
+        <header className="mb-6 flex items-center gap-3">
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-56 p-0">
+              <SheetHeader className="border-b p-4">
+                <SheetTitle className="text-base">仪表盘</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 p-3">
+                {visibleNavItems.map(item => (
+                  <DashboardNavItem
+                    key={item.key}
+                    icon={item.icon}
+                    label={item.label}
+                    active={activeSection === item.key}
+                    onSelect={() => {
+                      setActiveSection(item.key)
+                      setSidebarOpen(false)
+                    }}
+                  />
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+          <PageTitle className="text-2xl sm:text-3xl">{activeNavLabel}</PageTitle>
         </header>
 
-        <div className="mx-auto max-w-5xl space-y-2">
-          <AccordionSection defaultOpen icon={MapPin} title="我的位置">
-            <LocationPanel />
-          </AccordionSection>
-
-          {isAdmin && (
-            <AccordionSection icon={FileText} title="Laravel 日志">
-              <LogPanel />
-            </AccordionSection>
-          )}
-
-          {isAdmin && (
-            <AccordionSection icon={CreditCard} title="MiniMax 订阅">
-              <MiniMaxPanel />
-            </AccordionSection>
-          )}
-        </div>
+        {/* 内容区 */}
+        <div className="mx-auto max-w-5xl">{activeContent}</div>
       </PageContainer>
     </ProtectedRoute>
   )
