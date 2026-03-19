@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { Clock, Copy, Check } from 'lucide-react'
+import { Copy, Check } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -15,7 +15,6 @@ interface TimestampToDateTabProps {
   copyStates: { [k in CopyType]: boolean }
   onTimestampChange: (value: string) => void
   onDateFormatChange: (value: string) => void
-  onConvert: () => void
   onUseCurrent: () => void
   onCopy: (text: string, type: CopyType) => void
 }
@@ -28,7 +27,6 @@ export const TimestampToDateTab = memo<TimestampToDateTabProps>(
     copyStates,
     onTimestampChange,
     onDateFormatChange,
-    onConvert,
     onUseCurrent,
     onCopy,
   }) => {
@@ -47,7 +45,6 @@ export const TimestampToDateTab = memo<TimestampToDateTabProps>(
                   onChange={e => onTimestampChange(e.target.value)}
                   placeholder="输入时间戳（支持秒级和毫秒级）"
                   className="flex-1"
-                  onKeyDown={e => e.key === 'Enter' && onConvert()}
                 />
                 <Button onClick={onUseCurrent} variant="outline" className="whitespace-nowrap">
                   使用当前
@@ -67,11 +64,7 @@ export const TimestampToDateTab = memo<TimestampToDateTabProps>(
               />
             </div>
 
-            <Button onClick={onConvert} className="h-9 w-full" disabled={!timestamp.trim()}>
-              转换
-            </Button>
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="datetime" className="text-sm font-medium">
                 转换结果
               </Label>
@@ -81,7 +74,7 @@ export const TimestampToDateTab = memo<TimestampToDateTabProps>(
                   readOnly
                   value={dateTime}
                   className="bg-muted/40 rounded-r-none"
-                  placeholder="转换结果将显示在这里"
+                  placeholder="输入时间戳自动转换"
                 />
                 <Button
                   variant="outline"
