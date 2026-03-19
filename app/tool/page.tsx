@@ -69,15 +69,12 @@ const useToolSelection = (initialToolId: string = 'time-converter') => {
 
   const handleToolSelect = useCallback(
     (toolId: string) => {
-      const tool = tools.find(t => t.id === toolId)
-      if (tool?.route) {
+      if (tools.some(t => t.id === toolId)) {
         isInternalChange.current = true
-        router.push(tool.route)
-      } else {
-        setActiveTab(toolId)
+        router.push(`${pathname}?tool=${toolId}`)
       }
     },
-    [router]
+    [router, pathname]
   )
 
   // 使用 usePathname 检测路由变化
@@ -244,7 +241,7 @@ export default function ToolPage() {
                 </div>
 
                 {/* 工具内容区域 */}
-                <div className="min-h-[600px]">
+                <div className="min-h-[300px]">
                   <ActiveComponent />
                 </div>
               </div>

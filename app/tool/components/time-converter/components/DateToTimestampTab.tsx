@@ -30,13 +30,13 @@ export const DateToTimestampTab = memo<DateToTimestampTabProps>(
   }) => {
     return (
       <Card className="border-border/60 bg-background/80 shadow-sm">
-        <CardContent className="space-y-5 pt-5">
-          <div className="grid gap-4">
-            <div className="space-y-2">
+        <CardContent className="space-y-3 pt-4">
+          <div className="grid gap-3">
+            <div className="space-y-1.5">
               <Label htmlFor="input-datetime" className="text-sm font-medium">
                 日期时间
               </Label>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <Input
                   id="input-datetime"
                   placeholder="yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss"
@@ -51,11 +51,11 @@ export const DateToTimestampTab = memo<DateToTimestampTabProps>(
               </div>
             </div>
 
-            <Button onClick={onConvert} className="h-10 w-full" disabled={!inputDateTime.trim()}>
+            <Button onClick={onConvert} className="h-9 w-full" disabled={!inputDateTime.trim()}>
               转换
             </Button>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="output-timestamp" className="text-sm font-medium">
                 时间戳结果（秒）
               </Label>
