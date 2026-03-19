@@ -707,7 +707,7 @@ function MiniMaxPanel({
           </div>
 
           {/* Token 消耗 */}
-          {billingData && billingRecords.length > 0 ? (
+          {billingData && billingRecords.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border bg-muted/30 p-3 text-center">
                 <div className="text-muted-foreground text-xs">近7天 Token</div>
@@ -718,17 +718,6 @@ function MiniMaxPanel({
               <div className="rounded-xl border bg-muted/30 p-3 text-center">
                 <div className="text-muted-foreground text-xs">数据截至</div>
                 <div className="text-primary mt-1 text-base font-bold">{lastRecordDate ?? '—'}</div>
-              </div>
-              <div className="col-span-2 rounded-xl border bg-muted/30 p-3 text-center sm:col-span-1">
-                <div className="text-muted-foreground text-xs">支持模型数</div>
-                <div className="text-primary mt-1 text-base font-bold">{models.length}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-              <div className="rounded-xl border bg-muted/30 p-3 text-center">
-                <div className="text-muted-foreground text-xs">支持模型数</div>
-                <div className="text-primary mt-1 text-base font-bold">{models.length}</div>
               </div>
             </div>
           )}
@@ -752,7 +741,9 @@ function MiniMaxPanel({
           {/* 模型列表 */}
           {models.length > 0 && (
             <div>
-              <div className="text-muted-foreground mb-2 text-xs font-medium">支持的模型</div>
+              <div className="text-muted-foreground mb-2 text-xs font-medium">
+                支持的模型 ({models.length})
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {models.map(m => (
                   <span
