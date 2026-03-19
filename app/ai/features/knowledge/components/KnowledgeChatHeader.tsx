@@ -27,12 +27,15 @@ interface KnowledgeChatHeaderProps {
   onSearchMethodChange: (value: SearchMethod) => void
   model?: string
   onModelChange?: (value: string) => void
+  provider?: 'ollama' | 'minimax'
+  onProviderChange?: (value: 'ollama' | 'minimax') => void
   onClear: () => void
   onClose?: () => void
   hideUseContext?: boolean
   hideAiLink?: boolean
   hideSearchMethod?: boolean
   hideModel?: boolean
+  hideProvider?: boolean
   hideTitle?: boolean
   hideClear?: boolean
 }
@@ -49,12 +52,15 @@ export function KnowledgeChatHeader({
   onSearchMethodChange,
   model,
   onModelChange,
+  provider,
+  onProviderChange,
   onClear,
   onClose,
   hideUseContext = false,
   hideAiLink = false,
   hideSearchMethod = false,
   hideModel = false,
+  hideProvider = false,
   hideTitle = false,
   hideClear = false,
 }: KnowledgeChatHeaderProps) {
@@ -73,6 +79,22 @@ export function KnowledgeChatHeader({
       )}
 
       <div className="flex items-center gap-4">
+        {!hideProvider && provider && onProviderChange && (
+          <div className="flex items-center gap-2">
+            <Label htmlFor="provider" className="text-sm">
+              AI:
+            </Label>
+            <Select value={provider} onValueChange={onProviderChange} disabled={isLoading}>
+              <SelectTrigger id="provider" className="h-8 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ollama">Ollama (本地)</SelectItem>
+                <SelectItem value="minimax">MiniMax (云端)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {variant === 'page' && !hideAiLink && (
           <Button variant="ghost" size="sm" asChild>
             <Link href="/ai" className="flex items-center gap-2">

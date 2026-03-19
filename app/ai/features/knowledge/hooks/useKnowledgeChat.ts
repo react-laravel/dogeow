@@ -27,6 +27,8 @@ interface UseKnowledgeChatReturn {
   setSearchMethod: (value: SearchMethod) => void
   model: string
   setModel: (value: string) => void
+  provider: 'ollama' | 'minimax'
+  setProvider: (value: 'ollama' | 'minimax') => void
   stop: () => void
   handleSend: () => void
   handleClear: () => void
@@ -42,6 +44,14 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
   const [isLoading, setIsLoading] = useState(false)
   const [useContext, setUseContext] = useState(true)
   const [searchMethod, setSearchMethod] = useState<SearchMethod>('rag')
+  const [provider, setProvider] = useState<'ollama' | 'minimax'>(() => {
+    // 从 localStorage 读取，默认使用 ollama
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('knowledge_provider')
+      return (saved as 'ollama' | 'minimax') || 'ollama'
+    }
+    return 'ollama'
+  })
   const [model, setModel] = useState<string>(() => {
     // 从 localStorage 读取，默认使用 qwen3:0.6b；选 embedding 时 API 会用默认对话模型
     if (typeof window !== 'undefined') {
@@ -120,7 +130,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
 
     try {
       // 检索/embedding 模型只发当前一条用户消息，减少请求体
-      const messagesToSend = isEmbeddingModel(model) ? [userMessage] : newMessages
+      const messagesToSend =
+        provider === 'minimax' ? newMessages : isEmbeddingModel(model) ? [userMessage] : newMessages
       const response = await fetch('/api/knowledge/chat', {
         method: 'POST',
         headers: {
@@ -131,6 +142,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
           useContext,
           searchMethod,
           model,
+          provider,
         }),
         signal: abortController.signal,
       })
@@ -266,6 +278,13 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     }
   }, [model])
 
+  // 保存 provider 到 localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('knowledge_provider', provider)
+    }
+  }, [provider])
+
   return {
     prompt,
     setPrompt,
@@ -280,6 +299,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     setSearchMethod,
     model,
     setModel,
+    provider,
+    setProvider,
     stop,
     handleSend,
     handleClear,
