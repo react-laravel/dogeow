@@ -48,6 +48,7 @@ export interface WatchedPackage {
   watch_level: WatchLevel
   latest_update_type?: WatchLevel | null
   matches_preference: boolean
+  publisher_display_name?: string | null
   registry_url?: string | null
   last_checked_at?: string | null
   last_error?: string | null
