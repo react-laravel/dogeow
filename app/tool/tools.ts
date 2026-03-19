@@ -1,5 +1,6 @@
 import { ComponentType } from 'react'
 import TimeConverter from './components/TimeConverter'
+import WorldClock from './components/WorldClock'
 import Base64Image from './components/Base64Image'
 import TextDiff from './components/TextDiff'
 import ToolPlaceholder from './components/ToolPlaceholder'
@@ -44,25 +45,9 @@ export const tools: Tool[] = [
     id: 'world-clock',
     title: '世界时钟',
     description: '查看多个城市的当前时间',
-    component: ToolPlaceholder,
+    component: WorldClock,
     category: '日期时间',
     tags: ['时区', '城市', '时间'],
-  },
-  {
-    id: 'countdown',
-    title: '倒计时',
-    description: '设置目标时间并倒计时提醒',
-    component: ToolPlaceholder,
-    category: '日期时间',
-    tags: ['倒计时', '提醒', '时间'],
-  },
-  {
-    id: 'timezone-converter',
-    title: '时区转换',
-    description: '不同地区时间相互换算',
-    component: ToolPlaceholder,
-    category: '日期时间',
-    tags: ['时区', '换算', '时间'],
   },
   {
     id: 'word-counter',
