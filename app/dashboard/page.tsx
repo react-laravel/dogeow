@@ -714,11 +714,17 @@ function MiniMaxPanel({
 
           {/* Token 消耗 */}
           {billingData && billingRecords.length > 0 && (
-            <div className="rounded-xl border bg-muted/30 p-3 text-center">
-              <div className="text-muted-foreground text-xs">近7天 Token</div>
-              <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-1.5 gap-y-1">
-                <span className="text-primary text-base font-bold">{fmtTokens(weeklyTokens)}</span>
-                <span className="text-muted-foreground text-xs">截至 {lastRecordDate ?? '—'}</span>
+            <div className="rounded-xl border bg-muted/30 p-3">
+              <div className="flex items-baseline justify-between gap-x-1.5">
+                <span className="text-muted-foreground text-xs">近7天 Token</span>
+                <div className="flex items-baseline gap-x-1.5">
+                  <span className="text-primary text-base font-bold">
+                    {fmtTokens(weeklyTokens)}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    截至 {lastRecordDate ?? '—'}
+                  </span>
+                </div>
               </div>
             </div>
           )}
