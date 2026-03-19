@@ -25,14 +25,21 @@ interface PlayerState {
 }
 
 const ASSET_BASE = process.env.NEXT_PUBLIC_ASSET_BASE_URL ?? ''
-const CDN_PREFIX = `${ASSET_BASE}/moon/`
+const CDN_PREFIX = `${ASSET_BASE}/mooncake/`
 
 const DICE_COUNT = 6
 
 const generateDice = () =>
   Array.from({ length: DICE_COUNT }, () => Math.floor(Math.random() * 6) + 1)
 
-export default function MoonDiceGame() {
+interface MoonDiceGameProps {
+  showAddPanel?: boolean
+  setShowAddPanel?: (v: boolean) => void
+  toolView?: string
+  setToolView?: (v: string) => void
+}
+
+export default function MoonDiceGame(_props: MoonDiceGameProps) {
   const [currentPlayer, setCurrentPlayer] = useState<Player>('A')
   const [playerA, setPlayerA] = useState<PlayerState>({
     name: '玩家一',
@@ -161,16 +168,16 @@ export default function MoonDiceGame() {
   }
 
   const renderDieImage = (value: number | undefined, index: number) => {
-    let fileName = '1.png'
+    let fileName = '1.jpg'
 
     if (rolling) {
       if (value) {
         fileName = `${value}.gif`
       } else {
-        fileName = 'none.gif'
+        fileName = '1.jpg'
       }
     } else if (value) {
-      fileName = `${value}.gif`
+      fileName = `${value}.jpg`
     }
 
     const src = `${CDN_PREFIX}${fileName}`
