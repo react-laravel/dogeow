@@ -5,6 +5,13 @@
  */
 
 import { type SupportedLanguage } from './translations'
+import {
+  isSupportedLanguage,
+  getSupportedLanguagesByPrefix,
+  normalizeLanguageCode,
+  detectLanguageFromBrowser,
+} from './browser-language-utils'
+import { getLanguageFromTimezone } from './timezone-map'
 
 // 常量配置
 export const DETECTION_CONFIG = {
@@ -301,7 +308,7 @@ export class LanguageDetectionService {
         this.logger.log('debug', `处理浏览器语言: ${browserLang}`)
 
         // 直接匹配
-        if (this.isSupportedLanguage(browserLang)) {
+        if (isSupportedLanguage(browserLang)) {
           this.logger.log('debug', `✅ 直接匹配: ${browserLang}`)
           return {
             language: browserLang as SupportedLanguage,
@@ -315,7 +322,7 @@ export class LanguageDetectionService {
         const [langCode, region] = browserLang.split('-', 2)
         this.logger.log('debug', `语言代码: ${langCode}, 地区: ${region || '无'}`)
 
-        const matchingLangs = this.getSupportedLanguagesByPrefix(langCode)
+        const matchingLangs = getSupportedLanguagesByPrefix(langCode)
         if (matchingLangs.length > 0) {
           this.logger.log(
             'debug',
@@ -454,7 +461,7 @@ export class LanguageDetectionService {
 
       if (timezone) {
         this.logger.log('debug', `检测到时区: ${timezone}`)
-        const geoLanguage = this.getLanguageFromTimezone(timezone)
+        const geoLanguage = getLanguageFromTimezone(timezone)
 
         if (geoLanguage) {
           this.logger.log('debug', `✅ 通过时区推断语言: ${geoLanguage}`)
@@ -487,7 +494,7 @@ export class LanguageDetectionService {
 
       if (ipGeoData?.language) {
         this.logger.log('debug', 'IP地理位置数据:', ipGeoData)
-        const supportedLang = this.normalizeLanguageCode(ipGeoData.language)
+        const supportedLang = normalizeLanguageCode(ipGeoData.language)
 
         if (supportedLang) {
           this.logger.log('debug', `✅ IP地理位置推断语言: ${supportedLang}`)
@@ -583,7 +590,7 @@ export class LanguageDetectionService {
 
     try {
       const stored = localStorage.getItem('dogeow-language-preference')
-      if (stored && this.isSupportedLanguage(stored)) {
+      if (stored && isSupportedLanguage(stored)) {
         this.logger.log('debug', `✅ 找到已存储偏好: ${stored}`)
         return stored
       }
@@ -695,44 +702,6 @@ export class LanguageDetectionService {
     }
 
     return null
-  }
-
-  /**
-   * 检查语言是否被支持
-   */
-  private isSupportedLanguage(lang: string): lang is SupportedLanguage {
-    const supportedLanguages: SupportedLanguage[] = ['zh-CN', 'zh-TW', 'en', 'ja']
-    return supportedLanguages.includes(lang as SupportedLanguage)
-  }
-
-  /**
-   * 根据前缀获取支持的语言
-   */
-  private getSupportedLanguagesByPrefix(
-    prefix: string
-  ): Array<{ code: SupportedLanguage; name: string }> {
-    const supportedLanguages = [
-      { code: 'zh-CN' as SupportedLanguage, name: 'Chinese (Simplified)' },
-      { code: 'zh-TW' as SupportedLanguage, name: 'Chinese (Traditional)' },
-      { code: 'en' as SupportedLanguage, name: 'English' },
-      { code: 'ja' as SupportedLanguage, name: 'Japanese' },
-    ]
-
-    return supportedLanguages.filter(lang => lang.code.startsWith(prefix))
-  }
-
-  /**
-   * 规范化语言代码
-   */
-  private normalizeLanguageCode(languageCode: string): SupportedLanguage | null {
-    if (this.isSupportedLanguage(languageCode)) {
-      return languageCode
-    }
-
-    const langPrefix = languageCode.split('-')[0]
-    const matchedLang = this.getSupportedLanguagesByPrefix(langPrefix)
-
-    return matchedLang.length > 0 ? matchedLang[0].code : null
   }
 
   /**
