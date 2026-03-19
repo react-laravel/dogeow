@@ -679,6 +679,9 @@ function MiniMaxPanel({
               </span>
               <span className="text-xs text-muted-foreground">已用 {cyclePct}%</span>
             </div>
+            <div className="mt-1.5 text-center text-xs text-muted-foreground">
+              剩余 {fmtTime(subModel?.remains_time ?? 0)}
+            </div>
           </div>
 
           {/* 本周用量 - 突出显示 */}
@@ -704,6 +707,9 @@ function MiniMaxPanel({
               </span>
               <span className="text-xs text-muted-foreground">已用 {weekPct}%</span>
             </div>
+            <div className="mt-1.5 text-center text-xs text-muted-foreground">
+              剩余 {fmtTime(subModel?.weekly_remains_time ?? 0)}
+            </div>
           </div>
 
           {/* Token 消耗 */}
@@ -721,22 +727,6 @@ function MiniMaxPanel({
               </div>
             </div>
           )}
-
-          {/* 次要信息 */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border bg-muted/30 p-3 text-center">
-              <div className="text-muted-foreground text-xs">周期剩余时间</div>
-              <div className="text-primary mt-1 text-base font-bold">
-                {fmtTime(subModel?.remains_time ?? 0)}
-              </div>
-            </div>
-            <div className="rounded-xl border bg-muted/30 p-3 text-center">
-              <div className="text-muted-foreground text-xs">本周剩余时间</div>
-              <div className="text-primary mt-1 text-base font-bold">
-                {fmtTime(subModel?.weekly_remains_time ?? 0)}
-              </div>
-            </div>
-          </div>
 
           {/* 模型列表 */}
           {models.length > 0 && (
