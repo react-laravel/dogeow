@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useFilePreview } from './grid/hooks/useFilePreview'
 import { useGridViewActions } from '@/app/file/hooks/useGridViewActions'
 import { useFileEdit } from '@/app/file/hooks/useFileEdit'
+import { useMoveFiles } from '@/app/file/hooks/useFileOperations'
 import { FileGridItem } from './grid/components/FileGridItem'
 import { EditFileDialog } from './grid/components/EditFileDialog'
 import { FilePreviewDialog } from './grid/components/FilePreviewDialog'
@@ -20,6 +21,7 @@ export default function GridView({ files }: GridViewProps) {
     useFilePreview()
   const { getSWRKey, toggleSelection, handleItemClick, downloadFile, deleteFile } =
     useGridViewActions({ currentFolderId })
+  const { moveFiles } = useMoveFiles()
   const {
     selectedId: editingId,
     setEditingFile,
@@ -30,6 +32,54 @@ export default function GridView({ files }: GridViewProps) {
     updateFile,
     closeEditDialog,
   } = useFileEdit()
+
+  const [dragOverFolderId, setDragOverFolderId] = useState<number | null>(null)
+
+  const handleDragStart = useCallback((file: CloudFile, event: React.DragEvent) => {
+    console.log('DragStart - file:', file.id, file.name, 'is_folder:', file.is_folder)
+    event.dataTransfer.setData('text/plain', file.id.toString())
+    event.dataTransfer.effectAllowed = 'move'
+  }, [])
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }, [])
+
+  const handleDragEnter = useCallback((folderId: number) => {
+    setDragOverFolderId(folderId)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverFolderId(null)
+  }, [])
+
+  const handleDrop = useCallback(
+    async (targetFolder: CloudFile, event: React.DragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      setDragOverFolderId(null)
+
+      const fileId = parseInt(event.dataTransfer.getData('text/plain'), 10)
+      console.log('Drop event - fileId:', fileId, 'targetFolder:', targetFolder.id)
+
+      if (isNaN(fileId)) {
+        console.log('Invalid fileId, no action taken')
+        return
+      }
+
+      // 不能将文件夹移动到自身
+      if (fileId === targetFolder.id) {
+        console.log('Cannot move folder to itself')
+        return
+      }
+
+      console.log('Calling moveFiles with:', fileId, targetFolder.id)
+      // 移动文件到目标文件夹
+      await moveFiles([fileId], targetFolder.id)
+    },
+    [moveFiles]
+  )
 
   const handleItemClickWithPreview = (file: CloudFile) => {
     if (file.is_folder) {
@@ -49,20 +99,66 @@ export default function GridView({ files }: GridViewProps) {
     deleteFile(file)
   }
 
+  const handleFileDragOver = useCallback(
+    (folderId: number) => (event: React.DragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      event.dataTransfer.dropEffect = 'move'
+      handleDragEnter(folderId)
+    },
+    [handleDragEnter]
+  )
+
+  const handleFileDragLeave = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      // 只有当真正离开文件夹时才重置
+      const relatedTarget = event.relatedTarget as HTMLElement
+      if (!relatedTarget || !event.currentTarget.contains(relatedTarget)) {
+        handleDragLeave()
+      }
+    },
+    [handleDragLeave]
+  )
+
+  const handleFileDrop = useCallback(
+    (folder: CloudFile) => (event: React.DragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      handleDrop(folder, event)
+    },
+    [handleDrop]
+  )
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {files.map(file => (
-          <FileGridItem
+          <div
             key={file.id}
-            file={file}
-            isSelected={false}
-            onSelect={toggleSelection}
-            onClick={handleItemClickWithPreview}
-            onDownload={downloadFile}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+            onDragOver={file.is_folder ? handleFileDragOver(file.id) : undefined}
+            onDragEnter={file.is_folder ? () => handleDragEnter(file.id) : undefined}
+            onDragLeave={file.is_folder ? handleFileDragLeave : undefined}
+            onDrop={file.is_folder ? handleFileDrop(file) : undefined}
+            className={
+              file.is_folder && dragOverFolderId === file.id
+                ? 'ring-2 ring-primary ring-offset-2 rounded-lg'
+                : ''
+            }
+          >
+            <FileGridItem
+              key={file.id}
+              file={file}
+              isSelected={false}
+              onSelect={toggleSelection}
+              onClick={handleItemClickWithPreview}
+              onDownload={downloadFile}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onDragStart={handleDragStart}
+            />
+          </div>
         ))}
       </div>
 
