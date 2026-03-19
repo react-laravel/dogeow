@@ -177,18 +177,17 @@ function useMiniMaxSubscription() {
   }
 }
 
-function MiniMaxRefreshButton({
-  onRefresh,
-  isLoading,
-}: {
-  onRefresh: () => void
-  isLoading: boolean
-}) {
+function MiniMaxRefreshButton() {
+  const { isLoading, mutate } = useSWR<MiniMaxSubscriptionResponse>(
+    '/minimax/subscription',
+    url => apiRequest<MiniMaxSubscriptionResponse>(url, 'GET', undefined, { handleError: false }),
+    { refreshInterval: 60000 }
+  )
   return (
     <Button
       variant="ghost"
       size="sm"
-      onClick={onRefresh}
+      onClick={() => mutate()}
       disabled={isLoading}
       className="h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
     >
