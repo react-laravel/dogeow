@@ -164,7 +164,11 @@ export default function Dashboard() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-56 p-0">
+            <SheetContent
+              side="left"
+              className="w-56 p-0"
+              style={{ top: 'var(--app-header-height, 50px)' }}
+            >
               <SheetHeader className="border-b p-4">
                 <SheetTitle className="text-base">仪表盘</SheetTitle>
               </SheetHeader>
