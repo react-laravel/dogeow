@@ -1,6 +1,7 @@
 import React from 'react'
-import { User } from 'lucide-react'
+import { ImageIcon, User } from 'lucide-react'
 import Image from 'next/image'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { ChatMessage } from '../types'
 import { SimpleMarkdown } from './SimpleMarkdown'
 
@@ -13,6 +14,37 @@ export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, vari
   const isUser = message.role === 'user'
   const messageImages = message.images ?? []
   const hasImages = messageImages.length > 0
+
+  const imageNodes = messageImages.map((item, index) => {
+    const key = item.id ?? item.url ?? `placeholder-${index}`
+
+    if (item.isPlaceholder || !item.url) {
+      return (
+        <div
+          key={key}
+          className="border-border bg-background/60 relative h-24 w-24 overflow-hidden rounded-md border border-dashed"
+        >
+          <Skeleton className="h-full w-full rounded-none" />
+          <div className="text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <ImageIcon className="h-5 w-5" />
+            <span className="text-[11px]">生成中</span>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <Image
+        key={key}
+        src={item.url}
+        alt={`消息图片 ${index + 1}`}
+        width={128}
+        height={128}
+        unoptimized
+        className="h-24 w-24 rounded-md border object-cover"
+      />
+    )
+  })
 
   if (variant === 'dialog') {
     return (
@@ -28,17 +60,7 @@ export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, vari
           >
             {hasImages && (
               <div className={`flex flex-wrap gap-2 ${message.content ? 'mb-2' : ''}`}>
-                {messageImages.map((item, index) => (
-                  <Image
-                    key={`${item.url}-${index}`}
-                    src={item.url}
-                    alt={`消息图片 ${index + 1}`}
-                    width={128}
-                    height={128}
-                    unoptimized
-                    className="h-24 w-24 rounded-md border object-cover"
-                  />
-                ))}
+                {imageNodes}
               </div>
             )}
             {message.content && (
@@ -89,17 +111,7 @@ export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, vari
         >
           {hasImages && (
             <div className={`flex flex-wrap gap-2 ${message.content ? 'mb-2' : ''}`}>
-              {messageImages.map((item, index) => (
-                <Image
-                  key={`${item.url}-${index}`}
-                  src={item.url}
-                  alt={`消息图片 ${index + 1}`}
-                  width={128}
-                  height={128}
-                  unoptimized
-                  className="h-24 w-24 rounded-md border object-cover"
-                />
-              ))}
+              {imageNodes}
             </div>
           )}
           {message.content && (
