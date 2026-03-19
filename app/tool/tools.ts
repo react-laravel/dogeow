@@ -1,4 +1,6 @@
 import { ComponentType } from 'react'
+
+type AnyComponent = ComponentType<any>
 import TimeConverter from './components/TimeConverter'
 import WorldClock from './components/WorldClock'
 import Base64Image from './components/Base64Image'
@@ -15,7 +17,7 @@ export interface Tool {
   id: string
   title: string
   description: string
-  component: ComponentType
+  component: AnyComponent
   category: ToolCategory
   tags: string[]
   icon?: string
