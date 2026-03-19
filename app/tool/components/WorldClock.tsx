@@ -122,6 +122,13 @@ const WorldClockContent: React.FC = () => {
   const [cities, setCities] = useState<City[]>(loadSavedCities)
   const [search, setSearch] = useState('')
   const [showPicker, setShowPicker] = useState(false)
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     saveCities(cities)
@@ -161,7 +168,7 @@ const WorldClockContent: React.FC = () => {
             </span>
           </div>
           <div className="mt-1 font-mono text-3xl font-bold tracking-tight">
-            {formatTime(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone).timeStr}
+            {formatTime(now, Intl.DateTimeFormat().resolvedOptions().timeZone).timeStr}
           </div>
         </CardContent>
       </Card>
