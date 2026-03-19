@@ -149,21 +149,23 @@ interface MiniMaxBillingResponse {
 }
 
 // 共享 SWR hooks，两个组件使用相同缓存 key，mutate 自动同步
-function useMiniMaxSubscription() {
+function useMiniMaxSubscription(enabled = true) {
   const fetcher = async <T,>(url: string): Promise<T> =>
     apiRequest<T>(url, 'GET', undefined, { handleError: false }) as Promise<T>
 
-  const sub = useSWR<MiniMaxSubscriptionResponse>('/minimax/subscription', fetcher, {
-    refreshInterval: 60000,
-  })
-  const detail = useSWR<MiniMaxSubscriptionDetailResponse>(
-    '/minimax/subscription-detail',
+  const sub = useSWR<MiniMaxSubscriptionResponse>(
+    enabled ? '/minimax/subscription' : null,
     fetcher,
-    { revalidateOnFocus: false, refreshInterval: 60000 }
+    { refreshInterval: 30000 }
   )
-  const billing = useSWR<MiniMaxBillingResponse>('/minimax/billing', fetcher, {
-    revalidateOnFocus: false,
-    refreshInterval: 60000,
+  const detail = useSWR<MiniMaxSubscriptionDetailResponse>(
+    enabled ? '/minimax/subscription-detail' : null,
+    fetcher,
+    { revalidateOnFocus: true, refreshInterval: 30000 }
+  )
+  const billing = useSWR<MiniMaxBillingResponse>(enabled ? '/minimax/billing' : null, fetcher, {
+    revalidateOnFocus: true,
+    refreshInterval: 30000,
   })
 
   return {
@@ -182,7 +184,7 @@ function MiniMaxRefreshButton() {
   const { isLoading, mutate } = useSWR<MiniMaxSubscriptionResponse>(
     '/minimax/subscription',
     url => apiRequest<MiniMaxSubscriptionResponse>(url, 'GET', undefined, { handleError: false }),
-    { refreshInterval: 60000 }
+    { refreshInterval: 30000 }
   )
   return (
     <Button
@@ -237,8 +239,8 @@ export default function Dashboard() {
     router.push(`?${params.toString()}`, { scroll: false })
   }
 
-  // 共享 SWR hooks
-  const { sub, detail, billing } = useMiniMaxSubscription()
+  // 始终创建 hooks，但在非 minimax 区域时不启用
+  const { sub, detail, billing } = useMiniMaxSubscription(activeSection === 'minimax')
 
   if (!isAuthenticated) {
     return <div className="text-muted-foreground p-6">正在加载用户信息...</div>
