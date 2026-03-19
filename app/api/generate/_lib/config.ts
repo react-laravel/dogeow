@@ -21,7 +21,7 @@ export const GITHUB_MODEL = 'openai/gpt-5-mini'
 
 export const ANTHROPIC_BASE_URL =
   process.env.ANTHROPIC_BASE_URL ?? 'https://api.minimaxi.com/anthropic'
-export const ANTHROPIC_AUTH_TOKEN = process.env.ANTHROPIC_AUTH_TOKEN ?? ''
+export const MINIMAX_COMPAT_API_KEY = process.env.MINIMAX_TOKEN_API_KEY?.trim() ?? ''
 export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? 'MiniMax-M2.5-highspeed'
 
 export const ZHIPUAI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4'
@@ -54,11 +54,11 @@ export const generatePrompt = (option: GenerateOption, text: string, command?: s
 
 export const getAIProvider = (requestedProvider?: AIProvider): AIProvider => {
   if (requestedProvider === 'github' && GITHUB_PAT) return 'github'
-  if (requestedProvider === 'minimax' && ANTHROPIC_AUTH_TOKEN) return 'minimax'
+  if (requestedProvider === 'minimax' && MINIMAX_COMPAT_API_KEY) return 'minimax'
   if (requestedProvider === 'zhipuai' && ZHIPUAI_API_KEY) return 'zhipuai'
   if (requestedProvider === 'ollama') return 'ollama'
   if (GITHUB_PAT) return 'github'
-  if (ANTHROPIC_AUTH_TOKEN) return 'minimax'
+  if (MINIMAX_COMPAT_API_KEY) return 'minimax'
   return 'ollama'
 }
 
@@ -67,7 +67,7 @@ export const getProviderFallbackMessage = (provider: AIProvider): string => {
     return 'AI 服务暂时不可用，请检查后端 GITHUB_PAT 环境变量及网络'
   }
   if (provider === 'minimax') {
-    return 'AI 服务暂时不可用，请检查后端 ANTHROPIC_AUTH_TOKEN 环境变量及网络'
+    return 'AI 服务暂时不可用，请检查 MINIMAX_TOKEN_API_KEY 及网络'
   }
   if (provider === 'zhipuai') {
     return 'AI 服务暂时不可用，请检查后端 ZHIPUAI_API_KEY 环境变量及网络'

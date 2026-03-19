@@ -18,6 +18,7 @@ export const zh_CN = {
   'nav.ai': 'AI',
   'nav.game': '游戏',
   'nav.chat': '聊天',
+  'nav.roleplay': '角色对话',
   'nav.about': '关于',
   'nav.word': '单词',
 

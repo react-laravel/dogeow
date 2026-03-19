@@ -1,11 +1,11 @@
 import {
-  ANTHROPIC_AUTH_TOKEN,
   ANTHROPIC_BASE_URL,
   ANTHROPIC_MODEL,
   DEFAULT_MODEL,
   GITHUB_MODEL,
   GITHUB_MODELS_URL,
   GITHUB_PAT,
+  MINIMAX_COMPAT_API_KEY,
   OLLAMA_CHAT_URL,
   OLLAMA_GENERATE_URL,
   ZHIPUAI_API_KEY,
@@ -90,8 +90,8 @@ export const callMiniMaxAPI = async (
   messages: ChatMessage[],
   images?: string[]
 ): Promise<Response> => {
-  if (!ANTHROPIC_AUTH_TOKEN) {
-    throw new Error('MiniMax Token 未配置，请设置 ANTHROPIC_AUTH_TOKEN 环境变量')
+  if (!MINIMAX_COMPAT_API_KEY) {
+    throw new Error('MiniMax Token API Key 未配置，请设置 MINIMAX_TOKEN_API_KEY')
   }
 
   const hasImages = images && images.length > 0
@@ -156,7 +156,7 @@ export const callMiniMaxAPI = async (
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      Authorization: `Bearer ${ANTHROPIC_AUTH_TOKEN}`,
+      Authorization: `Bearer ${MINIMAX_COMPAT_API_KEY}`,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),

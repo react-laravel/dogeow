@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   MINIMAX_API_BASE_URL,
-  MINIMAX_API_KEY,
-  MINIMAX_API_HEADERS,
+  MINIMAX_TOKEN_API_HEADERS,
+  MINIMAX_TOKEN_API_KEY,
   MINIMAX_VIDEO_MODEL,
 } from '../_lib/config'
 
@@ -23,7 +23,7 @@ async function pollForVideo(taskId: string, model: string): Promise<string> {
 
     const statusRes = await fetch(
       `${MINIMAX_API_BASE_URL}/v1/query/video_generation?task_id=${taskId}`,
-      { headers: MINIMAX_API_HEADERS }
+      { headers: MINIMAX_TOKEN_API_HEADERS }
     )
     const statusData = await statusRes.json()
     const status = statusData?.status
@@ -37,7 +37,7 @@ async function pollForVideo(taskId: string, model: string): Promise<string> {
       if (!fileId) throw new Error('响应中缺少 file_id')
 
       const fileRes = await fetch(`${MINIMAX_API_BASE_URL}/v1/files/retrieve?file_id=${fileId}`, {
-        headers: MINIMAX_API_HEADERS,
+        headers: MINIMAX_TOKEN_API_HEADERS,
       })
       const fileData = await fileRes.json()
       const downloadUrl: string = fileData?.file?.download_url
@@ -50,8 +50,11 @@ async function pollForVideo(taskId: string, model: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  if (!MINIMAX_API_KEY) {
-    return NextResponse.json({ error: 'MiniMax API Key 未配置' }, { status: 500 })
+  if (!MINIMAX_TOKEN_API_KEY) {
+    return NextResponse.json(
+      { error: 'MiniMax Token API Key 未配置，请设置 MINIMAX_TOKEN_API_KEY' },
+      { status: 500 }
+    )
   }
 
   let body: VideoRequest
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${MINIMAX_API_BASE_URL}/v1/video_generation`, {
       method: 'POST',
       headers: {
-        ...MINIMAX_API_HEADERS,
+        ...MINIMAX_TOKEN_API_HEADERS,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),

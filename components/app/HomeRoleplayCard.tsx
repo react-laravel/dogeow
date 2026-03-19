@@ -176,11 +176,11 @@ export function HomeRoleplayCard() {
           <div className="space-y-2">
             <CardTitle className="flex items-center gap-2 text-xl">
               <Sparkles className="h-5 w-5 text-orange-500" />
-              首页角色对话卡
+              角色对话
             </CardTitle>
             <CardDescription className="max-w-3xl text-sm leading-6">
-              直接在首页体验 MiniMax `M2-her`。你可以同时设定 AI
-              角色、用户身份和场景，让它更像一段真正的角色扮演对话。
+              基于 MiniMax `M2-her` 的角色扮演对话面板。你可以同时设定 AI
+              角色、用户身份和场景，让它更像一段真正的剧情互动。
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={resetConversation} disabled={isLoading}>
