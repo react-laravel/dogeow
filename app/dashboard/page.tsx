@@ -105,6 +105,99 @@ function DashboardNavItem({
   )
 }
 
+interface MiniMaxModelRemain {
+  model_name: string
+  remains_time: number
+  current_interval_total_count: number
+  current_interval_usage_count: number
+  current_weekly_total_count: number
+  current_weekly_usage_count: number
+  weekly_remains_time: number
+  start_time: number
+  end_time: number
+  weekly_start_time: number
+  weekly_end_time: number
+}
+
+interface MiniMaxSubscriptionResponse {
+  model_remains: MiniMaxModelRemain[]
+  base_resp?: { status_code: number; status_msg: string }
+}
+
+interface MiniMaxSubscriptionDetailResponse {
+  current_subscribe?: {
+    current_subscribe_end_time?: string
+    current_subscribe_title?: string
+    current_credit_reload_time?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+interface MiniMaxBillingRecord {
+  consume_token: string | number
+  created_at: number
+  consume_time?: string
+  [key: string]: unknown
+}
+
+interface MiniMaxBillingResponse {
+  charge_records?: MiniMaxBillingRecord[]
+  total_cnt?: number
+  [key: string]: unknown
+}
+
+// 共享 SWR hooks，两个组件使用相同缓存 key，mutate 自动同步
+function useMiniMaxSubscription() {
+  const fetcher = async <T,>(url: string): Promise<T> =>
+    apiRequest<T>(url, 'GET', undefined, { handleError: false }) as Promise<T>
+
+  const sub = useSWR<MiniMaxSubscriptionResponse>('/minimax/subscription', fetcher, {
+    refreshInterval: 60000,
+  })
+  const detail = useSWR<MiniMaxSubscriptionDetailResponse>(
+    '/minimax/subscription-detail',
+    fetcher,
+    { revalidateOnFocus: false, refreshInterval: 60000 }
+  )
+  const billing = useSWR<MiniMaxBillingResponse>('/minimax/billing', fetcher, {
+    revalidateOnFocus: false,
+    refreshInterval: 60000,
+  })
+
+  return {
+    sub,
+    detail,
+    billing,
+    refresh: () => {
+      sub.mutate()
+      detail.mutate()
+      billing.mutate()
+    },
+  }
+}
+
+function MiniMaxRefreshButton({
+  onRefresh,
+  isLoading,
+}: {
+  onRefresh: () => void
+  isLoading: boolean
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onRefresh}
+      disabled={isLoading}
+      className="h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+    >
+      <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+      刷新
+    </Button>
+  )
+}
+
 function DashboardCard({
   title,
   description,
@@ -134,6 +227,9 @@ export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<DashboardSection>('location')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // 共享 SWR hooks
+  const { sub, detail, billing } = useMiniMaxSubscription()
+
   if (!isAuthenticated) {
     return <div className="text-muted-foreground p-6">正在加载用户信息...</div>
   }
@@ -149,7 +245,7 @@ export default function Dashboard() {
       case 'logs':
         return <LogPanel />
       case 'minimax':
-        return <MiniMaxPanel />
+        return <MiniMaxPanel sub={sub} detail={detail} billing={billing} />
     }
   })()
 
@@ -188,7 +284,8 @@ export default function Dashboard() {
               </nav>
             </SheetContent>
           </Sheet>
-          <PageTitle className="text-2xl sm:text-3xl">{activeNavLabel}</PageTitle>
+          <PageTitle className="flex-1 text-2xl sm:text-3xl">{activeNavLabel}</PageTitle>
+          {activeSection === 'minimax' && <MiniMaxRefreshButton />}
         </header>
 
         {/* 内容区 */}
@@ -408,85 +505,23 @@ function LogPanel() {
   )
 }
 
-interface MiniMaxModelRemain {
-  model_name: string
-  remains_time: number
-  current_interval_total_count: number
-  current_interval_usage_count: number
-  current_weekly_total_count: number
-  current_weekly_usage_count: number
-  weekly_remains_time: number
-  start_time: number
-  end_time: number
-  weekly_start_time: number
-  weekly_end_time: number
-}
-
-interface MiniMaxSubscriptionResponse {
-  model_remains: MiniMaxModelRemain[]
-  base_resp?: { status_code: number; status_msg: string }
-}
-
-interface MiniMaxSubscriptionDetailResponse {
-  current_subscribe?: {
-    current_subscribe_end_time?: string
-    current_subscribe_title?: string
-    current_credit_reload_time?: string
-    [key: string]: unknown
-  }
-  [key: string]: unknown
-}
-
-interface MiniMaxBillingRecord {
-  consume_token: string | number
-  created_at: number
-  consume_time?: string
-  [key: string]: unknown
-}
-
-interface MiniMaxBillingResponse {
-  charge_records?: MiniMaxBillingRecord[]
-  total_cnt?: number
-  [key: string]: unknown
-}
-
-function MiniMaxPanel() {
-  const fetcher = async <T,>(url: string): Promise<T> =>
-    apiRequest<T>(url, 'GET', undefined, { handleError: false }) as Promise<T>
-
-  const {
-    data: subData,
-    isLoading: subLoading,
-    error: subError,
-    mutate: mutateSub,
-  } = useSWR<MiniMaxSubscriptionResponse>('/minimax/subscription', fetcher, {
-    refreshInterval: 60000,
-  })
-  const { data: detailData, mutate: mutateDetail } = useSWR<MiniMaxSubscriptionDetailResponse>(
-    '/minimax/subscription-detail',
-    fetcher,
-    { revalidateOnFocus: false, refreshInterval: 60000 }
-  )
-  const { data: billingData, mutate: mutateBilling } = useSWR<MiniMaxBillingResponse>(
-    '/minimax/billing',
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      refreshInterval: 60000,
-    }
-  )
-
-  const handleRefresh = () => {
-    mutateSub()
-    mutateDetail()
-    mutateBilling()
-  }
-
-  const isLoading = subLoading
-  const error = subError
+function MiniMaxPanel({
+  sub,
+  detail,
+  billing,
+}: {
+  sub: ReturnType<typeof useSWR<MiniMaxSubscriptionResponse>>
+  detail: ReturnType<typeof useSWR<MiniMaxSubscriptionDetailResponse>>
+  billing: ReturnType<typeof useSWR<MiniMaxBillingResponse>>
+}) {
+  const subData = sub.data ?? null
+  const detailData = detail.data ?? null
+  const billingData = billing.data ?? null
+  const isLoading = sub.isLoading
+  const error = sub.error
 
   const models = subData?.model_remains ?? []
-  const sub = models[0]
+  const subModel = models[0]
 
   const fmtTime = (ms: number): string => {
     const s = Math.floor(ms / 1000)
@@ -496,14 +531,6 @@ function MiniMaxPanel() {
     if (d > 0) return `${d}天${h}小时`
     if (h > 0) return `${h}小时${m}分`
     return `${m}分`
-  }
-
-  const fmtTs = (ms: number): string => {
-    try {
-      return new Date(ms).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
-    } catch {
-      return String(ms)
-    }
   }
 
   const fmtDate = (v: string | number | undefined): string => {
@@ -530,13 +557,13 @@ function MiniMaxPanel() {
   }
 
   // usage_count 字段实际上是剩余次数
-  const cycleTotal = sub?.current_interval_total_count ?? 0
-  const cycleRemain = sub?.current_interval_usage_count ?? 0
+  const cycleTotal = subModel?.current_interval_total_count ?? 0
+  const cycleRemain = subModel?.current_interval_usage_count ?? 0
   const cycleUsed = cycleTotal - cycleRemain
   const cyclePct = cycleTotal > 0 ? ((cycleUsed / cycleTotal) * 100).toFixed(1) : '0'
 
-  const weekTotal = sub?.current_weekly_total_count ?? 0
-  const weekRemain = sub?.current_weekly_usage_count ?? 0
+  const weekTotal = subModel?.current_weekly_total_count ?? 0
+  const weekRemain = subModel?.current_weekly_usage_count ?? 0
   const weekUsed = weekTotal - weekRemain
   const weekPct = weekTotal > 0 ? ((weekUsed / weekTotal) * 100).toFixed(1) : '0'
 
@@ -583,19 +610,6 @@ function MiniMaxPanel() {
   return (
     <div className="space-y-4">
       {isLoading && <LoadingState message="加载 MiniMax 订阅信息..." size="sm" />}
-      {!isLoading && (
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            刷新
-          </Button>
-        </div>
-      )}
       {error && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           {error instanceof Error ? error.message : '获取订阅信息失败'}
@@ -714,13 +728,13 @@ function MiniMaxPanel() {
             <div className="rounded-xl border bg-muted/30 p-3 text-center">
               <div className="text-muted-foreground text-xs">周期剩余时间</div>
               <div className="text-primary mt-1 text-base font-bold">
-                {fmtTime(sub.remains_time)}
+                {fmtTime(subModel.remains_time)}
               </div>
             </div>
             <div className="rounded-xl border bg-muted/30 p-3 text-center">
               <div className="text-muted-foreground text-xs">本周剩余时间</div>
               <div className="text-primary mt-1 text-base font-bold">
-                {fmtTime(sub.weekly_remains_time)}
+                {fmtTime(subModel.weekly_remains_time)}
               </div>
             </div>
           </div>
