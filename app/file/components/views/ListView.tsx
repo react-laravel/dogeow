@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 
 import {
   File,
@@ -23,6 +23,7 @@ import { CloudFile, SortField } from '../../types'
 import useFileStore from '../../store/useFileStore'
 import { getFileDownloadUrl, getFilePreviewUrl } from '../../services/api'
 import { formatFileSize } from '../../constants'
+import { useMoveFiles } from '@/app/file/hooks/useFileOperations'
 
 interface ListViewProps {
   files: CloudFile[]
@@ -128,6 +129,46 @@ export default function ListView({ files }: ListViewProps) {
     sortDirection,
     handleSort,
   } = useFileStore()
+
+  const { moveFiles } = useMoveFiles()
+  const [dragOverFolderId, setDragOverFolderId] = useState<number | null>(null)
+
+  const handleDragStart = useCallback((file: CloudFile, event: React.DragEvent) => {
+    event.dataTransfer.setData('text/plain', file.id.toString())
+    event.dataTransfer.effectAllowed = 'move'
+  }, [])
+
+  const handleDragEnter = useCallback((folderId: number) => {
+    setDragOverFolderId(folderId)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverFolderId(null)
+  }, [])
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }, [])
+
+  const handleDrop = useCallback(
+    async (targetFolder: CloudFile, event: React.DragEvent) => {
+      event.preventDefault()
+      setDragOverFolderId(null)
+
+      const fileId = parseInt(event.dataTransfer.getData('text/plain'), 10)
+      if (isNaN(fileId)) return
+
+      // 不能将文件夹移动到自身
+      if (fileId === targetFolder.id) {
+        return
+      }
+
+      // 移动文件到目标文件夹
+      await moveFiles([fileId], targetFolder.id)
+    },
+    [moveFiles]
+  )
 
   // 计算是否全选
   const isAllSelected = useMemo(
@@ -252,13 +293,20 @@ export default function ListView({ files }: ListViewProps) {
               key={file.id}
               className={cn(
                 'border-muted/30 hover:bg-muted/30 cursor-pointer border-b transition-colors',
-                selectedFiles.includes(file.id) && 'bg-muted/40'
+                selectedFiles.includes(file.id) && 'bg-muted/40',
+                file.is_folder && dragOverFolderId === file.id && 'ring-2 ring-primary ring-inset'
               )}
               onClick={() => handleItemClick(file)}
               onKeyDown={e => handleKeyDown(e, file)}
               tabIndex={0}
               role="row"
               aria-selected={selectedFiles.includes(file.id)}
+              draggable={!file.is_folder}
+              onDragStart={e => handleDragStart(file, e)}
+              onDragOver={file.is_folder ? handleDragOver : undefined}
+              onDragEnter={file.is_folder ? () => handleDragEnter(file.id) : undefined}
+              onDragLeave={file.is_folder ? handleDragLeave : undefined}
+              onDrop={file.is_folder ? e => handleDrop(file, e) : undefined}
             >
               <td className="px-4 py-3" role="gridcell">
                 <div className="flex items-center space-x-3">

@@ -22,10 +22,20 @@ interface FileGridItemProps {
   onDownload: (file: CloudFile) => void
   onEdit: (file: CloudFile, event: React.MouseEvent) => void
   onDelete: (file: CloudFile, event: React.MouseEvent) => void
+  onDragStart?: (file: CloudFile, event: React.DragEvent) => void
 }
 
 export const FileGridItem = memo<FileGridItemProps>(
-  ({ file, isSelected, onSelect, onClick, onDownload, onEdit, onDelete }) => {
+  ({ file, isSelected, onSelect, onClick, onDownload, onEdit, onDelete, onDragStart }) => {
+    const handleDragStart = (event: React.DragEvent) => {
+      if (onDragStart) {
+        onDragStart(file, event)
+      } else {
+        event.dataTransfer.setData('text/plain', file.id.toString())
+        event.dataTransfer.effectAllowed = 'move'
+      }
+    }
+
     return (
       <div
         className={cn(
@@ -34,6 +44,8 @@ export const FileGridItem = memo<FileGridItemProps>(
           isSelected && 'ring-primary border-primary ring-2'
         )}
         onClick={() => onClick(file)}
+        draggable={!file.is_folder}
+        onDragStart={handleDragStart}
       >
         <div className="relative">
           <FileIcon file={file} />
