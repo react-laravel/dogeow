@@ -660,13 +660,15 @@ function MiniMaxPanel({
           <div className="rounded-2xl border bg-muted/30 p-4">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-muted-foreground">本周期</div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-2xl font-bold sm:text-3xl">
-                  {cycleRemain.toLocaleString()}
-                </span>
-                <span className="text-muted-foreground text-sm">次剩余</span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-2xl font-bold sm:text-3xl">
+                    {cycleRemain.toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground text-sm">次剩余</span>
+                </div>
                 <span className="text-xs text-muted-foreground">
-                  剩余 {fmtTime(subModel?.remains_time ?? 0)}
+                  {fmtTime(subModel?.remains_time ?? 0)}后重置
                 </span>
               </div>
             </div>
@@ -688,13 +690,15 @@ function MiniMaxPanel({
           <div className="rounded-2xl border bg-muted/30 p-4">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-muted-foreground">本周</div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-2xl font-bold sm:text-3xl">
-                  {weekRemain.toLocaleString()}
-                </span>
-                <span className="text-muted-foreground text-sm">次剩余</span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-2xl font-bold sm:text-3xl">
+                    {weekRemain.toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground text-sm">次剩余</span>
+                </div>
                 <span className="text-xs text-muted-foreground">
-                  剩余 {fmtTime(subModel?.weekly_remains_time ?? 0)}
+                  {fmtTime(subModel?.weekly_remains_time ?? 0)}后重置
                 </span>
               </div>
             </div>
