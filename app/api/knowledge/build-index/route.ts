@@ -1,16 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadAllDocuments } from '@/lib/knowledge/search'
 import { buildVectorIndex, saveVectorIndex, loadVectorIndex } from '@/lib/knowledge/vector-store'
+import { idempotencyTracker } from '@/lib/utils/idempotency'
 
 /**
  * 构建向量索引的 API 端点
  * POST /api/knowledge/build-index
+ *
+ * Idempotency: Uses request ID header to prevent duplicate index builds
+ */
+
+// Track in-progress index builds
+const inProgressBuilds = new Map<string, { timestamp: number; promise: Promise<unknown> }>()
+const BUILD_TTL = 5 * 60 * 1000 // 5 minutes
+
+function getRequestId(request: NextRequest): string {
+  return request.headers.get('X-Request-ID') || `build-index-${Date.now()}`
+}
+
+function cleanupOldBuilds(): void {
+  const now = Date.now()
+  for (const [key, value] of inProgressBuilds.entries()) {
+    if (now - value.timestamp > BUILD_TTL) {
+      inProgressBuilds.delete(key)
+    }
+  }
+}
+
+/**
+ * POST /api/knowledge/build-index
+ * 构建向量索引
  */
 export async function POST(request: NextRequest) {
+  const requestId = getRequestId(request)
+
   try {
     const { force = false } = await request.json().catch(() => ({ force: false }))
 
-    // 检查索引是否已存在
+    // Idempotency check: Check if this exact request is already in progress
+    const existingBuild = inProgressBuilds.get(requestId)
+    if (existingBuild && Date.now() - existingBuild.timestamp < BUILD_TTL) {
+      console.log(`[BuildIndex] Request ${requestId} already in progress, waiting for result`)
+      try {
+        await existingBuild.promise
+        // If we get here, the original request completed - return success
+        const existingIndex = loadVectorIndex()
+        return NextResponse.json({
+          success: true,
+          message: '向量索引已存在（请求已处理）',
+          indexSize: existingIndex?.documents.length ?? 0,
+          createdAt: existingIndex?.createdAt,
+          updatedAt: existingIndex?.updatedAt,
+          idempotent: true,
+        })
+      } catch {
+        // Original request failed, allow retry
+        inProgressBuilds.delete(requestId)
+      }
+    }
+
+    // Check if index already exists
     const existingIndex = loadVectorIndex()
     if (existingIndex && !force) {
       return NextResponse.json({
@@ -22,18 +71,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 加载所有文档
+    // Load all documents
     const documents = await loadAllDocuments()
     if (documents.length === 0) {
-      // 获取调试信息
+      // Get debug info
       let apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-      // 确保 URL 以 /api 结尾（如果环境变量是基础 URL）
+      // Ensure URL ends with /api
       if (apiBaseUrl && !apiBaseUrl.endsWith('/api') && !apiBaseUrl.endsWith('/api/')) {
         apiBaseUrl = apiBaseUrl.endsWith('/') ? `${apiBaseUrl}api` : `${apiBaseUrl}/api`
       }
 
-      // 尝试直接测试后端 API
+      // Try to test backend API directly
       let debugInfo: Record<string, unknown> = {
         apiUrl: apiBaseUrl,
         endpoint: `${apiBaseUrl}/notes/wiki/articles`,
@@ -71,19 +120,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 构建向量索引
-    const index = await buildVectorIndex(documents)
+    // Build vector index with idempotency tracking
+    cleanupOldBuilds()
 
-    // 保存索引
-    saveVectorIndex(index)
+    const buildPromise = (async () => {
+      const index = await buildVectorIndex(documents)
+      saveVectorIndex(index)
+      return index
+    })()
 
-    return NextResponse.json({
-      success: true,
-      message: '向量索引构建成功',
-      indexSize: index.documents.length,
-      createdAt: index.createdAt,
-      updatedAt: index.updatedAt,
+    // Track this build
+    inProgressBuilds.set(requestId, {
+      timestamp: Date.now(),
+      promise: buildPromise,
     })
+
+    try {
+      const index = await buildPromise
+
+      return NextResponse.json({
+        success: true,
+        message: '向量索引构建成功',
+        indexSize: index.documents.length,
+        createdAt: index.createdAt,
+        updatedAt: index.updatedAt,
+      })
+    } finally {
+      // Clean up after completion
+      inProgressBuilds.delete(requestId)
+    }
   } catch (error: unknown) {
     console.error('构建向量索引失败:', error)
     const errorMessage = error instanceof Error ? error.message : '未知错误'

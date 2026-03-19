@@ -12,6 +12,7 @@ vi.mock('@/hooks/useTranslation', () => ({
 vi.mock('@/components/ui/use-toast', () => ({
   toast: {
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -151,5 +152,102 @@ describe('useMessageInput typing callbacks', () => {
     })
 
     expect(onTypingStop).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useMessageInput idempotency', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  it('should detect and block duplicate message sends within the idempotency window', async () => {
+    const sendMessage = vi.fn(async () => ({ success: true as const }))
+
+    const { result } = renderHook(() =>
+      useMessageInput({
+        roomId: 1,
+        sendMessage,
+        isConnected: true,
+        replyingTo: undefined,
+        onCancelReply: undefined,
+      })
+    )
+
+    // Set a message
+    act(() => {
+      result.current.handleInputChange('Test message')
+    })
+
+    // Send the message
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    // Should have called sendMessage once
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+
+    // Try to send the same message again (within idempotency window)
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    // Should NOT call sendMessage again due to idempotency
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+
+    // Advance time past the idempotency window
+    act(() => {
+      vi.advanceTimersByTime(6000) // 5 seconds + buffer
+    })
+
+    // Try sending again after window expires
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    // Should allow the send now
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it('should allow different messages to be sent', async () => {
+    const sendMessage = vi.fn(async () => ({ success: true as const }))
+
+    const { result } = renderHook(() =>
+      useMessageInput({
+        roomId: 1,
+        sendMessage,
+        isConnected: true,
+        replyingTo: undefined,
+        onCancelReply: undefined,
+      })
+    )
+
+    // Send first message
+    act(() => {
+      result.current.handleInputChange('First message')
+    })
+
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+
+    // Clear and send second message
+    act(() => {
+      result.current.handleInputChange('Second message')
+    })
+
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    // Should allow second message
+    expect(sendMessage).toHaveBeenCalledTimes(2)
   })
 })
