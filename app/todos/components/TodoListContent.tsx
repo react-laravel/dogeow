@@ -84,7 +84,7 @@ function TodoItemInner({
             onKeyDown={e => {
               if (e.key === 'Enter') onTitleBlur()
             }}
-            className="bg-transparent border-border w-full border-b py-0.5 text-sm focus:outline-none focus:ring-0"
+            className="bg-transparent w-full py-0.5 text-sm focus:outline-none focus:ring-0"
             autoFocus
             aria-label="编辑任务"
           />
