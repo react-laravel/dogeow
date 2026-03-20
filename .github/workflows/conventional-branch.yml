@@ -23,3 +23,4 @@ jobs:
             echo "Allowed patterns: main, develop, feature/*, bugfix/*, hotfix/*, release/*, chore/*, ai*, refactor/*, fix/*, cursor/*"
             exit 1
           fi
+
