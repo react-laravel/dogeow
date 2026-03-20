@@ -19,6 +19,7 @@ import {
   createZhipuAIStreamResponse,
 } from './_lib/streams'
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
+import { requireAuth } from '../_lib/auth-guard'
 
 function buildChatMessages(messages: ChatMessage[], command?: string): ChatMessage[] {
   if (messages.some(m => m.role === 'system')) return messages
@@ -81,6 +82,10 @@ async function handleGenerateRequest(body: GenerateRequestBody) {
 }
 
 export async function POST(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   let body: GenerateRequestBody
   try {
     body = (await request.json()) as GenerateRequestBody

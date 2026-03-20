@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { loadAllDocuments } from '@/lib/knowledge/search'
+import { requireAuth } from '../../_lib/auth-guard'
 
 /**
  * 获取所有文档列表的 API 端点
  * GET /api/knowledge/documents
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   try {
     const documents = await loadAllDocuments()
 

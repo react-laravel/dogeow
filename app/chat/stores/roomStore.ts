@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import type { ChatRoom, CreateRoomData } from '../types'
 import { get as apiGet, post as apiPost } from '@/lib/api'
 import { handleChatApiError } from '@/lib/api/chat-error-handler'
+import { distributedLock } from '@/lib/utils/distributed-lock'
 
 interface RoomState {
   currentRoom: ChatRoom | null
@@ -64,9 +65,29 @@ export const useRoomStore = create<RoomStore>(set => ({
 
   createRoom: async roomData => {
     set({ isLoading: true, error: null })
+
+    // Use distributed lock to prevent duplicate room creation
+    const lockResource = `room:create:${roomData.name || 'unnamed'}`
+    const lockResult = await distributedLock.withLock(
+      lockResource,
+      async () => {
+        const response = await apiPost<{ room: ChatRoom }>('/chat/rooms', roomData)
+        return response
+      },
+      { ttl: 10000, maxRetries: 3 }
+    )
+
+    if (!lockResult.success) {
+      const chatError = handleChatApiError(lockResult.error, '创建聊天室失败（资源被锁定）', {
+        showToast: true,
+        retryable: true,
+      })
+      set({ error: chatError, isLoading: false })
+      throw chatError
+    }
+
     try {
-      const response = await apiPost<{ room: ChatRoom }>('/chat/rooms', roomData)
-      const newRoom = response.room
+      const newRoom = lockResult.result!.room
       set(state => ({
         rooms: [...state.rooms, newRoom],
         isLoading: false,
@@ -77,20 +98,27 @@ export const useRoomStore = create<RoomStore>(set => ({
         showToast: true,
         retryable: true,
       })
-      set({
-        error: chatError,
-        isLoading: false,
-      })
+      set({ error: chatError, isLoading: false })
       throw chatError
     }
   },
 
   joinRoom: async roomId => {
     set({ error: null })
-    try {
-      await apiPost(`/chat/rooms/${roomId}/join`, {})
-    } catch (error) {
-      const chatError = handleChatApiError(error, '加入聊天室失败', {
+
+    // Use distributed lock to prevent duplicate join requests
+    const lockResource = `room:join:${roomId}`
+    const lockResult = await distributedLock.withLock(
+      lockResource,
+      async () => {
+        await apiPost(`/chat/rooms/${roomId}/join`, {})
+        return true
+      },
+      { ttl: 5000, maxRetries: 5 }
+    )
+
+    if (!lockResult.success) {
+      const chatError = handleChatApiError(lockResult.error, '加入聊天室失败（请求正在处理中）', {
         showToast: true,
         retryable: true,
       })
@@ -100,25 +128,34 @@ export const useRoomStore = create<RoomStore>(set => ({
   },
 
   leaveRoom: async roomId => {
-    try {
-      await apiPost(`/chat/rooms/${roomId}/leave`, {})
+    // Use distributed lock to ensure clean leave operation
+    const lockResource = `room:leave:${roomId}`
+    const lockResult = await distributedLock.withLock(
+      lockResource,
+      async () => {
+        await apiPost(`/chat/rooms/${roomId}/leave`, {})
+        return true
+      },
+      { ttl: 5000, maxRetries: 3 }
+    )
 
-      set(state => {
-        const newState = { ...state }
-        if (state.currentRoom?.id === roomId) {
-          newState.currentRoom = null
-        }
-        newState.error = null
-        return newState
-      })
-    } catch (error) {
-      const chatError = handleChatApiError(error, '离开聊天室失败', {
+    if (!lockResult.success) {
+      const chatError = handleChatApiError(lockResult.error, '离开聊天室失败（操作被锁定）', {
         showToast: true,
         retryable: true,
       })
       set({ error: chatError })
       throw chatError
     }
+
+    set(state => {
+      const newState = { ...state }
+      if (state.currentRoom?.id === roomId) {
+        newState.currentRoom = null
+      }
+      newState.error = null
+      return newState
+    })
   },
 
   updateRoomOnlineCount: (roomId, onlineCount) => {
