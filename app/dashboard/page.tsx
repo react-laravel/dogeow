@@ -181,19 +181,53 @@ function useMiniMaxSubscription(enabled = true) {
 }
 
 function MiniMaxRefreshButton() {
+  // 自动刷新间隔（毫秒）
+  const REFRESH_INTERVAL = 10000
   const { isLoading, mutate } = useSWR<MiniMaxSubscriptionResponse>(
     '/minimax/subscription',
     url => apiRequest<MiniMaxSubscriptionResponse>(url, 'GET', undefined, { handleError: false }),
-    { refreshInterval: 30000 }
+    {
+      refreshInterval: REFRESH_INTERVAL,
+      revalidateOnFocus: true, // 回到tab时自动刷新
+      isPaused: () => typeof document !== 'undefined' && document.visibilityState !== 'visible',
+    }
   )
+  const [countdown, setCountdown] = useState(() => REFRESH_INTERVAL / 1000)
+  // 计时器逻辑
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    if (!isLoading) {
+      timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            return REFRESH_INTERVAL / 1000
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [isLoading, REFRESH_INTERVAL])
+
+  // 手动刷新并重置倒计时
+  const handleManualRefresh = async () => {
+    setCountdown(REFRESH_INTERVAL / 1000)
+    await mutate()
+  }
+
   return (
     <Button
       variant="ghost"
       size="sm"
-      onClick={() => mutate()}
+      onClick={handleManualRefresh}
       disabled={isLoading}
       className="h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
     >
+      <span className="mr-2 text-[11px] tabular-nums text-muted-foreground min-w-[28px] text-right">
+        {countdown}s
+      </span>
       <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
       刷新
     </Button>
@@ -582,38 +616,44 @@ function MiniMaxPanel({
   // 套餐到期时间
   const subscribeEnd = detailData?.current_subscribe?.current_subscribe_end_time
   const subscribeEndStr = fmtDate(subscribeEnd)
-  const subscribeDaysLeft = useMemo(() => {
-    if (!subscribeEnd) return null
-    // eslint-disable-next-line react-hooks/purity -- snapshot of current time for display, intentionally not reactive
-    const now = Date.now()
+  const [subscribeDaysLeft, setSubscribeDaysLeft] = useState<number | null>(null)
+  useEffect(() => {
+    if (!subscribeEnd) {
+      setTimeout(() => setSubscribeDaysLeft(null), 0)
+      return
+    }
+    let days = null
     try {
+      const now = Date.now()
       if (typeof subscribeEnd === 'string' && subscribeEnd.includes('/')) {
         const [mm, dd, yyyy] = subscribeEnd.split('/')
         const expiry = new Date(`${yyyy}-${mm}-${dd}T00:00:00+08:00`)
-        return Math.ceil((expiry.getTime() - now) / 86400000)
+        days = Math.ceil((expiry.getTime() - now) / 86400000)
+      } else {
+        days = Math.ceil((new Date(Number(subscribeEnd)).getTime() - now) / 86400000)
       }
-      return Math.ceil((new Date(Number(subscribeEnd)).getTime() - now) / 86400000)
     } catch {
-      return null
+      days = null
     }
+    setTimeout(() => setSubscribeDaysLeft(days), 0)
   }, [subscribeEnd])
 
   // Token 消耗：从账单记录聚合（created_at 是秒级时间戳，账单延迟约1-2天）
-  const billingRecords = billingData?.charge_records ?? []
+  const billingRecords = useMemo(() => billingData?.charge_records ?? [], [billingData])
 
-  // 近7天消耗
-  const sevenDaysAgo = useMemo(
-    // eslint-disable-next-line react-hooks/purity -- snapshot of current time for display, intentionally not reactive
-    () => Date.now() - 7 * 24 * 60 * 60 * 1000,
-    []
-  )
-  const weeklyTokens = useMemo(
-    () =>
-      billingRecords
-        .filter(r => r.created_at * 1000 >= sevenDaysAgo)
-        .reduce((sum, r) => sum + (Number(r.consume_token) || 0), 0),
-    [billingRecords, sevenDaysAgo]
-  )
+  // 近7天消耗（每次 billingRecords 变化时重新计算）
+  const [weeklyTokens, setWeeklyTokens] = useState(0)
+  useEffect(() => {
+    const now = Date.now()
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+    setTimeout(() => {
+      setWeeklyTokens(
+        billingRecords
+          .filter(r => r.created_at * 1000 >= sevenDaysAgo)
+          .reduce((sum, r) => sum + (Number(r.consume_token) || 0), 0)
+      )
+    }, 0)
+  }, [billingRecords])
 
   // 数据截至日期
   const lastRecord = billingRecords[0]

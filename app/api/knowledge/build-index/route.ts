@@ -3,7 +3,7 @@ import { loadAllDocuments } from '@/lib/knowledge/search'
 import { buildVectorIndex, saveVectorIndex, loadVectorIndex } from '@/lib/knowledge/vector-store'
 import { requireAuth } from '../../_lib/auth-guard'
 import { idempotencyTracker } from '@/lib/utils/idempotency'
-import { getRequestId } from '@/lib/utils/idempotency'
+// import { getRequestId } from '@/lib/utils/idempotency' // 已在本文件内实现
 // getRequestId helper was removed from idempotency, using inline
 
 /**
