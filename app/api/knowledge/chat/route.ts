@@ -4,6 +4,7 @@ import { searchWithRAG } from '@/lib/knowledge/rag-search'
 import { getKnowledgeConfig, type KnowledgeSearchMethod } from '@/lib/knowledge/config'
 import { callMiniMaxAPI } from '@/app/api/generate/_lib/clients'
 import { createMiniMaxStreamResponse } from '@/app/api/generate/_lib/streams'
+import { requireAuth } from '../../_lib/auth-guard'
 
 type AIProvider = 'ollama' | 'minimax'
 
@@ -267,6 +268,10 @@ ${context}
 }
 
 export async function POST(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   const {
     messages,
     query,
