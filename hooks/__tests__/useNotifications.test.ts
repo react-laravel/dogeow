@@ -85,12 +85,12 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyNewMessage(1, 'John', 'Hello world')
+        result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
       expect(
         require('@/lib/services/notificationService').default.getInstance().notifyNewMessage
-      ).toHaveBeenCalledWith('Test Room', 'John', 'Hello world', 1, true)
+      ).toHaveBeenCalledWith({ roomName: 'Test Room', senderName: 'John', message: 'Hello world', roomId: 1, playSound: true })
     })
 
     it('should not notify when in current room and tab is active', () => {
@@ -115,7 +115,7 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyNewMessage(1, 'John', 'Hello world')
+        result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
       expect(
@@ -141,12 +141,12 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyMention(1, 123, 'John', '@user Hello')
+        result.current.notifyMention({ roomId: 1, messageId: 123, senderName: 'John', message: '@user Hello' })
       })
 
       expect(
         require('@/lib/services/notificationService').default.getInstance().notifyMention
-      ).toHaveBeenCalledWith('Test Room', 'John', '@user Hello', 1, 123, true)
+      ).toHaveBeenCalledWith({ roomName: 'Test Room', senderName: 'John', message: '@user Hello', roomId: 1, messageId: 123, playSound: true })
     })
 
     it('should notify user joined in current room', () => {
@@ -167,12 +167,12 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyUserJoined(1, 'John')
+        result.current.notifyUserJoined({ roomId: 1, userName: 'John' })
       })
 
       expect(
         require('@/lib/services/notificationService').default.getInstance().notifyUserJoined
-      ).toHaveBeenCalledWith('Test Room', 'John', 1, true)
+      ).toHaveBeenCalledWith({ roomName: 'Test Room', userName: 'John', roomId: 1, playSound: true })
     })
 
     it('should notify user left in current room', () => {
@@ -193,12 +193,12 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyUserLeft(1, 'John')
+        result.current.notifyUserLeft({ roomId: 1, userName: 'John' })
       })
 
       expect(
         require('@/lib/services/notificationService').default.getInstance().notifyUserLeft
-      ).toHaveBeenCalledWith('Test Room', 'John', 1, true)
+      ).toHaveBeenCalledWith({ roomName: 'Test Room', userName: 'John', roomId: 1, playSound: true })
     })
   })
 
@@ -326,7 +326,7 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyNewMessage(1, 'John', 'Hello world')
+        result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
       expect(
@@ -398,7 +398,7 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyNewMessage(999, 'John', 'Hello world')
+        result.current.notifyNewMessage({ roomId: 999, senderName: 'John', message: 'Hello world' })
       })
 
       expect(
@@ -424,7 +424,7 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyNewMessage(1, 'John', 'Hello world')
+        result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
       expect(
@@ -450,7 +450,7 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyUserJoined(1, 'John')
+        result.current.notifyUserJoined({ roomId: 1, userName: 'John' })
       })
 
       expect(

@@ -39,6 +39,7 @@ export interface OnlineUser {
   id: number
   name: string
   email: string
+  role?: 'admin' | 'moderator' | 'user' // 角色必须由服务器提供，不能客户端推断
   joined_at: string
   is_online: boolean
 }
@@ -116,6 +117,7 @@ export interface PresenceUser {
   id: number
   name: string
   email: string
+  role?: 'admin' | 'moderator' | 'user' // 角色必须由服务器提供，不能客户端推断
   avatar?: string
 }
 

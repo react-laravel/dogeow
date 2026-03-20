@@ -4,9 +4,78 @@ import { useEffect, useCallback, useRef } from 'react'
 import useChatStore from '@/app/chat/chatStore'
 import NotificationService from '@/lib/services/notificationService'
 
+// Value Objects for notification parameters (resolves Long Parameter List code smell)
+export interface NewMessageNotificationParams {
+  roomId: number
+  senderName: string
+  message: string
+}
+
+export interface MentionNotificationParams {
+  roomId: number
+  messageId: number
+  senderName: string
+  message: string
+}
+
+export interface UserPresenceNotificationParams {
+  roomId: number
+  userName: string
+}
+
 interface UseNotificationsOptions {
   enableSounds?: boolean
   enableBrowserNotifications?: boolean
+}
+
+interface NotificationDecision {
+  shouldPlaySound: boolean
+  shouldShowBrowser: boolean
+  isCurrentRoom: boolean
+  isTabInactive: boolean
+}
+
+// DRY: Extract shared notification decision logic
+function getNotificationDecision(
+  roomId: number,
+  rooms: { id: number; name: string }[],
+  currentRoom: { id: number } | null,
+  notificationSettings: {
+    browserNotifications: boolean
+    soundNotifications: boolean
+    mentionNotifications?: boolean
+    roomNotifications?: boolean
+  },
+  browserNotificationPermission: NotificationPermission,
+  options: UseNotificationsOptions,
+  requiresCurrentRoom = false
+): { decision: NotificationDecision; room: { id: number; name: string } | undefined } {
+  const room = rooms.find(r => r.id === roomId)
+  if (!room) {
+    return {
+      decision: { shouldPlaySound: false, shouldShowBrowser: false, isCurrentRoom: false, isTabInactive: false },
+      room: undefined,
+    }
+  }
+
+  const shouldPlaySound = notificationSettings.soundNotifications && options.enableSounds !== false
+  const shouldShowBrowser =
+    notificationSettings.browserNotifications &&
+    options.enableBrowserNotifications !== false &&
+    browserNotificationPermission === 'granted'
+
+  const isCurrentRoom = currentRoom?.id === roomId
+  const isTabInactive = typeof document !== 'undefined' && document.hidden
+
+  // Skip if requires current room and not in it
+  if (requiresCurrentRoom && !isCurrentRoom) {
+    return {
+      decision: { shouldPlaySound: false, shouldShowBrowser: false, isCurrentRoom: false, isTabInactive: false },
+      room,
+    }
+  }
+
+  return { decision: { shouldPlaySound, shouldShowBrowser, isCurrentRoom, isTabInactive }, room }
 }
 
 export function useNotifications(options: UseNotificationsOptions = {}) {
@@ -24,7 +93,6 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   // Initialize notification service and request permissions
   useEffect(() => {
     const initializeNotifications = async () => {
-      // Request browser notification permission if not already granted
       if (
         notificationSettings.browserNotifications &&
         browserNotificationPermission === 'default'
@@ -42,16 +110,12 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   // Handle visibility changes for notification management
   useEffect(() => {
-    // Clean up previous listener
     if (visibilityCleanupRef.current) {
       visibilityCleanupRef.current()
     }
 
-    // Set up new visibility change listener
     visibilityCleanupRef.current = notificationService.current.onVisibilityChange(isHidden => {
-      // When tab becomes active, we could clear notifications for current room
       if (!isHidden && currentRoom) {
-        // Clear room notifications when user returns to active tab
         useChatStore.getState().clearRoomNotifications(currentRoom.id)
       }
     })
@@ -63,37 +127,84 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     }
   }, [currentRoom])
 
-  // Notification methods
-  const notifyNewMessage = useCallback(
-    (roomId: number, senderName: string, message: string) => {
-      const room = rooms.find(r => r.id === roomId)
-      if (!room) return
-
-      const shouldPlaySound =
-        notificationSettings.soundNotifications && options.enableSounds !== false
-
-      const shouldShowBrowser =
-        notificationSettings.browserNotifications &&
-        notificationSettings.roomNotifications &&
-        options.enableBrowserNotifications !== false &&
-        browserNotificationPermission === 'granted'
-
-      // Only notify if not in current room or tab is inactive
-      const isCurrentRoom = currentRoom?.id === roomId
-      const isTabInactive = notificationService.current.isTabInactive()
-
-      if (!isCurrentRoom || isTabInactive) {
-        if (shouldShowBrowser) {
-          notificationService.current.notifyNewMessage(
-            room.name,
-            senderName,
-            message,
-            roomId,
-            shouldPlaySound
-          )
-        } else if (shouldPlaySound) {
-          notificationService.current.playSound('message')
+  // DRY: Centralized notification execution
+  const executeNotification = useCallback(
+    (
+      notificationType: 'message' | 'mention' | 'join' | 'leave',
+      room: { id: number; name: string },
+      decision: NotificationDecision,
+      extra?: { messageId?: number; senderName?: string; message?: string }
+    ) => {
+      if (decision.shouldShowBrowser) {
+        switch (notificationType) {
+          case 'message':
+            notificationService.current.notifyNewMessage({
+              roomName: room.name,
+              senderName: extra?.senderName || '',
+              message: extra?.message || '',
+              roomId: room.id,
+              playSound: decision.shouldPlaySound,
+            })
+            break
+          case 'mention':
+            notificationService.current.notifyMention({
+              roomName: room.name,
+              senderName: extra?.senderName || '',
+              message: extra?.message || '',
+              roomId: room.id,
+              messageId: extra?.messageId || 0,
+              playSound: decision.shouldPlaySound,
+            })
+            break
+          case 'join':
+            notificationService.current.notifyUserJoined({
+              roomName: room.name,
+              userName: extra?.senderName || '',
+              roomId: room.id,
+              playSound: decision.shouldPlaySound,
+            })
+            break
+          case 'leave':
+            notificationService.current.notifyUserLeft({
+              roomName: room.name,
+              userName: extra?.senderName || '',
+              roomId: room.id,
+              playSound: decision.shouldPlaySound,
+            })
+            break
         }
+      } else if (decision.shouldPlaySound) {
+        const soundName = notificationType === 'message' ? 'message' :
+          notificationType === 'mention' ? 'mention' :
+            notificationType === 'join' ? 'join' : 'leave'
+        const volume = notificationType === 'message' || notificationType === 'mention' ? undefined : 0.3
+        notificationService.current.playSound(soundName, { volume })
+      }
+    },
+    []
+  )
+
+  // Notification methods using shared logic
+  const notifyNewMessage = useCallback(
+    (params: NewMessageNotificationParams) => {
+      const { decision, room } = getNotificationDecision(
+        params.roomId,
+        rooms,
+        currentRoom,
+        {
+          browserNotifications: notificationSettings.browserNotifications,
+          soundNotifications: notificationSettings.soundNotifications,
+          roomNotifications: notificationSettings.roomNotifications,
+        },
+        browserNotificationPermission,
+        options
+      )
+
+      if (!decision.isCurrentRoom || decision.isTabInactive) {
+        executeNotification('message', room!, decision, {
+          senderName: params.senderName,
+          message: params.message,
+        })
       }
     },
     [
@@ -101,67 +212,59 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       currentRoom,
       notificationSettings,
       browserNotificationPermission,
-      options.enableSounds,
-      options.enableBrowserNotifications,
+      options,
+      executeNotification,
     ]
   )
 
   const notifyMention = useCallback(
-    (roomId: number, messageId: number, senderName: string, message: string) => {
-      const room = rooms.find(r => r.id === roomId)
-      if (!room) return
+    (params: MentionNotificationParams) => {
+      const { decision, room } = getNotificationDecision(
+        params.roomId,
+        rooms,
+        currentRoom,
+        {
+          browserNotifications: notificationSettings.browserNotifications,
+          soundNotifications: notificationSettings.soundNotifications,
+          mentionNotifications: notificationSettings.mentionNotifications,
+        },
+        browserNotificationPermission,
+        options
+      )
 
-      const shouldPlaySound =
-        notificationSettings.soundNotifications && options.enableSounds !== false
-
-      const shouldShowBrowser =
-        notificationSettings.browserNotifications &&
-        notificationSettings.mentionNotifications &&
-        options.enableBrowserNotifications !== false &&
-        browserNotificationPermission === 'granted'
-
-      if (shouldShowBrowser) {
-        notificationService.current.notifyMention(
-          room.name,
-          senderName,
-          message,
-          roomId,
-          messageId,
-          shouldPlaySound
-        )
-      } else if (shouldPlaySound) {
-        notificationService.current.playSound('mention')
+      if (decision.shouldShowBrowser || decision.shouldPlaySound) {
+        executeNotification('mention', room!, decision, {
+          senderName: params.senderName,
+          message: params.message,
+          messageId: params.messageId,
+        })
       }
     },
     [
       rooms,
       notificationSettings,
       browserNotificationPermission,
-      options.enableSounds,
-      options.enableBrowserNotifications,
+      options,
+      executeNotification,
     ]
   )
 
   const notifyUserJoined = useCallback(
-    (roomId: number, userName: string) => {
-      const room = rooms.find(r => r.id === roomId)
-      if (!room) return
+    (params: UserPresenceNotificationParams) => {
+      const { decision, room } = getNotificationDecision(
+        params.roomId,
+        rooms,
+        currentRoom,
+        notificationSettings,
+        browserNotificationPermission,
+        options,
+        true // requires current room
+      )
 
-      const shouldPlaySound =
-        notificationSettings.soundNotifications && options.enableSounds !== false
-
-      const shouldShowBrowser =
-        notificationSettings.browserNotifications &&
-        options.enableBrowserNotifications !== false &&
-        browserNotificationPermission === 'granted'
-
-      // Only notify for current room
-      if (currentRoom?.id === roomId) {
-        if (shouldShowBrowser) {
-          notificationService.current.notifyUserJoined(room.name, userName, roomId, shouldPlaySound)
-        } else if (shouldPlaySound) {
-          notificationService.current.playSound('join', { volume: 0.3 })
-        }
+      if (decision.shouldShowBrowser || decision.shouldPlaySound) {
+        executeNotification('join', room!, decision, {
+          senderName: params.userName,
+        })
       }
     },
     [
@@ -169,31 +272,27 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       currentRoom,
       notificationSettings,
       browserNotificationPermission,
-      options.enableSounds,
-      options.enableBrowserNotifications,
+      options,
+      executeNotification,
     ]
   )
 
   const notifyUserLeft = useCallback(
-    (roomId: number, userName: string) => {
-      const room = rooms.find(r => r.id === roomId)
-      if (!room) return
+    (params: UserPresenceNotificationParams) => {
+      const { decision, room } = getNotificationDecision(
+        params.roomId,
+        rooms,
+        currentRoom,
+        notificationSettings,
+        browserNotificationPermission,
+        options,
+        true // requires current room
+      )
 
-      const shouldPlaySound =
-        notificationSettings.soundNotifications && options.enableSounds !== false
-
-      const shouldShowBrowser =
-        notificationSettings.browserNotifications &&
-        options.enableBrowserNotifications !== false &&
-        browserNotificationPermission === 'granted'
-
-      // Only notify for current room
-      if (currentRoom?.id === roomId) {
-        if (shouldShowBrowser) {
-          notificationService.current.notifyUserLeft(room.name, userName, roomId, shouldPlaySound)
-        } else if (shouldPlaySound) {
-          notificationService.current.playSound('leave', { volume: 0.3 })
-        }
+      if (decision.shouldShowBrowser || decision.shouldPlaySound) {
+        executeNotification('leave', room!, decision, {
+          senderName: params.userName,
+        })
       }
     },
     [
@@ -201,8 +300,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       currentRoom,
       notificationSettings,
       browserNotificationPermission,
-      options.enableSounds,
-      options.enableBrowserNotifications,
+      options,
+      executeNotification,
     ]
   )
 

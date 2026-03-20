@@ -12,6 +12,24 @@ import {
 import { getDraftKey } from '@/app/chat/utils/message-input/utils'
 import type { MessageInputProps } from '@/app/chat/types/messageInput'
 
+/**
+ * Idempotency cache for sent messages
+ * Prevents duplicate message sends within a time window
+ */
+interface SentMessageCache {
+  /** Message content hash */
+  contentHash: string
+  /** Room ID */
+  roomId: string
+  /** Timestamp when sent */
+  timestamp: number
+  /** Whether we got a successful response */
+  acknowledged: boolean
+}
+
+const MESSAGE_IDEMPOTENCY_WINDOW = 5000 // 5 seconds window for deduplication
+const MAX_CACHE_SIZE = 50
+
 export function useMessageInput({
   roomId,
   sendMessage,
@@ -44,6 +62,84 @@ export function useMessageInput({
 
   const { currentRoom, checkMuteStatus, muteUntil } = useChatStore()
   const storage = typeof window !== 'undefined' ? window.localStorage : null
+
+  // Idempotency: Track recently sent messages to prevent duplicates
+  const sentMessagesRef = useRef<SentMessageCache[]>([])
+
+  /**
+   * Generate a simple hash for message content
+   */
+  const hashMessage = (content: string, room: string): string => {
+    let hash = 0
+    const combined = `${room}:${content}`
+    for (let i = 0; i < combined.length; i++) {
+      const char = combined.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash
+    }
+    return Math.abs(hash).toString(36)
+  }
+
+  /**
+   * Check if a message was recently sent and not yet acknowledged
+   */
+  const isMessageRecentlySent = (content: string, room: string): boolean => {
+    const now = Date.now()
+    const contentHash = hashMessage(content, room)
+
+    // Clean up old entries
+    sentMessagesRef.current = sentMessagesRef.current.filter(
+      entry => now - entry.timestamp < MESSAGE_IDEMPOTENCY_WINDOW
+    )
+
+    return sentMessagesRef.current.some(
+      entry => entry.contentHash === contentHash && entry.roomId === room && !entry.acknowledged
+    )
+  }
+
+  /**
+   * Mark a message as sent (pending acknowledgment)
+   */
+  const markMessageAsSent = (content: string, room: string): void => {
+    const now = Date.now()
+    const contentHash = hashMessage(content, room)
+
+    // Enforce max cache size
+    if (sentMessagesRef.current.length >= MAX_CACHE_SIZE) {
+      // Remove oldest entry
+      sentMessagesRef.current.shift()
+    }
+
+    sentMessagesRef.current.push({
+      contentHash,
+      roomId: room,
+      timestamp: now,
+      acknowledged: false,
+    })
+  }
+
+  /**
+   * Mark a message as acknowledged (成功收到响应)
+   */
+  const acknowledgeMessage = (content: string, room: string): void => {
+    const contentHash = hashMessage(content, room)
+    const entry = sentMessagesRef.current.find(
+      e => e.contentHash === contentHash && e.roomId === room
+    )
+    if (entry) {
+      entry.acknowledged = true
+    }
+  }
+
+  /**
+   * Clean up the sent messages cache
+   */
+  const cleanupSentMessages = useCallback((): void => {
+    const now = Date.now()
+    sentMessagesRef.current = sentMessagesRef.current.filter(
+      entry => now - entry.timestamp < MESSAGE_IDEMPOTENCY_WINDOW
+    )
+  }, [])
 
   // 防抖消息用于自动保存
   const draftPayload = useMemo(() => ({ roomId, message }), [roomId, message])
@@ -161,7 +257,7 @@ export function useMessageInput({
       return
     }
 
-    // 防止重复发送
+    // 防止重复发送（基于 isSending 状态）
     if (isSending) {
       console.warn('Message sending already in progress')
       return
@@ -185,17 +281,33 @@ export function useMessageInput({
 
     setIsSending(true)
 
+    // 构建实际要发送的消息内容
+    let messageToSend = message.trim()
+    const roomKey = roomId.toString()
+
+    // 如果回复消息则添加回复前缀
+    if (replyingTo) {
+      messageToSend = `@${replyingTo.user.name} ${messageToSend}`
+    }
+
+    // Idempotency check: Prevent duplicate sends within the time window
+    if (isMessageRecentlySent(messageToSend, roomKey)) {
+      console.warn('[Idempotency] Duplicate message detected, ignoring')
+      toast.warning(t('chat.message_already_sent', 'Message already being sent'))
+      setIsSending(false)
+      return
+    }
+
+    // Mark message as sent (pending acknowledgment)
+    markMessageAsSent(messageToSend, roomKey)
+
     try {
-      let messageToSend = message.trim()
-
-      // 如果回复消息则添加回复前缀
-      if (replyingTo) {
-        messageToSend = `@${replyingTo.user.name} ${messageToSend}`
-      }
-
-      const result = await sendMessage(roomId.toString(), messageToSend)
+      const result = await sendMessage(roomKey, messageToSend)
 
       if (result.success) {
+        // Acknowledge the message
+        acknowledgeMessage(messageToSend, roomKey)
+
         setMessage('')
         adjustTextareaHeight()
         clearDraft()
@@ -239,6 +351,9 @@ export function useMessageInput({
         typingActiveRef.current = false
         onTypingStop?.()
       }
+
+      // Cleanup old sent messages periodically
+      cleanupSentMessages()
     }
   }, [
     message,
@@ -256,6 +371,7 @@ export function useMessageInput({
     checkMuteStatus,
     muteUntil,
     onTypingStop,
+    cleanupSentMessages,
   ])
 
   // 计算是否可以发送

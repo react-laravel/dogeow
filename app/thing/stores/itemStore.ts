@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { format } from 'date-fns'
 import { apiRequest } from '@/lib/api'
 import { Item, Category, Tag, ItemFormData, ApiSubmitItemData } from '@/app/thing/types'
+import { distributedLock } from '@/lib/utils/distributed-lock'
+import { idempotencyTracker } from '@/lib/utils/idempotency'
 
 // 前端专用过滤器，不发送到后端
 const FRONTEND_ONLY_FILTERS = [
@@ -287,10 +289,39 @@ export const useItemStore = create<ItemState>((set, get) => ({
   createItem: async data => {
     set({ loading: true, error: null })
 
-    try {
-      const formData = prepareFormData(data)
-      const result = await apiRequest<{ item: Item }>('/things/items', 'POST', formData)
+    // Generate idempotency key for this create operation
+    const idempotencyKey = idempotencyTracker.generateKey('/things/items', 'POST', data)
 
+    // Use distributed lock to prevent concurrent creates of the same item
+    const itemName = (data.name as string) || 'unnamed'
+    const lockResource = `thing:item:create:${itemName}`
+
+    const lockResult = await distributedLock.withLock(
+      lockResource,
+      async () => {
+        // Check if request already in flight
+        if (idempotencyTracker.isRequestPending(idempotencyKey)) {
+          console.log('[Idempotency] Create item request already in progress')
+          return idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
+        }
+
+        const formData = prepareFormData(data)
+        return idempotencyTracker.trackRequest(
+          idempotencyKey,
+          apiRequest<{ item: Item }>('/things/items', 'POST', formData)
+        )
+      },
+      { ttl: 10000, maxRetries: 3 }
+    )
+
+    if (!lockResult.success) {
+      const errorMessage = handleError(lockResult.error, '创建物品失败（操作被锁定）')
+      set({ loading: false, error: errorMessage })
+      throw lockResult.error
+    }
+
+    try {
+      const result = (await lockResult.result) as { item: Item }
       set({ loading: false })
       // 刷新列表
       await get().fetchItems()
@@ -306,12 +337,39 @@ export const useItemStore = create<ItemState>((set, get) => ({
   updateItem: async (id, data) => {
     set({ loading: true, error: null })
 
+    // Generate idempotency key for this update operation
+    const idempotencyKey = idempotencyTracker.generateKey(`/things/items/${id}`, 'PUT', data)
+
+    // Use distributed lock to prevent concurrent updates to the same item
+    const lockResource = `thing:item:update:${id}`
+
+    const lockResult = await distributedLock.withLock(
+      lockResource,
+      async () => {
+        // Check if request already in flight
+        if (idempotencyTracker.isRequestPending(idempotencyKey)) {
+          console.log('[Idempotency] Update item request already in progress')
+          return idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
+        }
+
+        const formData = prepareFormData(data)
+        formData.append('_method', 'PUT')
+        return idempotencyTracker.trackRequest(
+          idempotencyKey,
+          apiRequest<{ item: Item }>(`/things/items/${id}`, 'POST', formData)
+        )
+      },
+      { ttl: 10000, maxRetries: 3 }
+    )
+
+    if (!lockResult.success) {
+      const errorMessage = handleError(lockResult.error, '更新物品失败（操作被锁定）')
+      set({ loading: false, error: errorMessage })
+      throw lockResult.error
+    }
+
     try {
-      const formData = prepareFormData(data)
-      formData.append('_method', 'PUT')
-
-      const result = await apiRequest<{ item: Item }>(`/things/items/${id}`, 'POST', formData)
-
+      const result = (await lockResult.result) as { item: Item }
       set({ loading: false })
       // 刷新列表
       await get().fetchItems()
@@ -327,9 +385,25 @@ export const useItemStore = create<ItemState>((set, get) => ({
   deleteItem: async (id: number) => {
     set({ loading: true, error: null })
 
-    try {
-      await apiRequest(`/things/items/${id}`, 'DELETE')
+    // Use distributed lock to prevent concurrent deletes of the same item
+    const lockResource = `thing:item:delete:${id}`
 
+    const lockResult = await distributedLock.withLock(
+      lockResource,
+      async () => {
+        await apiRequest(`/things/items/${id}`, 'DELETE')
+        return true
+      },
+      { ttl: 5000, maxRetries: 3 }
+    )
+
+    if (!lockResult.success) {
+      const errorMessage = handleError(lockResult.error, '删除物品失败（操作被锁定）')
+      set({ loading: false, error: errorMessage })
+      throw lockResult.error
+    }
+
+    try {
       set(state => ({
         items: state.items.filter(item => item.id !== id),
         loading: false,

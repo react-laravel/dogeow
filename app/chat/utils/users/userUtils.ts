@@ -8,28 +8,37 @@ export type UserRole = 'admin' | 'moderator' | 'user'
 /**
  * 用户角色判断工具函数
  * 提供判断用户是否为管理员、版主的方法
+ *
+ * SECURITY: 角色必须从服务器提供的 role 字段获取，不能通过 email 推断
+ * 之前的实现使用 email.includes('admin') 存在 privilege escalation 漏洞
  */
 export const userRoleUtils = {
   /**
    * 判断用户是否为管理员
+   * @param user - 在线用户对象
+   * @returns 是否为管理员（基于 role 字段）
    */
   isAdmin: (user: OnlineUser): boolean => {
-    return user.email.includes('admin')
+    return user.role === 'admin'
   },
 
   /**
    * 判断用户是否为版主
+   * @param user - 在线用户对象
+   * @returns 是否为版主（基于 role 字段）
    */
   isModerator: (user: OnlineUser): boolean => {
-    return user.email.includes('admin') || user.email.includes('mod')
+    return user.role === 'moderator' || user.role === 'admin'
   },
 
   /**
    * 获取用户角色
+   * @param user - 在线用户对象
+   * @returns 用户角色
    */
   getUserRole: (user: OnlineUser): UserRole => {
-    if (userRoleUtils.isAdmin(user)) return 'admin'
-    if (userRoleUtils.isModerator(user)) return 'moderator'
+    if (user.role === 'admin') return 'admin'
+    if (user.role === 'moderator') return 'moderator'
     return 'user'
   },
 }
