@@ -135,7 +135,7 @@ export function MiniMaxPanel() {
   const weekTotal = subModel?.current_weekly_total_count ?? 0
   const weekRemain = subModel?.current_weekly_usage_count ?? 0
   const weekUsed = weekTotal - weekRemain
-  const weekPct = weekTotal > 0 ? ((weekUsed / weekTotal) * 100).toFixed(1) : '0'
+  const weekPct = weekTotal > 0 ? ((weekUsed / weekTotal) * 100).toFixed(2) : '0'
 
   // 套餐到期时间
   const subscribeEnd = detailData?.current_subscribe?.current_subscribe_end_time
