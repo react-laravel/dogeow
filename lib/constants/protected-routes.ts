@@ -11,6 +11,7 @@ const TILE_ROUTE_ACCESS_RULES: ReadonlyArray<RouteAccessRule> = [
   { href: '/tool', needLogin: true },
   { href: '/nav', needLogin: true },
   { href: '/note', needLogin: true },
+  { href: '/todos', needLogin: true },
   { href: '/game', needLogin: true },
   { href: '/chat', needLogin: true },
   { href: '/word', needLogin: true },

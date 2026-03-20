@@ -20,74 +20,90 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Check, Circle, GripVertical, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  createTodoList,
+  createTodoTask,
+  deleteTodoList,
+  fetchTodoList,
+  fetchTodoLists,
+  reorderTodoTasks,
+  updateTodoTask,
+} from './api'
+import type { TodoList, TodoTask } from './types'
 import { PageContainer, PageHeader } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/helpers'
+import useAuthStore from '@/stores/authStore'
 
-const STORAGE_KEY = 'dogeow_todos'
+const LEGACY_STORAGE_KEY = 'dogeow_todos'
+const LEGACY_MIGRATION_KEY = 'dogeow_todos_api_migrated_v1'
 const DEFAULT_LIST_NAME = '网站'
 const DEFAULT_LIST_DESCRIPTION = '自己开发'
+const EMPTY_TASKS: TodoTask[] = []
 
-interface TodoTask {
-  id: number
-  todo_list_id: number
-  title: string
-  is_completed: boolean
-  position: number
-  created_at: string
-  updated_at: string
+type TodoListWithTasks = Omit<TodoList, 'tasks'> & { tasks: TodoTask[] }
+type LegacyTodoList = TodoListWithTasks
+
+function sortTasks(tasks: TodoTask[] | undefined): TodoTask[] {
+  return [...(tasks ?? EMPTY_TASKS)].sort((a, b) => a.position - b.position)
 }
 
-interface TodoList {
-  id: number
-  user_id: number
-  name: string
-  description: string | null
-  position: number
-  created_at: string
-  updated_at: string
-  tasks: TodoTask[]
+function normalizeList(list: TodoList): TodoListWithTasks {
+  return {
+    ...list,
+    tasks: sortTasks(list.tasks),
+  }
 }
 
-function loadFromStorage(): TodoList[] {
+function readLegacyLocalLists(): LegacyTodoList[] {
   if (typeof window === 'undefined') return []
+
+  const raw = localStorage.getItem(LEGACY_STORAGE_KEY)
+  if (!raw) return []
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
     const parsed = JSON.parse(raw) as TodoList[]
-    return Array.isArray(parsed) ? parsed : []
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.map(list => normalizeList(list))
   } catch {
     return []
   }
 }
 
-function saveToStorage(lists: TodoList[]): void {
+function getLegacySeedList(): LegacyTodoList | null {
+  return readLegacyLocalLists()[0] ?? null
+}
+
+function hasLegacyMigrationCompleted(): boolean {
+  if (typeof window === 'undefined') return true
+  return localStorage.getItem(LEGACY_MIGRATION_KEY) === '1'
+}
+
+function clearLegacyLocalData(): void {
   if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(lists))
-  } catch {
-    toast.error('保存失败')
+  localStorage.removeItem(LEGACY_STORAGE_KEY)
+}
+
+function markLegacyMigrationCompleted(): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(LEGACY_MIGRATION_KEY, '1')
+  clearLegacyLocalData()
+}
+
+function getDefaultListPayload(seed: LegacyTodoList | null): {
+  name: string
+  description: string
+} {
+  return {
+    name: seed?.name?.trim() || DEFAULT_LIST_NAME,
+    description: seed?.description?.trim() || DEFAULT_LIST_DESCRIPTION,
   }
 }
 
-let nextListId = 1
-let nextTaskId = 1
-function genListId(): number {
-  return nextListId++
-}
-function genTaskId(): number {
-  return nextTaskId++
-}
-
-function initIds(lists: TodoList[]): void {
-  const maxListId = lists.reduce((m, l) => Math.max(m, l.id), 0)
-  const maxTaskId = lists.reduce((m, l) => {
-    const tMax = (l.tasks ?? []).reduce((t, task) => Math.max(t, task.id), 0)
-    return Math.max(m, tMax)
-  }, 0)
-  nextListId = maxListId + 1
-  nextTaskId = maxTaskId + 1
+function buildTaskSignature(task: TodoTask): string {
+  return `${task.title.trim()}::${task.is_completed ? '1' : '0'}`
 }
 
 function TodoItemRow({
@@ -107,7 +123,7 @@ function TodoItemRow({
   isEditing: boolean
   onStartEdit: () => void
   editTitle: string
-  onEditTitleChange: (v: string) => void
+  onEditTitleChange: (value: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -140,9 +156,9 @@ function TodoItemRow({
           <input
             type="text"
             value={editTitle}
-            onChange={e => onEditTitleChange(e.target.value)}
+            onChange={event => onEditTitleChange(event.target.value)}
             onBlur={onTitleBlur}
-            onKeyDown={e => e.key === 'Enter' && onTitleBlur()}
+            onKeyDown={event => event.key === 'Enter' && onTitleBlur()}
             className="w-full bg-transparent py-0.5 text-sm focus:outline-none focus:ring-0"
             autoFocus
             aria-label="编辑任务"
@@ -174,114 +190,199 @@ function TodoItemRow({
 }
 
 export default function TodosPage() {
-  const [lists, setLists] = useState<TodoList[]>(() => {
-    const loaded = loadFromStorage()
-    initIds(loaded)
-
-    // 如果没有列表，创建默认列表
-    if (loaded.length === 0) {
-      const now = new Date().toISOString()
-      const newList: TodoList = {
-        id: genListId(),
-        user_id: 0,
-        name: DEFAULT_LIST_NAME,
-        description: DEFAULT_LIST_DESCRIPTION,
-        position: 0,
-        created_at: now,
-        updated_at: now,
-        tasks: [],
-      }
-      return [newList]
-    }
-
-    return loaded
-  })
+  const { isAuthenticated, loading: authLoading } = useAuthStore()
+  const [lists, setLists] = useState<TodoListWithTasks[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isMigrating, setIsMigrating] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [isSubmittingNewTask, setIsSubmittingNewTask] = useState(false)
+  const [isDeletingList, setIsDeletingList] = useState(false)
+  const hasInitializedRef = useRef(false)
 
-  useEffect(() => {
-    queueMicrotask(() => setMounted(true))
-  }, [])
+  const updateCurrentList = useCallback(
+    (updater: (prev: TodoListWithTasks) => TodoListWithTasks) => {
+      setLists(prev => {
+        if (prev.length === 0) return prev
+        return [normalizeList(updater(prev[0])), ...prev.slice(1)]
+      })
+    },
+    []
+  )
 
-  const list = lists[0]
-  const tasks = list?.tasks ?? []
+  const migrateLegacyTodos = useCallback(
+    async (targetList: TodoListWithTasks): Promise<boolean> => {
+      if (typeof window === 'undefined' || hasLegacyMigrationCompleted()) {
+        return false
+      }
 
-  useEffect(() => {
-    if (lists.length > 0) saveToStorage(lists)
-  }, [lists])
+      const legacyList = getLegacySeedList()
+      if (!legacyList) {
+        markLegacyMigrationCompleted()
+        return false
+      }
 
-  const setList = useCallback((updater: (prev: TodoList) => TodoList) => {
-    setLists(prev => {
-      if (prev.length === 0) return prev
-      return [updater(prev[0]), ...prev.slice(1)]
-    })
-  }, [])
+      const legacyTasks = sortTasks(legacyList.tasks).filter(task => task.title.trim())
+      if (legacyTasks.length === 0) {
+        markLegacyMigrationCompleted()
+        return false
+      }
 
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault()
-    const title = newTaskTitle.trim()
-    if (!title || !list) return
-    const now = new Date().toISOString()
-    const newTask: TodoTask = {
-      id: genTaskId(),
-      todo_list_id: list.id,
-      title,
-      is_completed: false,
-      position: tasks.length,
-      created_at: now,
-      updated_at: now,
+      const existingSignatures = new Set(targetList.tasks.map(buildTaskSignature))
+      let migratedCount = 0
+
+      for (const legacyTask of legacyTasks) {
+        const title = legacyTask.title.trim()
+        const signature = buildTaskSignature({ ...legacyTask, title })
+
+        if (!title || existingSignatures.has(signature)) {
+          continue
+        }
+
+        const createdTask = await createTodoTask(String(targetList.id), title)
+
+        if (legacyTask.is_completed) {
+          await updateTodoTask(String(targetList.id), createdTask.id, { is_completed: true })
+        }
+
+        existingSignatures.add(signature)
+        migratedCount += 1
+      }
+
+      markLegacyMigrationCompleted()
+
+      if (migratedCount > 0) {
+        toast.success(`已迁移 ${migratedCount} 条本地待办`)
+      }
+
+      return migratedCount > 0
+    },
+    []
+  )
+
+  const initializeLists = useCallback(async () => {
+    setIsLoading(true)
+    setLoadError(null)
+
+    try {
+      let nextLists = (await fetchTodoLists()).map(normalizeList)
+
+      if (nextLists.length === 0) {
+        const createdList = await createTodoList(getDefaultListPayload(getLegacySeedList()))
+        nextLists = [normalizeList(await fetchTodoList(String(createdList.id)))]
+      }
+
+      if (nextLists.length === 0) {
+        throw new Error('初始化待办列表失败')
+      }
+
+      setIsMigrating(true)
+      const migrated = await migrateLegacyTodos(nextLists[0])
+      if (migrated) {
+        nextLists = (await fetchTodoLists()).map(normalizeList)
+      }
+
+      setLists(nextLists)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : '加载待办失败')
+    } finally {
+      setIsMigrating(false)
+      setIsLoading(false)
     }
-    setList(prev => ({
-      ...prev,
-      tasks: [...prev.tasks, newTask],
-      updated_at: now,
-    }))
-    setNewTaskTitle('')
-    toast.success('已添加')
+  }, [migrateLegacyTodos])
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || hasInitializedRef.current) return
+
+    hasInitializedRef.current = true
+    void initializeLists()
+  }, [authLoading, initializeLists, isAuthenticated])
+
+  const list = lists[0] ?? null
+  const tasks = sortTasks(list?.tasks)
+  const taskIds = tasks.map(task => task.id)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleAddTask = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!list || isSubmittingNewTask) return
+
+    const title = newTaskTitle.trim()
+    if (!title) return
+
+    setIsSubmittingNewTask(true)
+
+    try {
+      const createdTask = await createTodoTask(String(list.id), title)
+      updateCurrentList(prev => ({
+        ...prev,
+        tasks: [...prev.tasks, createdTask],
+        updated_at: createdTask.updated_at,
+      }))
+      setNewTaskTitle('')
+      toast.success('已添加')
+    } finally {
+      setIsSubmittingNewTask(false)
+    }
   }
 
   const handleToggle = useCallback(
-    (task: TodoTask) => {
-      const now = new Date().toISOString()
-      setList(prev => ({
+    async (task: TodoTask) => {
+      if (!list) return
+
+      const updatedTask = await updateTodoTask(String(list.id), task.id, {
+        is_completed: !task.is_completed,
+      })
+
+      updateCurrentList(prev => ({
         ...prev,
-        tasks: prev.tasks.map(t =>
-          t.id === task.id ? { ...t, is_completed: !t.is_completed, updated_at: now } : t
-        ),
-        updated_at: now,
+        tasks: prev.tasks.map(current => (current.id === task.id ? updatedTask : current)),
+        updated_at: updatedTask.updated_at,
       }))
     },
-    [setList]
+    [list, updateCurrentList]
   )
 
   const handleTitleChange = useCallback(
-    (task: TodoTask, title: string) => {
-      if (title === task.title) {
-        setEditingTaskId(null)
+    async (task: TodoTask, title: string) => {
+      if (!list) return
+
+      const nextTitle = title.trim()
+      setEditingTaskId(null)
+
+      if (!nextTitle || nextTitle === task.title) {
         return
       }
-      const now = new Date().toISOString()
-      setList(prev => ({
+
+      const updatedTask = await updateTodoTask(String(list.id), task.id, { title: nextTitle })
+
+      updateCurrentList(prev => ({
         ...prev,
-        tasks: prev.tasks.map(t =>
-          t.id === task.id ? { ...t, title: title.trim() || t.title, updated_at: now } : t
-        ),
-        updated_at: now,
+        tasks: prev.tasks.map(current => (current.id === task.id ? updatedTask : current)),
+        updated_at: updatedTask.updated_at,
       }))
-      setEditingTaskId(null)
     },
-    [setList]
+    [list, updateCurrentList]
   )
 
   const handleEndEdit = useCallback(() => {
     if (editingTaskId == null) return
-    const task = tasks.find(t => t.id === editingTaskId)
-    if (task && editTitle.trim() !== task.title) handleTitleChange(task, editTitle.trim())
+
+    const task = tasks.find(current => current.id === editingTaskId)
+    if (task && editTitle.trim() !== task.title) {
+      void handleTitleChange(task, editTitle)
+      return
+    }
+
     setEditingTaskId(null)
-  }, [editingTaskId, editTitle, tasks, handleTitleChange])
+  }, [editTitle, editingTaskId, handleTitleChange, tasks])
 
   const handleStartEdit = useCallback((task: TodoTask) => {
     setEditingTaskId(task.id)
@@ -289,47 +390,69 @@ export default function TodosPage() {
   }, [])
 
   const handleReorder = useCallback(
-    (taskIds: number[]) => {
-      setList(prev => {
-        const idToTask = new Map(prev.tasks.map(t => [t.id, t]))
-        const ordered = taskIds
-          .map((id, position) => {
-            const t = idToTask.get(id)
-            return t ? { ...t, position } : null
-          })
-          .filter(Boolean) as TodoTask[]
-        return { ...prev, tasks: ordered }
-      })
+    async (taskIdsInOrder: number[]) => {
+      if (!list) return
+
+      const updatedList = normalizeList(await reorderTodoTasks(String(list.id), taskIdsInOrder))
+      updateCurrentList(() => updatedList)
     },
-    [setList]
+    [list, updateCurrentList]
   )
 
-  const handleDeleteList = useCallback(() => {
-    setLists([])
-    setDeleteDialogOpen(false)
-    toast.success('已删除列表')
-  }, [])
+  const handleDeleteList = useCallback(async () => {
+    if (!list || isDeletingList) return
 
-  const sortedTasks = [...tasks].sort((a, b) => a.position - b.position)
-  const taskIds = sortedTasks.map(t => t.id)
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
+    setIsDeletingList(true)
+
+    try {
+      await deleteTodoList(String(list.id))
+      setDeleteDialogOpen(false)
+      toast.success('已删除列表')
+      await initializeLists()
+    } finally {
+      setIsDeletingList(false)
+    }
+  }, [initializeLists, isDeletingList, list])
 
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = sortedTasks.findIndex(t => t.id === active.id)
-    const newIndex = sortedTasks.findIndex(t => t.id === over.id)
+
+    const oldIndex = tasks.findIndex(task => task.id === active.id)
+    const newIndex = tasks.findIndex(task => task.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
-    handleReorder(arrayMove(sortedTasks, oldIndex, newIndex).map(t => t.id))
+
+    void handleReorder(arrayMove(tasks, oldIndex, newIndex).map(task => task.id))
+  }
+
+  if (authLoading || isLoading) {
+    return (
+      <PageContainer maxWidth="2xl">
+        <div className="text-muted-foreground flex items-center justify-center py-12">
+          {isMigrating ? '正在迁移本地待办…' : '加载中…'}
+        </div>
+      </PageContainer>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <PageContainer maxWidth="2xl">
+        <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+          <p className="text-muted-foreground text-sm">{loadError}</p>
+          <Button onClick={() => void initializeLists()}>重试</Button>
+        </div>
+      </PageContainer>
+    )
   }
 
   if (!list) {
     return (
       <PageContainer maxWidth="2xl">
-        <div className="text-muted-foreground flex items-center justify-center py-12">加载中…</div>
+        <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+          <p className="text-muted-foreground text-sm">暂无待办列表</p>
+          <Button onClick={() => void initializeLists()}>重新加载</Button>
+        </div>
       </PageContainer>
     )
   }
@@ -346,6 +469,7 @@ export default function TodosPage() {
             onClick={() => setDeleteDialogOpen(true)}
             aria-label="删除列表"
             className="text-muted-foreground hover:text-destructive"
+            disabled={isDeletingList}
           >
             <Trash2 className="h-5 w-5" />
           </Button>
@@ -358,12 +482,13 @@ export default function TodosPage() {
           <input
             type="text"
             value={newTaskTitle}
-            onChange={e => setNewTaskTitle(e.target.value)}
+            onChange={event => setNewTaskTitle(event.target.value)}
             placeholder="任务"
             aria-label="新任务"
             className="border-border bg-background focus:ring-primary flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            disabled={isSubmittingNewTask}
           />
-          <Button type="submit" size="sm">
+          <Button type="submit" size="sm" disabled={isSubmittingNewTask}>
             添加
           </Button>
         </form>
@@ -371,20 +496,18 @@ export default function TodosPage() {
 
       <section>
         <h2 className="text-foreground mb-3 text-base font-medium">代办事项</h2>
-        {!mounted ? (
-          <p className="text-muted-foreground py-6 text-sm">加载中...</p>
-        ) : sortedTasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <p className="text-muted-foreground py-6 text-sm">暂无事项，在上方添加一条吧</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
               <ul className="divide-border divide-y" role="list">
-                {sortedTasks.map(task => (
+                {tasks.map(task => (
                   <li key={task.id} role="listitem">
                     <TodoItemRow
                       task={task}
                       isCompleted={task.is_completed}
-                      onToggle={() => handleToggle(task)}
+                      onToggle={() => void handleToggle(task)}
                       onTitleBlur={handleEndEdit}
                       isEditing={editingTaskId === task.id}
                       onStartEdit={() => handleStartEdit(task)}
@@ -404,8 +527,8 @@ export default function TodosPage() {
         onOpenChange={setDeleteDialogOpen}
         title={`删除「${list.name}」列表？`}
         description="删除后，该列表下的所有任务也将一并删除。"
-        confirmText="删除"
-        onConfirm={handleDeleteList}
+        confirmText={isDeletingList ? '删除中…' : '删除'}
+        onConfirm={() => void handleDeleteList()}
       />
     </PageContainer>
   )
