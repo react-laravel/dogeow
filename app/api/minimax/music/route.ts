@@ -5,6 +5,7 @@ import {
   MINIMAX_TOKEN_API_HEADERS,
   MINIMAX_MUSIC_MODEL,
 } from '../_lib/config'
+import { requireAuth } from '../../_lib/auth-guard'
 
 export interface MusicRequest {
   prompt: string
@@ -13,6 +14,10 @@ export interface MusicRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   if (!MINIMAX_TOKEN_API_KEY) {
     return NextResponse.json(
       { error: 'MiniMax Token API Key 未配置，请设置 MINIMAX_TOKEN_API_KEY' },

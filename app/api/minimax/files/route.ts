@@ -4,6 +4,7 @@ import {
   MINIMAX_TOKEN_API_HEADERS,
   MINIMAX_TOKEN_API_KEY,
 } from '../_lib/config'
+import { requireAuth } from '../../_lib/auth-guard'
 
 export interface MiniMaxFile {
   id: string
@@ -21,6 +22,10 @@ export interface FilesListResponse {
 }
 
 export async function GET(request: NextRequest) {
+  // Auth guard: require valid Bearer token
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   if (!MINIMAX_TOKEN_API_KEY) {
     return NextResponse.json(
       {
