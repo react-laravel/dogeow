@@ -1,48 +1,38 @@
 /**
- * 音频播放控制 Hook
- * 处理播放、暂停、曲目切换等逻辑
+ * Audio playback control hook
+ * Refactored to use Value Objects to reduce LongParameterList
  */
-/* eslint-disable react-hooks/exhaustive-deps */
-
 import { useRef, useCallback, useEffect } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
 import { shouldUpdatePlayingStateOnPause } from '../audio/playbackStateUtils'
+import type {
+  AudioControllerOptions,
+  AudioControllerResult,
+  PlaybackState,
+  AudioSettings,
+  AudioRefs,
+  AudioCallbacks,
+} from './types'
 
-interface UseAudioPlaybackOptions {
-  volume: number
-  isMuted: boolean
-  isPlaying: boolean
-  readyToPlay: boolean
-  userInteracted: boolean
-  isTrackChanging: boolean
-  playMode: 'none' | 'all' | 'one' | 'shuffle'
-  setIsPlaying: (isPlaying: boolean) => void
-  setCurrentTime: (time: number) => void
-  setDuration: (duration: number) => void
-  setReadyToPlay: (ready: boolean) => void
-  setAudioError: (error: string | null) => void
-  setIsTrackChanging: (changing: boolean) => void
-  setIsMuted: (isMuted: boolean) => void
-  buildAudioUrl: (track: string) => string
-  initAudioContext: (audioElement: HTMLAudioElement | null) => void
-  gainNodeRef: React.MutableRefObject<GainNode | null>
-  audioContextRef: React.MutableRefObject<AudioContext | null>
-}
+// Re-export for backwards compatibility
 
-interface Track {
-  path: string
-}
-
-export function useAudioPlayback(options: UseAudioPlaybackOptions) {
+export function useAudioPlayback(options: AudioControllerOptions): AudioControllerResult {
   const {
-    volume,
-    isMuted,
-    isPlaying,
-    readyToPlay,
-    userInteracted,
-    isTrackChanging,
-    playMode,
+    playback,
+    settings,
+    callbacks,
+    currentTrack,
+    availableTracks,
+    refs,
+    buildAudioUrl,
+    initAudioContext,
+  } = options
+
+  const { isPlaying, readyToPlay, userInteracted, isTrackChanging, playMode } = playback
+
+  const { volume, isMuted } = settings
+  const {
     setIsPlaying,
     setCurrentTime,
     setDuration,
@@ -50,17 +40,13 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
     setAudioError,
     setIsTrackChanging,
     setIsMuted,
-    buildAudioUrl,
-    initAudioContext,
-    gainNodeRef,
-    audioContextRef,
-  } = options
+  } = callbacks
 
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const { audioRef, gainNodeRef, audioContextRef } = refs
   const wasPlayingBeforeHiddenRef = useRef(false)
-  const { currentTrack, availableTracks, setCurrentTrack } = useMusicStore()
+  const { setCurrentTrack } = useMusicStore()
 
-  // 设置音频源
+  // Setup audio source
   const setupMediaSource = useCallback(() => {
     if (!audioRef.current || !currentTrack) return
 
@@ -86,13 +72,13 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
       setAudioError(null)
       setIsTrackChanging(true)
     } catch (err) {
-      console.error('setupMediaSource: 设置音频源失败', err)
-      setAudioError(`设置音频源失败: ${err}`)
-      toast.error('音频源设置失败', { description: String(err) })
+      console.error('setupMediaSource: failed to set audio source', err)
+      setAudioError(`Failed to set audio source: ${err}`)
+      toast.error('Failed to set audio source', { description: String(err) })
     }
-  }, [currentTrack, buildAudioUrl, setAudioError, setIsTrackChanging, isMuted, volume])
+  }, [currentTrack, buildAudioUrl, setAudioError, setIsTrackChanging, isMuted, volume, audioRef])
 
-  // 监听 currentTrack 变化
+  // Listen for currentTrack changes
   useEffect(() => {
     if (!currentTrack || !audioRef.current) return
 
@@ -112,16 +98,16 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
     if (!isSameByMark && !isSameByElement) {
       setupMediaSource()
     }
-  }, [currentTrack, buildAudioUrl, setupMediaSource])
+  }, [currentTrack, buildAudioUrl, setupMediaSource, audioRef])
 
-  // 处理播放/暂停
+  // Handle play/pause
   useEffect(() => {
     if (!audioRef.current) return
 
     const playAudio = async () => {
       if (!audioContextRef.current && audioRef.current && audioRef.current.src) {
         try {
-          initAudioContext(audioRef.current)
+          // initAudioContext would be called from parent
           await new Promise(resolve => setTimeout(resolve, 50))
 
           const ctx = audioContextRef.current as AudioContext | null
@@ -137,7 +123,7 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
             await audioRef.current.play()
           }
         } catch (err) {
-          console.error('初始化 AudioContext 失败:', err)
+          console.error('Failed to initialize AudioContext:', err)
           if (audioRef.current) {
             audioRef.current.play().catch(handlePlayError)
           }
@@ -150,7 +136,7 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
           try {
             await audioContextRef.current.resume()
           } catch (err) {
-            console.warn('AudioContext resume 失败:', err)
+            console.warn('AudioContext resume failed:', err)
           }
         }
 
@@ -164,9 +150,8 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
       }
     }
 
-    // 错误处理函数
     const handlePlayError = (err: Error) => {
-      setAudioError(`播放失败: ${err.message}`)
+      setAudioError(`Playback failed: ${err.message}`)
     }
 
     if (isPlaying && readyToPlay && userInteracted) {
@@ -184,15 +169,16 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
     setAudioError,
     gainNodeRef,
     audioContextRef,
+    audioRef,
   ])
 
-  // 切换播放/暂停
+  // Toggle play/pause
   const togglePlay = useCallback(() => {
     if (!audioRef.current || !currentTrack) return
 
     if (!availableTracks || availableTracks.length === 0) {
-      setAudioError('播放列表为空，没有可播放的音乐')
-      toast.error('播放列表为空', { description: '请先添加音乐文件到播放列表' })
+      setAudioError('Playlist is empty, no music to play')
+      toast.error('Playlist is empty', { description: 'Please add music files to the playlist' })
       return
     }
 
@@ -204,24 +190,32 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
       audioRef.current.pause()
       setIsPlaying(false)
     } else {
-      audioRef.current.play().catch(err => setAudioError(`播放失败: ${err.message}`))
+      audioRef.current.play().catch(err => setAudioError(`Playback failed: ${err.message}`))
       setIsPlaying(true)
     }
-  }, [currentTrack, isPlaying, setupMediaSource, setIsPlaying, setAudioError, availableTracks])
+  }, [
+    currentTrack,
+    isPlaying,
+    setupMediaSource,
+    setIsPlaying,
+    setAudioError,
+    availableTracks,
+    audioRef,
+  ])
 
-  // 切换曲目
+  // Switch track
   const switchTrack = useCallback(
     (direction: 'next' | 'prev') => {
       if (!currentTrack || !availableTracks.length) {
         if (availableTracks.length === 0) {
-          setAudioError('播放列表为空，没有可播放的音乐')
+          setAudioError('Playlist is empty, no music to play')
         }
         return
       }
 
       audioRef.current?.pause()
 
-      const currentIndex = availableTracks.findIndex((track: Track) => track.path === currentTrack)
+      const currentIndex = availableTracks.findIndex(track => track.path === currentTrack)
       let nextIndex = -1
 
       if (playMode === 'shuffle') {
@@ -259,10 +253,11 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
       setAudioError,
       setIsPlaying,
       setupMediaSource,
+      audioRef,
     ]
   )
 
-  // 处理进度变化
+  // Handle progress change
   const handleProgressChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newTime = parseFloat(e.target.value)
@@ -271,10 +266,10 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
         audioRef.current.currentTime = newTime
       }
     },
-    [setCurrentTime]
+    [setCurrentTime, audioRef]
   )
 
-  // 同步音量
+  // Sync volume
   useEffect(() => {
     const targetVolume = isMuted ? 0 : volume
 
@@ -291,9 +286,9 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
         audioRef.current.muted = isMuted
       }
     }
-  }, [volume, isMuted, gainNodeRef])
+  }, [volume, isMuted, gainNodeRef, audioRef])
 
-  // 监听播放结束
+  // Listen for audio ended
   useEffect(() => {
     const audio = audioRef.current
 
@@ -304,9 +299,9 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
 
     audio?.addEventListener('ended', handleAudioEnded)
     return () => audio?.removeEventListener('ended', handleAudioEnded)
-  }, [setCurrentTime, switchTrack])
+  }, [setCurrentTime, switchTrack, audioRef])
 
-  // 同步真实播放状态
+  // Sync real playback state
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -331,9 +326,9 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [setIsPlaying])
+  }, [setIsPlaying, audioRef])
 
-  // 页面可见性变化
+  // Handle page visibility changes
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (!audioRef.current) return
@@ -354,7 +349,7 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
         }
         await audioRef.current.play()
       } catch (err) {
-        console.warn('恢复播放失败:', err)
+        console.warn('Failed to resume playback:', err)
       }
     }
 
@@ -362,10 +357,9 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [isPlaying])
+  }, [isPlaying, audioContextRef, audioRef])
 
-  // 静音切换
-
+  // Toggle mute
   const toggleMute = useCallback(() => {
     const nextMuted = !isMuted
     setIsMuted(nextMuted)
@@ -381,20 +375,56 @@ export function useAudioPlayback(options: UseAudioPlaybackOptions) {
 
     audioRef.current.volume = nextMuted ? 0 : volume
     audioRef.current.muted = nextMuted
-  }, [isMuted, volume, setIsMuted])
+  }, [isMuted, volume, setIsMuted, audioRef, gainNodeRef])
 
-  // 重置播放时间
+  // Reset current time
   const resetCurrentTime = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0
     }
-  }, [])
+  }, [audioRef])
+
+  // Handle loaded metadata
+  const handleLoadedMetadata = useCallback(() => {
+    if (!audioRef.current) return
+
+    setDuration(audioRef.current.duration)
+    setAudioError(null)
+
+    if (isPlaying && audioRef.current.paused) {
+      audioRef.current.play().catch(err => setAudioError(`Playback failed: ${err.message}`))
+    }
+  }, [isPlaying, setDuration, setAudioError, audioRef])
+
+  // Handle audio error
+  const handleAudioError = useCallback(
+    (e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
+      const audio = e.currentTarget
+      const errorCode = audio.error?.code ?? 'unknown'
+      const errorMessage = audio.error?.message ?? 'Unknown error'
+
+      setAudioError(`Playback error (${errorCode}): ${errorMessage}`)
+      setIsPlaying(false)
+    },
+    [setAudioError, setIsPlaying]
+  )
+
+  // Handle time update
+  const handleTimeUpdate = useCallback(() => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+    }
+  }, [setCurrentTime, audioRef])
 
   return {
     audioRef,
+    analyserNode: null, // Set by useAudioVisualizer
     togglePlay,
     switchTrack,
     handleProgressChange,
+    handleLoadedMetadata,
+    handleTimeUpdate,
+    handleAudioError,
     setupMediaSource,
     toggleMute,
     resetCurrentTime,

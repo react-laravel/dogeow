@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useMusicStore, MusicTrack } from '@/stores/musicStore'
-import { AudioController } from '@/components/launcher/AudioController'
+import { useAudioPlayback } from '@/components/launcher/hooks/useAudioPlayback'
+import { useAudioVisualizer } from '@/components/launcher/hooks/useAudioVisualizer'
 import { apiRequest } from '@/lib/api'
 
 export const useAudioManager = () => {
@@ -15,6 +16,7 @@ export const useAudioManager = () => {
     availableTracks,
   } = useMusicStore()
 
+  // Local state
   const [isPlaying, setIsPlaying] = useState(storeIsPlaying)
   const [isMuted, setIsMuted] = useState(false)
   const [volume] = useState(musicVolume)
@@ -26,25 +28,79 @@ export const useAudioManager = () => {
   const [readyToPlay, setReadyToPlay] = useState(false)
   const [isLoadingTracks, setIsLoadingTracks] = useState(false)
 
-  // 初始化音频控制器
-  const audioController = AudioController({
-    volume,
-    isMuted,
-    setIsPlaying,
-    setCurrentTime,
-    setDuration,
-    setReadyToPlay,
-    setAudioError,
-    isPlaying,
-    readyToPlay,
-    userInteracted,
-    isTrackChanging,
-    setIsTrackChanging,
-    playMode,
-    setIsMuted,
+  // Audio refs
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+
+  // API URL
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
+  // Build audio URL
+  const buildAudioUrl = useCallback(
+    (track: string) => {
+      if (!track) return ''
+      // Extract filename from path
+      const filename = track.split('/').pop() ?? track
+      return `${apiUrl}/musics/${filename}`
+    },
+    [apiUrl]
+  )
+
+  // Audio visualizer hook
+  const visualizer = useAudioVisualizer({ volume, isMuted })
+
+  // Initialize AudioContext from visualizer
+  const initAudioContext = useCallback(
+    (audioElement: HTMLAudioElement | null) => {
+      visualizer.initAudioContext(audioElement)
+      // Sync refs
+      if (audioElement) {
+        audioContextRef.current = visualizer.audioContextRef.current
+      }
+    },
+    [visualizer]
+  )
+
+  // Audio playback hook with Value Objects
+  const playback = useAudioPlayback({
+    playback: {
+      isPlaying,
+      readyToPlay,
+      userInteracted,
+      isTrackChanging,
+      playMode,
+    },
+    position: {
+      currentTime,
+      duration,
+    },
+    settings: {
+      volume,
+      isMuted,
+    },
+    callbacks: {
+      setIsPlaying,
+      setCurrentTime,
+      setDuration,
+      setReadyToPlay,
+      setAudioError,
+      setIsTrackChanging,
+      setIsMuted,
+    },
+    currentTrack,
+    availableTracks,
+    refs: {
+      audioRef,
+      audioContextRef: visualizer.audioContextRef,
+      analyserRef: visualizer.analyserRef,
+      sourceRef: visualizer.sourceRef,
+      gainNodeRef: visualizer.gainNodeRef,
+    },
+    buildAudioUrl,
+    initAudioContext,
   })
 
-  // 加载音频列表
+  // Load audio list
   const fetchAvailableTracks = useCallback(async () => {
     setIsLoadingTracks(true)
     setAudioError(null)
@@ -53,9 +109,9 @@ export const useAudioManager = () => {
       const musicData = await apiRequest<MusicTrack[]>('/musics')
       setAvailableTracks(musicData)
 
-      // 检查播放列表是否为空
+      // Check if playlist is empty
       if (musicData.length === 0) {
-        setAudioError('播放列表为空，没有可播放的音乐')
+        setAudioError('Playlist is empty, no music to play')
         setCurrentTrack('')
         setIsPlaying(false)
         return
@@ -63,11 +119,11 @@ export const useAudioManager = () => {
 
       const currentTrackValue = useMusicStore.getState().currentTrack
       if (musicData.length > 0) {
-        // 如果当前曲目为空，或者当前曲目不在新的列表中，则设置第一个曲目
+        // If current track is empty, or current track is not in the new list, set first track
         if (!currentTrackValue || currentTrackValue === '') {
           setCurrentTrack(musicData[0].path)
         } else {
-          // 检查当前曲目是否仍然有效
+          // Check if current track is still valid
           const isValidTrack = musicData.some(track => track.path === currentTrackValue)
           if (!isValidTrack) {
             setCurrentTrack(musicData[0].path)
@@ -75,14 +131,14 @@ export const useAudioManager = () => {
         }
       }
     } catch (error) {
-      console.error('加载音频列表失败:', error)
-      setAudioError('加载音频列表失败')
+      console.error('Failed to load audio list:', error)
+      setAudioError('Failed to load audio list')
     } finally {
       setIsLoadingTracks(false)
     }
   }, [setAvailableTracks, setCurrentTrack, setAudioError, setIsPlaying])
 
-  // 获取当前音频文件名称
+  // Get current audio file name
   const getCurrentTrackName = useCallback(() => {
     if (!currentTrack) return ''
 
@@ -94,7 +150,7 @@ export const useAudioManager = () => {
       return trackInfo.name
     }
 
-    // 从路径中提取文件名
+    // Extract filename from path
     const parts = currentTrack.split('/')
     const fileName = parts[parts.length - 1]
     let decodedFileName = fileName
@@ -108,19 +164,19 @@ export const useAudioManager = () => {
     return decodedFileName.replace(/\.(mp3|wav|m4a|aac|ogg|flac)$/i, '').replace(/[_\-]/g, ' ')
   }, [currentTrack, availableTracks])
 
-  // 格式化时间显示
+  // Format time display
   const formatTime = useCallback((time: number) => {
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
   }, [])
 
-  // 同步播放状态到store
+  // Sync playback state to store
   useEffect(() => {
     setStoreIsPlaying(isPlaying)
   }, [isPlaying, setStoreIsPlaying])
 
-  // 监听全局用户交互
+  // Listen for global user interaction
   useEffect(() => {
     const handleUserInteraction = () => {
       if (!userInteracted) {
@@ -141,7 +197,7 @@ export const useAudioManager = () => {
   }, [])
 
   return {
-    // 状态
+    // State
     isPlaying,
     isMuted,
     volume,
@@ -154,13 +210,14 @@ export const useAudioManager = () => {
     readyToPlay,
     setReadyToPlay,
     setIsPlaying,
-    // 方法
+    // Methods
     getCurrentTrackName,
     formatTime,
     fetchAvailableTracks,
     setCurrentTrack,
     markUserInteracted,
-    // 音频控制器（包含toggleMute）
-    ...audioController,
+    // Audio controller
+    ...playback,
+    analyserNode: visualizer.analyserNode,
   }
 }
