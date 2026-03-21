@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '../../_lib/auth-guard'
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
 const OLLAMA_TAGS_URL = `${OLLAMA_BASE_URL}/api/tags`
@@ -109,7 +110,11 @@ function supportsVision(model: OllamaTagModel, show?: OllamaShowResponse): boole
   return VISION_NAME_PATTERNS.some(pattern => pattern.test(model.name ?? ''))
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Auth guard: require valid Bearer token to prevent model enumeration
+  const authError = requireAuth(request)
+  if (authError) return authError
+
   try {
     const tags = await fetchJson<OllamaTagsResponse>(OLLAMA_TAGS_URL)
     const models = tags.models ?? []
