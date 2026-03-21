@@ -29,6 +29,24 @@ import {
 import { apiGet, post, put, del } from '@/lib/api'
 import { soundManager } from '../utils/soundManager'
 
+// Imports from extracted helpers
+import {
+  reportCombatDebug,
+  extractCombatLogId,
+  mergeCombatLogsWithUpdate,
+  hasPotionUsage,
+  type CombatLogEntry,
+} from './combatHelpers'
+import {
+  normalizeEquipmentResponse,
+  getSelectedCharacterIdOrAbort,
+  setRequestError,
+  startRequest,
+  patchCharacter,
+  withUpdatedCopper,
+  withCombatFlag,
+} from './gameStateHelpers'
+
 /** 进入地图接口响应 */
 interface EnterMapResponse {
   character: GameCharacter
@@ -224,142 +242,6 @@ const initialState = {
   compendiumMonsters: [],
   compendiumMonsterDrops: null,
 }
-
-type CombatLogEntry = CombatResult | CombatLog
-
-type InventoryEquipmentResponse = Record<
-  string,
-  { slot?: string; item?: GameItem | null } | GameItem | null
->
-
-const COMBAT_DEBUG_ENDPOINT = process.env.NEXT_PUBLIC_COMBAT_DEBUG_ENDPOINT
-const COMBAT_DEBUG_HEADERS = {
-  'Content-Type': 'application/json',
-  'X-Debug-Session-Id': process.env.NEXT_PUBLIC_COMBAT_DEBUG_SESSION_ID || '',
-}
-const COMBAT_DEBUG_BASE = {
-  sessionId: process.env.NEXT_PUBLIC_COMBAT_DEBUG_SESSION_ID || '',
-  hypothesisId: 'H1',
-}
-
-const reportCombatDebug = (location: string, message: string, data: Record<string, unknown>) => {
-  if (!COMBAT_DEBUG_ENDPOINT) return
-  fetch(COMBAT_DEBUG_ENDPOINT, {
-    method: 'POST',
-    headers: COMBAT_DEBUG_HEADERS,
-    body: JSON.stringify({
-      ...COMBAT_DEBUG_BASE,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-}
-
-const isGameItem = (data: unknown): data is GameItem => {
-  return !!(
-    data &&
-    typeof data === 'object' &&
-    'id' in data &&
-    'character_id' in data &&
-    'definition_id' in data &&
-    'definition' in data &&
-    'quality' in data &&
-    'quantity' in data
-  )
-}
-
-const normalizeEquipmentResponse = (
-  equipmentResponse?: InventoryEquipmentResponse
-): Record<string, GameItem | null> => {
-  const equipment: Record<string, GameItem | null> = {}
-  Object.entries(equipmentResponse || {}).forEach(([slot, data]) => {
-    if (data && typeof data === 'object' && 'item' in data) {
-      const item = data.item
-      equipment[slot] = isGameItem(item) ? item : null
-      return
-    }
-    equipment[slot] = isGameItem(data) ? data : null
-  })
-  return equipment
-}
-
-const extractCombatLogId = (log: CombatLogEntry | GameCombatUpdateEvent): number | null => {
-  if ('id' in log && typeof log.id === 'number') return log.id
-  if ('combat_log_id' in log && typeof log.combat_log_id === 'number') return log.combat_log_id
-  return null
-}
-
-const mergeCombatLogsWithUpdate = (
-  logs: CombatLogEntry[],
-  update: GameCombatUpdateEvent
-): CombatLogEntry[] => {
-  const updateLogId = extractCombatLogId(update)
-  if (updateLogId == null) {
-    return logs
-  }
-
-  const existingLogIds = new Set<number>(
-    logs.map(log => extractCombatLogId(log)).filter((id): id is number => id != null)
-  )
-  if (existingLogIds.has(updateLogId)) {
-    return logs
-  }
-
-  const normalizedLog = { ...update, id: updateLogId } as CombatLogEntry
-  return [normalizedLog, ...logs].slice(0, 100)
-}
-
-const hasPotionUsage = (update: GameCombatUpdateEvent): boolean => {
-  const potionUsed = update.potion_used
-  return !!(
-    potionUsed &&
-    ((potionUsed.before && Object.keys(potionUsed.before).length > 0) ||
-      (potionUsed.after && Object.keys(potionUsed.after).length > 0))
-  )
-}
-
-type SetGameState = (updater: (state: GameState) => GameState | Partial<GameState>) => void
-
-const getSelectedCharacterIdOrAbort = (
-  getState: () => GameState,
-  setState: SetGameState,
-  options: { context: string; stopLoading?: boolean; warn?: boolean }
-): number | null => {
-  const { context, stopLoading = true, warn = true } = options
-  const selectedId = getState().selectedCharacterId
-  if (selectedId) return selectedId
-
-  if (warn) {
-    console.warn(`[GameStore] ${context} - no character selected, skipping`)
-  }
-  if (stopLoading) {
-    setState(state => ({ ...state, isLoading: false }))
-  }
-  return null
-}
-
-const setRequestError = (setState: SetGameState, error: unknown) => {
-  setState(state => ({ ...state, error: (error as Error).message, isLoading: false }))
-}
-
-const startRequest = (setState: SetGameState, extra: Partial<GameState> = {}) => {
-  setState(state => ({ ...state, isLoading: true, error: null, ...extra }))
-}
-
-const patchCharacter = (
-  character: GameCharacter | null,
-  patch: Partial<GameCharacter>
-): GameCharacter | null => (character ? { ...character, ...patch } : null)
-
-const withUpdatedCopper = (character: GameCharacter | null, copper: number): GameCharacter | null =>
-  patchCharacter(character, { copper })
-
-const withCombatFlag = (state: GameState, isFighting: boolean): Partial<GameState> => ({
-  isFighting,
-  character: patchCharacter(state.character, { is_fighting: isFighting }),
-})
 
 const store: StateCreator<GameState> = (set, get) => ({
   ...initialState,
