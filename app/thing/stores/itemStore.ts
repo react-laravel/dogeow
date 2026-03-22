@@ -299,10 +299,15 @@ export const useItemStore = create<ItemState>((set, get) => ({
     const lockResult = await distributedLock.withLock(
       lockResource,
       async () => {
-        // Check if request already in flight
+        // Check if request already in flight - wait for it to complete
         if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-          console.log('[Idempotency] Create item request already in progress')
-          return idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
+          console.log('[Idempotency] Create item request already in progress, waiting for result')
+          const pendingRequest = idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
+          if (pendingRequest) {
+            return pendingRequest
+          }
+          // Fall through to make a new request if pending somehow disappeared
+          console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
         }
 
         const formData = prepareFormData(data)
@@ -318,6 +323,13 @@ export const useItemStore = create<ItemState>((set, get) => ({
       const errorMessage = handleError(lockResult.error, '创建物品失败（操作被锁定）')
       set({ loading: false, error: errorMessage })
       throw lockResult.error
+    }
+
+    // Guard against null result from lock
+    if (!lockResult.result) {
+      const errorMessage = '创建物品失败（服务器返回空响应）'
+      set({ loading: false, error: errorMessage })
+      throw new Error(errorMessage)
     }
 
     try {
@@ -346,10 +358,15 @@ export const useItemStore = create<ItemState>((set, get) => ({
     const lockResult = await distributedLock.withLock(
       lockResource,
       async () => {
-        // Check if request already in flight
+        // Check if request already in flight - wait for it to complete
         if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-          console.log('[Idempotency] Update item request already in progress')
-          return idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
+          console.log('[Idempotency] Update item request already in progress, waiting for result')
+          const pendingRequest = idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
+          if (pendingRequest) {
+            return pendingRequest
+          }
+          // Fall through to make a new request if pending somehow disappeared
+          console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
         }
 
         const formData = prepareFormData(data)
@@ -366,6 +383,13 @@ export const useItemStore = create<ItemState>((set, get) => ({
       const errorMessage = handleError(lockResult.error, '更新物品失败（操作被锁定）')
       set({ loading: false, error: errorMessage })
       throw lockResult.error
+    }
+
+    // Guard against null result from lock
+    if (!lockResult.result) {
+      const errorMessage = '更新物品失败（服务器返回空响应）'
+      set({ loading: false, error: errorMessage })
+      throw new Error(errorMessage)
     }
 
     try {
