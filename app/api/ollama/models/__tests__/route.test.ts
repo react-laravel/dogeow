@@ -34,7 +34,7 @@ describe('Ollama Models API Route', () => {
     it('returns 401 when no Authorization header is present', async () => {
       const { requireAuth } = await import('../../../_lib/auth-guard')
       vi.mocked(requireAuth).mockReturnValueOnce(
-        new (await import('next/server')).NextResponse.json(
+        (await import('next/server')).NextResponse.json(
           { error: '未授权', message: '请先登录或提供有效的认证令牌' },
           { status: 401 }
         )
@@ -110,6 +110,244 @@ describe('Ollama Models API Route', () => {
       expect(data.models).toHaveLength(1)
       expect(data.models[0].name).toBe('qwen3:0.6b')
       expect(data.models[0].supportsVision).toBe(false)
+    })
+
+    it('filters out embedding models by name pattern', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            models: [
+              { name: 'nomic-embed-text:latest', size: 123456 },
+              { name: 'qwen3:0.6b', size: 1234567 },
+            ],
+          }),
+      } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(1)
+      expect(data.models[0].name).toBe('qwen3:0.6b')
+    })
+
+    it('filters out embedding models by family pattern', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [
+                { name: 'custom-embedding-model', size: 123456, details: { family: 'bert' } },
+                { name: 'qwen3:0.6b', size: 1234567 },
+              ],
+            }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['embedding'] }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(1)
+      expect(data.models[0].name).toBe('qwen3:0.6b')
+    })
+
+    it('detects vision-capable models by name pattern', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [
+                { name: 'llava:latest', size: 123456 },
+                { name: 'qwen3:0.6b', size: 1234567 },
+              ],
+            }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: [] }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(2)
+      const llavaModel = data.models.find((m: any) => m.name === 'llava:latest')
+      expect(llavaModel?.supportsVision).toBe(true)
+    })
+
+    it('detects vision-capable models by capabilities', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [{ name: 'qwen3:0.6b', size: 1234567 }],
+            }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['vision', 'completion', 'chat'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(1)
+      expect(data.models[0].supportsVision).toBe(true)
+    })
+
+    it('handles model with missing details gracefully', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [{ name: 'unknown-model', size: 123456 }],
+            }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(1)
+      expect(data.models[0].name).toBe('unknown-model')
+      expect(data.models[0].family).toBeUndefined()
+      expect(data.models[0].parameterSize).toBeUndefined()
+    })
+
+    it('handles fetch error for individual model show endpoint', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [
+                { name: 'model1', size: 123 },
+                { name: 'model2', size: 456 },
+              ],
+            }),
+        } as unknown as Response)
+        .mockRejectedValueOnce(new Error('Network error')) // First show call fails
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      // Should still return models even if one show call fails
+      expect(data.models).toHaveLength(2)
+    })
+
+    it('returns models sorted alphabetically', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [
+                { name: 'zephyr', size: 123 },
+                { name: 'alpha', size: 456 },
+                { name: 'beta', size: 789 },
+              ],
+            }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['completion', 'chat'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models[0].name).toBe('alpha')
+      expect(data.models[1].name).toBe('beta')
+      expect(data.models[2].name).toBe('zephyr')
+    })
+
+    it('returns available: false when Ollama is unavailable', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch).mockRejectedValue(new Error('Ollama API error: 500'))
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(response.status).toBe(200) // Returns 200 with error info
+      expect(data.models).toEqual([])
+      expect(data.available).toBe(false)
+      expect(data.error).toContain('Ollama API error')
+    })
+
+    it('filters out models with only embedding capability', async () => {
+      const { requireAuth } = await import('../../../_lib/auth-guard')
+      vi.mocked(requireAuth).mockReturnValueOnce(null)
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              models: [{ name: 'embedding-model', size: 123456 }],
+            }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ capabilities: ['embedding'] }),
+        } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(0)
     })
   })
 })
