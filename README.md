@@ -32,12 +32,15 @@
 
 ## 构建与分析
 
-项目使用 Next.js 的官方构建命令，脚本在 `package.json` 中配置：
+项目统一使用 `npm`，不要混用 `yarn` / `pnpm`。构建脚本在 `package.json` 中配置：
 
 ```bash
+npm ci                  # 安装锁定依赖
 npm run build           # 生产构建 (next build)
 npm run analyze         # 生成 bundle 分析报告 (next experimental-analyze)
 ```
+
+线上更新依赖后，必须重新执行 `npm run build`，然后再重启或 reload PM2。推荐直接走仓库里的 `scripts/deploy-zero-downtime.sh`，它会按 `npm ci -> next build -> pm2 reload` 的顺序部署，避免旧 `.next` 产物和新依赖混用导致 500。
 
 在 CI 中会额外跑一次 `npm run analyze` 并上传分析报告为构建产物；分析失败不会阻塞流水线。若 `next experimental-analyze` 输出目录有变，需同步修改 CI 中的 artifact path。
 
