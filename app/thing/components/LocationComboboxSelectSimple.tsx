@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { cn } from '@/lib/helpers'
-import { useLocationData } from './location/hooks/useLocationData'
+import { useLocationData } from '@/hooks/useLocationData'
 import { useAutoScroll } from './location/hooks/useAutoScroll'
 import { useLocationCreation } from './location/hooks/useLocationCreation'
 import { LocationSelectField } from './location/components/LocationSelectField'
-import { areaToOptions, roomToOptions, spotToOptions } from './location/utils/optionUtils'
-import { buildPathFromSelection } from './location/utils/pathUtils'
+import { areaToOptions, roomToOptions, spotToOptions } from '@/lib/utils/location-options'
+import { buildLocationPathFromSelection } from '@/lib/utils/location-path'
 import type { Area, Room, Spot } from '@/app/thing/types'
 
 export type LocationSelection =
@@ -108,7 +108,14 @@ const LocationComboboxSelectSimple: React.FC<LocationComboboxSelectProps> = ({
     setSelectedSpotId('')
 
     if (roomId) {
-      const path = buildPathFromSelection(selectedAreaId, roomId, '', areas, rooms, spots)
+      const path = buildLocationPathFromSelection({
+        areaId: selectedAreaId,
+        roomId,
+        spotId: '',
+        areas,
+        rooms,
+        spots,
+      })
       const room = rooms.find(r => r.id.toString() === roomId)
       if (room) {
         onSelect('room', room.id, path)
@@ -130,21 +137,28 @@ const LocationComboboxSelectSimple: React.FC<LocationComboboxSelectProps> = ({
     setSelectedSpotId(spotId)
 
     if (spotId) {
-      const path = buildPathFromSelection(
-        selectedAreaId,
-        selectedRoomId,
+      const path = buildLocationPathFromSelection({
+        areaId: selectedAreaId,
+        roomId: selectedRoomId,
         spotId,
         areas,
         rooms,
-        spots
-      )
+        spots,
+      })
       const spot = spots.find(s => s.id.toString() === spotId)
       if (spot) {
         onSelect('spot', spot.id, path)
       }
     } else {
       if (selectedRoomId && selectedAreaId) {
-        const path = buildPathFromSelection(selectedAreaId, selectedRoomId, '', areas, rooms, spots)
+        const path = buildLocationPathFromSelection({
+          areaId: selectedAreaId,
+          roomId: selectedRoomId,
+          spotId: '',
+          areas,
+          rooms,
+          spots,
+        })
         const room = rooms.find(r => r.id.toString() === selectedRoomId)
         if (room) {
           onSelect('room', room.id, path)
