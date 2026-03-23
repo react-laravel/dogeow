@@ -22,8 +22,8 @@ export interface FilesListResponse {
 }
 
 export async function GET(request: NextRequest) {
-  // Auth guard: require valid Bearer token
-  const authError = requireAuth(request)
+  // Auth guard: require valid Bearer token (validates against backend)
+  const authError = await requireAuth(request)
   if (authError) return authError
 
   if (!MINIMAX_TOKEN_API_KEY) {

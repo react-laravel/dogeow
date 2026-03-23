@@ -87,8 +87,8 @@ async function handleGenerateRequest(body: GenerateRequestBody) {
 }
 
 export async function POST(request: NextRequest) {
-  // Auth guard: require valid Bearer token
-  const authError = requireAuth(request)
+  // Auth guard: require valid Bearer token (validates against backend)
+  const authError = await requireAuth(request)
   if (authError) return authError
 
   let body: GenerateRequestBody
@@ -146,7 +146,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (useChat && messages && messages.length > 0) {
-      const response = await handleChatRequest(body, buildChatMessages(messages, command), requestId)
+      const response = await handleChatRequest(
+        body,
+        buildChatMessages(messages, command),
+        requestId
+      )
       // Note: Streaming responses can't be easily deduplicated
       // The idempotency check above helps prevent duplicate starts
       return response
