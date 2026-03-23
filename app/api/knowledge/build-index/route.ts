@@ -11,9 +11,14 @@ import { idempotencyTracker } from '@/lib/utils/idempotency'
  * POST /api/knowledge/build-index
  *
  * Idempotency: Uses request ID header to prevent duplicate index builds
+ *
+ * NOTE: This implementation uses in-memory storage for idempotency tracking.
+ * In a serverless environment (e.g., Vercel), each instance has its own memory,
+ * so idempotency only works within a single instance. For true distributed
+ * idempotency, a Redis or database-backed solution would be required.
  */
 
-// Track in-progress index builds
+// Track in-progress index builds (per-instance only - see note above)
 const inProgressBuilds = new Map<string, { timestamp: number; promise: Promise<unknown> }>()
 const BUILD_TTL = 5 * 60 * 1000 // 5 minutes
 
@@ -49,6 +54,7 @@ export async function POST(request: NextRequest) {
     if (existingBuild && Date.now() - existingBuild.timestamp < BUILD_TTL) {
       console.log(`[BuildIndex] Request ${requestId} already in progress, waiting for result`)
       try {
+        // Wait for the existing build to complete
         await existingBuild.promise
         // If we get here, the original request completed - return success
         const existingIndex = loadVectorIndex()
@@ -59,14 +65,16 @@ export async function POST(request: NextRequest) {
           createdAt: existingIndex?.createdAt,
           updatedAt: existingIndex?.updatedAt,
           idempotent: true,
+          requestId,
         })
-      } catch {
+      } catch (waitingError) {
         // Original request failed, allow retry
+        console.warn(`[BuildIndex] Previous request ${requestId} failed, allowing retry:`, waitingError)
         inProgressBuilds.delete(requestId)
       }
     }
 
-    // Check if index already exists
+    // Check if index already exists (only if not forcing rebuild)
     const existingIndex = loadVectorIndex()
     if (existingIndex && !force) {
       return NextResponse.json({
@@ -136,7 +144,7 @@ export async function POST(request: NextRequest) {
       return index
     })()
 
-    // Track this build
+    // Track this build before starting
     inProgressBuilds.set(requestId, {
       timestamp: Date.now(),
       promise: buildPromise,
@@ -151,19 +159,23 @@ export async function POST(request: NextRequest) {
         indexSize: index.documents.length,
         createdAt: index.createdAt,
         updatedAt: index.updatedAt,
+        requestId,
       })
     } finally {
-      // Clean up after completion
+      // Clean up after completion (success or failure)
       inProgressBuilds.delete(requestId)
     }
   } catch (error: unknown) {
     console.error('构建向量索引失败:', error)
+    // Clean up failed build from tracking
+    inProgressBuilds.delete(requestId)
     const errorMessage = error instanceof Error ? error.message : '未知错误'
     return NextResponse.json(
       {
         success: false,
         message: '构建向量索引失败',
         error: errorMessage,
+        requestId,
       },
       { status: 500 }
     )
