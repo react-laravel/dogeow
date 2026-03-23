@@ -1,4 +1,5 @@
 // 2025-09-24 claude-4-sonnet 优化过本文件代码：「优化代码」
+// 2026-03-20 AI refactor: extracted duplicated toPagination to lib/utils/pagination.ts
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
@@ -24,34 +25,7 @@ import {
   extractMentions,
 } from './stores/utils/notificationHelpers'
 import type { NotificationSettings, RoomNotification, MentionInfo } from './stores/types'
-
-type JsonApiPaginatedResponse<T> = {
-  data: T[]
-  meta?: {
-    current_page?: number
-    last_page?: number
-    per_page?: number
-    total?: number
-  }
-  links?: {
-    next?: string | null
-  }
-}
-
-const toPagination = (response: JsonApiPaginatedResponse<ChatMessage>): MessagePagination => {
-  const meta = response.meta ?? {}
-  const currentPage = meta.current_page ?? 1
-  const lastPage = meta.last_page ?? currentPage
-
-  return {
-    data: response.data,
-    current_page: currentPage,
-    last_page: lastPage,
-    per_page: meta.per_page ?? response.data.length,
-    total: meta.total ?? response.data.length,
-    has_more: Boolean(response.links?.next) || currentPage < lastPage,
-  }
-}
+import { toPagination, type JsonApiPaginatedResponse } from '@/lib/utils/pagination'
 
 export interface ChatState {
   // 核心状态
