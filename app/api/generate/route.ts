@@ -20,6 +20,7 @@ import {
 } from './_lib/streams'
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
 import { requireAuth } from '../_lib/auth-guard'
+import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
 
 function buildChatMessages(messages: ChatMessage[], command?: string): ChatMessage[] {
   if (messages.some(m => m.role === 'system')) return messages
@@ -45,7 +46,11 @@ function getErrorMessage(error: unknown, provider?: GenerateRequestBody['provide
   return 'AI服务发生未知错误'
 }
 
-async function handleChatRequest(body: GenerateRequestBody, chatMessages: ChatMessage[]) {
+async function handleChatRequest(
+  body: GenerateRequestBody,
+  chatMessages: ChatMessage[],
+  requestId: string
+) {
   const { provider, images, imageUrl, model } = body
   const actualProvider = getAIProvider(provider)
   const promptTokens = getPromptTokens(chatMessages)
@@ -96,12 +101,55 @@ export async function POST(request: NextRequest) {
   const { messages, useChat = false, command, provider, images, imageUrl, model } = body
   const hasImages = !!(images && images.length > 0) || !!imageUrl
 
+  // Generate idempotency key for this request
+  const requestId = generateRequestId()
+  const endpoint = '/api/generate'
+  const method = 'POST'
+  const idempotencyKey = idempotencyTracker.generateKey(endpoint, method, {
+    messages,
+    useChat,
+    command,
+    provider,
+    images,
+    imageUrl,
+    model,
+  })
+
   try {
     console.log('[Generate API] 接收到的请求:', { provider, model, useChat, hasImages })
     console.log('[Generate API] 实际使用的 AI 提供商:', getAIProvider(provider))
+    console.log('[Generate API] Request ID:', requestId)
+
+    // Check for duplicate in-flight requests
+    if (idempotencyTracker.isRequestPending(idempotencyKey)) {
+      console.log('[Generate API] Request already in progress, waiting for result')
+      const pendingRequest = idempotencyTracker.getPendingRequest<unknown>(idempotencyKey)
+      if (pendingRequest) {
+        // For streaming responses, we can't directly return the pending result
+        // Instead, we return a response indicating the request is being processed
+        // The client should implement retry logic with the same request ID
+        return NextResponse.json(
+          {
+            error: '请求正在处理中',
+            requestId,
+            message: '相同的请求正在处理，请稍后重试',
+          },
+          {
+            status: 409,
+            headers: {
+              'X-Request-ID': requestId,
+              'Retry-After': '5',
+            },
+          }
+        )
+      }
+    }
 
     if (useChat && messages && messages.length > 0) {
-      return await handleChatRequest(body, buildChatMessages(messages, command))
+      const response = await handleChatRequest(body, buildChatMessages(messages, command), requestId)
+      // Note: Streaming responses can't be easily deduplicated
+      // The idempotency check above helps prevent duplicate starts
+      return response
     }
 
     return await handleGenerateRequest(body)

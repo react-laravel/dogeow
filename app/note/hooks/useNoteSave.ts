@@ -50,6 +50,7 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
         } catch {
           // If waiting fails, proceed with new request
         }
+        console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
       }
 
       setIsSaving(true)
@@ -83,6 +84,9 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
               throw new Error('保存笔记失败')
             }
 
+            // Create checkpoint before committing
+            ctx.checkpoint({ note: normalizedNote })
+
             return { note: normalizedNote }
           } catch (error) {
             console.error('保存笔记错误:', error)
@@ -101,7 +105,12 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
         return Promise.reject(transactionResult.error)
       }
 
-      const normalizedNote = transactionResult.result!.note
+      if (!transactionResult.result) {
+        toast.error('保存失败（服务器返回空响应）')
+        return Promise.reject(new Error('保存失败（服务器返回空响应）'))
+      }
+
+      const normalizedNote = transactionResult.result.note
       toast.success(isEditing ? '笔记已更新' : '笔记已创建')
 
       if (!isEditing && normalizedNote.id) {
@@ -132,8 +141,14 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
 
       if (idempotencyTracker.isRequestPending(idempotencyKey)) {
         console.log('[Idempotency] Draft save already in progress')
-        toast.info('保存请求已在处理中')
-        return
+        const pendingRequest = idempotencyTracker.getPendingRequest<Note | { note: Note }>(
+          idempotencyKey
+        )
+        if (pendingRequest) {
+          toast.info('保存请求已在处理中')
+          return
+        }
+        console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
       }
 
       setIsSaving(true)
