@@ -48,4 +48,57 @@ describe('location-combobox optionUtils', () => {
       { value: '202', label: '床头柜' },
     ])
   })
+
+  it('handles empty arrays', () => {
+    expect(getAreaOptions([])).toEqual([{ value: '', label: '请选择区域' }])
+    expect(getRoomOptions('1', [])).toEqual([{ value: '', label: '请选择房间' }])
+    expect(getSpotOptions('11', [])).toEqual([{ value: '', label: '请选择具体位置' }])
+  })
+
+  it('handles undefined/null values in arrays', () => {
+    const areasWithNull = [{ id: 1, name: '客厅' }, undefined] as any
+    expect(getAreaOptions(areasWithNull)).toEqual([
+      { value: '', label: '请选择区域' },
+      { value: '1', label: '客厅' },
+    ])
+
+    const roomsWithNull = [{ id: 11, name: '电视区', area_id: 1 }, null] as any
+    expect(getRoomOptions('1', roomsWithNull)).toEqual([
+      { value: '', label: '请选择房间' },
+      { value: '11', label: '电视区' },
+    ])
+  })
+
+  it('handles area name as null or undefined', () => {
+    const areasWithNullName = [{ id: 1, name: null }, { id: 2, name: '卧室' }] as any
+    expect(getAreaOptions(areasWithNullName)).toEqual([
+      { value: '', label: '请选择区域' },
+      { value: '1', label: null },
+      { value: '2', label: '卧室' },
+    ])
+
+    const areasWithUndefinedName = [{ id: 1, name: undefined }, { id: 2, name: '卧室' }] as any
+    expect(getAreaOptions(areasWithUndefinedName)).toEqual([
+      { value: '', label: '请选择区域' },
+      { value: '1', label: undefined },
+      { value: '2', label: '卧室' },
+    ])
+  })
+
+  it('handles string vs number id types', () => {
+    const areasWithStringId = [{ id: '1', name: '客厅' }, { id: '2', name: '卧室' }] as any
+    expect(getAreaOptions(areasWithStringId)).toEqual([
+      { value: '', label: '请选择区域' },
+      { value: '1', label: '客厅' },
+      { value: '2', label: '卧室' },
+    ])
+  })
+
+  it('getRoomOptions returns empty for non-numeric selectedAreaId', () => {
+    expect(getRoomOptions('abc', rooms)).toEqual([{ value: '', label: '请选择房间' }])
+  })
+
+  it('getSpotOptions returns empty for non-numeric selectedRoomId', () => {
+    expect(getSpotOptions('abc', spots)).toEqual([{ value: '', label: '请选择具体位置' }])
+  })
 })
