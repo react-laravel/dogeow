@@ -232,4 +232,108 @@ describe('searchUtils', () => {
     expect(result.filteredRooms.map(r => r.id)).toEqual([11])
     expect(result.filteredSpots.map(s => s.id)).toEqual([101])
   })
+
+  describe('matchesSearch edge cases', () => {
+    it('handles empty search term', () => {
+      expect(matchesSearch('Living Room', '')).toBe(true)
+    })
+
+    it('handles empty text', () => {
+      expect(matchesSearch('', 'living')).toBe(false)
+    })
+
+    it('handles both empty', () => {
+      expect(matchesSearch('', '')).toBe(true)
+    })
+
+    it('handles unicode characters', () => {
+      expect(matchesSearch('客厅', '客')).toBe(true)
+      expect(matchesSearch('客厅', '厅')).toBe(true)
+      expect(matchesSearch('日本語', '日本')).toBe(true)
+    })
+
+    it('handles special regex characters in search term', () => {
+      expect(matchesSearch('Test (value)', '(value')).toBe(true)
+      expect(matchesSearch('Test [value]', '[value')).toBe(true)
+    })
+  })
+
+  describe('buildLocationMaps edge cases', () => {
+    it('handles empty arrays', () => {
+      const { areaRoomsMap, roomSpotsMap } = buildLocationMaps([], [])
+      expect(areaRoomsMap.size).toBe(0)
+      expect(roomSpotsMap.size).toBe(0)
+    })
+
+    it('handles rooms with undefined area_id', () => {
+      const roomsWithUndefined = [{ id: 11, name: '电视区', area_id: undefined }] as any
+      const { areaRoomsMap } = buildLocationMaps(roomsWithUndefined, spots)
+      expect(areaRoomsMap.get(undefined)?.map(r => r.id)).toEqual([11])
+    })
+
+    it('handles spots with undefined room_id', () => {
+      const spotsWithUndefined = [{ id: 101, name: '沙发角落', room_id: undefined }] as any
+      const { roomSpotsMap } = buildLocationMaps(rooms, spotsWithUndefined)
+      expect(roomSpotsMap.get(undefined)?.map(s => s.id)).toEqual([101])
+    })
+
+    it('handles null values in arrays', () => {
+      const roomsWithNull = [
+        { id: 11, name: '电视区', area_id: 1 },
+        null,
+      ] as any
+      const { areaRoomsMap } = buildLocationMaps(roomsWithNull, spots)
+      expect(areaRoomsMap.get(1)?.map(r => r.id)).toEqual([11])
+    })
+  })
+
+  describe('filterSearchResults edge cases', () => {
+    it('handles empty search term with filterType area', () => {
+      const result = filterSearchResults(
+        areas,
+        rooms,
+        spots,
+        '',
+        'area',
+        new Set(),
+        new Set(),
+        false
+      )
+      expect(result.filteredAreas.map(a => a.id)).toEqual([1, 2])
+      expect(result.filteredRooms.map(r => r.id)).toEqual([11, 22])
+      expect(result.filteredSpots).toEqual([])
+    })
+
+    it('handles empty search term with filterType room', () => {
+      const result = filterSearchResults(
+        areas,
+        rooms,
+        spots,
+        '',
+        'room',
+        new Set(),
+        new Set(),
+        false
+      )
+      expect(result.filteredAreas).toEqual([])
+      expect(result.filteredRooms.map(r => r.id)).toEqual([11, 22])
+      expect(result.filteredSpots.map(s => s.id)).toEqual([101, 202])
+    })
+
+    it('handles search with only whitespace', () => {
+      const result = filterSearchResults(
+        areas,
+        rooms,
+        spots,
+        '   ',
+        null,
+        new Set(),
+        new Set(),
+        false
+      )
+      // With whitespace, it should still filter (searchTerm is truthy)
+      // But since '   ' is truthy, it will search for it
+      expect(result.filteredAreas).toEqual([])
+    })
+  })
 })
