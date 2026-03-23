@@ -5,36 +5,19 @@ import { AI_SYSTEM_PROMPT, type ChatMessage } from '../types'
 import { getRequestModel, type AIProvider } from '../request-model'
 import { readAiChatStream } from './chatStream'
 import { useAiChatImages, type ImageItem } from './useAiChatImages'
-import { API_URL } from '@/lib/api'
-import useAuthStore from '@/stores/authStore'
+import { useOllamaModels, type OllamaModelListItem } from './useOllamaModels'
+import { useMediaGenerators } from './useMediaGenerators'
+import { uploadImageToServer } from './uploadImage'
 import { toast } from 'sonner'
-
-const AI_PROVIDER_STORAGE_KEY = 'ai_provider'
-const OLLAMA_MODEL_STORAGE_KEY = 'ollama_model'
-const ZHIPUAI_MODEL_STORAGE_KEY = 'zhipuai_model'
-const DEFAULT_OLLAMA_MODEL = 'qwen3:0.6b'
-const DEFAULT_ZHIPUAI_MODEL = 'glm-4.7'
-
-const getStoredProvider = (): AIProvider => {
-  if (typeof window === 'undefined') return 'ollama'
-
-  const saved = localStorage.getItem(AI_PROVIDER_STORAGE_KEY)
-  if (saved === 'github' || saved === 'minimax' || saved === 'ollama' || saved === 'zhipuai') {
-    return saved
-  }
-
-  return 'ollama'
-}
-
-const getStoredOllamaModel = (): string => {
-  if (typeof window === 'undefined') return DEFAULT_OLLAMA_MODEL
-  return localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY) || DEFAULT_OLLAMA_MODEL
-}
-
-const getStoredZhipuaiModel = (): string => {
-  if (typeof window === 'undefined') return DEFAULT_ZHIPUAI_MODEL
-  return localStorage.getItem(ZHIPUAI_MODEL_STORAGE_KEY) || DEFAULT_ZHIPUAI_MODEL
-}
+import {
+  getStoredProvider,
+  getStoredOllamaModel,
+  getStoredZhipuaiModel,
+  setStoredProvider,
+  setStoredOllamaModel,
+  setStoredZhipuaiModel,
+} from './modelStorage'
+import { generateTtsForMessage } from './ttsHandlers'
 
 interface UseAiChatOptions {
   open?: boolean
@@ -83,13 +66,6 @@ interface UseAiChatReturn {
     onVideoGenerated?: (fileId: string, url: string, prompt: string) => void
   ) => void
   handleGenerateMusic: (prompt: string, lyrics: string) => void
-}
-
-interface OllamaModelListItem {
-  name: string
-  size?: number
-  parameterSize?: string
-  supportsVision?: boolean
 }
 
 const ZHIPUAI_VISION_MODELS = new Set(['glm-4.6v-flash', 'glm-4.6v'])
@@ -336,31 +312,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
         // TTS: generate audio for the response
         if (ttsEnabled) {
-          try {
-            const ttsRes = await fetch('/api/minimax/tts', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: accumulatedContent }),
-            })
-            if (ttsRes.ok) {
-              const ttsData = await ttsRes.json()
-              if (ttsData.success && ttsData.audioUrl) {
-                setMessages(prev => {
-                  const updated = [...prev]
-                  updated[updated.length - 1] = {
-                    ...updated[updated.length - 1],
-                    audioUrl: ttsData.audioUrl,
-                  }
-                  return updated
-                })
-                // Auto-play the TTS audio
-                const audio = new Audio(ttsData.audioUrl)
-                await audio.play()
-              }
-            }
-          } catch {
-            // TTS errors are non-fatal
-          }
+          await generateTtsForMessage(accumulatedContent, setMessages)
         }
       }
       setCompletion('')
@@ -404,187 +356,17 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     ttsEnabled,
   ])
 
-  // 生成图片
-  const handleGenerateImage = useCallback(
-    async (prompt: string, onImageGenerated?: (url: string, prompt: string) => void) => {
-      setGenerationError(undefined)
-      setIsGeneratingMedia(true)
-
-      // 立即插入占位消息
-      const placeholderId = crypto.randomUUID()
-      const imageSlotId = `${placeholderId}-image`
-      setMessages(prev => [
-        ...prev,
-        {
-          id: placeholderId,
-          role: 'assistant',
-          content: `图片提示词：${prompt}`,
-          images: [{ id: imageSlotId, isPlaceholder: true }],
-          generatingImage: true,
-        },
-      ])
-
-      try {
-        const res = await fetch('/api/minimax/image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-        })
-        const data = await res.json()
-        if (!res.ok || !data.success) {
-          setGenerationError(data.error ?? '图片生成失败')
-          setMessages(prev => prev.filter(m => m.id !== placeholderId))
-          return
-        }
-        const imageUrl: string = data.imageUrls?.[0]
-        if (!imageUrl) {
-          setGenerationError('未返回图片')
-          setMessages(prev => prev.filter(m => m.id !== placeholderId))
-          return
-        }
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === placeholderId
-              ? (() => {
-                  const { id: _messageId, generatingImage: _generatingImage, ...restMessage } = m
-                  return {
-                    ...restMessage,
-                    images: [{ id: imageSlotId, url: imageUrl }],
-                  }
-                })()
-              : m
-          )
-        )
-        onImageGenerated?.(imageUrl, prompt)
-      } catch {
-        setGenerationError('图片生成请求失败')
-        setMessages(prev => prev.filter(m => m.id !== placeholderId))
-      } finally {
-        setIsGeneratingMedia(false)
-      }
-    },
-    []
-  )
-
-  // 生成视频
-  const handleGenerateVideo = useCallback(
-    async (
-      prompt: string,
-      onVideoGenerated?: (fileId: string, url: string, prompt: string) => void
-    ) => {
-      setGenerationError(undefined)
-      setIsGeneratingMedia(true)
-
-      const placeholderId = crypto.randomUUID()
-      const videoSlotId = `${placeholderId}-video`
-      setMessages(prev => [
-        ...prev,
-        {
-          id: placeholderId,
-          role: 'assistant',
-          content: `正在为你生成视频：${prompt}`,
-          videos: [{ id: videoSlotId, isPlaceholder: true }],
-          generatingVideo: true,
-        },
-      ])
-
-      try {
-        const res = await fetch('/api/minimax/video', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-        })
-        const data = await res.json()
-        if (!res.ok || !data.success) {
-          setGenerationError(data.error ?? '视频生成失败')
-          setMessages(prev => prev.filter(m => m.id !== placeholderId))
-          return
-        }
-        const videoUrl: string = data.videoUrl
-        const taskId: string = data.taskId
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === placeholderId
-              ? (() => {
-                  const { id: _messageId, generatingVideo: _generatingVideo, ...restMessage } = m
-                  return {
-                    ...restMessage,
-                    content: '已为你生成视频：',
-                    videos: [{ id: videoSlotId, url: videoUrl }],
-                  }
-                })()
-              : m
-          )
-        )
-        onVideoGenerated?.(taskId, videoUrl, prompt)
-      } catch {
-        setGenerationError('视频生成请求失败')
-        setMessages(prev => prev.filter(m => m.id !== placeholderId))
-      } finally {
-        setIsGeneratingMedia(false)
-      }
-    },
-    []
-  )
-
-  // 生成音乐
-  const handleGenerateMusic = useCallback(async (prompt: string, lyrics: string) => {
-    setGenerationError(undefined)
-    setIsGeneratingMedia(true)
-
-    const placeholderId = crypto.randomUUID()
-    const musicSlotId = `${placeholderId}-music`
-    setMessages(prev => [
-      ...prev,
-      {
-        id: placeholderId,
-        role: 'assistant',
-        content: `正在为你生成音乐：${prompt}`,
-        musics: [{ id: musicSlotId, isPlaceholder: true }],
-        generatingMusic: true,
-      },
-    ])
-
-    try {
-      const res = await fetch('/api/minimax/music', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, lyrics }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        setGenerationError(data.error ?? '音乐生成失败')
-        setMessages(prev => prev.filter(m => m.id !== placeholderId))
-        return
-      }
-      const musicUrl: string = data.musicUrl
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === placeholderId
-            ? (() => {
-                const { id: _messageId, generatingMusic: _generatingMusic, ...restMessage } = m
-                return {
-                  ...restMessage,
-                  content: '已为你生成音乐：',
-                  musics: [{ id: musicSlotId, url: musicUrl }],
-                }
-              })()
-            : m
-        )
-      )
-    } catch {
-      setGenerationError('音乐生成请求失败')
-      setMessages(prev => prev.filter(m => m.id !== placeholderId))
-    } finally {
-      setIsGeneratingMedia(false)
-    }
-  }, [])
+  // Media generators from extracted hook
+  const mediaGenerators = useMediaGenerators({
+    setMessages,
+    setGenerationError,
+    setIsGeneratingMedia,
+  })
+  const { handleGenerateImage, handleGenerateVideo, handleGenerateMusic } = mediaGenerators
 
   // 当 provider 改变时保存到 localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(AI_PROVIDER_STORAGE_KEY, provider)
-    }
+    setStoredProvider(provider)
   }, [provider])
 
   // 切换 provider 时恢复各自最近一次选择的模型，避免跨 provider 串值
@@ -601,15 +383,13 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
   // 按 provider 保存各自模型选择
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
     if (provider === 'ollama') {
-      localStorage.setItem(OLLAMA_MODEL_STORAGE_KEY, model)
+      setStoredOllamaModel(model)
       return
     }
 
     if (provider === 'zhipuai') {
-      localStorage.setItem(ZHIPUAI_MODEL_STORAGE_KEY, model)
+      setStoredZhipuaiModel(model)
     }
   }, [model, provider])
 
