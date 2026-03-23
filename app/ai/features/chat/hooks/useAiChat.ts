@@ -8,7 +8,7 @@ import { useAiChatImages, type ImageItem } from './useAiChatImages'
 import { useOllamaModels, type OllamaModelListItem } from './useOllamaModels'
 import { useMediaGenerators } from './useMediaGenerators'
 import { uploadImageToServer } from './uploadImage'
-import { toast } from 'sonner'
+import { generateTtsForMessage } from './ttsHandlers'
 import {
   getStoredProvider,
   getStoredOllamaModel,
@@ -17,7 +17,7 @@ import {
   setStoredOllamaModel,
   setStoredZhipuaiModel,
 } from './modelStorage'
-import { generateTtsForMessage } from './ttsHandlers'
+import { toast } from 'sonner'
 
 interface UseAiChatOptions {
   open?: boolean
@@ -37,12 +37,7 @@ interface UseAiChatReturn {
   clearImages: () => void
   completion: string | undefined
   isLoading: boolean
-  ollamaModels: Array<{
-    name: string
-    size?: number
-    parameterSize?: string
-    supportsVision?: boolean
-  }>
+  ollamaModels: OllamaModelListItem[]
   isLoadingOllamaModels: boolean
   supportsImages: boolean
   model: string
@@ -93,10 +88,8 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [completion, setCompletion] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
-  const [ollamaModels, setOllamaModels] = useState<OllamaModelListItem[]>([])
-  const [isLoadingOllamaModels, setIsLoadingOllamaModels] = useState(false)
 
-  // AI 提供商状态
+  // AI provider state
   const [provider, setProvider] = useState<AIProvider>(() => getStoredProvider())
 
   const [model, setModel] = useState<string>(() => {
@@ -106,8 +99,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const hasLoadedOllamaModelsRef = useRef(false)
-  const isOllamaModelsRequestInFlightRef = useRef(false)
 
   // TTS state
   const [ttsEnabled, setTtsEnabled] = useState(false)
@@ -116,94 +107,24 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const [isGeneratingMedia, setIsGeneratingMedia] = useState(false)
   const [generationError, setGenerationError] = useState<string | undefined>(undefined)
 
-  // 过滤掉 system 消息用于显示
+  // Ollama models loading - extracted to hook
+  const { ollamaModels, isLoadingOllamaModels } = useOllamaModels({
+    enabled: Boolean(open) && provider === 'ollama',
+  })
+
+  // Filter out system messages for display
   const displayMessages = messages.filter(m => m.role !== 'system')
   const hasMessages = displayMessages.length > 0
   const supportsImages = supportsImagesForSelection(provider, model, ollamaModels)
 
-  // 自动滚动到底部
+  // Auto-scroll to bottom
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages, completion, isLoading])
 
-  useEffect(() => {
-    if (!open || provider !== 'ollama') {
-      return
-    }
-
-    if (hasLoadedOllamaModelsRef.current || isOllamaModelsRequestInFlightRef.current) {
-      return
-    }
-
-    let cancelled = false
-
-    const loadOllamaModels = async () => {
-      isOllamaModelsRequestInFlightRef.current = true
-      setIsLoadingOllamaModels(true)
-
-      try {
-        const response = await fetch('/api/ollama/models')
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`)
-        }
-
-        const data = (await response.json()) as { models?: OllamaModelListItem[] }
-        if (!cancelled) {
-          setOllamaModels(Array.isArray(data.models) ? data.models : [])
-          hasLoadedOllamaModelsRef.current = true
-        }
-      } catch (error) {
-        if (!cancelled) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Failed to load Ollama models:', error)
-          }
-          setOllamaModels([])
-        }
-      } finally {
-        isOllamaModelsRequestInFlightRef.current = false
-        if (!cancelled) {
-          setIsLoadingOllamaModels(false)
-        }
-      }
-    }
-
-    void loadOllamaModels()
-
-    return () => {
-      cancelled = true
-    }
-  }, [open, provider])
-
-  // 上传单张图片到后端（又拍云）
-  const uploadImageToServer = useCallback(async (file: File): Promise<string> => {
-    const token = useAuthStore.getState().token
-    const formData = new FormData()
-    formData.append('image', file)
-
-    const response = await fetch(`${API_URL}/api/vision/upload`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: formData,
-    })
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
-      throw new Error(err.message || '图片上传失败')
-    }
-
-    const data = await response.json()
-    if (!data.success) {
-      throw new Error(data.message || '图片上传失败')
-    }
-
-    return data.url
-  }, [])
-
+  // Image handling
   const { images, hasImages, isUploadingImages, handleImageSelect, removeImage, clearImages } =
     useAiChatImages({
       enabled: Boolean(open) && supportsImages,
@@ -216,7 +137,14 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     }
   }, [open, supportsImages, hasImages, clearImages])
 
-  // 停止生成
+  // Media generators - extracted to hook
+  const { handleGenerateImage, handleGenerateVideo, handleGenerateMusic } = useMediaGenerators({
+    setMessages,
+    setGenerationError,
+    setIsGeneratingMedia,
+  })
+
+  // Stop generation
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -226,7 +154,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     setCompletion('')
   }, [])
 
-  // 清除对话
+  // Clear conversation
   const handleClear = useCallback(() => {
     stop()
     setMessages([])
@@ -235,7 +163,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     clearImages()
   }, [stop, clearImages])
 
-  // 发送消息
+  // Send message
   const handleSend = useCallback(async () => {
     if (isLoading) return
 
@@ -254,7 +182,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       images: imageUrls.map(url => ({ url })),
     }
 
-    // 添加用户消息到历史
+    // Add user message to history
     const newMessages: ChatMessage[] = [...messages, userMessage]
     setMessages(newMessages)
     setPrompt('')
@@ -262,12 +190,12 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     setIsLoading(true)
     setCompletion('')
 
-    // 创建 abort controller
+    // Create abort controller
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
     try {
-      // 准备消息列表（确保有 system 消息）
+      // Prepare messages (ensure system message exists)
       const chatMessages: ChatMessage[] = newMessages.some(m => m.role === 'system')
         ? newMessages
         : [
@@ -280,7 +208,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
       const requestMessages = chatMessages.map(({ role, content }) => ({ role, content }))
 
-      // 调用 API
+      // Call API
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -297,12 +225,12 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       })
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        throw new Error(\`API error: \${response.status}\`)
       }
 
       const accumulatedContent = await readAiChatStream(response, setCompletion)
 
-      // 流结束，添加 assistant 消息
+      // Stream ended, add assistant message
       if (accumulatedContent) {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
@@ -319,7 +247,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       setIsLoading(false)
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // 用户主动停止，不显示错误
+        // User stopped, no error to show
         return
       }
 
@@ -331,12 +259,12 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
             : error.message
           : 'AI服务发生未知错误'
 
-      // 添加错误消息
+      // Add error message
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: `错误: ${errorMessage}`,
+          content: \`错误: \${errorMessage}\`,
         },
       ])
       setCompletion('')
@@ -356,20 +284,12 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     ttsEnabled,
   ])
 
-  // Media generators from extracted hook
-  const mediaGenerators = useMediaGenerators({
-    setMessages,
-    setGenerationError,
-    setIsGeneratingMedia,
-  })
-  const { handleGenerateImage, handleGenerateVideo, handleGenerateMusic } = mediaGenerators
-
-  // 当 provider 改变时保存到 localStorage
+  // When provider changes, persist to localStorage
   useEffect(() => {
     setStoredProvider(provider)
   }, [provider])
 
-  // 切换 provider 时恢复各自最近一次选择的模型，避免跨 provider 串值
+  // When provider changes, restore the last selected model for that provider
   useEffect(() => {
     if (provider === 'ollama') {
       setModel(getStoredOllamaModel())
@@ -381,7 +301,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     }
   }, [provider])
 
-  // 按 provider 保存各自模型选择
+  // Persist model selection based on current provider
   useEffect(() => {
     if (provider === 'ollama') {
       setStoredOllamaModel(model)
@@ -428,5 +348,5 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   }
 }
 
-// 默认导出作为备用
+// Default export as fallback
 export default useAiChat
