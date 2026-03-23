@@ -55,4 +55,43 @@ describe('pathUtils', () => {
   it('returns unknown spot fallback when spot does not exist', () => {
     expect(buildPath('spot', 999, areas, rooms, spots, t)).toBe('location.unknown_spot')
   })
+
+  it('handles empty arrays', () => {
+    expect(buildPath('area', 1, [], [], [], t)).toBe('location.unknown_area')
+    expect(buildPath('room', 11, areas, [], [], t)).toBe('location.unknown_room')
+    expect(buildPath('spot', 101, areas, rooms, [], t)).toBe('location.unknown_spot')
+  })
+
+  it('handles area with null or undefined name', () => {
+    const areasWithNull = [{ id: 1, name: null }, { id: 2, name: '卧室' }] as any
+    expect(buildPath('area', 1, areasWithNull, rooms, spots, t)).toBe('location.unknown_area')
+    expect(buildPath('area', 2, areasWithNull, rooms, spots, t)).toBe('卧室')
+  })
+
+  it('handles room with null or undefined name', () => {
+    const roomsWithNull = [
+      { id: 11, name: null, area_id: 1 },
+      { id: 12, name: '主卧', area_id: 2 },
+    ] as any
+    expect(buildPath('room', 11, areas, roomsWithNull, spots, t)).toBe('客厅 / location.unknown_room')
+  })
+
+  it('handles spot with null or undefined name', () => {
+    const spotsWithNull = [
+      { id: 101, name: null, room_id: 11 },
+      { id: 102, name: '床头柜', room_id: 12 },
+    ] as any
+    expect(buildPath('spot', 101, areas, rooms, spotsWithNull, t)).toBe(
+      '客厅 / 电视区 / location.unknown_spot'
+    )
+  })
+
+  it('handles undefined/null values in arrays', () => {
+    const areasWithUndefined = [{ id: 1, name: '客厅' }, undefined] as any
+    expect(buildPath('area', 1, areasWithUndefined, rooms, spots, t)).toBe('客厅')
+  })
+
+  it('handles unknown type value', () => {
+    expect(buildPath('unknown' as any, 1, areas, rooms, spots, t)).toBe('location.unknown_area')
+  })
 })
