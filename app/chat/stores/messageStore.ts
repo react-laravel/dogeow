@@ -1,39 +1,13 @@
 /**
  * 消息相关状态管理
+ * 2026-03-20 AI refactor: extracted duplicated toPagination to lib/utils/pagination.ts
  */
 import { create } from 'zustand'
 import type { ChatMessage, MessagePagination } from '../types'
 import chatCache from '@/lib/cache/chat-cache'
 import { get as apiGet } from '@/lib/api'
 import { handleChatApiError } from '@/lib/api/chat-error-handler'
-
-type JsonApiPaginatedResponse<T> = {
-  data: T[]
-  meta?: {
-    current_page?: number
-    last_page?: number
-    per_page?: number
-    total?: number
-  }
-  links?: {
-    next?: string | null
-  }
-}
-
-const toPagination = (response: JsonApiPaginatedResponse<ChatMessage>): MessagePagination => {
-  const meta = response.meta ?? {}
-  const currentPage = meta.current_page ?? 1
-  const lastPage = meta.last_page ?? currentPage
-
-  return {
-    data: response.data,
-    current_page: currentPage,
-    last_page: lastPage,
-    per_page: meta.per_page ?? response.data.length,
-    total: meta.total ?? response.data.length,
-    has_more: Boolean(response.links?.next) || currentPage < lastPage,
-  }
-}
+import { toPagination, type JsonApiPaginatedResponse } from '@/lib/utils/pagination'
 
 interface MessageState {
   messages: Record<string, ChatMessage[]>
