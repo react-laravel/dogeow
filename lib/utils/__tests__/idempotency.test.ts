@@ -4,6 +4,8 @@ import {
   generateRequestId,
   deduplicateRequest,
   withIdempotency,
+  withIdempotencyAndLock,
+  type IdempotentResult,
 } from '../idempotency'
 
 describe('Idempotency Utilities', () => {
@@ -286,6 +288,172 @@ describe('Idempotency Utilities', () => {
       expect(result2).toBe(result3)
       // But factory should only be called once
       expect(callCount).toBe(1)
+    })
+  })
+
+  describe('withIdempotencyAndLock', () => {
+    it('should execute request with idempotency and lock protection', async () => {
+      const endpoint = '/api/test'
+      const data = { action: 'test' }
+      let callCount = 0
+
+      const factory = async () => {
+        callCount++
+        return { success: true, data: 'result' }
+      }
+
+      const result: IdempotentResult<{ success: boolean; data: string }> =
+        await withIdempotencyAndLock(endpoint, 'POST', data, factory)
+
+      expect(result.success).toBe(true)
+      expect(result.result?.success).toBe(true)
+      expect(result.result?.data).toBe('result')
+      expect(result.isDuplicate).toBe(false)
+      expect(callCount).toBe(1)
+    })
+
+    it('should detect duplicate requests and return cached result', async () => {
+      const endpoint = '/api/duplicate'
+      const data = { id: 123 }
+      let callCount = 0
+
+      const factory = async () => {
+        callCount++
+        return { value: `computed_${callCount}` }
+      }
+
+      // First request
+      const result1: IdempotentResult<{ value: string }> = await withIdempotencyAndLock(
+        endpoint,
+        'POST',
+        data,
+        factory
+      )
+      expect(result1.success).toBe(true)
+      expect(result1.result?.value).toBe('computed_1')
+      expect(callCount).toBe(1)
+
+      // Duplicate request should return cached result
+      const result2: IdempotentResult<{ value: string }> = await withIdempotencyAndLock(
+        endpoint,
+        'POST',
+        data,
+        factory
+      )
+      expect(result2.success).toBe(true)
+      expect(result2.isDuplicate).toBe(true)
+      expect(result2.result?.value).toBe('computed_1') // Same as first
+      expect(callCount).toBe(1) // Factory not called again
+    })
+
+    it('should handle request factory errors', async () => {
+      const endpoint = '/api/error'
+      const data = { trigger: 'error' }
+
+      const factory = async () => {
+        throw new Error('Factory error')
+      }
+
+      const result: IdempotentResult<unknown> = await withIdempotencyAndLock(
+        endpoint,
+        'POST',
+        data,
+        factory
+      )
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBeInstanceOf(Error)
+      expect(result.error?.message).toBe('Factory error')
+      expect(result.isDuplicate).toBe(false)
+    })
+
+    it('should generate request ID for each request', async () => {
+      const endpoint = '/api/request-id'
+      const data = {}
+
+      const factory = async () => 'done'
+
+      const result = await withIdempotencyAndLock(endpoint, 'POST', data, factory)
+
+      expect(result.requestId).toBeTruthy()
+      expect(result.requestId).toMatch(/^req_/)
+    })
+
+    it('should call onDuplicate callback when duplicate is detected', async () => {
+      const endpoint = '/api/callback'
+      const data = { key: 'value' }
+      let callCount = 0
+
+      const factory = async () => {
+        callCount++
+        return { count: callCount }
+      }
+
+      const onDuplicate = vi.fn()
+
+      // First request
+      await withIdempotencyAndLock(endpoint, 'POST', data, factory, { onDuplicate })
+      expect(callCount).toBe(1)
+
+      // Duplicate request
+      await withIdempotencyAndLock(endpoint, 'POST', data, factory, { onDuplicate })
+      expect(callCount).toBe(1) // Factory not called again
+
+      // onDuplicate should have been called
+      expect(onDuplicate).toHaveBeenCalledTimes(1)
+      expect(onDuplicate).toHaveBeenCalledWith({ count: 1 })
+    })
+
+    it('should treat different data as different requests', async () => {
+      const endpoint = '/api/different'
+      let callCount = 0
+
+      const factory = async () => {
+        callCount++
+        return { n: callCount }
+      }
+
+      const result1 = await withIdempotencyAndLock(endpoint, 'POST', { a: 1 }, factory)
+      const result2 = await withIdempotencyAndLock(endpoint, 'POST', { b: 2 }, factory)
+
+      expect(result1.result?.n).toBe(1)
+      expect(result2.result?.n).toBe(2)
+      expect(callCount).toBe(2)
+    })
+
+    it('should treat different endpoints as different requests', async () => {
+      const data = {}
+      let callCount = 0
+
+      const factory = async () => {
+        callCount++
+        return { n: callCount }
+      }
+
+      const result1 = await withIdempotencyAndLock('/api/one', 'POST', data, factory)
+      const result2 = await withIdempotencyAndLock('/api/two', 'POST', data, factory)
+
+      expect(result1.result?.n).toBe(1)
+      expect(result2.result?.n).toBe(2)
+      expect(callCount).toBe(2)
+    })
+
+    it('should treat different methods as different requests', async () => {
+      const endpoint = '/api/method'
+      const data = {}
+      let callCount = 0
+
+      const factory = async () => {
+        callCount++
+        return { n: callCount }
+      }
+
+      const result1 = await withIdempotencyAndLock(endpoint, 'POST', data, factory)
+      const result2 = await withIdempotencyAndLock(endpoint, 'PUT', data, factory)
+
+      expect(result1.result?.n).toBe(1)
+      expect(result2.result?.n).toBe(2)
+      expect(callCount).toBe(2)
     })
   })
 })

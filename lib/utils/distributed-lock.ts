@@ -527,9 +527,8 @@ class DistributedLockManager {
   ): Promise<{ success: boolean; result?: T; error?: Error }> {
     const acquireResult = await this.acquire(resource, options)
 
-    // If lock wasn't acquired OR wasn't freshly acquired (same instance already held it),
-    // treat as failure to ensure exclusive lock semantics
-    if (!acquireResult.acquired || !acquireResult.token || acquireResult.isFresh === false) {
+    // If lock wasn't acquired, treat as failure
+    if (!acquireResult.acquired || !acquireResult.token) {
       const error = new LockAcquisitionError(resource, options.maxRetries ?? DEFAULT_MAX_RETRIES)
       return {
         success: false,
