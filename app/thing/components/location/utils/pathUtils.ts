@@ -1,22 +1,24 @@
-import type { Area, Room, Spot } from '../../../types'
+import type { Area, Room, Spot } from '@/app/thing/types'
+import {
+  buildLocationPath as buildLocationPathFromObjects,
+  buildLocationPathFromSelection,
+} from '@/lib/utils/location-path'
 
 /**
- * 构建位置路径字符串
+ * 构建位置路径字符串 - 使用共享工具库 (DRY & LongParameterList 修复)
+ * @deprecated 请使用 @/lib/utils/location-path 中的 buildLocationPath
  */
 export const buildLocationPath = (
   area: Area | undefined,
   room: Room | undefined,
   spot: Spot | undefined
 ): string => {
-  const parts: string[] = []
-  if (area) parts.push(area.name)
-  if (room) parts.push(room.name)
-  if (spot) parts.push(spot.name)
-  return parts.join(' > ')
+  return buildLocationPathFromObjects(area, room, spot, ' > ')
 }
 
 /**
- * 根据选择构建路径
+ * 根据选择构建路径 - 使用共享工具库 (DRY & LongParameterList 修复)
+ * @deprecated 请使用 @/lib/utils/location-path 中的 buildLocationPathFromSelection
  */
 export const buildPathFromSelection = (
   areaId: string,
@@ -26,9 +28,13 @@ export const buildPathFromSelection = (
   rooms: Room[],
   spots: Spot[]
 ): string => {
-  const area = areas.find(a => a.id.toString() === areaId)
-  const room = rooms.find(r => r.id.toString() === roomId)
-  const spot = spots.find(s => s.id.toString() === spotId)
-
-  return buildLocationPath(area, room, spot)
+  return buildLocationPathFromSelection({
+    areaId,
+    roomId,
+    spotId,
+    areas,
+    rooms,
+    spots,
+    separator: ' > ',
+  })
 }

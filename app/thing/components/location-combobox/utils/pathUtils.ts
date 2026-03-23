@@ -1,7 +1,9 @@
 import type { Area, Room, Spot } from '@/app/thing/types'
+import { buildLocationPathBySelection } from '@/lib/utils/location-path'
 
 /**
- * 构建位置路径
+ * 构建位置路径 - 使用共享工具库 (DRY & LongParameterList 修复)
+ * @deprecated 请使用 @/lib/utils/location-path 中的 buildLocationPathBySelection
  */
 export const buildLocationPath = (
   type: 'area' | 'room' | 'spot',
@@ -12,26 +14,14 @@ export const buildLocationPath = (
   selectedAreaId: string,
   selectedRoomId: string
 ): string => {
-  if (type === 'area') {
-    const area = areas.find(a => a.id === id)
-    return area?.name ?? ''
-  }
-
-  if (type === 'room') {
-    const room = rooms.find(r => r.id === id)
-    const area = areas.find(a => a.id.toString() === selectedAreaId)
-    if (room && area) {
-      return `${area.name} > ${room.name}`
-    }
-    return ''
-  }
-
-  // spot
-  const spot = spots.find(s => s.id === id)
-  const room = rooms.find(r => r.id.toString() === selectedRoomId)
-  const area = areas.find(a => a.id.toString() === selectedAreaId)
-  if (spot && room && area) {
-    return `${area.name} > ${room.name} > ${spot.name}`
-  }
-  return ''
+  return buildLocationPathBySelection({
+    type,
+    id,
+    areas,
+    rooms,
+    spots,
+    selectedAreaId,
+    selectedRoomId,
+    separator: ' > ',
+  })
 }
