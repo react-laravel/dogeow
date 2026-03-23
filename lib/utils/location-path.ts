@@ -138,6 +138,11 @@ export function buildLocationPath(
 
 /**
  * Build location path from selection ids - fixes LongParameterList
+ * Combobox-specific behavior:
+ * - Requires areaId to be present for any path
+ * - If roomId is empty when spotId is provided, returns ''
+ * - If roomId is provided but not found, returns ''
+ * - If spotId is provided but not found, returns ''
  */
 export interface LocationPathSelectionOptions {
   areaId: string
@@ -152,9 +157,30 @@ export interface LocationPathSelectionOptions {
 export function buildLocationPathFromSelection(options: LocationPathSelectionOptions): string {
   const { areaId, roomId, spotId, areas, rooms, spots, separator = ' > ' } = options
 
+  // If areaId is not provided, no valid path
+  if (!areaId) {
+    return ''
+  }
+
   const area = areas.find(a => a.id.toString() === areaId)
-  const room = rooms.find(r => r.id.toString() === roomId)
-  const spot = spots.find(s => s.id.toString() === spotId)
+
+  // If spotId is provided but roomId is empty, no valid path
+  if (spotId && !roomId) {
+    return ''
+  }
+
+  const room = roomId ? rooms.find(r => r.id.toString() === roomId) : undefined
+  const spot = spotId ? spots.find(s => s.id.toString() === spotId) : undefined
+
+  // If roomId is provided but not found, return empty
+  if (roomId && !room) {
+    return ''
+  }
+
+  // If spotId is provided but not found, return empty
+  if (spotId && !spot) {
+    return ''
+  }
 
   return buildLocationPath(area, room, spot, separator)
 }
