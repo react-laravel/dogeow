@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
+import { getAuthTokenFromStorage } from '@/lib/utils/storage'
 
 // 让 Pusher 在全局可用，供 Laravel Echo 使用
 declare global {
@@ -21,6 +22,84 @@ let lastCreatedAt = 0
 /** 创建当前实例时使用的 token，用于复用前校验是否已变化（如刷新/多标签页登录） */
 let lastAuthToken: string | null = null
 
+/**
+ * WebSocket 配置参数
+ */
+interface WebSocketConfig {
+  scheme: string
+  isHttps: boolean
+  port: number
+  wsHost: string
+  wsPort: number | undefined
+  wssPort: number | undefined
+  forceTLS: boolean
+}
+
+/**
+ * 获取 WebSocket 配置 - 提取配置逻辑减少 createEchoInstance 复杂度
+ */
+function getWebSocketConfig(): WebSocketConfig {
+  const scheme = process.env.NEXT_PUBLIC_REVERB_SCHEME || 'https'
+  const isHttps = scheme === 'https'
+  const port = process.env.NEXT_PUBLIC_REVERB_PORT
+    ? parseInt(process.env.NEXT_PUBLIC_REVERB_PORT)
+    : isHttps
+      ? 443
+      : 8080
+
+  const wsHost = (() => {
+    if (process.env.NEXT_PUBLIC_REVERB_HOST) {
+      return process.env.NEXT_PUBLIC_REVERB_HOST
+    }
+    if (typeof window !== 'undefined') {
+      return window.location.host
+    }
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    try {
+      return new URL(apiUrl).host
+    } catch {
+      return 'localhost'
+    }
+  })()
+
+  return {
+    scheme,
+    isHttps,
+    port,
+    wsHost,
+    wsPort: isHttps ? (port === 443 ? undefined : port) : port,
+    wssPort: isHttps ? (port === 443 ? undefined : port) : port,
+    forceTLS: isHttps,
+  }
+}
+
+/**
+ * 构建广播认证端点 URL
+ */
+function toBroadcastAuthEndpoint(baseUrl: string): string {
+  const normalizedBase = baseUrl.replace(/\/+$/, '')
+  return normalizedBase.endsWith('/api')
+    ? `${normalizedBase}/broadcasting/auth`
+    : `${normalizedBase}/api/broadcasting/auth`
+}
+
+/**
+ * 获取认证端点 URL - 提取认证端点逻辑
+ */
+function getAuthEndpoint(): string {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL
+  if (apiBase) {
+    return toBroadcastAuthEndpoint(apiBase)
+  }
+
+  if (typeof window !== 'undefined') {
+    const inferredApiBase = window.location.origin.replace(':3000', ':8000')
+    return toBroadcastAuthEndpoint(inferredApiBase)
+  }
+
+  return toBroadcastAuthEndpoint(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+}
+
 export function createEchoInstance(): Echo<'reverb'> | null {
   if (typeof window === 'undefined') {
     console.warn('Echo: Window 不可用，跳过 Echo 创建')
@@ -36,18 +115,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
   }
 
   // 复用前校验：localStorage 中的 token 若已变化（过期刷新、多标签页登录等），必须重建实例
-  const currentToken = (() => {
-    try {
-      const authStorage = localStorage.getItem('auth-storage')
-      if (authStorage) {
-        const authData = JSON.parse(authStorage)
-        return authData.state?.token ?? null
-      }
-    } catch {
-      // ignore
-    }
-    return null
-  })()
+  const currentToken = getAuthTokenFromStorage()
 
   const tokenChanged =
     echoInstance &&
@@ -98,74 +166,21 @@ export function createEchoInstance(): Echo<'reverb'> | null {
   }
 
   // 获取认证 token（始终从 localStorage 读取最新，与 auth-storage 一致）
-  let authToken = ''
-  try {
-    const authStorage = localStorage.getItem('auth-storage')
-    if (authStorage) {
-      const authData = JSON.parse(authStorage)
-      authToken = authData.state?.token ?? ''
-    }
-  } catch (error) {
-    console.warn('Echo: 获取认证token失败:', error)
-  }
+  const authToken = getAuthTokenFromStorage() ?? ''
   const previousToken = lastAuthToken
   lastAuthToken = authToken || null
 
-  // 智能端口配置：当使用 HTTPS 且端口是标准端口时，不设置端口号
-  const scheme = process.env.NEXT_PUBLIC_REVERB_SCHEME || 'https'
-  const isHttps = scheme === 'https'
-  const port = process.env.NEXT_PUBLIC_REVERB_PORT
-    ? parseInt(process.env.NEXT_PUBLIC_REVERB_PORT)
-    : isHttps
-      ? 443
-      : 8080
-
-  // WebSocket 主机：优先使用环境变量配置的值
-  const wsHost = (() => {
-    if (process.env.NEXT_PUBLIC_REVERB_HOST) {
-      return process.env.NEXT_PUBLIC_REVERB_HOST
-    }
-    if (typeof window !== 'undefined') {
-      return window.location.host
-    }
-    // SSR 分支：从 API URL 解析 host 或使用默认
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-    try {
-      return new URL(apiUrl).host
-    } catch {
-      return 'localhost'
-    }
-  })()
-
-  // 获取认证端点 URL：后端路由在 api.php 中，需走 /api/broadcasting/auth
-  const toBroadcastAuthEndpoint = (baseUrl: string): string => {
-    const normalizedBase = baseUrl.replace(/\/+$/, '')
-    return normalizedBase.endsWith('/api')
-      ? `${normalizedBase}/broadcasting/auth`
-      : `${normalizedBase}/api/broadcasting/auth`
-  }
-
-  const authEndpoint = (() => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL
-    if (apiBase) {
-      return toBroadcastAuthEndpoint(apiBase)
-    }
-
-    if (typeof window !== 'undefined') {
-      const inferredApiBase = window.location.origin.replace(':3000', ':8000')
-      return toBroadcastAuthEndpoint(inferredApiBase)
-    }
-
-    return toBroadcastAuthEndpoint(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
-  })()
+  // 使用提取的配置函数获取 WebSocket 配置
+  const wsConfig = getWebSocketConfig()
+  const authEndpoint = getAuthEndpoint()
 
   const config = {
     broadcaster: 'reverb',
     key: process.env.NEXT_PUBLIC_REVERB_APP_KEY || 'jnwliwk8ulk32jkwqcy7',
-    wsHost,
-    wsPort: isHttps ? (port === 443 ? undefined : port) : port,
-    wssPort: isHttps ? (port === 443 ? undefined : port) : port,
-    forceTLS: isHttps,
+    wsHost: wsConfig.wsHost,
+    wsPort: wsConfig.wsPort,
+    wssPort: wsConfig.wssPort,
+    forceTLS: wsConfig.forceTLS,
     enabledTransports: ['ws', 'wss'],
     disableStats: true,
     authEndpoint,

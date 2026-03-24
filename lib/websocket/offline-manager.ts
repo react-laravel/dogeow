@@ -1,3 +1,41 @@
+import { getAuthTokenFromStorage } from '@/lib/utils/storage'
+
+/**
+ * Storage keys for offline queue
+ */
+const STORAGE_KEY = 'chat-offline-queue'
+
+/**
+ * Extract storage operations to reduce OfflineManager complexity
+ */
+function loadQueueFromStorage(): QueuedMessage[] {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return parsed.map((msg: unknown) => ({
+        ...(msg as QueuedMessage),
+        timestamp: new Date((msg as QueuedMessage).timestamp),
+      }))
+    }
+  } catch (error) {
+    console.warn('Failed to load offline queue from storage:', error)
+  }
+  return []
+}
+
+function saveQueueToStorage(queuedMessages: QueuedMessage[]): void {
+  if (typeof window === 'undefined') return
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(queuedMessages))
+  } catch (error) {
+    console.warn('Failed to save offline queue to storage:', error)
+  }
+}
+
 export interface QueuedMessage {
   id: string
   roomId: string
@@ -40,7 +78,7 @@ class OfflineManager {
     this.maxRetries = options.maxRetries || 3
 
     this.setupNetworkListeners()
-    this.loadQueueFromStorage()
+    this.queuedMessages = loadQueueFromStorage()
   }
 
   private setupNetworkListeners(): void {
@@ -108,7 +146,7 @@ class OfflineManager {
     }
 
     this.queuedMessages.push(queuedMessage)
-    this.saveQueueToStorage()
+    this.persistQueue()
 
     if (this.options.onMessageQueued) {
       this.options.onMessageQueued(queuedMessage)
@@ -147,7 +185,7 @@ class OfflineManager {
       }
     }
 
-    this.saveQueueToStorage()
+    this.persistQueue()
     this.notifyListeners()
   }
 
@@ -175,21 +213,8 @@ class OfflineManager {
   }
 
   private getAuthToken(): string | null {
-    // This should integrate with your auth system
-    // For now, we'll try to get it from localStorage or auth store
-    if (typeof window === 'undefined') return null
-
-    try {
-      const authData = localStorage.getItem('auth-storage')
-      if (authData) {
-        const parsed = JSON.parse(authData)
-        return parsed.state?.token || null
-      }
-    } catch (error) {
-      console.warn('Failed to get auth token from storage:', error)
-    }
-
-    return null
+    // Use shared utility for getting auth token
+    return getAuthTokenFromStorage()
   }
 
   private removeFromQueue(messageId: string): void {
@@ -200,32 +225,8 @@ class OfflineManager {
     return `queued_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 
-  private loadQueueFromStorage(): void {
-    if (typeof window === 'undefined') return
-
-    try {
-      const stored = localStorage.getItem('chat-offline-queue')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        this.queuedMessages = parsed.map((msg: unknown) => ({
-          ...(msg as QueuedMessage),
-          timestamp: new Date((msg as QueuedMessage).timestamp),
-        }))
-      }
-    } catch (error) {
-      console.warn('Failed to load offline queue from storage:', error)
-      this.queuedMessages = []
-    }
-  }
-
-  private saveQueueToStorage(): void {
-    if (typeof window === 'undefined') return
-
-    try {
-      localStorage.setItem('chat-offline-queue', JSON.stringify(this.queuedMessages))
-    } catch (error) {
-      console.warn('Failed to save offline queue to storage:', error)
-    }
+  private persistQueue(): void {
+    saveQueueToStorage(this.queuedMessages)
   }
 
   public getState(): OfflineState {
@@ -240,7 +241,7 @@ class OfflineManager {
 
   public clearQueue(): void {
     this.queuedMessages = []
-    this.saveQueueToStorage()
+    this.persistQueue()
     this.notifyListeners()
   }
 
