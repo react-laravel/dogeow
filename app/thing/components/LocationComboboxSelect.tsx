@@ -4,15 +4,11 @@ import React, { useEffect, useMemo, useCallback } from 'react'
 import { Label } from '@/components/ui/label'
 import { Combobox } from '@/components/ui/combobox'
 import { cn } from '@/lib/helpers'
-import { useLocationData } from './location-combobox/hooks/useLocationData'
+import { useLocationData } from '@/hooks/useLocationData'
 import { useLocationSelection } from './location-combobox/hooks/useLocationSelection'
 import { useLocationCreation } from './location-combobox/hooks/useLocationCreation'
-import {
-  getAreaOptions,
-  getRoomOptions,
-  getSpotOptions,
-} from './location-combobox/utils/optionUtils'
-import { buildLocationPath } from './location-combobox/utils/pathUtils'
+import { areaToOptions, roomToOptions, spotToOptions } from '@/lib/utils/location-options'
+import { buildLocationPathFromSelection } from '@/lib/utils/location-path'
 import type { LocationSelection } from './location-combobox/hooks/useLocationSelection'
 import type { Area, Room, Spot } from '@/app/thing/types'
 
@@ -53,13 +49,13 @@ const LocationComboboxSelect: React.FC<LocationComboboxSelectProps> = ({
   } = useLocationSelection(selectedLocation, areas, rooms, spots)
 
   // 区域选项
-  const areaOptions = useMemo(() => getAreaOptions(areas), [areas])
+  const areaOptions = useMemo(() => areaToOptions(areas), [areas])
 
   // 房间选项
-  const roomOptions = useMemo(() => getRoomOptions(selectedAreaId, rooms), [selectedAreaId, rooms])
+  const roomOptions = useMemo(() => roomToOptions(rooms), [rooms])
 
   // 位置选项
-  const spotOptions = useMemo(() => getSpotOptions(selectedRoomId, spots), [selectedRoomId, spots])
+  const spotOptions = useMemo(() => spotToOptions(spots), [spots])
 
   // 处理区域选择
   const handleAreaSelect = useCallback(
@@ -86,7 +82,14 @@ const LocationComboboxSelect: React.FC<LocationComboboxSelectProps> = ({
         const room = rooms.find((r: Room) => r.id.toString() === roomId)
         const area = areas.find((a: Area) => a.id.toString() === selectedAreaId)
         if (room && area) {
-          const path = buildLocationPath('room', room.id, areas, rooms, spots, selectedAreaId, '')
+          const path = buildLocationPathFromSelection({
+            areaId: selectedAreaId,
+            roomId: room.id.toString(),
+            spotId: '',
+            areas,
+            rooms,
+            spots,
+          })
           onSelect('room', room.id, path)
           loadSpots(roomId)
         }
@@ -103,15 +106,14 @@ const LocationComboboxSelect: React.FC<LocationComboboxSelectProps> = ({
       if (spotId) {
         const spot = spots.find((s: Spot) => s.id.toString() === spotId)
         if (spot) {
-          const path = buildLocationPath(
-            'spot',
-            spot.id,
+          const path = buildLocationPathFromSelection({
+            areaId: selectedAreaId,
+            roomId: selectedRoomId,
+            spotId: spot.id.toString(),
             areas,
             rooms,
             spots,
-            selectedAreaId,
-            selectedRoomId
-          )
+          })
           onSelect('spot', spot.id, path)
         }
       }

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildLocationPath } from '../location-combobox/utils/pathUtils'
+import { buildLocationPathFromSelection } from '@/lib/utils/location-path'
 import type { Area, Room, Spot } from '@/app/thing/types'
 
-describe('location-combobox/pathUtils', () => {
+describe('lib/utils/location-path - buildLocationPathFromSelection', () => {
   const areas: Area[] = [
     { id: 1, name: '客厅' },
     { id: 2, name: '卧室' },
@@ -17,28 +17,79 @@ describe('location-combobox/pathUtils', () => {
   ]
 
   it('should build area path by area id', () => {
-    expect(buildLocationPath('area', 1, areas, rooms, spots, '', '')).toBe('客厅')
-    expect(buildLocationPath('area', 999, areas, rooms, spots, '', '')).toBe('')
+    expect(
+      buildLocationPathFromSelection({ areaId: '1', roomId: '', spotId: '', areas, rooms, spots })
+    ).toBe('客厅')
+    expect(
+      buildLocationPathFromSelection({ areaId: '999', roomId: '', spotId: '', areas, rooms, spots })
+    ).toBe('')
   })
 
   it('should build room path when room and selected area exist', () => {
-    expect(buildLocationPath('room', 11, areas, rooms, spots, '1', '')).toBe('客厅 > 电视墙')
+    expect(
+      buildLocationPathFromSelection({ areaId: '1', roomId: '11', spotId: '', areas, rooms, spots })
+    ).toBe('客厅 > 电视墙')
   })
 
   it('should return empty room path when room or area is missing', () => {
-    expect(buildLocationPath('room', 11, areas, rooms, spots, '', '')).toBe('')
-    expect(buildLocationPath('room', 999, areas, rooms, spots, '1', '')).toBe('')
+    expect(
+      buildLocationPathFromSelection({ areaId: '', roomId: '11', spotId: '', areas, rooms, spots })
+    ).toBe('')
+    expect(
+      buildLocationPathFromSelection({
+        areaId: '1',
+        roomId: '999',
+        spotId: '',
+        areas,
+        rooms,
+        spots,
+      })
+    ).toBe('')
   })
 
   it('should build spot path when spot, room and area exist', () => {
-    expect(buildLocationPath('spot', 111, areas, rooms, spots, '1', '11')).toBe(
-      '客厅 > 电视墙 > 抽屉'
-    )
+    expect(
+      buildLocationPathFromSelection({
+        areaId: '1',
+        roomId: '11',
+        spotId: '111',
+        areas,
+        rooms,
+        spots,
+      })
+    ).toBe('客厅 > 电视墙 > 抽屉')
   })
 
   it('should return empty spot path when any level is missing', () => {
-    expect(buildLocationPath('spot', 111, areas, rooms, spots, '', '11')).toBe('')
-    expect(buildLocationPath('spot', 111, areas, rooms, spots, '1', '')).toBe('')
-    expect(buildLocationPath('spot', 999, areas, rooms, spots, '1', '11')).toBe('')
+    expect(
+      buildLocationPathFromSelection({
+        areaId: '',
+        roomId: '11',
+        spotId: '111',
+        areas,
+        rooms,
+        spots,
+      })
+    ).toBe('')
+    expect(
+      buildLocationPathFromSelection({
+        areaId: '1',
+        roomId: '',
+        spotId: '111',
+        areas,
+        rooms,
+        spots,
+      })
+    ).toBe('')
+    expect(
+      buildLocationPathFromSelection({
+        areaId: '1',
+        roomId: '11',
+        spotId: '999',
+        areas,
+        rooms,
+        spots,
+      })
+    ).toBe('')
   })
 })

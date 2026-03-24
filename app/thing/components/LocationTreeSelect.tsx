@@ -9,7 +9,7 @@ import { SearchBar } from './location-tree/components/SearchBar'
 import { LocationTreeContent } from './location-tree/components/LocationTreeContent'
 import { useExpandedState } from './location-tree/hooks/useExpandedState'
 import { filterSearchResults } from './location-tree/utils/searchUtils'
-import { buildPath } from './location-tree/utils/pathUtils'
+import { buildLocationPathById } from '@/lib/utils/location-path'
 import { TREE_HEIGHT } from './location-tree/constants'
 
 interface LocationTreeSelectProps {
@@ -94,7 +94,16 @@ const LocationTreeSelect: React.FC<LocationTreeSelectProps> = ({
   // 优化路径构建
   const buildLocationPath = useCallback(
     (type: 'area' | 'room' | 'spot', id: number): string => {
-      return buildPath(type, id, areas, rooms, spots, t)
+      return buildLocationPathById(type, id, {
+        areas,
+        rooms,
+        spots,
+        separator: ' / ',
+        t,
+        unknownAreaKey: 'location.unknown_area',
+        unknownRoomKey: 'location.unknown_room',
+        unknownSpotKey: 'location.unknown_spot',
+      })
     },
     [areas, rooms, spots, t]
   )

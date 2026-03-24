@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPath } from '../location-tree/utils/pathUtils'
+import { buildLocationPathById } from '@/lib/utils/location-path'
 
 const areas = [
   { id: 1, name: '客厅' },
@@ -21,23 +21,36 @@ const spots = [
 
 const t = (key: string) => key
 
-describe('location-tree/utils/pathUtils', () => {
+describe('lib/utils/location-path - buildLocationPathById', () => {
+  const defaultOptions = {
+    areas,
+    rooms,
+    spots,
+    separator: ' / ',
+    t,
+    unknownAreaKey: 'location.unknown_area',
+    unknownRoomKey: 'location.unknown_room',
+    unknownSpotKey: 'location.unknown_spot',
+  }
+
   it('builds area and room paths with fallbacks', () => {
-    expect(buildPath('area', 1, areas, rooms, spots, t)).toBe('客厅')
-    expect(buildPath('area', 999, areas, rooms, spots, t)).toBe('location.unknown_area')
-    expect(buildPath('room', 11, areas, rooms, spots, t)).toBe('客厅 / 电视区')
-    expect(buildPath('room', 13, areas, rooms, spots, t)).toBe('location.unknown_area / 神秘房间')
-    expect(buildPath('room', 999, areas, rooms, spots, t)).toBe('location.unknown_room')
+    expect(buildLocationPathById('area', 1, defaultOptions)).toBe('客厅')
+    expect(buildLocationPathById('area', 999, defaultOptions)).toBe('location.unknown_area')
+    expect(buildLocationPathById('room', 11, defaultOptions)).toBe('客厅 / 电视区')
+    expect(buildLocationPathById('room', 13, defaultOptions)).toBe(
+      'location.unknown_area / 神秘房间'
+    )
+    expect(buildLocationPathById('room', 999, defaultOptions)).toBe('location.unknown_room')
   })
 
   it('builds spot path for normal, unknown room, unknown area, and missing spot cases', () => {
-    expect(buildPath('spot', 101, areas, rooms, spots, t)).toBe('客厅 / 电视区 / 沙发角落')
-    expect(buildPath('spot', 103, areas, rooms, spots, t)).toBe(
+    expect(buildLocationPathById('spot', 101, defaultOptions)).toBe('客厅 / 电视区 / 沙发角落')
+    expect(buildLocationPathById('spot', 103, defaultOptions)).toBe(
       'location.unknown_room / 未知房间位置'
     )
-    expect(buildPath('spot', 104, areas, rooms, spots, t)).toBe(
+    expect(buildLocationPathById('spot', 104, defaultOptions)).toBe(
       'location.unknown_area / 神秘房间 / 未知区域位置'
     )
-    expect(buildPath('spot', 999, areas, rooms, spots, t)).toBe('location.unknown_spot')
+    expect(buildLocationPathById('spot', 999, defaultOptions)).toBe('location.unknown_spot')
   })
 })
