@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadAllDocuments } from '@/lib/knowledge/search'
 import { buildVectorIndex, saveVectorIndex, loadVectorIndex } from '@/lib/knowledge/vector-store'
-import { requireAuth } from '../../_lib/auth-guard'
+import { requireAuth, requireAdmin } from '../../_lib/auth-guard'
 import { idempotencyTracker } from '@/lib/utils/idempotency'
 // import { getRequestId } from '@/lib/utils/idempotency' // 已在本文件内实现
 // getRequestId helper was removed from idempotency, using inline
@@ -42,9 +42,13 @@ function cleanupOldBuilds(): void {
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request)
 
-  // Auth guard: require valid Bearer token
-  const authError = requireAuth(request)
+  // Auth guard: require valid Bearer token (validates against backend)
+  const authError = await requireAuth(request)
   if (authError) return authError
+
+  // Admin guard: require admin role for rebuilding vector index (resource-intensive operation)
+  const adminError = await requireAdmin(request)
+  if (adminError) return adminError
 
   try {
     const { force = false } = await request.json().catch(() => ({ force: false }))
@@ -69,7 +73,10 @@ export async function POST(request: NextRequest) {
         })
       } catch (waitingError) {
         // Original request failed, allow retry
-        console.warn(`[BuildIndex] Previous request ${requestId} failed, allowing retry:`, waitingError)
+        console.warn(
+          `[BuildIndex] Previous request ${requestId} failed, allowing retry:`,
+          waitingError
+        )
         inProgressBuilds.delete(requestId)
       }
     }
@@ -187,8 +194,8 @@ export async function POST(request: NextRequest) {
  * GET /api/knowledge/build-index
  */
 export async function GET(request: NextRequest) {
-  // Auth guard: require valid Bearer token
-  const authError = requireAuth(request)
+  // Auth guard: require valid Bearer token (validates against backend)
+  const authError = await requireAuth(request)
   if (authError) return authError
 
   try {
