@@ -98,6 +98,8 @@ class IdempotencyTracker {
   private readonly HISTORY_TTL = 5 * 60 * 1000 // 5 minutes
   private readonly MAX_HISTORY_SIZE = 100
   private redisInitialized: boolean = false
+  // Separate set to track acquired idempotency locks (for in-memory fallback)
+  private acquiredIdempotencyLocks: Set<string> = new Set()
 
   /**
    * Initialize Redis if not already done
@@ -151,6 +153,9 @@ class IdempotencyTracker {
     if (existing) {
       return existing as Promise<T>
     }
+
+    // Clear any acquired idempotency lock since we're now tracking the actual request
+    this.acquiredIdempotencyLocks.delete(key)
 
     this.pendingRequests.set(key, request as Promise<unknown>)
 
@@ -241,6 +246,7 @@ class IdempotencyTracker {
   reset(): void {
     this.pendingRequests.clear()
     this.requestHistory.clear()
+    this.acquiredIdempotencyLocks.clear()
   }
 
   /**
@@ -302,14 +308,27 @@ class IdempotencyTracker {
   /**
    * Try to acquire an idempotency lock in Redis (for distributed duplicate submission prevention)
    * Returns true if this is the first request with this key
+   * For in-memory fallback, uses a separate Set to track acquired locks atomically
    */
   async tryAcquireIdempotencyLock(key: string, ttl: number = 30000): Promise<boolean> {
     await this.ensureRedisInitialized()
+
+    // First check in-memory acquired locks (fast path for concurrent requests in same instance)
+    if (this.acquiredIdempotencyLocks.has(key)) {
+      return false
+    }
+
     if (!redisClient || !redisAvailable) {
       // Fall back to in-memory check
       if (this.isRequestPending(key) || this.wasRecentlyCompleted(key)) {
         return false
       }
+      // Double-check pattern for race condition
+      if (this.acquiredIdempotencyLocks.has(key)) {
+        return false
+      }
+      // Atomically add to acquired locks - this prevents race conditions
+      this.acquiredIdempotencyLocks.add(key)
       return true
     }
 
@@ -324,7 +343,14 @@ class IdempotencyTracker {
         error instanceof Error ? error.message : error
       )
       // Fall back to in-memory
-      return !this.isRequestPending(key) && !this.wasRecentlyCompleted(key)
+      if (this.isRequestPending(key) || this.wasRecentlyCompleted(key)) {
+        return false
+      }
+      if (this.acquiredIdempotencyLocks.has(key)) {
+        return false
+      }
+      this.acquiredIdempotencyLocks.add(key)
+      return true
     }
   }
 
@@ -332,6 +358,9 @@ class IdempotencyTracker {
    * Release idempotency lock in Redis
    */
   async releaseIdempotencyLock(key: string): Promise<void> {
+    // Always clear from in-memory acquired locks
+    this.acquiredIdempotencyLocks.delete(key)
+
     await this.ensureRedisInitialized()
     if (!redisClient || !redisAvailable) {
       return

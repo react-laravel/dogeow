@@ -20,7 +20,8 @@ import {
 } from './_lib/streams'
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
 import { requireAuth } from '../_lib/auth-guard'
-import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
+import { idempotencyTracker, generateRequestId, deduplicateRequest } from '@/lib/utils/idempotency'
+import { distributedLock } from '@/lib/utils/distributed-lock'
 
 function buildChatMessages(messages: ChatMessage[], command?: string): ChatMessage[] {
   if (messages.some(m => m.role === 'system')) return messages
@@ -115,48 +116,35 @@ export async function POST(request: NextRequest) {
     model,
   })
 
+  // Use distributed lock to prevent concurrent heavy requests (e.g., multiple image generations)
+  const lockResource = `generate:${getAIProvider(provider)}:${useChat ? 'chat' : 'complete'}`
+
   try {
     console.log('[Generate API] 接收到的请求:', { provider, model, useChat, hasImages })
     console.log('[Generate API] 实际使用的 AI 提供商:', getAIProvider(provider))
     console.log('[Generate API] Request ID:', requestId)
 
-    // Check for duplicate in-flight requests
-    if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-      console.log('[Generate API] Request already in progress, waiting for result')
-      const pendingRequest = idempotencyTracker.getPendingRequest<unknown>(idempotencyKey)
-      if (pendingRequest) {
-        // For streaming responses, we can't directly return the pending result
-        // Instead, we return a response indicating the request is being processed
-        // The client should implement retry logic with the same request ID
-        return NextResponse.json(
-          {
-            error: '请求正在处理中',
-            requestId,
-            message: '相同的请求正在处理，请稍后重试',
-          },
-          {
-            status: 409,
-            headers: {
-              'X-Request-ID': requestId,
-              'Retry-After': '5',
-            },
+    // Use deduplicateRequest for atomic check-and-track
+    // This prevents race conditions where two requests both pass the check before either is tracked
+    return await deduplicateRequest(idempotencyKey, async () => {
+      // Wrap with distributed lock for resource protection
+      const lockResult = await distributedLock.withLock(
+        lockResource,
+        async () => {
+          if (useChat && messages && messages.length > 0) {
+            return await handleChatRequest(body, buildChatMessages(messages, command), requestId)
           }
-        )
-      }
-    }
-
-    if (useChat && messages && messages.length > 0) {
-      const response = await handleChatRequest(
-        body,
-        buildChatMessages(messages, command),
-        requestId
+          return await handleGenerateRequest(body)
+        },
+        { ttl: 60000, maxRetries: 3, retryInterval: 200 }
       )
-      // Note: Streaming responses can't be easily deduplicated
-      // The idempotency check above helps prevent duplicate starts
-      return response
-    }
 
-    return await handleGenerateRequest(body)
+      if (!lockResult.success) {
+        throw lockResult.error || new Error('Request failed due to lock acquisition failure')
+      }
+
+      return lockResult.result
+    })
   } catch (error: unknown) {
     console.error('AI API错误:', error)
     return NextResponse.json({ error: getErrorMessage(error, provider) }, { status: 500 })

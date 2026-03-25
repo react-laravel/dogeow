@@ -226,6 +226,7 @@ class DistributedLockManager {
     const token = this.generateToken()
 
     // Lua script for atomic lock acquisition with token check
+    // Only acquires if no existing lock or if current instance already holds the lock
     const acquireScript = `
       local key = KEYS[1]
       local token = ARGV[1]
@@ -240,14 +241,15 @@ class DistributedLockManager {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const existingToken = await redisClient.get(lockKey)
+        const existingValue = await redisClient.get(lockKey)
 
-        if (existingToken) {
-          if (existingToken === this.instanceId) {
-            // Same instance holds the lock - refresh it
-            await redisClient.set(lockKey, this.instanceId, 'PX', ttl)
+        if (existingValue) {
+          // Check if this instance already holds the lock
+          if (existingValue === token) {
+            // We already hold this lock with the same token - refresh it
+            await redisClient.set(lockKey, token, 'PX', ttl)
             this.log('acquire:redis', `Refreshed existing lock: ${lockKey}`)
-            return { acquired: true, token: existingToken, isFresh: false }
+            return { acquired: true, token, isFresh: false }
           }
           // Another instance holds the lock
           if (verbose) {
@@ -257,20 +259,18 @@ class DistributedLockManager {
             )
           }
         } else {
-          // Try to acquire
-          const result = (await redisClient.eval(
-            acquireScript,
-            1,
-            lockKey,
-            this.instanceId,
-            ttl
-          )) as string | null
+          // Try to acquire with token
+          const result = (await redisClient.eval(acquireScript, 1, lockKey, token, ttl)) as
+            | string
+            | null
           if (result === null) {
-            this.log('acquire:redis', `Lock acquired: ${lockKey} with token ${this.instanceId}`)
-            return { acquired: true, token: this.instanceId, isFresh: true }
+            this.log('acquire:redis', `Lock acquired: ${lockKey} with token ${token}`)
+            return { acquired: true, token, isFresh: true }
           }
-          if (result === this.instanceId) {
-            return { acquired: true, token: this.instanceId, isFresh: false }
+          // Someone else got the lock between our check and set
+          if (result === token) {
+            // We actually got it (race condition won)
+            return { acquired: true, token, isFresh: true }
           }
         }
       } catch (error) {
