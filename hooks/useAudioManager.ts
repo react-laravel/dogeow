@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useMusicStore, MusicTrack } from '@/stores/musicStore'
 import { useAudioPlayback } from '@/components/launcher/hooks/useAudioPlayback'
 import { useAudioVisualizer } from '@/components/launcher/hooks/useAudioVisualizer'
+import { buildAudioUrl as buildAudioUrlHelper } from '@/components/launcher/audio/utils'
 import { apiRequest } from '@/lib/api'
 
 export const useAudioManager = () => {
@@ -39,9 +40,7 @@ export const useAudioManager = () => {
   const buildAudioUrl = useCallback(
     (track: string) => {
       if (!track) return ''
-      // Extract filename from path
-      const filename = track.split('/').pop() ?? track
-      return `${apiUrl}/musics/${filename}`
+      return buildAudioUrlHelper(track, apiUrl)
     },
     [apiUrl]
   )

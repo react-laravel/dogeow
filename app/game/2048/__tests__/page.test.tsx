@@ -5,21 +5,27 @@ import Game2048 from '../page'
 // Mock dependencies
 vi.mock('@/components/ui/button', () => ({
   Button: vi.fn(({ children, onClick, disabled }) => (
-    <button onClick={onClick} disabled={disabled} data-testid="button">{children}</button>
+    <button onClick={onClick} disabled={disabled} data-testid="button">
+      {children}
+    </button>
   )),
 }))
 
 vi.mock('@/components/ui/game-rules-dialog', () => ({
   GameRulesDialog: vi.fn(({ title, rules }) => (
     <div data-testid="game-rules-dialog" data-title={title}>
-      {rules.map((rule: string, i: number) => <span key={i}>{rule}</span>)}
+      {rules.map((rule: string, i: number) => (
+        <span key={i}>{rule}</span>
+      ))}
     </div>
   )),
 }))
 
 vi.mock('next/link', () => ({
   default: vi.fn(({ children, href }) => (
-    <a href={href} data-testid="link">{children}</a>
+    <a href={href} data-testid="link">
+      {children}
+    </a>
   )),
 }))
 
@@ -51,8 +57,6 @@ vi.mock('./utils/gameEngine', () => ({
   moveRight: vi.fn(() => ({ moved: false, newBoard: [], scoreGained: 0 })),
   moveUp: vi.fn(() => ({ moved: false, newBoard: [], scoreGained: 0 })),
   moveDown: vi.fn(() => ({ moved: false, newBoard: [], scoreGained: 0 })),
-  type Board = number[][]
-  type Direction = 'up' | 'down' | 'left' | 'right'
 }))
 
 vi.mock('./store', () => ({
@@ -65,11 +69,18 @@ vi.mock('./store', () => ({
 }))
 
 // Mock window properties
-const mockMatchMedia = vi.fn(() => ({
-  matches: false,
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-}))
+const mockMatchMedia = vi.fn(
+  (query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(() => false),
+  })
+)
 
 describe('Game2048', () => {
   beforeEach(() => {

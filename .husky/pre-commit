@@ -1,2 +1,2 @@
 npx lint-staged
-npm run type-check
+node scripts/precommit-typecheck-staged.mjs

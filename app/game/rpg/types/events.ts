@@ -1,7 +1,8 @@
 // WebSocket event types for RPG game
 
-import type { CombatMonster } from './combat'
-import type { GameCharacter, GameItem } from './index'
+import type { CombatMonster, CombatResult } from './combat'
+import type { GameCharacter } from './character'
+import type { GameItem } from './item'
 
 /** 怪物出现事件数据 */
 export interface GameMonstersAppearEvent {
@@ -14,12 +15,10 @@ export interface GameMonstersAppearEvent {
 }
 
 /** 战斗更新事件数据 */
-export interface GameCombatUpdateEvent {
+export interface GameCombatUpdateEvent extends CombatResult {
   type?: string
   current_hp?: number
   current_mana?: number
-  defeat?: boolean
-  auto_stopped?: boolean
 }
 
 /** 战利品掉落事件数据 */
