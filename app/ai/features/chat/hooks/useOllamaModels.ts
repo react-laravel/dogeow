@@ -19,9 +19,7 @@ interface UseOllamaModelsReturn {
   refetch: () => void
 }
 
-export function useOllamaModels(
-  options: UseOllamaModelsOptions = {}
-): UseOllamaModelsReturn {
+export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllamaModelsReturn {
   const { enabled = true } = options
 
   const [ollamaModels, setOllamaModels] = useState<OllamaModelListItem[]>([])
@@ -43,7 +41,7 @@ export function useOllamaModels(
     try {
       const response = await fetch('/api/ollama/models')
       if (!response.ok) {
-        throw new Error(\`API error: \${response.status}\`)
+        throw new Error(`API error: ${response.status}`)
       }
 
       const data = (await response.json()) as { models?: OllamaModelListItem[] }

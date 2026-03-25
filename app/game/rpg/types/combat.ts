@@ -1,4 +1,6 @@
 // Combat types for RPG game
+import type { GameItem } from './item'
+import type { GameCharacter } from './character'
 
 export type MonsterType = 'normal' | 'elite' | 'boss'
 export type SkillType = 'active' | 'passive'
@@ -59,8 +61,8 @@ export interface CombatResult {
   copper_gained: number
   loot: {
     copper?: number
-    item?: unknown
-    potion?: unknown
+    item?: GameItem
+    potion?: GameItem
     item_lost?: boolean
     item_lost_reason?: string
   }
@@ -73,7 +75,7 @@ export interface CombatResult {
     before?: Record<string, { name: string; restored: number }>
     after?: Record<string, { name: string; restored: number }>
   }
-  character: unknown
+  character: GameCharacter
   /** 仅当本场战斗结束（胜利/失败）时存在 */
   combat_log_id?: number
 }
@@ -83,16 +85,24 @@ export interface CombatLog {
   character_id: number
   map_id: number
   monster_id: number
-  monster: unknown
-  map: unknown
+  monster: {
+    id?: number
+    name?: string
+    type?: MonsterType
+    level?: number
+  } | null
+  map: {
+    id?: number
+    name?: string
+  } | null
   damage_dealt: number
   damage_taken: number
   victory: boolean
   loot_dropped: Record<string, unknown> | null
   loot?: {
     copper?: number
-    item?: unknown
-    potion?: unknown
+    item?: GameItem
+    potion?: GameItem
     item_lost?: boolean
     item_lost_reason?: string
   }

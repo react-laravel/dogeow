@@ -15,11 +15,11 @@ export async function uploadImageToServer(file: File): Promise<string> {
   const formData = new FormData()
   formData.append('image', file)
 
-  const response = await fetch(\`\${API_URL}/api/vision/upload\`, {
+  const response = await fetch(`${API_URL}/api/vision/upload`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      ...(token ? { Authorization: \`Bearer \${token}\` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: formData,
   })

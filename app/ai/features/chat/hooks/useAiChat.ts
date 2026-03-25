@@ -225,7 +225,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       })
 
       if (!response.ok) {
-        throw new Error(\`API error: \${response.status}\`)
+        throw new Error(`API error: ${response.status}`)
       }
 
       const accumulatedContent = await readAiChatStream(response, setCompletion)
@@ -264,7 +264,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
         ...prev,
         {
           role: 'assistant',
-          content: \`错误: \${errorMessage}\`,
+          content: `错误: ${errorMessage}`,
         },
       ])
       setCompletion('')

@@ -3,7 +3,6 @@ import { loadAllDocuments } from '@/lib/knowledge/search'
 import { buildVectorIndex, saveVectorIndex, loadVectorIndex } from '@/lib/knowledge/vector-store'
 import { requireAuth, requireAdmin } from '../../_lib/auth-guard'
 import {
-  idempotencyTracker,
   withIdempotencyAndLock,
   generateRequestId,
   type IdempotentResult,
@@ -26,6 +25,12 @@ import { distributedLock, LockAcquisitionError } from '@/lib/utils/distributed-l
 
 const BUILD_RESOURCE = 'knowledge:build-index'
 const BUILD_TTL = 5 * 60 * 1000 // 5 minutes
+type VectorIndex = NonNullable<ReturnType<typeof loadVectorIndex>>
+type BuildIndexResult = {
+  action: 'skipped' | 'built'
+  index: VectorIndex
+  message: string
+}
 
 function getRequestId(request: NextRequest): string {
   return request.headers.get('X-Request-ID') || generateRequestId()
@@ -50,15 +55,15 @@ export async function POST(request: NextRequest) {
     const { force = false } = await request.json().catch(() => ({ force: false }))
 
     // Execute with idempotency and distributed lock protection
-    const result: IdempotentResult<void> = await withIdempotencyAndLock(
+    const result: IdempotentResult<BuildIndexResult> = await withIdempotencyAndLock(
       '/api/knowledge/build-index',
       'POST',
       { force },
-      async () => {
+      async (): Promise<BuildIndexResult> => {
         // Use distributed lock to ensure only one build runs at a time
-        const lockResult = await distributedLock.withLock(
+        const lockResult = await distributedLock.withLock<BuildIndexResult>(
           BUILD_RESOURCE,
-          async () => {
+          async (): Promise<BuildIndexResult> => {
             // Check if index already exists (only if not forcing rebuild)
             const existingIndex = loadVectorIndex()
             if (existingIndex && !force) {
@@ -135,6 +140,10 @@ export async function POST(request: NextRequest) {
           throw lockResult.error
         }
 
+        if (!lockResult.result) {
+          throw new Error('索引构建未返回结果')
+        }
+
         return lockResult.result
       },
       {
@@ -148,13 +157,13 @@ export async function POST(request: NextRequest) {
 
     // Handle duplicate submission
     if (result.isDuplicate && result.result) {
-      const lockResult = result.result as { action: string; index?: unknown; message: string }
+      const lockResult = result.result
       return NextResponse.json({
         success: true,
         message: lockResult.message,
-        indexSize: lockResult.index?.documents?.length ?? 0,
-        createdAt: lockResult.index?.createdAt,
-        updatedAt: lockResult.index?.updatedAt,
+        indexSize: lockResult.index.documents.length,
+        createdAt: lockResult.index.createdAt,
+        updatedAt: lockResult.index.updatedAt,
         idempotent: true,
         requestId: result.requestId,
       })
@@ -204,13 +213,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Success
-    const lockResult = result.result as { action: string; index: unknown; message: string }
+    const lockResult = result.result!
     return NextResponse.json({
       success: true,
       message: lockResult.message,
-      indexSize: lockResult.index?.documents?.length ?? 0,
-      createdAt: lockResult.index?.createdAt,
-      updatedAt: lockResult.index?.createdAt,
+      indexSize: lockResult.index.documents.length,
+      createdAt: lockResult.index.createdAt,
+      updatedAt: lockResult.index.updatedAt,
       requestId: result.requestId,
     })
   } catch (error: unknown) {
