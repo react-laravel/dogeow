@@ -176,7 +176,8 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
   const togglePlay = useCallback(() => {
     if (!audioRef.current || !currentTrack) return
 
-    if (!availableTracks || availableTracks.length === 0) {
+    const hasReadySource = Boolean(audioRef.current.src || currentTrack)
+    if ((!availableTracks || availableTracks.length === 0) && !hasReadySource) {
       setAudioError('Playlist is empty, no music to play')
       toast.error('Playlist is empty', { description: 'Please add music files to the playlist' })
       return

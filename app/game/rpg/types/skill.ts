@@ -1,6 +1,7 @@
 // Skill types for RPG game
 
-import type { CharacterClass, SkillType, SkillTargetType } from './character'
+import type { CharacterClass } from './character'
+import type { SkillType, SkillTargetType } from './combat'
 
 /** 技能定义 */
 export interface SkillDefinition {

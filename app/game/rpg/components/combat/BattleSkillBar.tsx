@@ -32,7 +32,7 @@ export function BattleSkillBar({
         const buttonContent = (
           <>
             <div className="relative">
-              <SkillIcon icon={def.icon} name={def.name} />
+              <SkillIcon icon={def.icon} effectKey={def.effect_key} name={def.name} />
               {onCooldown && (
                 <div
                   className="absolute inset-0 flex items-center justify-center overflow-hidden rounded bg-black/50"

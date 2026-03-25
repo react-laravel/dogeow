@@ -4,13 +4,26 @@
  * Supports both in-memory and Redis-backed storage for distributed environments
  */
 
+import { loadOptionalNodeModule } from './optional-node-module'
+
 // Redis client types (will be loaded dynamically)
 interface RedisClient {
   get(key: string): Promise<string | null>
-  set(key: string, value: string, pxMode?: string, ttl?: number): Promise<'OK'>
+  set(key: string, value: string, ...args: Array<string | number>): Promise<'OK' | null>
   del(key: string): Promise<number>
-  eval(script: string, numKeys: number, ...args: string[]): Promise<unknown>
+  eval(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>
+  ping(): Promise<string>
 }
+
+type RedisConstructor = new (
+  url: string,
+  options: {
+    maxRetriesPerRequest: number
+    retryStrategy: (times: number) => number | null
+    lazyConnect: boolean
+  }
+) => RedisClient & { ping(): Promise<string> }
+type RedisModule = RedisConstructor | { default: RedisConstructor }
 
 let redisClient: RedisClient | null = null
 let redisAvailable = false
@@ -31,7 +44,18 @@ async function initRedisClient(): Promise<boolean> {
   }
 
   try {
-    const Redis = (await import('ioredis')).default
+    const redisModule = loadOptionalNodeModule<RedisModule>('ioredis')
+    const Redis: RedisConstructor | null = !redisModule
+      ? null
+      : typeof redisModule === 'function'
+        ? redisModule
+        : redisModule.default
+
+    if (!Redis) {
+      console.log('[Idempotency] Node runtime module loader unavailable, using in-memory storage')
+      return false
+    }
+
     redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       retryStrategy(times) {
@@ -41,7 +65,7 @@ async function initRedisClient(): Promise<boolean> {
       lazyConnect: true,
     }) as unknown as RedisClient
 
-    await (redisClient as { ping: () => Promise<string> }).ping()
+    await redisClient.ping()
     redisAvailable = true
     console.log('[Idempotency] Redis connection established')
     return true
