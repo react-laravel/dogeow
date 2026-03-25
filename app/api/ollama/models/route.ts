@@ -112,7 +112,7 @@ function supportsVision(model: OllamaTagModel, show?: OllamaShowResponse): boole
 
 export async function GET(request: NextRequest) {
   // Auth guard: require valid Bearer token to prevent model enumeration
-  const authError = requireAuth(request)
+  const authError = await requireAuth(request)
   if (authError) return authError
 
   try {
