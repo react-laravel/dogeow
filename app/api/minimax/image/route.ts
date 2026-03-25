@@ -16,7 +16,7 @@ export interface ImageRequest {
 
 export async function POST(request: NextRequest) {
   // Auth guard: require valid Bearer token
-  const authError = requireAuth(request)
+  const authError = await requireAuth(request)
   if (authError) return authError
 
   if (!MINIMAX_TOKEN_API_KEY) {
