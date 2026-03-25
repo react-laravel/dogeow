@@ -107,7 +107,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     const playAudio = async () => {
       if (!audioContextRef.current && audioRef.current && audioRef.current.src) {
         try {
-          // initAudioContext would be called from parent
+          initAudioContext(audioRef.current)
           await new Promise(resolve => setTimeout(resolve, 50))
 
           const ctx = audioContextRef.current as AudioContext | null
@@ -190,6 +190,9 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       audioRef.current.pause()
       setIsPlaying(false)
     } else {
+      if (!audioContextRef.current && audioRef.current.src) {
+        initAudioContext(audioRef.current)
+      }
       audioRef.current.play().catch(err => setAudioError(`Playback failed: ${err.message}`))
       setIsPlaying(true)
     }
@@ -200,6 +203,8 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     setIsPlaying,
     setAudioError,
     availableTracks,
+    initAudioContext,
+    audioContextRef,
     audioRef,
   ])
 
