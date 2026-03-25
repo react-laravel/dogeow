@@ -7,9 +7,24 @@ import type { SkillWithLearnedState, CharacterClass } from '../../types'
 import { getRpgSkillImageUrl } from '../../utils/assetUrls'
 
 /** 技能图标 */
-function SkillIcon({ icon, name }: { icon?: string | null; name: string }) {
+function SkillIcon({
+  icon,
+  effectKey,
+  name,
+}: {
+  icon?: string | null
+  effectKey?: string | null
+  name: string
+}) {
+  const resolvedIcon = (() => {
+    if (effectKey) {
+      return effectKey.endsWith('.png') ? effectKey : `${effectKey}.png`
+    }
+    if (icon && /\.(png|jpe?g|webp|gif|svg)$/i.test(icon)) return icon
+    return null
+  })()
   const fallback = icon && icon.length <= 4 ? icon : (name?.[0] ?? '?')
-  const iconFile = icon && /\.(png|jpe?g|webp|gif|svg)$/i.test(icon) ? icon : null
+  const iconFile = resolvedIcon
   const [useImg, setUseImg] = useState(iconFile != null)
   const src = useImg && iconFile ? getRpgSkillImageUrl(iconFile) : ''
   return (
@@ -86,7 +101,7 @@ function SkillCard({
       className={cardClass}
       onClick={() => !isLearned && !isLocked && canLearn && onLearn(skill)}
     >
-      <SkillIcon icon={skill.icon} name={skill.name || ''} />
+      <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name || ''} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-foreground text-sm font-medium">{skill.name}</span>

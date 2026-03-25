@@ -2,7 +2,13 @@
 // Re-exports from modular type files
 
 // Character types
-export type { CharacterClass, GameCharacter, CombatStats, StatBreakdownItem, CombatStatsBreakdown } from './character'
+export type {
+  CharacterClass,
+  GameCharacter,
+  CombatStats,
+  StatBreakdownItem,
+  CombatStatsBreakdown,
+} from './character'
 export { CLASS_NAMES } from './character'
 
 // Item and equipment types
@@ -11,14 +17,21 @@ export type { ItemDefinition, GameItem, Equipment } from './item'
 export { QUALITY_COLORS, QUALITY_NAMES, SLOT_NAMES } from './item'
 
 // Skill types
-export type { SkillType, SkillTargetType } from './skill'
+export type { SkillType, SkillTargetType } from './combat'
 export type { SkillDefinition, SkillWithLearnedState, CharacterSkill } from './skill'
 
 // Map types
 export type { MonsterDefinition, MapDefinition, CharacterMap } from './map'
 
 // Combat types
-export type { MonsterType, CombatMonster, SkillUsedEntry, CombatResult, CombatLog, CombatLogDetail } from './combat'
+export type {
+  MonsterType,
+  CombatMonster,
+  SkillUsedEntry,
+  CombatResult,
+  CombatLog,
+  CombatLogDetail,
+} from './combat'
 
 // Shop types
 export type { ShopItem } from './shop'
