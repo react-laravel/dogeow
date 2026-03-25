@@ -1,7 +1,13 @@
 'use client'
 
 import type { GameItem, ShopItem, ItemQuality } from '@/app/game/rpg/types'
-import { QUALITY_COLORS, STAT_NAMES } from '@/app/game/rpg/types'
+import {
+  QUALITY_COLORS,
+  STAT_NAMES,
+  getQualityGradient,
+  getQualityBorderStyle,
+  getQualityColor,
+} from '@/app/game/rpg/types'
 import { ItemIcon } from './ItemIcon'
 import { ItemActions, type ItemActionType } from './ItemActions'
 import {
@@ -53,8 +59,8 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
         <div
           className="p-2 text-center font-medium"
           style={{
-            background: `linear-gradient(135deg, ${QUALITY_COLORS[equippedItem.quality as ItemQuality]}20 0%, ${QUALITY_COLORS[equippedItem.quality as ItemQuality]}10 100%)`,
-            borderBottom: `1px solid ${QUALITY_COLORS[equippedItem.quality as ItemQuality]}30`,
+            background: getQualityGradient(equippedItem.quality as ItemQuality),
+            borderBottom: getQualityBorderStyle(equippedItem.quality as ItemQuality),
           }}
         >
           当前装备
@@ -64,7 +70,7 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           <div className="mb-2 flex justify-center">
             <div
               className="flex h-12 w-12 items-center justify-center rounded border-2"
-              style={{ borderColor: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
+              style={{ borderColor: getQualityColor(equippedItem.quality as ItemQuality) }}
             >
               <ItemIcon item={equippedItem} className="drop-shadow-sm" />
             </div>
@@ -73,7 +79,7 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           <div className="mb-2 text-center">
             <span
               className="text-sm font-bold"
-              style={{ color: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
+              style={{ color: getQualityColor(equippedItem.quality as ItemQuality) }}
             >
               {getItemDisplayName(equippedItem)}
             </span>
@@ -179,8 +185,8 @@ export function EquipmentComparePanel({
       <div
         className="p-2 text-center font-medium"
         style={{
-          background: `linear-gradient(135deg, ${QUALITY_COLORS[equippedItem.quality as ItemQuality]}20 0%, ${QUALITY_COLORS[equippedItem.quality as ItemQuality]}10 100%)`,
-          borderBottom: `1px solid ${QUALITY_COLORS[equippedItem.quality as ItemQuality]}30`,
+          background: getQualityGradient(equippedItem.quality as ItemQuality),
+          borderBottom: getQualityBorderStyle(equippedItem.quality as ItemQuality),
         }}
       >
         当前装备
@@ -190,7 +196,7 @@ export function EquipmentComparePanel({
         <div className="mb-1 flex justify-center">
           <div
             className="relative flex h-9 w-9 items-center justify-center rounded border-2"
-            style={{ borderColor: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
+            style={{ borderColor: getQualityColor(equippedItem.quality as ItemQuality) }}
           >
             <ItemIcon item={equippedItem} className="drop-shadow-sm" />
           </div>
@@ -199,7 +205,7 @@ export function EquipmentComparePanel({
         <div className="mb-1 text-center">
           <span
             className="text-sm font-bold"
-            style={{ color: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
+            style={{ color: getQualityColor(equippedItem.quality as ItemQuality) }}
           >
             {getItemDisplayName(equippedItem)}
           </span>
@@ -285,7 +291,7 @@ export function FullComparePanel({
           <div className="mb-1 flex justify-center">
             <div
               className="flex h-10 w-10 items-center justify-center rounded border-2"
-              style={{ borderColor: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
+              style={{ borderColor: getQualityColor(equippedItem.quality as ItemQuality) }}
             >
               <ItemIcon item={equippedItem} className="drop-shadow-sm" />
             </div>
@@ -293,7 +299,7 @@ export function FullComparePanel({
           <div className="mb-2 text-center">
             <span
               className="font-bold"
-              style={{ color: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
+              style={{ color: getQualityColor(equippedItem.quality as ItemQuality) }}
             >
               {getItemDisplayName(equippedItem)}
             </span>
@@ -333,7 +339,7 @@ export function FullComparePanel({
           <div className="mb-1 flex justify-center">
             <div
               className="flex h-10 w-10 items-center justify-center rounded border-2"
-              style={{ borderColor: QUALITY_COLORS[newItem.quality as ItemQuality] }}
+              style={{ borderColor: getQualityColor(newItem.quality as ItemQuality) }}
             >
               <ItemIcon item={newItem} className="drop-shadow-sm" />
             </div>
@@ -341,7 +347,7 @@ export function FullComparePanel({
           <div className="mb-2 text-center">
             <span
               className="font-bold"
-              style={{ color: QUALITY_COLORS[newItem.quality as ItemQuality] }}
+              style={{ color: getQualityColor(newItem.quality as ItemQuality) }}
             >
               {getItemDisplayName(newItem)}
             </span>

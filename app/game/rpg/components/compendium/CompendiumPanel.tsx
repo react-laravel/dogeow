@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import { useGameStore } from '../../stores/gameStore'
 import { useMonsterDrops } from '../../hooks/useMonsterDrops'
 import { CompendiumItem, CompendiumMonster, ItemType, STAT_NAMES } from '../../types'
@@ -124,32 +125,18 @@ export function CompendiumPanel() {
 
       {/* 进度显示 */}
       {activeTab === 'items' && (
-        <div className="text-muted-foreground flex items-center gap-2 text-xs">
-          <span>物品收集:</span>
-          <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-            <div
-              className="h-full bg-green-500 transition-all"
-              style={{ width: `${itemProgress.percent}%` }}
-            />
-          </div>
-          <span>
-            {itemProgress.discovered}/{itemProgress.total} ({itemProgress.percent}%)
-          </span>
-        </div>
+        <CompendiumProgressBar
+          label="物品收集:"
+          discovered={itemProgress.discovered}
+          total={itemProgress.total}
+        />
       )}
       {activeTab === 'monsters' && (
-        <div className="text-muted-foreground flex items-center gap-2 text-xs">
-          <span>怪物收集:</span>
-          <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-            <div
-              className="h-full bg-green-500 transition-all"
-              style={{ width: `${monsterProgress.percent}%` }}
-            />
-          </div>
-          <span>
-            {monsterProgress.discovered}/{monsterProgress.total} ({monsterProgress.percent}%)
-          </span>
-        </div>
+        <CompendiumProgressBar
+          label="怪物收集:"
+          discovered={monsterProgress.discovered}
+          total={monsterProgress.total}
+        />
       )}
 
       {/* 物品图鉴 */}
@@ -177,38 +164,22 @@ export function CompendiumPanel() {
             {filteredItems.map(item => {
               const isDiscovered = item.discovered !== false
               return (
-                <button
+                <CompendiumGridItem
                   key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  level={item.required_level}
+                  isDiscovered={isDiscovered}
+                  isSelected={selectedItem?.id === item.id}
                   onClick={() => isDiscovered && setSelectedItem(item)}
-                  disabled={!isDiscovered}
-                  className={`flex flex-col items-center rounded-lg border-2 p-2 transition-all hover:shadow-md ${
-                    selectedItem?.id === item.id
-                      ? 'bg-muted border-yellow-500 ring-2 ring-yellow-500/50'
-                      : isDiscovered
-                        ? 'border-border bg-card'
-                        : 'border-border bg-card opacity-50'
-                  } ${!isDiscovered ? 'cursor-not-allowed' : ''}`}
-                  style={{
-                    borderColor: selectedItem?.id === item.id ? undefined : '#4b5563',
-                  }}
-                  title={isDiscovered ? item.name : '未发现'}
-                >
-                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
-                    {isDiscovered ? (
+                  icon={
+                    isDiscovered ? (
                       <ItemIcon item={item} className="drop-shadow-sm" />
                     ) : (
                       <span className="text-2xl">❓</span>
-                    )}
-                  </span>
-                  <span
-                    className={`mt-1 w-full truncate text-center text-xs ${!isDiscovered ? 'text-muted-foreground' : ''}`}
-                  >
-                    {isDiscovered ? item.name : '???'}
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">
-                    {isDiscovered ? `Lv.${item.required_level}` : 'Lv.?'}
-                  </span>
-                </button>
+                    )
+                  }
+                />
               )
             })}
           </div>
@@ -331,32 +302,24 @@ export function CompendiumPanel() {
             {filteredMonsters.map(monster => {
               const isDiscovered = monster.discovered !== false
               return (
-                <button
+                <CompendiumGridItem
                   key={monster.id}
+                  id={monster.id}
+                  name={monster.name}
+                  level={monster.level}
+                  isDiscovered={isDiscovered}
+                  isSelected={selectedMonster?.id === monster.id}
                   onClick={() => isDiscovered && handleMonsterClick(monster)}
-                  disabled={!isDiscovered}
-                  className={`flex flex-col items-center rounded-lg border-2 p-2 transition-all hover:shadow-md ${
-                    selectedMonster?.id === monster.id
-                      ? 'bg-muted border-yellow-500 ring-2 ring-yellow-500/50'
-                      : isDiscovered
-                        ? 'border-border bg-card'
-                        : 'border-border bg-card opacity-50'
-                  } ${isDiscovered ? '' : 'cursor-not-allowed'}`}
-                >
-                  {isDiscovered ? (
-                    <MonsterIcon icon={monster.icon} className="h-10 w-10" />
-                  ) : (
-                    <span className="flex h-10 w-10 items-center justify-center text-2xl">❓</span>
-                  )}
-                  <span
-                    className={`mt-1 w-full truncate text-center text-xs ${!isDiscovered ? 'text-muted-foreground' : ''}`}
-                  >
-                    {isDiscovered ? monster.name : '???'}
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">
-                    {isDiscovered ? `Lv.${monster.level}` : 'Lv.?'}
-                  </span>
-                </button>
+                  icon={
+                    isDiscovered ? (
+                      <MonsterIcon icon={monster.icon} className="h-10 w-10" />
+                    ) : (
+                      <span className="flex h-10 w-10 items-center justify-center text-2xl">
+                        ❓
+                      </span>
+                    )
+                  }
+                />
               )
             })}
           </div>
@@ -454,102 +417,106 @@ export function CompendiumPanel() {
   )
 }
 
-/** 带 fallback 的图片组件 */
-function ImageWithFallback({ src, fallback }: { src: string; fallback: string }) {
-  const [useImg, setUseImg] = useState(true)
+// ============================================================================
+// Shared Components - Extracted to resolve DRY violations
+// ============================================================================
+
+interface CompendiumGridItemProps {
+  id: number
+  name: string
+  level: number
+  isDiscovered: boolean
+  isSelected: boolean
+  onClick: () => void
+  icon: React.ReactNode
+}
+
+function CompendiumGridItem({
+  id,
+  name,
+  level,
+  isDiscovered,
+  isSelected,
+  onClick,
+  icon,
+}: CompendiumGridItemProps) {
   return (
-    <>
-      {useImg && (
-        <Image
-          src={src}
-          alt=""
-          fill
-          sizes="200px"
-          className="object-contain"
-          onError={() => setUseImg(false)}
-        />
-      )}
-      {!useImg && (
-        <span className="absolute inset-0 flex items-center justify-center text-6xl">
-          {fallback}
-        </span>
-      )}
-    </>
+    <button
+      key={id}
+      onClick={onClick}
+      disabled={!isDiscovered}
+      className={`flex flex-col items-center rounded-lg border-2 p-2 transition-all hover:shadow-md ${
+        isSelected
+          ? 'bg-muted border-yellow-500 ring-2 ring-yellow-500/50'
+          : isDiscovered
+            ? 'border-border bg-card'
+            : 'border-border bg-card opacity-50'
+      } ${!isDiscovered ? 'cursor-not-allowed' : ''}`}
+      title={isDiscovered ? name : '未发现'}
+    >
+      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">{icon}</span>
+      <span
+        className={`mt-1 w-full truncate text-center text-xs ${!isDiscovered ? 'text-muted-foreground' : ''}`}
+      >
+        {isDiscovered ? name : '???'}
+      </span>
+      <span className="text-muted-foreground text-[10px]">
+        {isDiscovered ? `Lv.${level}` : 'Lv.?'}
+      </span>
+    </button>
   )
 }
+
+interface ProgressBarProps {
+  label: string
+  discovered: number
+  total: number
+}
+
+function CompendiumProgressBar({ label, discovered, total }: ProgressBarProps) {
+  const percent = total > 0 ? Math.round((discovered / total) * 100) : 0
+  return (
+    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+      <span>{label}</span>
+      <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+        <div className="h-full bg-green-500 transition-all" style={{ width: `${percent}%` }} />
+      </div>
+      <span>
+        {discovered}/{total} ({percent}%)
+      </span>
+    </div>
+  )
+}
+
+// ============================================================================
+// Icon Components
+// ============================================================================
 
 /** 物品小图标 */
 function ItemIcon({ item, className }: { item: CompendiumItem; className?: string }) {
   const definitionId = item.id
   const fallback = getItemIconFallback({ definition: item })
-  const [useImg, setUseImg] = useState(definitionId != null)
   const src = getRpgItemImageUrl(item.icon, definitionId)
   return (
-    <span
-      className={`relative inline-flex h-full w-full items-center justify-center ${className ?? ''}`}
-    >
-      {useImg && src ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          className="object-contain"
-          sizes="48px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        <span className="drop-shadow-sm">{fallback}</span>
-      )}
-    </span>
-  )
-}
-
-/** 物品 tip 大图标 */
-function ItemTipIcon({ item, onClick }: { item: CompendiumItem; onClick?: () => void }) {
-  const definitionId = item.id
-  const fallback = getItemIconFallback({ definition: item })
-  const [useImg, setUseImg] = useState(definitionId != null)
-  const src = getRpgItemImageUrl(item.icon, definitionId)
-  return (
-    <span
-      className={`bg-muted relative inline-flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-lg border-2 border-gray-400 shadow-sm ${onClick ? 'cursor-zoom-in' : ''}`}
-      onClick={onClick}
-    >
-      {useImg && src ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          className="rounded-md object-contain p-1"
-          sizes="80px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        <span className="text-4xl drop-shadow-sm">{fallback}</span>
-      )}
-    </span>
+    <ImageWithFallback
+      src={src || ''}
+      fallback={<span className="drop-shadow-sm">{fallback}</span>}
+      wrapperClassName={`relative inline-flex h-full w-full items-center justify-center ${className ?? ''}`}
+      imageSizes="48px"
+    />
   )
 }
 
 /** 怪物图标 */
 function MonsterIcon({ icon, className }: { icon?: string | null; className?: string }) {
-  const [useImg, setUseImg] = useState(true)
   const src = getRpgMonsterImageUrl(icon)
   return (
-    <span className={`relative inline-flex items-center justify-center ${className ?? ''}`}>
-      {useImg ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          className="object-contain"
-          sizes="200px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        <span>👾</span>
-      )}
-    </span>
+    <ImageWithFallback
+      src={src || ''}
+      fallback={<span>👾</span>}
+      wrapperClassName={`relative inline-flex items-center justify-center ${className ?? ''}`}
+      imageSizes="200px"
+    />
   )
 }
 

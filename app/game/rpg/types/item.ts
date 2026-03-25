@@ -86,3 +86,40 @@ export const SLOT_NAMES: Record<EquipmentSlot, string> = {
   ring: '戒指',
   amulet: '护符',
 }
+
+// ============================================================================
+// Quality-based Style Helpers - Extracted to resolve DRY violations
+// ============================================================================
+
+/**
+ * Get gradient background style for item quality
+ * @param quality Item quality level
+ * @param opacity1 First color opacity suffix (default "20")
+ * @param opacity2 Second color opacity suffix (default "10")
+ */
+export function getQualityGradient(
+  quality: ItemQuality,
+  opacity1: string = '20',
+  opacity2: string = '10'
+): string {
+  const p1 = opacity1.padStart(2, '0')
+  const p2 = opacity2.padStart(2, '0')
+  return `linear-gradient(135deg, ${QUALITY_COLORS[quality]}${p1} 0%, ${QUALITY_COLORS[quality]}${p2} 100%)`
+}
+
+/**
+ * Get border style for item quality
+ * @param quality Item quality level
+ * @param opacity Border color opacity suffix (default "30")
+ */
+export function getQualityBorderStyle(quality: ItemQuality, opacity: string = '30'): string {
+  const p = opacity.padStart(2, '0')
+  return `1px solid ${QUALITY_COLORS[quality]}${p}`
+}
+
+/**
+ * Get text color for item quality
+ */
+export function getQualityColor(quality: ItemQuality): string {
+  return QUALITY_COLORS[quality]
+}

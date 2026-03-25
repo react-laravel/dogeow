@@ -3,7 +3,14 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import type { GameItem, ItemQuality, ShopItem } from '@/app/game/rpg/types'
-import { QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '@/app/game/rpg/types'
+import {
+  QUALITY_COLORS,
+  QUALITY_NAMES,
+  STAT_NAMES,
+  getQualityGradient,
+  getQualityBorderStyle,
+  getQualityColor,
+} from '@/app/game/rpg/types'
 import { ItemTipIcon } from './ItemTipIcon'
 import {
   getItemDisplayName,
@@ -87,15 +94,15 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
     <div
       className="relative flex gap-3 p-3"
       style={{
-        background: `linear-gradient(135deg, ${QUALITY_COLORS[quality as ItemQuality]}20 0%, ${QUALITY_COLORS[quality as ItemQuality]}10 100%)`,
-        borderBottom: `1px solid ${QUALITY_COLORS[quality as ItemQuality]}30`,
+        background: getQualityGradient(quality as ItemQuality),
+        borderBottom: getQualityBorderStyle(quality as ItemQuality),
       }}
     >
       {/* 物品图片 */}
       {isShopItem ? (
         <span
           className="relative flex h-[100px] w-[100px] shrink-0 items-center justify-center rounded-lg border-2 shadow-sm"
-          style={{ borderColor: QUALITY_COLORS[quality as ItemQuality] }}
+          style={{ borderColor: getQualityColor(quality as ItemQuality) }}
         >
           <ShopItemIcon item={item as ShopItem} className="h-full w-full" />
         </span>
@@ -109,11 +116,11 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
           <div>
             <h5
               className="min-w-0 text-sm leading-tight font-bold break-words sm:text-base"
-              style={{ color: QUALITY_COLORS[quality as ItemQuality] }}
+              style={{ color: getQualityColor(quality as ItemQuality) }}
             >
               {displayName}
             </h5>
-            <span className="text-xs" style={{ color: QUALITY_COLORS[quality as ItemQuality] }}>
+            <span className="text-xs" style={{ color: getQualityColor(quality as ItemQuality) }}>
               {QUALITY_NAMES[quality as ItemQuality]}
             </span>
           </div>

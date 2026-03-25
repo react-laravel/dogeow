@@ -14,7 +14,14 @@ export { CLASS_NAMES } from './character'
 // Item and equipment types
 export type { ItemQuality, ItemType, EquipmentSlot } from './item'
 export type { ItemDefinition, GameItem, Equipment } from './item'
-export { QUALITY_COLORS, QUALITY_NAMES, SLOT_NAMES } from './item'
+export {
+  QUALITY_COLORS,
+  QUALITY_NAMES,
+  SLOT_NAMES,
+  getQualityGradient,
+  getQualityBorderStyle,
+  getQualityColor,
+} from './item'
 
 // Skill types
 export type { SkillType, SkillTargetType } from './combat'

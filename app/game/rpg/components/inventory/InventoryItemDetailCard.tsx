@@ -2,7 +2,15 @@
 
 import type { ReactNode } from 'react'
 import { CopperDisplay } from '../shared/CopperDisplay'
-import { GameItem, QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '../../types'
+import {
+  GameItem,
+  QUALITY_COLORS,
+  QUALITY_NAMES,
+  STAT_NAMES,
+  getQualityGradient,
+  getQualityBorderStyle,
+  getQualityColor,
+} from '../../types'
 import { getItemDisplayName } from '../../utils/itemUtils'
 import { ItemTipIcon } from '@/components/game'
 import { ItemSocketIndicators } from './ItemSocketIndicators'
@@ -29,8 +37,8 @@ export function InventoryItemDetailCard({
       <div
         className="relative flex gap-3 p-3"
         style={{
-          background: `linear-gradient(135deg, ${QUALITY_COLORS[item.quality]}20 0%, ${QUALITY_COLORS[item.quality]}10 100%)`,
-          borderBottom: `1px solid ${QUALITY_COLORS[item.quality]}30`,
+          background: getQualityGradient(item.quality),
+          borderBottom: getQualityBorderStyle(item.quality),
         }}
       >
         <ItemTipIcon item={item} className="shrink-0 drop-shadow-lg" />
@@ -40,11 +48,11 @@ export function InventoryItemDetailCard({
             <div>
               <h5
                 className="min-w-0 text-sm leading-tight font-bold break-words sm:text-base"
-                style={{ color: QUALITY_COLORS[item.quality] }}
+                style={{ color: getQualityColor(item.quality) }}
               >
                 {getItemDisplayName(item)}
               </h5>
-              <span className="text-xs" style={{ color: QUALITY_COLORS[item.quality] }}>
+              <span className="text-xs" style={{ color: getQualityColor(item.quality) }}>
                 {QUALITY_NAMES[item.quality]}
               </span>
 

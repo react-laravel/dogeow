@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { ItemIcon } from '@/components/game'
 import type { GameItem } from '../../types'
-import { QUALITY_COLORS } from '../../types'
+import { QUALITY_COLORS, getQualityGradient, getQualityColor } from '../../types'
 import { ItemSocketIndicators } from './ItemSocketIndicators'
 
 type SlotVariant = 'inventory' | 'equipment'
@@ -34,10 +34,8 @@ export function GameItemSlot({
           isSelected ? '' : 'border-border'
         }`}
         style={{
-          background: isSelected
-            ? undefined
-            : `linear-gradient(135deg, ${QUALITY_COLORS[item.quality]}15 0%, ${QUALITY_COLORS[item.quality]}08 100%)`,
-          borderColor: QUALITY_COLORS[item.quality],
+          background: isSelected ? undefined : getQualityGradient(item.quality, '15', '8'),
+          borderColor: getQualityColor(item.quality),
         }}
         title={title}
       >
@@ -52,7 +50,7 @@ export function GameItemSlot({
     )
   }
 
-  const borderColor = item ? QUALITY_COLORS[item.quality] : undefined
+  const borderColor = item ? getQualityColor(item.quality) : undefined
 
   return (
     <button

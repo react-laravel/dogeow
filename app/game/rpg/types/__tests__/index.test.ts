@@ -7,6 +7,9 @@ import {
   SLOT_NAMES,
   STAT_NAMES,
   STAT_DESCRIPTIONS,
+  getQualityGradient,
+  getQualityBorderStyle,
+  getQualityColor,
 } from '../index'
 
 describe('RPG Types', () => {
@@ -65,6 +68,45 @@ describe('RPG Types', () => {
       expect(QUALITY_NAMES.rare).toBe('稀有')
       expect(QUALITY_NAMES.legendary).toBe('传奇')
       expect(QUALITY_NAMES.mythic).toBe('神话')
+    })
+  })
+
+  describe('getQualityGradient', () => {
+    it('should return correct gradient for common quality with default opacities', () => {
+      const gradient = getQualityGradient('common')
+      expect(gradient).toBe('linear-gradient(135deg, #9ca3af20 0%, #9ca3af10 100%)')
+    })
+
+    it('should return correct gradient with custom opacities', () => {
+      const gradient = getQualityGradient('rare', '15', '8')
+      expect(gradient).toBe('linear-gradient(135deg, #ffcc0015 0%, #ffcc0008 100%)')
+    })
+
+    it('should return correct gradient for legendary quality', () => {
+      const gradient = getQualityGradient('legendary')
+      expect(gradient).toBe('linear-gradient(135deg, #ff800020 0%, #ff800010 100%)')
+    })
+  })
+
+  describe('getQualityBorderStyle', () => {
+    it('should return correct border style with default opacity', () => {
+      const border = getQualityBorderStyle('magic')
+      expect(border).toBe('1px solid #6888ff30')
+    })
+
+    it('should return correct border style with custom opacity', () => {
+      const border = getQualityBorderStyle('mythic', '50')
+      expect(border).toBe('1px solid #00ff0050')
+    })
+  })
+
+  describe('getQualityColor', () => {
+    it('should return correct color for each quality type', () => {
+      expect(getQualityColor('common')).toBe('#9ca3af')
+      expect(getQualityColor('magic')).toBe('#6888ff')
+      expect(getQualityColor('rare')).toBe('#ffcc00')
+      expect(getQualityColor('legendary')).toBe('#ff8000')
+      expect(getQualityColor('mythic')).toBe('#00ff00')
     })
   })
 
