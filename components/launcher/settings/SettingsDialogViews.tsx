@@ -1,12 +1,24 @@
 'use client'
 
-import React from 'react'
 import { BookOpen, Columns } from 'lucide-react'
 import { BottomHourPicker } from '@/components/ui/bottom-hour-picker'
 import { Switch } from '@/components/ui/switch'
 import { PROJECT_COVER_MODE_OPTIONS, type ProjectCoverMode } from '@/stores/projectCoverStore'
 import type { SiteLayout } from '@/stores/layoutStore'
 import type { ThemeMode, RestPeriod } from '@/stores/themeStore'
+
+const THEME_MODE_OPTIONS = [
+  { mode: 'light' as const, label: '浅色' },
+  { mode: 'dark' as const, label: '深色' },
+  { mode: 'system' as const, label: '跟随系统' },
+  { mode: 'rest' as const, label: '休息时段' },
+]
+
+const SITE_LAYOUT_OPTIONS = [
+  { value: 'icon' as const, label: '图标' },
+  { value: 'grid' as const, label: '网格' },
+  { value: 'magazine' as const, label: '杂志' },
+] as { value: SiteLayout; label: string }[]
 
 interface ColorModeViewProps {
   themeMode: ThemeMode
@@ -33,12 +45,7 @@ export function ColorModeView({
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex flex-col gap-2">
-        {[
-          { mode: 'light' as const, label: '浅色' },
-          { mode: 'dark' as const, label: '深色' },
-          { mode: 'system' as const, label: '跟随系统' },
-          { mode: 'rest' as const, label: '休息时段' },
-        ].map(({ mode, label }) => (
+        {THEME_MODE_OPTIONS.map(({ mode, label }) => (
           <button
             key={mode}
             type="button"
@@ -141,30 +148,20 @@ export function AppsListView({
       <div className="flex w-full items-center gap-2 rounded-lg p-2">
         <Columns className="h-4 w-4 shrink-0" />
         <div className="flex flex-1 gap-1">
-          <button
-            onClick={() => setSiteLayout('grid')}
-            className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
-              siteLayout === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-            }`}
-          >
-            网格
-          </button>
-          <button
-            onClick={() => setSiteLayout('magazine')}
-            className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
-              siteLayout === 'magazine' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-            }`}
-          >
-            杂志
-          </button>
-          <button
-            onClick={() => setSiteLayout('icon')}
-            className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
-              siteLayout === 'icon' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-            }`}
-          >
-            图标
-          </button>
+          {SITE_LAYOUT_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setSiteLayout(option.value)}
+              className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
+                siteLayout === option.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
