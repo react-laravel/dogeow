@@ -13,7 +13,7 @@ interface LayoutState {
 export const useLayoutStore = create<LayoutState>()(
   persist(
     set => ({
-      siteLayout: 'grid',
+      siteLayout: 'icon',
       setSiteLayout: layout => set({ siteLayout: layout }),
     }),
     {
