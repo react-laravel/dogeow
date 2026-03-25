@@ -19,6 +19,7 @@ const nextPolyfillModuleAliasesForTurbopack = Object.fromEntries(
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ['127.0.0.1'],
   // 将 Next 默认的 module polyfills 缩减到仅保留当前目标浏览器仍缺失的 URL.canParse。
   turbopack: {
     resolveAlias: nextPolyfillModuleAliasesForTurbopack,
