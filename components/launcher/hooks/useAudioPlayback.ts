@@ -71,12 +71,22 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
       setAudioError(null)
       setIsTrackChanging(true)
+      setReadyToPlay(false) // 重置加载状态，显示加载指示器
     } catch (err) {
       console.error('setupMediaSource: failed to set audio source', err)
       setAudioError(`Failed to set audio source: ${err}`)
       toast.error('Failed to set audio source', { description: String(err) })
     }
-  }, [currentTrack, buildAudioUrl, setAudioError, setIsTrackChanging, isMuted, volume, audioRef])
+  }, [
+    currentTrack,
+    buildAudioUrl,
+    setAudioError,
+    setIsTrackChanging,
+    setReadyToPlay,
+    isMuted,
+    volume,
+    audioRef,
+  ])
 
   // Listen for currentTrack changes
   useEffect(() => {
@@ -339,23 +349,26 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     const handleVisibilityChange = async () => {
       if (!audioRef.current) return
 
+      // 页面隐藏时：记录当前播放状态
       if (document.hidden) {
-        wasPlayingBeforeHiddenRef.current = isPlaying || !audioRef.current.paused
+        wasPlayingBeforeHiddenRef.current = isPlaying && !audioRef.current.paused
         return
       }
 
-      const shouldResumePlayback = wasPlayingBeforeHiddenRef.current || isPlaying
-      if (!shouldResumePlayback) return
-
-      wasPlayingBeforeHiddenRef.current = false
-
-      try {
-        if (audioContextRef.current?.state === 'suspended') {
-          await audioContextRef.current.resume()
+      // 页面重新可见时：只有在锁屏前确实在播放，且当前状态仍为播放时才恢复
+      if (wasPlayingBeforeHiddenRef.current && isPlaying) {
+        wasPlayingBeforeHiddenRef.current = false
+        try {
+          if (audioContextRef.current?.state === 'suspended') {
+            await audioContextRef.current.resume()
+          }
+          // 只有在音频实际暂停状态时才尝试播放
+          if (audioRef.current.paused) {
+            await audioRef.current.play()
+          }
+        } catch (err) {
+          console.warn('Failed to resume playback:', err)
         }
-        await audioRef.current.play()
-      } catch (err) {
-        console.warn('Failed to resume playback:', err)
       }
     }
 

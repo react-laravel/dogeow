@@ -1,7 +1,7 @@
 'use client'
 
 import React, { memo, useMemo, useState } from 'react'
-import { Maximize2, Pause, Play } from 'lucide-react'
+import { Maximize2, Pause, Play, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { BackButton } from '@/components/ui/back-button'
 import type { MusicPlayerProps } from './types'
@@ -14,6 +14,14 @@ import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceS
 // 图标尺寸常量
 const ICON_SIZE = 'h-4 w-4'
 
+// 加载状态指示器组件 - 保持与播放按钮相同尺寸
+const LoadingIndicator = memo(() => (
+  <div className="flex h-7 w-7 items-center justify-center">
+    <Loader2 className={`${ICON_SIZE} animate-spin text-foreground/60`} />
+  </div>
+))
+LoadingIndicator.displayName = 'LoadingIndicator'
+
 // 主播放器组件
 export const MusicPlayer = memo(
   ({
@@ -23,6 +31,8 @@ export const MusicPlayer = memo(
     duration,
     availableTracks,
     currentTrack,
+    readyToPlay,
+    isLoadingTracks,
     handleProgressChange,
     getCurrentTrackName,
     currentLyric,
@@ -34,9 +44,13 @@ export const MusicPlayer = memo(
   }: MusicPlayerProps) => {
     const router = useRouter()
     const { clearFilters } = useFilterPersistenceStore()
-    const isEmptyState = !currentTrack || availableTracks.length === 0
     const handleBackToApps = () => toggleDisplayMode('apps')
     const [showRemainingTime, setShowRemainingTime] = useState(false)
+
+    // 是否有有效内容：有当前歌曲且播放列表已加载完成
+    const hasContent = Boolean(currentTrack) && availableTracks.length > 0
+    // 是否正在加载：列表加载中或音频还没准备好
+    const isLoading = isLoadingTracks || (hasContent && readyToPlay === false)
 
     const handleLogoClick = () => {
       clearFilters()
@@ -57,12 +71,20 @@ export const MusicPlayer = memo(
           <div className="relative z-10 flex shrink-0 items-center gap-3">
             <LogoButton onClick={handleLogoClick} className="h-10 w-10" />
             <BackButton onClick={handleBackToApps} title="返回启动台" className="h-7 w-7" />
-            {!isEmptyState && (
-              <PlayerControlButton
-                onClick={togglePlay}
-                title={isPlaying ? '暂停' : '播放'}
-                icon={isPlaying ? <Pause className={ICON_SIZE} /> : <Play className={ICON_SIZE} />}
-              />
+            {(hasContent || isLoading) && (
+              <div className="flex items-center justify-center">
+                {isLoading ? (
+                  <LoadingIndicator />
+                ) : (
+                  <PlayerControlButton
+                    onClick={togglePlay}
+                    title={isPlaying ? '暂停' : '播放'}
+                    icon={
+                      isPlaying ? <Pause className={ICON_SIZE} /> : <Play className={ICON_SIZE} />
+                    }
+                  />
+                )}
+              </div>
             )}
           </div>
 
@@ -75,14 +97,14 @@ export const MusicPlayer = memo(
             />
           </div>
 
-          {audioError && !isEmptyState && (
+          {audioError && hasContent && (
             <div className="relative z-10 shrink-0 truncate rounded bg-amber-50 px-2 py-1 text-xs text-amber-600">
               {audioError.includes('播放列表为空') ? '🎵 暂无音乐' : audioError}
             </div>
           )}
 
           <div className="relative z-10 ml-auto flex shrink-0 items-center gap-2 overflow-hidden">
-            {!isEmptyState && (
+            {hasContent && (
               <button
                 type="button"
                 className="shrink-0 text-xs font-medium text-foreground/80 tabular-nums transition-opacity hover:opacity-80"
@@ -103,7 +125,7 @@ export const MusicPlayer = memo(
           </div>
         </div>
 
-        {!isEmptyState && (
+        {hasContent && (
           <ProgressBar
             currentTime={currentTime}
             duration={duration}
