@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
-import { buildAudioUrl as buildAudioUrlHelper, isMobileDevice } from './audio/utils'
+import { buildAudioUrl as buildAudioUrlHelper } from './audio/utils'
 import { shouldUpdatePlayingStateOnPause } from './audio/playbackStateUtils'
 
 interface AudioControllerProps {
@@ -65,10 +65,15 @@ export function AudioController({
       return shouldUseWebAudioRef.current
     }
 
+    // 现代浏览器（包括移动端）都支持 Web Audio API
+    // 不再禁用移动设备的可视化功能
     try {
-      shouldUseWebAudioRef.current = !isMobileDevice()
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      shouldUseWebAudioRef.current = !!AudioContextClass
     } catch {
-      shouldUseWebAudioRef.current = true
+      shouldUseWebAudioRef.current = false
     }
 
     return shouldUseWebAudioRef.current

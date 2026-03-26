@@ -4,7 +4,6 @@
  */
 
 import { useRef, useCallback, useState } from 'react'
-import { isMobileDevice } from '../audio/utils'
 
 interface UseAudioVisualizerOptions {
   volume: number
@@ -35,10 +34,15 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
       return shouldUseWebAudioRef.current
     }
 
+    // 现代浏览器（包括移动端）都支持 Web Audio API
+    // 不再禁用移动设备的可视化功能
     try {
-      shouldUseWebAudioRef.current = !isMobileDevice()
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      shouldUseWebAudioRef.current = !!AudioContextClass
     } catch {
-      shouldUseWebAudioRef.current = true
+      shouldUseWebAudioRef.current = false
     }
 
     return shouldUseWebAudioRef.current
