@@ -7,25 +7,27 @@ import { getInventoryCompareActions, handleInventoryCompareAction } from './inve
 import { canSocketItem, useGemManagement } from './useGemManagement'
 import { canUnsocketItem } from './inventoryUtils'
 
-interface UseInventoryPanelActionsParams {
+// Value Object: groups all inventory action functions into a single parameter
+// This reduces the parameter count from 7 to 2, resolving LongParameterList code smell
+interface InventoryActions {
   consumePotion: (itemId: number) => Promise<unknown>
   equipItem: (itemId: number) => Promise<unknown>
-  inventory: GameItem[]
   moveItem: (itemId: number, toStorage: boolean) => Promise<unknown>
   sellItem: (itemId: number, quantity?: number) => Promise<unknown>
   socketGem: (itemId: number, gemItemId: number, socketIndex: number) => Promise<unknown>
   unsocketGem: (itemId: number, socketIndex: number) => Promise<unknown>
 }
 
+interface UseInventoryPanelActionsParams {
+  inventoryActions: InventoryActions
+  inventory: GameItem[]
+}
+
 export function useInventoryPanelActions({
-  consumePotion,
-  equipItem,
+  inventoryActions,
   inventory,
-  moveItem,
-  sellItem,
-  socketGem,
-  unsocketGem,
 }: UseInventoryPanelActionsParams) {
+  const { consumePotion, equipItem, moveItem, sellItem, socketGem, unsocketGem } = inventoryActions
   const [selectedItem, setSelectedItem] = useState<GameItem | null>(null)
   const [sellQuantity, setSellQuantity] = useState(1)
   const [showSellConfirm, setShowSellConfirm] = useState(false)

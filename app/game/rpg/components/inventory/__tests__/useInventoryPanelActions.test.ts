@@ -14,13 +14,15 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
-        equipItem: vi.fn(async () => undefined),
+        inventoryActions: {
+          consumePotion: vi.fn(async () => undefined),
+          equipItem: vi.fn(async () => undefined),
+          moveItem: vi.fn(async () => undefined),
+          sellItem,
+          socketGem: vi.fn(async () => undefined),
+          unsocketGem: vi.fn(async () => undefined),
+        },
         inventory: [],
-        moveItem: vi.fn(async () => undefined),
-        sellItem,
-        socketGem: vi.fn(async () => undefined),
-        unsocketGem: vi.fn(async () => undefined),
       })
     )
 
@@ -39,13 +41,15 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
-        equipItem: vi.fn(async () => undefined),
+        inventoryActions: {
+          consumePotion: vi.fn(async () => undefined),
+          equipItem: vi.fn(async () => undefined),
+          moveItem: vi.fn(async () => undefined),
+          sellItem,
+          socketGem: vi.fn(async () => undefined),
+          unsocketGem: vi.fn(async () => undefined),
+        },
         inventory: [],
-        moveItem: vi.fn(async () => undefined),
-        sellItem,
-        socketGem: vi.fn(async () => undefined),
-        unsocketGem: vi.fn(async () => undefined),
       })
     )
 
@@ -75,13 +79,15 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
-        equipItem: vi.fn(async () => undefined),
+        inventoryActions: {
+          consumePotion: vi.fn(async () => undefined),
+          equipItem: vi.fn(async () => undefined),
+          moveItem: vi.fn(async () => undefined),
+          sellItem: vi.fn(async () => undefined),
+          socketGem: vi.fn(async () => undefined),
+          unsocketGem: vi.fn(async () => undefined),
+        },
         inventory: [],
-        moveItem: vi.fn(async () => undefined),
-        sellItem: vi.fn(async () => undefined),
-        socketGem: vi.fn(async () => undefined),
-        unsocketGem: vi.fn(async () => undefined),
       })
     )
 
@@ -110,13 +116,15 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
-        equipItem: vi.fn(async () => undefined),
+        inventoryActions: {
+          consumePotion: vi.fn(async () => undefined),
+          equipItem: vi.fn(async () => undefined),
+          moveItem: vi.fn(async () => undefined),
+          sellItem: vi.fn(async () => undefined),
+          socketGem: vi.fn(async () => undefined),
+          unsocketGem,
+        },
         inventory: [],
-        moveItem: vi.fn(async () => undefined),
-        sellItem: vi.fn(async () => undefined),
-        socketGem: vi.fn(async () => undefined),
-        unsocketGem,
       })
     )
 

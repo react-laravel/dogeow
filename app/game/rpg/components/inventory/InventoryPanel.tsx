@@ -56,13 +56,15 @@ export function InventoryPanel() {
     showGemSelector,
     showSellConfirm,
   } = useInventoryPanelActions({
-    consumePotion,
-    equipItem,
+    inventoryActions: {
+      consumePotion,
+      equipItem,
+      moveItem,
+      sellItem,
+      socketGem,
+      unsocketGem,
+    },
     inventory,
-    moveItem,
-    sellItem,
-    socketGem,
-    unsocketGem,
   })
 
   const {
