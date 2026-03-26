@@ -59,15 +59,31 @@ async function validateTokenWithBackend(token: string): Promise<{ is_admin: bool
 // Cache for validated tokens (prevents excessive backend calls)
 // In production with multiple serverless instances, this is per-instance only
 const tokenValidationCache = new Map<string, { user: { is_admin: boolean }; timestamp: number }>()
-const TOKEN_CACHE_TTL = 30 * 1000 // 30 seconds
+const TOKEN_CACHE_TTL = 5 * 1000 // 5 seconds — short TTL to minimize TOCTOU window for privilege changes
+const ADMIN_CACHE_TTL = 5 * 1000 // 5 seconds — shorter TTL for admin checks to reduce time window after privilege revocation
+const MAX_CACHE_SIZE = 1000 // Maximum number of cached tokens to prevent memory exhaustion DoS
 
 /**
- * Clear expired cache entries
+ * Clear expired cache entries and enforce size limit (LRU eviction)
  */
 function cleanExpiredCache(): void {
   const now = Date.now()
+
+  // First pass: remove expired entries
   for (const [key, value] of tokenValidationCache.entries()) {
     if (now - value.timestamp > TOKEN_CACHE_TTL) {
+      tokenValidationCache.delete(key)
+    }
+  }
+
+  // Second pass: if still over limit, evict oldest entries (LRU)
+  if (tokenValidationCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(tokenValidationCache.entries())
+    // Sort by timestamp ascending (oldest first)
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
+    // Remove oldest entries until under limit
+    const toRemove = entries.slice(0, tokenValidationCache.size - MAX_CACHE_SIZE + 1)
+    for (const [key] of toRemove) {
       tokenValidationCache.delete(key)
     }
   }

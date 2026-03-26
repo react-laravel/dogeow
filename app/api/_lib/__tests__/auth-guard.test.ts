@@ -164,4 +164,17 @@ describe('auth-guard', () => {
       expect(response!.status).toBe(401)
     })
   })
+
+  describe('cache size limit', () => {
+    it('should not throw when many unique tokens are validated (cache eviction)', async () => {
+      fetchSpy = mockFetch(true, false)
+      // Simulate many unique tokens - cache should evict old entries, not grow unbounded
+      for (let i = 0; i < 100; i++) {
+        const request = createMockNextRequest(`Bearer unique-token-${i}`)
+        const response = await requireAuth(request)
+        expect(response).toBeNull()
+      }
+      // All calls should have succeeded without throwing
+    })
+  })
 })

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { requireAuth } from '@/app/api/_lib/auth-guard'
 
 export const runtime = 'nodejs'
 
@@ -82,5 +83,9 @@ async function proxyMusic(request: NextRequest, context: RouteContext) {
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
+  // Auth guard: require valid Bearer token to prevent unauthorized music file access (IDOR)
+  const authError = await requireAuth(request)
+  if (authError) return authError
+
   return proxyMusic(request, context)
 }
