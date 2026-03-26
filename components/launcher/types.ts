@@ -26,6 +26,8 @@ export interface MusicPlayerProps {
   currentTrack: string
   playMode: PlayMode
   analyserNode?: AnalyserNode | null
+  /** 音频是否已加载完成可以播放 */
+  readyToPlay?: boolean
   toggleMute: () => void
   switchToPrevTrack: () => void
   switchToNextTrack: () => void

@@ -178,12 +178,21 @@ export function AudioController({
 
       setAudioError(null)
       setIsTrackChanging(true)
+      setReadyToPlay(false) // 重置加载状态，显示加载指示器
     } catch (err) {
       console.error('setupMediaSource: 设置音频源失败', err)
       setAudioError(`设置音频源失败: ${err}`)
       toast.error('音频源设置失败', { description: String(err) })
     }
-  }, [currentTrack, buildAudioUrl, setAudioError, setIsTrackChanging, isMuted, volume])
+  }, [
+    currentTrack,
+    buildAudioUrl,
+    setAudioError,
+    setIsTrackChanging,
+    setReadyToPlay,
+    isMuted,
+    volume,
+  ])
 
   // 处理播放错误
   const handlePlayError = useCallback(
@@ -508,28 +517,27 @@ export function AudioController({
     const handleVisibilityChange = async () => {
       if (!audioRef.current) return
 
+      // 页面隐藏时：记录当前播放状态
       if (document.hidden) {
-        wasPlayingBeforeHiddenRef.current = isPlaying || !audioRef.current.paused
+        wasPlayingBeforeHiddenRef.current = isPlaying && !audioRef.current.paused
         return
       }
 
-      const shouldResumePlayback = wasPlayingBeforeHiddenRef.current || isPlaying
-      if (!shouldResumePlayback) {
-        return
-      }
-
-      wasPlayingBeforeHiddenRef.current = false
-
-      // 页面重新可见时恢复播放
-      try {
-        // 确保 AudioContext 处于运行状态
-        if (audioContextRef.current?.state === 'suspended') {
-          await audioContextRef.current.resume()
+      // 页面重新可见时：只有在锁屏前确实在播放，且当前状态仍为播放时才恢复
+      if (wasPlayingBeforeHiddenRef.current && isPlaying) {
+        wasPlayingBeforeHiddenRef.current = false
+        try {
+          // 确保 AudioContext 处于运行状态
+          if (audioContextRef.current?.state === 'suspended') {
+            await audioContextRef.current.resume()
+          }
+          // 只有在音频实际暂停状态时才尝试播放
+          if (audioRef.current.paused) {
+            await audioRef.current.play()
+          }
+        } catch (err) {
+          console.warn('恢复播放失败:', err)
         }
-        // 恢复音频播放
-        await audioRef.current.play()
-      } catch (err) {
-        console.warn('恢复播放失败:', err)
       }
     }
 
