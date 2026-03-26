@@ -192,28 +192,24 @@ export function MiniMaxPanel() {
         </div>
       )}
 
-      {/* 套餐到期时间 - 单行 */}
+      {/* 套餐信息 */}
       {subscribeEndStr !== '—' && (
         <div className="rounded-xl border bg-muted/30 p-3">
-          <div className="flex items-baseline justify-between gap-x-1.5">
-            <span className="text-muted-foreground text-xs">
-              {detailData?.current_subscribe?.current_subscribe_title ?? '套餐'}
-            </span>
-            {subscribeDaysLeft !== null && (
-              <span
-                className={cn(
-                  'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  subscribeDaysLeft <= 3
-                    ? 'text-destructive'
-                    : subscribeDaysLeft <= 7
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-muted-foreground'
-                )}
-              >
-                {subscribeDaysLeft > 0
-                  ? `还有 ${subscribeDaysLeft} 天 (${subscribeEndStr})`
-                  : `今日到期 (${subscribeEndStr})`}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs">
+                {detailData?.current_subscribe?.current_subscribe_title ?? '套餐'}
               </span>
+              <span className="text-xs font-medium text-primary">
+                {weekTotal > 0 ? '您是尊敬的周限制用户' : '您是尊敬的非周限制用户'}
+              </span>
+            </div>
+            {subscribeDaysLeft !== null && (
+              <div className="text-xs text-muted-foreground">
+                {subscribeDaysLeft > 0
+                  ? `还有 ${subscribeDaysLeft} 天到期 (${subscribeEndStr})`
+                  : `今日到期 (${subscribeEndStr})`}
+              </div>
             )}
           </div>
         </div>
@@ -251,35 +247,37 @@ export function MiniMaxPanel() {
             </div>
           </div>
 
-          {/* 本周用量 - 突出显示 */}
-          <div className="rounded-2xl border bg-muted/30 p-4">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-muted-foreground">本周</div>
-              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-2xl font-bold sm:text-3xl">
-                    {weekRemain.toLocaleString()}
+          {/* 本周用量 - 仅当有周限制时显示 */}
+          {weekTotal > 0 && (
+            <div className="rounded-2xl border bg-muted/30 p-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs text-muted-foreground">本周</div>
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-2xl font-bold sm:text-3xl">
+                      {weekRemain.toLocaleString()}
+                    </span>
+                    <span className="text-muted-foreground text-sm">次剩余</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {fmtTime(subModel?.weekly_remains_time ?? 0)}后重置
                   </span>
-                  <span className="text-muted-foreground text-sm">次剩余</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {fmtTime(subModel?.weekly_remains_time ?? 0)}后重置
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-primary/10">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{ width: `${Math.min(parseFloat(weekPct), 100)}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {weekUsed.toLocaleString()}/{weekTotal.toLocaleString()}
                 </span>
+                <span className="text-xs text-muted-foreground">已用 {weekPct}%</span>
               </div>
             </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-primary/10">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${Math.min(parseFloat(weekPct), 100)}%` }}
-              />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                {weekUsed.toLocaleString()}/{weekTotal.toLocaleString()}
-              </span>
-              <span className="text-xs text-muted-foreground">已用 {weekPct}%</span>
-            </div>
-          </div>
+          )}
 
           {/* Token 消耗 */}
           {billingData && billingRecords.length > 0 && (
