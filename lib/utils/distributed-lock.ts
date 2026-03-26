@@ -1,6 +1,11 @@
 /**
  * Distributed Lock simulation for client-side operations
  * Simulates Redis distributed lock behavior for critical sections
+ *
+ * Note: This is a CLIENT-SIDE lock implementation. For true distributed locking
+ * across multiple servers/tabs, a server-side Redis lock is required.
+ * This implementation helps prevent duplicate submissions within a single
+ * browser session and provides a foundation for server-side lock integration.
  */
 
 interface LockOptions {

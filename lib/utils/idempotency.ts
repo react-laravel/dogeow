@@ -14,6 +14,8 @@ class IdempotencyTracker {
 
   /**
    * Generate a unique idempotency key for a request
+   * The key is based only on the request content (method, endpoint, data)
+   * to ensure the same request always generates the same key
    */
   generateKey(endpoint: string, method: string, data?: unknown): string {
     const payload = data ? JSON.stringify(data) : ''
@@ -26,7 +28,8 @@ class IdempotencyTracker {
       hash = (hash << 5) - hash + char
       hash = hash & hash // Convert to 32bit integer
     }
-    return `idempotent_${Math.abs(hash).toString(36)}_${Date.now().toString(36)}`
+    // Return key WITHOUT timestamp to ensure idempotency across time
+    return `idempotent_${Math.abs(hash).toString(36)}`
   }
 
   /**
@@ -149,6 +152,16 @@ export function deduplicateRequest<T>(key: string, requestFactory: () => Promise
 }
 
 /**
+ * Result type for idempotent requests
+ */
+export interface IdempotentResult<T> {
+  /** Whether this was a cached response from a duplicate request */
+  isCached: boolean
+  /** The result value (undefined if isCached is false and no result yet) */
+  value?: T
+}
+
+/**
  * Execute a request with idempotency protection
  * Prevents duplicate submissions within a time window
  */
@@ -158,22 +171,29 @@ export async function withIdempotency<T>(
   data: unknown,
   requestFactory: () => Promise<T>,
   options: { deduplicateConcurrent?: boolean; timeWindow?: number } = {}
-): Promise<T> {
+): Promise<IdempotentResult<T>> {
   const { deduplicateConcurrent = true } = options
   const key = idempotencyTracker.generateKey(endpoint, method, data)
 
-  // Check if request was recently completed
-  if (idempotencyTracker.wasRecentlyCompleted(key)) {
-    console.log(`[Idempotency] Request already completed recently: ${key}`)
-    // Return a resolved promise with the cached result indicator
-    // The actual result handling depends on the specific use case
+  // Only check for duplicates if deduplication is enabled
+  if (deduplicateConcurrent) {
+    // Check if request was recently completed
+    if (idempotencyTracker.wasRecentlyCompleted(key)) {
+      console.log(`[Idempotency] Request already completed recently: ${key}`)
+      // Return cached indicator - caller can use this to avoid refetching
+      return { isCached: true }
+    }
+
+    if (idempotencyTracker.isRequestPending(key)) {
+      console.log(`[Idempotency] Request already in-flight: ${key}`)
+      const existing = idempotencyTracker.getPendingRequest<T>(key)
+      if (existing) {
+        const result = await existing
+        return { isCached: false, value: result }
+      }
+    }
   }
 
-  if (deduplicateConcurrent && idempotencyTracker.isRequestPending(key)) {
-    console.log(`[Idempotency] Request already in-flight: ${key}`)
-    const existing = idempotencyTracker.getPendingRequest<T>(key)
-    if (existing) return existing
-  }
-
-  return idempotencyTracker.trackRequest(key, requestFactory())
+  const result = await idempotencyTracker.trackRequest(key, requestFactory())
+  return { isCached: false, value: result }
 }
