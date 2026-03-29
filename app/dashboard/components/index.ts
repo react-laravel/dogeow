@@ -1,5 +1,6 @@
 export { DashboardCard } from './DashboardCard'
 export { DashboardNavItem } from './DashboardNavItem'
+export { HomePanel } from './HomePanel'
 export { LocationPanel } from './LocationPanel'
 export { LogPanel } from './LogPanel'
 export { MiniMaxPanel, MiniMaxRefreshButton } from './MiniMaxPanel'

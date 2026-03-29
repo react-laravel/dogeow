@@ -3,13 +3,14 @@
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { FileText, MapPin, CreditCard, Menu } from 'lucide-react'
+import { FileText, MapPin, CreditCard, Menu, House } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { PageContainer, PageTitle } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import {
   DashboardNavItem,
+  HomePanel,
   LocationPanel,
   LogPanel,
   MiniMaxPanel,
@@ -17,13 +18,14 @@ import {
 } from './components'
 import { isAdminSync } from '@/lib/auth'
 import useAuthStore from '@/stores/authStore'
-import type { DashboardSection } from './types'
+import { isDashboardSection, type DashboardSection } from './types'
 
 const NAV_ITEMS: Array<{
   key: DashboardSection
   icon: LucideIcon
   label: string
 }> = [
+  { key: 'home', icon: House, label: '首页' },
   { key: 'location', icon: MapPin, label: '我的位置' },
   { key: 'logs', icon: FileText, label: 'Laravel 日志' },
   { key: 'minimax', icon: CreditCard, label: 'MiniMax 订阅' },
@@ -36,9 +38,6 @@ export default function Dashboard() {
   const searchParams = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // 从 URL 读取当前 section，默认 location
-  const activeSection = (searchParams.get('section') as DashboardSection) || 'location'
-
   const setActiveSection = (section: DashboardSection) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('section', section)
@@ -49,12 +48,22 @@ export default function Dashboard() {
     return <div className="text-muted-foreground p-6">正在加载用户信息...</div>
   }
 
-  const visibleNavItems = NAV_ITEMS.filter(item => item.key === 'location' || isAdmin)
+  const visibleNavItems = NAV_ITEMS.filter(
+    item => item.key === 'home' || item.key === 'location' || isAdmin
+  )
+
+  const sectionParam = searchParams.get('section')
+  const requestedSection = isDashboardSection(sectionParam) ? sectionParam : 'location'
+  const activeSection = visibleNavItems.some(item => item.key === requestedSection)
+    ? requestedSection
+    : 'location'
 
   const activeNavLabel = visibleNavItems.find(n => n.key === activeSection)?.label ?? '仪表盘'
 
   const activeContent = (() => {
     switch (activeSection) {
+      case 'home':
+        return <HomePanel />
       case 'location':
         return <LocationPanel />
       case 'logs':

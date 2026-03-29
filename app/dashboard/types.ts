@@ -23,7 +23,13 @@ export interface LogFile {
   modified: number
 }
 
-export type DashboardSection = 'location' | 'logs' | 'minimax'
+export const DASHBOARD_SECTIONS = ['home', 'location', 'logs', 'minimax'] as const
+
+export type DashboardSection = (typeof DASHBOARD_SECTIONS)[number]
+
+export function isDashboardSection(value: string | null): value is DashboardSection {
+  return value != null && DASHBOARD_SECTIONS.includes(value as DashboardSection)
+}
 
 export interface MiniMaxModelRemain {
   model_name: string
