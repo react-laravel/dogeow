@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+interface AuthenticatedUser {
+  is_admin: boolean
+}
+
 /**
  * Validates that the request has a valid Bearer token in the Authorization header.
  * Returns the token if valid, or null if missing/invalid/empty.
@@ -24,20 +28,40 @@ export function validateAuthToken(request: NextRequest): string | null {
   return token
 }
 
+function getSessionCookie(request: NextRequest): string | null {
+  const cookieHeader = request.headers.get('cookie')
+  return cookieHeader && cookieHeader.trim().length > 0 ? cookieHeader : null
+}
+
 /**
  * Validate token against the Laravel backend.
  * Returns the user object if valid, or null if invalid.
  */
-async function validateTokenWithBackend(token: string): Promise<{ is_admin: boolean } | null> {
+async function validateRequestWithBackend({
+  token,
+  cookie,
+}: {
+  token?: string | null
+  cookie?: string | null
+}): Promise<AuthenticatedUser | null> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   try {
+    const headers: HeadersInit = {
+      Accept: 'application/json',
+    }
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    if (cookie) {
+      headers.Cookie = cookie
+    }
+
     const response = await fetch(`${apiBaseUrl}/api/user`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
+      headers,
       // Add signal to prevent hanging
       signal: AbortSignal.timeout(5000),
     })
@@ -79,32 +103,31 @@ function cleanExpiredCache(): void {
  */
 export async function requireAuth(request: NextRequest): Promise<NextResponse | null> {
   const token = validateAuthToken(request)
-  if (!token) {
-    return NextResponse.json(
-      { error: '未授权', message: '请先登录或提供有效的认证令牌' },
-      { status: 401 }
-    )
+  const cookie = getSessionCookie(request)
+
+  if (!token && !cookie) {
+    return NextResponse.json({ error: '未授权', message: '请先登录' }, { status: 401 })
   }
 
-  // Check cache first
-  cleanExpiredCache()
-  const cached = tokenValidationCache.get(token)
-  if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
-    // Token was recently validated, allow access
-    return null
+  if (token) {
+    cleanExpiredCache()
+    const cached = tokenValidationCache.get(token)
+    if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
+      return null
+    }
   }
 
-  // Validate token against backend
-  const user = await validateTokenWithBackend(token)
+  const user = await validateRequestWithBackend({ token, cookie })
   if (!user) {
     return NextResponse.json(
-      { error: '未授权', message: '令牌无效或已过期，请重新登录' },
+      { error: '未授权', message: '登录已失效，请重新登录' },
       { status: 401 }
     )
   }
 
-  // Cache the validated token
-  tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  if (token) {
+    tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  }
 
   return null
 }
@@ -115,34 +138,34 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
  */
 export async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const token = validateAuthToken(request)
-  if (!token) {
-    return NextResponse.json(
-      { error: '未授权', message: '请先登录或提供有效的认证令牌' },
-      { status: 401 }
-    )
+  const cookie = getSessionCookie(request)
+
+  if (!token && !cookie) {
+    return NextResponse.json({ error: '未授权', message: '请先登录' }, { status: 401 })
   }
 
-  // Check cache for admin status
-  cleanExpiredCache()
-  const cached = tokenValidationCache.get(token)
-  if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
-    if (!cached.user.is_admin) {
-      return NextResponse.json({ error: '禁止访问', message: '需要管理员权限' }, { status: 403 })
+  if (token) {
+    cleanExpiredCache()
+    const cached = tokenValidationCache.get(token)
+    if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
+      if (!cached.user.is_admin) {
+        return NextResponse.json({ error: '禁止访问', message: '需要管理员权限' }, { status: 403 })
+      }
+      return null
     }
-    return null
   }
 
-  // Validate token and get user info from backend
-  const user = await validateTokenWithBackend(token)
+  const user = await validateRequestWithBackend({ token, cookie })
   if (!user) {
     return NextResponse.json(
-      { error: '未授权', message: '令牌无效或已过期，请重新登录' },
+      { error: '未授权', message: '登录已失效，请重新登录' },
       { status: 401 }
     )
   }
 
-  // Cache the validated token
-  tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  if (token) {
+    tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  }
 
   if (!user.is_admin) {
     return NextResponse.json({ error: '禁止访问', message: '需要管理员权限' }, { status: 403 })

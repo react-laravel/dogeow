@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User, AuthResponse } from '../app'
-import { get as apiGet, post } from '@/lib/api'
+import { ApiRequestError, apiRequest, get as apiGet, post } from '@/lib/api'
+import { redirectTo } from '@/lib/auth/redirect'
 
 // 常量定义
 const AUTH_TOKEN_KEY = 'auth-token'
@@ -23,11 +24,15 @@ interface AuthState {
     password: string,
     passwordConfirmation: string
   ) => Promise<AuthResponse>
+  restoreSession: () => Promise<User | null>
   logout: () => Promise<void>
+  clearAuthState: () => Promise<void>
   setUser: (user: User | null) => void
   setToken: (token: string | null) => Promise<void>
   getToken: () => string | null
 }
+
+type UserPayload = User | { user?: User }
 
 // WebSocket 认证管理器同步
 const syncWithWebSocketAuth = async (token: string | null): Promise<void> => {
@@ -63,6 +68,31 @@ const createMemoryStorage = () => {
 
 const memoryStorage = createMemoryStorage()
 
+const normalizeToken = (token: string | null | undefined): string | null =>
+  typeof token === 'string' && token.trim().length > 0 ? token : null
+
+const persistLegacyToken = (token: string | null): void => {
+  if (typeof window === 'undefined') return
+
+  const storage = getSafeStorage()
+  if (token) {
+    storage.setItem(AUTH_TOKEN_KEY, token)
+  } else {
+    storage.removeItem(AUTH_TOKEN_KEY)
+  }
+}
+
+const isWrappedUserPayload = (payload: UserPayload): payload is { user?: User } =>
+  !('id' in payload && 'name' in payload && 'email' in payload)
+
+const resolveUserPayload = (payload: UserPayload): User | null => {
+  if (isWrappedUserPayload(payload)) {
+    return payload.user ?? null
+  }
+
+  return payload
+}
+
 const getSafeStorage = () => {
   if (typeof window === 'undefined') return memoryStorage
 
@@ -89,37 +119,63 @@ const useAuthStore = create<AuthState>()(
 
       setLoading: loading => set({ loading }),
 
-      setUser: user => set({ user, isAuthenticated: !!user }),
+      setUser: user =>
+        set(state => ({
+          user,
+          isAuthenticated: Boolean(user || state.token),
+        })),
 
       setToken: async (token: string | null) => {
-        set({ token, isAuthenticated: !!token })
-        await syncWithWebSocketAuth(token)
+        const normalizedToken = normalizeToken(token)
+        set(state => ({
+          token: normalizedToken,
+          isAuthenticated: Boolean(state.user || normalizedToken),
+        }))
+        persistLegacyToken(normalizedToken)
+        await syncWithWebSocketAuth(normalizedToken)
       },
 
       getToken: () => get().token,
+
+      clearAuthState: async () => {
+        set({
+          user: null,
+          token: null,
+          loading: false,
+          isAuthenticated: false,
+        })
+        persistLegacyToken(null)
+        await syncWithWebSocketAuth(null)
+      },
 
       login: async (email: string, password: string) => {
         set({ loading: true })
 
         try {
-          const data = await post<AuthResponse>('/login', { email, password })
+          const data = await apiRequest<AuthResponse>(
+            '/login',
+            'POST',
+            { email, password },
+            {
+              handleError: false,
+              suppressUnauthorizedRedirect: true,
+              includeAuthToken: false,
+            }
+          )
+          const normalizedToken = normalizeToken(data.token)
 
           // 更新状态
           set({
             user: data.user,
-            token: data.token,
+            token: normalizedToken,
             loading: false,
-            isAuthenticated: true,
+            isAuthenticated: Boolean(data.user || normalizedToken),
           })
 
-          // 备份到 localStorage
-          if (typeof window !== 'undefined') {
-            const storage = getSafeStorage()
-            storage.setItem(AUTH_TOKEN_KEY, data.token)
-          }
+          persistLegacyToken(normalizedToken)
 
           // 同步到 WebSocket
-          await syncWithWebSocketAuth(data.token)
+          await syncWithWebSocketAuth(normalizedToken)
 
           return data
         } catch (error) {
@@ -137,7 +193,7 @@ const useAuthStore = create<AuthState>()(
           if (!data?.url) {
             throw new Error('未获取到 GitHub 授权 URL')
           }
-          window.location.href = data.url
+          redirectTo(data.url)
         } catch (error) {
           set({ loading: false })
           throw error
@@ -153,29 +209,35 @@ const useAuthStore = create<AuthState>()(
         set({ loading: true })
 
         try {
-          const data = await post<AuthResponse>('/register', {
-            name,
-            email,
-            password,
-            password_confirmation: passwordConfirmation,
-          })
+          const data = await apiRequest<AuthResponse>(
+            '/register',
+            'POST',
+            {
+              name,
+              email,
+              password,
+              password_confirmation: passwordConfirmation,
+            },
+            {
+              handleError: false,
+              suppressUnauthorizedRedirect: true,
+              includeAuthToken: false,
+            }
+          )
+          const normalizedToken = normalizeToken(data.token)
 
           // 更新状态
           set({
             user: data.user,
-            token: data.token,
+            token: normalizedToken,
             loading: false,
-            isAuthenticated: true,
+            isAuthenticated: Boolean(data.user || normalizedToken),
           })
 
-          // 备份到 localStorage
-          if (typeof window !== 'undefined') {
-            const storage = getSafeStorage()
-            storage.setItem(AUTH_TOKEN_KEY, data.token)
-          }
+          persistLegacyToken(normalizedToken)
 
           // 同步到 WebSocket
-          await syncWithWebSocketAuth(data.token)
+          await syncWithWebSocketAuth(normalizedToken)
 
           return data
         } catch (error) {
@@ -184,22 +246,91 @@ const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: async () => {
-        // 清除状态
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-        })
+      restoreSession: async () => {
+        set({ loading: true })
 
-        // 清除 localStorage
-        if (typeof window !== 'undefined') {
-          const storage = getSafeStorage()
-          storage.removeItem(AUTH_TOKEN_KEY)
+        const fetchCurrentUser = async (includeAuthToken: boolean) => {
+          const payload = await apiRequest<UserPayload>('/user', 'GET', undefined, {
+            handleError: false,
+            suppressUnauthorizedRedirect: true,
+            includeAuthToken,
+          })
+
+          return resolveUserPayload(payload)
         }
 
-        // 同步到 WebSocket
-        await syncWithWebSocketAuth(null)
+        try {
+          let currentUser: User | null = null
+
+          try {
+            currentUser = await fetchCurrentUser(false)
+          } catch (error) {
+            if (!(error instanceof ApiRequestError) || error.status !== 401 || !get().token) {
+              throw error
+            }
+
+            currentUser = await fetchCurrentUser(true)
+          }
+
+          if (!currentUser) {
+            throw new Error('未获取到当前用户')
+          }
+
+          set(state => ({
+            user: currentUser,
+            loading: false,
+            isAuthenticated: Boolean(currentUser || state.token),
+          }))
+
+          return currentUser
+        } catch (error) {
+          if (error instanceof ApiRequestError && error.status === 401) {
+            await get().clearAuthState()
+            return null
+          }
+
+          set({ loading: false })
+          throw error
+        }
+      },
+
+      logout: async () => {
+        try {
+          await apiRequest(
+            '/logout',
+            'POST',
+            {},
+            {
+              handleError: false,
+              suppressUnauthorizedRedirect: true,
+              includeAuthToken: false,
+            }
+          )
+        } catch (error) {
+          if (!(error instanceof ApiRequestError) || error.status !== 401 || !get().token) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('登出请求失败，继续清理本地状态:', error)
+            }
+          } else {
+            try {
+              await apiRequest(
+                '/logout',
+                'POST',
+                {},
+                {
+                  handleError: false,
+                  suppressUnauthorizedRedirect: true,
+                }
+              )
+            } catch (retryError) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Bearer 登出重试失败，继续清理本地状态:', retryError)
+              }
+            }
+          }
+        } finally {
+          await get().clearAuthState()
+        }
       },
     }),
     {
@@ -211,12 +342,29 @@ const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => state => {
-        if (state) {
-          // 使用 setLoading 方法而不是直接修改 readonly 属性
-          setTimeout(() => {
-            useAuthStore.getState().setLoading(false)
-          }, 0)
+        if (!state || typeof window === 'undefined') {
+          return
         }
+
+        const hasPersistedAuth = Boolean(state.user || state.token)
+        const hasSessionCookie = document.cookie.includes('laravel_session=')
+
+        if (!hasPersistedAuth && !hasSessionCookie) {
+          useAuthStore.getState().setLoading(false)
+          return
+        }
+
+        setTimeout(() => {
+          void useAuthStore
+            .getState()
+            .restoreSession()
+            .catch(error => {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('恢复登录态失败:', error)
+              }
+              useAuthStore.getState().setLoading(false)
+            })
+        }, 0)
       },
     }
   )

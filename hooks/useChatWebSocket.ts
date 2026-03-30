@@ -189,11 +189,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
     try {
       console.log('WebSocket: Starting connection process')
       const token = await getAuthToken(authTokenRefreshCallback)
-      if (!token) {
-        console.error('WebSocket: No auth token available')
-        onError?.(createConnectionError('No authentication token available', false))
-        return false
-      }
+      console.log('WebSocket: Using auth mode:', token ? 'Bearer Token' : 'Session Cookie')
 
       console.log('WebSocket: Creating Echo instance')
       const echoInstance = createEchoInstance()

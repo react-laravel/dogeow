@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
 import { useChatStore } from '../chatStore'
 import type { ChatRoom, ChatMessage, OnlineUser } from '../types'
+import { get as apiGet } from '@/lib/api'
 
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
@@ -104,6 +105,45 @@ describe('ChatStore', () => {
 
       expect(useChatStore.getState().rooms).toEqual(mockRooms)
     })
+
+    it('should clear stale current room when new room list no longer contains it', () => {
+      const staleRoom: ChatRoom = {
+        id: 99,
+        name: 'Stale Room',
+        description: 'Removed from backend',
+        created_by: 1,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        online_count: 0,
+        message_count: 0,
+        last_activity: '2024-01-01T00:00:00Z',
+        unread_count: 0,
+      }
+
+      const freshRoom: ChatRoom = {
+        id: 1,
+        name: 'Fresh Room',
+        description: 'Still active',
+        created_by: 1,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        online_count: 1,
+        message_count: 2,
+        last_activity: '2024-01-01T00:00:00Z',
+        unread_count: 0,
+      }
+
+      act(() => {
+        useChatStore.getState().setCurrentRoom(staleRoom)
+        useChatStore.getState().setRooms([freshRoom])
+      })
+
+      const state = useChatStore.getState()
+      expect(state.currentRoom).toBeNull()
+      expect(state.rooms).toEqual([freshRoom])
+    })
   })
 
   describe('Message Operations', () => {
@@ -158,7 +198,7 @@ describe('ChatStore', () => {
       })
 
       const state = useChatStore.getState()
-      expect(state.messages['1']).toEqual([])
+      expect(state.messages['1']).toBeUndefined()
     })
   })
 
@@ -281,7 +321,7 @@ describe('ChatStore', () => {
       })
 
       const state = useChatStore.getState()
-      expect(state.notifications['1']?.unreadCount).toBe(0)
+      expect(state.notifications['1']).toBeUndefined()
       expect(state.totalUnreadCount).toBe(0)
     })
 
@@ -364,7 +404,19 @@ describe('ChatStore', () => {
       // Modify state first
       act(() => {
         useChatStore.getState().setLoading(true)
-        useChatStore.getState().setCurrentRoom({} as ChatRoom)
+        useChatStore.getState().setCurrentRoom({
+          id: 1,
+          name: 'Reset Room',
+          description: 'Reset Description',
+          created_by: 1,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          online_count: 0,
+          message_count: 0,
+          last_activity: '2024-01-01T00:00:00Z',
+          unread_count: 0,
+        })
       })
 
       // Reset
@@ -377,6 +429,52 @@ describe('ChatStore', () => {
       expect(state.currentRoom).toBeNull()
       expect(state.rooms).toEqual([])
       expect(state.messages).toEqual({})
+    })
+
+    it('should clear stale current room after loading fresh rooms from API', async () => {
+      const staleRoom: ChatRoom = {
+        id: 99,
+        name: 'Stale Room',
+        description: 'Removed from backend',
+        created_by: 1,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        online_count: 0,
+        message_count: 0,
+        last_activity: '2024-01-01T00:00:00Z',
+        unread_count: 0,
+      }
+
+      const freshRoom: ChatRoom = {
+        id: 1,
+        name: 'Fresh Room',
+        description: 'Still active',
+        created_by: 1,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        online_count: 1,
+        message_count: 2,
+        last_activity: '2024-01-01T00:00:00Z',
+        unread_count: 0,
+      }
+
+      vi.mocked(apiGet).mockResolvedValue({
+        rooms: [freshRoom],
+      } as any)
+
+      act(() => {
+        useChatStore.getState().setCurrentRoom(staleRoom)
+      })
+
+      await act(async () => {
+        await useChatStore.getState().loadRooms()
+      })
+
+      const state = useChatStore.getState()
+      expect(state.currentRoom).toBeNull()
+      expect(state.rooms).toEqual([freshRoom])
     })
   })
 })

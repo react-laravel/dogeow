@@ -22,13 +22,12 @@ interface NotificationCreatedEvent {
 export function NotificationRealtimeSubscriber() {
   const loading = useAuthStore(s => s.loading)
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
-  const token = useAuthStore(s => s.token)
   const userId = useAuthStore(s => s.user?.id)
   const setUser = useAuthStore(s => s.setUser)
   const { mutate } = useSWRConfig()
 
   useEffect(() => {
-    if (loading || !isAuthenticated || !token) return
+    if (loading || !isAuthenticated) return
 
     const eventName = '.notification.created'
     const handleNotificationCreated = (_event: NotificationCreatedEvent) => {
@@ -85,7 +84,7 @@ export function NotificationRealtimeSubscriber() {
       isCancelled = true
       cleanup?.()
     }
-  }, [loading, isAuthenticated, token, userId, setUser, mutate])
+  }, [loading, isAuthenticated, userId, setUser, mutate])
 
   return null
 }

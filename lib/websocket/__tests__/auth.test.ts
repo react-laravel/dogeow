@@ -17,6 +17,15 @@ describe('WebSocket Auth Manager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    const storageMock = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    } as Storage
+
     // Mock window object
     originalWindow = global.window
     global.window = {
@@ -24,27 +33,13 @@ describe('WebSocket Auth Manager', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
-      localStorage: {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-        length: 0,
-        key: vi.fn(),
-      },
+      localStorage: storageMock,
     } as unknown as Window & typeof globalThis
 
     // Mock localStorage
     originalLocalStorage = global.localStorage
     Object.defineProperty(global, 'localStorage', {
-      value: {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-        length: 0,
-        key: vi.fn(),
-      } as Storage,
+      value: storageMock,
       configurable: true,
     })
   })
@@ -119,6 +114,17 @@ describe('WebSocket Auth Manager', () => {
         expect(token).toBeNull()
       })
 
+      it('should fall back to legacy auth-token storage', () => {
+        vi.mocked(localStorage.getItem).mockImplementation(key => {
+          if (key === 'auth-storage') return null
+          if (key === 'auth-token') return 'legacy-token'
+          return null
+        })
+
+        const token = manager.getToken()
+        expect(token).toBe('legacy-token')
+      })
+
       it('should return null when auth storage is invalid JSON', () => {
         vi.mocked(localStorage.getItem).mockReturnValue('invalid-json')
 
@@ -128,7 +134,11 @@ describe('WebSocket Auth Manager', () => {
 
       it('should return null when token is not in auth data', () => {
         const mockAuthData = { state: {} }
-        vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(mockAuthData))
+        vi.mocked(localStorage.getItem).mockImplementation(key => {
+          if (key === 'auth-storage') return JSON.stringify(mockAuthData)
+          if (key === 'auth-token') return null
+          return null
+        })
 
         const token = manager.getToken()
         expect(token).toBeNull()
@@ -283,24 +293,23 @@ describe('WebSocket Auth Manager', () => {
         expect(result).toBe(true)
       })
 
-      it('should return false when no token is available', async () => {
+      it('should return true when no token is available but session auth can be used', async () => {
         vi.mocked(localStorage.getItem).mockReturnValue(null)
 
         const result = await manager.initializeConnection()
 
-        expect(result).toBe(false)
+        expect(result).toBe(true)
       })
 
-      it('should try to refresh token when no token is available', async () => {
+      it('should no longer depend on refreshing a token during initialization', async () => {
         vi.mocked(localStorage.getItem).mockReturnValue(null)
         const mockRefreshCallback = vi.fn().mockResolvedValue('refreshed-token')
         manager.setRefreshCallback(mockRefreshCallback)
 
         const result = await manager.initializeConnection()
 
-        // The current implementation doesn't call refreshCallback in initializeConnection
-        // It only checks if token exists and creates echo instance
-        expect(result).toBe(false)
+        expect(result).toBe(true)
+        expect(mockRefreshCallback).not.toHaveBeenCalled()
       })
     })
 

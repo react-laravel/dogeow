@@ -14,11 +14,59 @@ import {
 } from './errors'
 import type { ApiError } from '@/app'
 
+const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+let csrfCookiePromise: Promise<void> | null = null
+
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+export async function ensureCsrfCookie(force = false): Promise<void> {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (!force && getCookieValue('XSRF-TOKEN')) {
+    return
+  }
+
+  if (!csrfCookiePromise) {
+    csrfCookiePromise = fetch(`${API_URL}/sanctum/csrf-cookie`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('获取 CSRF Cookie 失败')
+        }
+      })
+      .finally(() => {
+        csrfCookiePromise = null
+      })
+  }
+
+  await csrfCookiePromise
+}
+
 /**
  * 创建请求头
  */
-const createHeaders = (isFormData = false): Record<string, string> => {
-  const token = useAuthStore.getState().token
+const createHeaders = (
+  method: string,
+  isFormData = false,
+  includeAuthToken: boolean = true
+): Record<string, string> => {
+  const token = includeAuthToken ? useAuthStore.getState().token : null
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -31,6 +79,13 @@ const createHeaders = (isFormData = false): Record<string, string> => {
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
+  }
+
+  if (!SAFE_HTTP_METHODS.has(method)) {
+    const xsrfToken = getCookieValue('XSRF-TOKEN')
+    if (xsrfToken) {
+      headers['X-XSRF-TOKEN'] = xsrfToken
+    }
   }
 
   // Laravel Echo 连接存在时附带 socket_id，供服务端 broadcast()->toOthers() 等排除发送者
@@ -51,7 +106,7 @@ const createHeaders = (isFormData = false): Record<string, string> => {
 const handleResponse = async <T>(response: Response): Promise<T> => {
   // 处理401未授权
   if (response.status === 401) {
-    useAuthStore.getState().logout()
+    void useAuthStore.getState().clearAuthState()
     if (typeof window !== 'undefined') {
       window.location.href = '/'
     }
@@ -130,28 +185,46 @@ export async function apiRequest<T>(
   endpoint: string,
   method: string = 'GET',
   data?: unknown,
-  options?: { handleError?: boolean }
+  options?: {
+    handleError?: boolean
+    suppressUnauthorizedRedirect?: boolean
+    includeAuthToken?: boolean
+  }
 ): Promise<T> {
-  const { handleError = true } = options || {}
+  const {
+    handleError = true,
+    suppressUnauthorizedRedirect = false,
+    includeAuthToken = true,
+  } = options || {}
+  const normalizedMethod = method.toUpperCase()
 
   // 构建URL
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint
   const url = `${API_URL}/api/${normalizedEndpoint}`
 
   const isFormData = data instanceof FormData
-  const headers = createHeaders(isFormData)
+  if (typeof window !== 'undefined' && !SAFE_HTTP_METHODS.has(normalizedMethod)) {
+    await ensureCsrfCookie()
+  }
+
+  const headers = createHeaders(normalizedMethod, isFormData, includeAuthToken)
 
   const requestOptions: RequestInit = {
-    method,
+    method: normalizedMethod,
     headers,
+    credentials: 'include',
   }
 
   // 处理请求体
-  if (data !== undefined && data !== null && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+  if (
+    data !== undefined &&
+    data !== null &&
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(normalizedMethod)
+  ) {
     requestOptions.body = isFormData ? data : JSON.stringify(data)
   }
 
-  try {
+  const executeRequest = async (): Promise<Response> => {
     const { controller, timeoutId, timeoutDuration } = createTimeoutController(isFormData)
     requestOptions.signal = controller.signal
 
@@ -166,6 +239,25 @@ export async function apiRequest<T>(
     const response = (await Promise.race([fetch(url, requestOptions), timeoutPromise])) as Response
 
     clearTimeout(timeoutId)
+
+    return response
+  }
+
+  try {
+    let response = await executeRequest()
+
+    if (
+      typeof window !== 'undefined' &&
+      !SAFE_HTTP_METHODS.has(normalizedMethod) &&
+      response.status === 419
+    ) {
+      await ensureCsrfCookie(true)
+      response = await executeRequest()
+    }
+
+    if (response.status === 401 && suppressUnauthorizedRedirect) {
+      throw new ApiRequestError('登录已过期，请重新登录', 401)
+    }
 
     return await handleResponse<T>(response)
   } catch (error) {

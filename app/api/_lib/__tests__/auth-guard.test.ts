@@ -2,9 +2,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { validateAuthToken, requireAuth, requireAdmin } from '../auth-guard'
 
 // Helper to create a mock NextRequest
-function createMockNextRequest(authHeader?: string) {
+function createMockNextRequest(authHeader?: string, cookieHeader?: string) {
+  const headers = new Headers()
+  if (authHeader) {
+    headers.set('Authorization', authHeader)
+  }
+  if (cookieHeader) {
+    headers.set('cookie', cookieHeader)
+  }
+
   return {
-    headers: new Headers(authHeader ? { Authorization: authHeader } : {}),
+    headers,
   } as unknown as import('next/server').NextRequest
 }
 
@@ -99,6 +107,16 @@ describe('auth-guard', () => {
       expect(fetchSpy).toHaveBeenCalled()
     })
 
+    it('accepts cookie-based session auth without bearer token', async () => {
+      fetchSpy = mockFetch(true)
+      const request = createMockNextRequest(undefined, 'laravel_session=abc123')
+
+      const response = await requireAuth(request)
+
+      expect(response).toBeNull()
+      expect(fetchSpy).toHaveBeenCalled()
+    })
+
     it('caches validated tokens to avoid excessive backend calls', async () => {
       fetchSpy = mockFetch(true)
       const request = createMockNextRequest('Bearer cached-token')
@@ -154,6 +172,16 @@ describe('auth-guard', () => {
       ])
 
       expect(response).toBeNull()
+    })
+
+    it('accepts admin auth via session cookie', async () => {
+      fetchSpy = mockFetch(true, true)
+      const request = createMockNextRequest(undefined, 'laravel_session=admin-cookie')
+
+      const response = await requireAdmin(request)
+
+      expect(response).toBeNull()
+      expect(fetchSpy).toHaveBeenCalled()
     })
 
     it('returns 401 when token is invalid', async () => {

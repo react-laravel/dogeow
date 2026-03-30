@@ -3,6 +3,8 @@ import { usePagination } from '@/hooks/usePagination'
 import { useChatWebSocket } from './useChatWebSocket'
 import type { SendMessageResult } from './chat-websocket/types'
 import { unwrapApiPayload } from '@/lib/api'
+import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
+import { API_URL } from '@/lib/api/url'
 import { getAuthManager } from '@/lib/websocket'
 import type {
   ChatRoom,
@@ -208,16 +210,11 @@ export const useChatRoom = (options: UseChatRoomOptions = {}): UseChatRoomReturn
     async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
       const authManager = getAuthManager()
       const token = authManager.getToken()
-
-      if (!token) {
-        throw new Error('No authentication token available')
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      const response = await authenticatedBrowserFetch(`${API_URL}${endpoint}`, {
+        token,
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
           ...options.headers,
         },
       })

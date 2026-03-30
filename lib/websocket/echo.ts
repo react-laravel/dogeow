@@ -1,6 +1,8 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { getAuthTokenFromStorage } from '@/lib/utils/storage'
+import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
+import { API_URL } from '@/lib/api/url'
 
 // 让 Pusher 在全局可用，供 Laravel Echo 使用
 declare global {
@@ -87,14 +89,8 @@ function toBroadcastAuthEndpoint(baseUrl: string): string {
  * 获取认证端点 URL - 提取认证端点逻辑
  */
 function getAuthEndpoint(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL
-  if (apiBase) {
-    return toBroadcastAuthEndpoint(apiBase)
-  }
-
   if (typeof window !== 'undefined') {
-    const inferredApiBase = window.location.origin.replace(':3000', ':8000')
-    return toBroadcastAuthEndpoint(inferredApiBase)
+    return toBroadcastAuthEndpoint(API_URL)
   }
 
   return toBroadcastAuthEndpoint(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
@@ -187,20 +183,9 @@ export function createEchoInstance(): Echo<'reverb'> | null {
     // 使用自定义 authorizer 处理 Sanctum Bearer token 认证
     authorizer: (channel: { name: string }) => ({
       authorize: (socketId: string, callback: (error: boolean | Error, data?: unknown) => void) => {
-        // 如果没有 token，直接失败
-        if (!authToken) {
-          console.warn('Echo: 无认证token，跳过频道认证')
-          callback(true, { message: 'No auth token' })
-          return
-        }
-
-        fetch(authEndpoint, {
+        authenticatedBrowserFetch(authEndpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
+          token: authToken || undefined,
           body: JSON.stringify({
             socket_id: socketId,
             channel_name: channel.name,

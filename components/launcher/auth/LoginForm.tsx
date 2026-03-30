@@ -168,7 +168,6 @@ export const LoginForm = memo<LoginFormProps>(
 
     return (
       <form onSubmit={onSubmit} className="flex w-full flex-col gap-4">
-        {/* GitHub 登录 - 放在最上面 */}
         <Button
           type="button"
           variant="outline"
@@ -180,7 +179,6 @@ export const LoginForm = memo<LoginFormProps>(
           {githubLoading ? '跳转中...' : '使用 GitHub 登录'}
         </Button>
 
-        {/* 分隔线 */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />

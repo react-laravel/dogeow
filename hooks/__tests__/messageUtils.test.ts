@@ -41,7 +41,7 @@ describe('messageUtils', () => {
   })
 
   it('succeeds when API returns ok', async () => {
-    mockFetch(200, { data: { id: 'm1' } })
+    mockFetch(200, { success: true, data: { id: 'm1' } })
 
     const res = await sendMessageToServer('room-1', 'hello')
     expect(res.success).toBe(true)
@@ -49,6 +49,26 @@ describe('messageUtils', () => {
   })
 
   it('returns authentication error when no token', async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        statusText: 'No Content',
+        json: async () => ({}),
+        clone() {
+          return this
+        },
+      } as any)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: async () => ({ message: 'Unauthorized' }),
+        clone() {
+          return this
+        },
+      } as any)
     const ws = await import('@/lib/websocket')
     ws.getAuthManager = () =>
       ({

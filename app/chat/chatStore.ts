@@ -4,7 +4,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ChatRoom, ChatMessage, OnlineUser, CreateRoomData, MessagePagination } from './types'
-import { get as apiGet, post as apiPost } from '@/lib/api'
+import { ApiRequestError, get as apiGet, post as apiPost } from '@/lib/api'
 import { handleChatApiError, type ChatApiError } from '@/lib/api/chat-error-handler'
 import chatCache from '@/lib/cache/chat-cache'
 import { getSafeStorage } from './stores/utils/storage'
@@ -142,6 +142,42 @@ const initialState = {
   browserNotificationPermission: 'default' as NotificationPermission,
 }
 
+const reconcileCurrentRoom = (state: ChatState, rooms: ChatRoom[]): Partial<ChatState> => {
+  const currentRoom = state.currentRoom
+  if (!currentRoom) {
+    return {
+      rooms,
+    }
+  }
+
+  const nextCurrentRoom = rooms.find(room => room.id === currentRoom.id) ?? null
+  if (nextCurrentRoom) {
+    return {
+      rooms,
+      currentRoom: nextCurrentRoom,
+    }
+  }
+
+  return {
+    ...cleanRoomData(state, currentRoom.id),
+    rooms,
+    currentRoom: null,
+  }
+}
+
+const clearMissingCurrentRoom = (state: ChatState, roomId: number): Partial<ChatState> => {
+  const nextState: Partial<ChatState> = {
+    ...cleanRoomData(state, roomId),
+    rooms: state.rooms.filter(room => room.id !== roomId),
+  }
+
+  if (state.currentRoom?.id === roomId) {
+    nextState.currentRoom = null
+  }
+
+  return nextState
+}
+
 // 工具函数已移至 stores/utils/ 目录
 
 const useChatStore = create<ChatState>()(
@@ -202,7 +238,9 @@ const useChatStore = create<ChatState>()(
 
       setRooms: rooms => {
         const safeRooms = Array.isArray(rooms) ? rooms : []
-        set({ rooms: safeRooms })
+        set(state => ({
+          ...reconcileCurrentRoom(state, safeRooms),
+        }))
       },
 
       // 使用节流的房间加载函数
@@ -220,19 +258,10 @@ const useChatStore = create<ChatState>()(
 
           const safeRooms = Array.isArray(rooms) ? rooms : []
 
-          set(state => {
-            const newState = { rooms: safeRooms, isLoading: false }
-
-            // 如果当前房间不在房间列表中，但存在，则添加到列表中
-            if (state.currentRoom && !safeRooms.find(room => room.id === state.currentRoom!.id)) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('ChatStore: Adding current room to list:', state.currentRoom)
-              }
-              newState.rooms = [...safeRooms, state.currentRoom]
-            }
-
-            return newState
-          })
+          set(state => ({
+            ...reconcileCurrentRoom(state, safeRooms),
+            isLoading: false,
+          }))
         } catch (error) {
           console.error('ChatStore: Failed to load rooms:', error)
           const chatError = handleChatApiError(error, '加载聊天室失败', {
@@ -439,6 +468,13 @@ const useChatStore = create<ChatState>()(
             isLoading: false,
           }))
         } catch (error) {
+          if (error instanceof ApiRequestError && error.status === 404) {
+            set(state => ({
+              ...clearMissingCurrentRoom(state, roomId),
+              isLoading: false,
+            }))
+          }
+
           const chatError = handleChatApiError(error, '加载消息失败', {
             showToast: true,
             retryable: true,
@@ -563,6 +599,12 @@ const useChatStore = create<ChatState>()(
             },
           }))
         } catch (error) {
+          if (error instanceof ApiRequestError && error.status === 404) {
+            set(state => ({
+              ...clearMissingCurrentRoom(state, roomId),
+            }))
+          }
+
           console.error('ChatStore: Failed to load online users:', error)
           const chatError = handleChatApiError(error, '加载在线用户失败', {
             showToast: false,
@@ -870,9 +912,8 @@ const useChatStore = create<ChatState>()(
           }
 
           // 状态恢复后检查并修复状态不一致问题
-          if (state.currentRoom && state.rooms.length === 0) {
-            // 将当前房间添加到房间列表中
-            state.rooms = [state.currentRoom]
+          if (state.currentRoom && !state.rooms.some(room => room.id === state.currentRoom?.id)) {
+            state.currentRoom = null
           }
         }
       },

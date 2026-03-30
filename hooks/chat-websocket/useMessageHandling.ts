@@ -3,6 +3,8 @@
  */
 import { useCallback } from 'react'
 import { getAuthManager } from '@/lib/websocket'
+import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
+import { API_URL } from '@/lib/api/url'
 
 export const useMessageHandling = () => {
   const sendMessage = useCallback(async (roomId: string, message: string): Promise<boolean> => {
@@ -10,18 +12,11 @@ export const useMessageHandling = () => {
       const authManager = getAuthManager()
       const token = authManager.getToken()
 
-      if (!token) {
-        throw new Error('No authentication token')
-      }
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/chat/rooms/${roomId}/messages`,
+      const response = await authenticatedBrowserFetch(
+        `${API_URL}/api/chat/rooms/${roomId}/messages`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          token,
           body: JSON.stringify({ message }),
         }
       )

@@ -1,4 +1,5 @@
 import { createEchoInstance, destroyEchoInstance, getEchoInstance } from './echo'
+import { getAuthTokenFromStorage } from '@/lib/utils/storage'
 
 export interface AuthTokenManager {
   getToken: () => string | null
@@ -50,20 +51,7 @@ class WebSocketAuthManager {
   }
 
   public getToken(): string | null {
-    if (typeof window === 'undefined') return null
-
-    try {
-      // 优先从 Zustand store 获取 token
-      const authStorage = localStorage.getItem('auth-storage')
-      if (authStorage) {
-        const authData = JSON.parse(authStorage)
-        return authData.state?.token || null
-      }
-    } catch (error) {
-      console.warn('从 auth storage 获取 token 失败:', error)
-    }
-
-    return null
+    return getAuthTokenFromStorage()
   }
 
   public setToken(token: string): void {
@@ -130,15 +118,10 @@ class WebSocketAuthManager {
 
   public async initializeConnection(): Promise<boolean> {
     const token = this.getToken()
-    console.log('WebSocket 认证: Token 检查:', token ? '已找到 Token' : '未找到 Token')
-
-    if (!token) {
-      console.warn('WebSocket 连接缺少认证 token')
-      return false
-    }
+    console.log('WebSocket 认证: 认证方式:', token ? 'Bearer Token' : 'Session Cookie')
 
     try {
-      console.log('WebSocket 认证: 使用 token 创建 Echo 实例')
+      console.log('WebSocket 认证: 创建 Echo 实例')
       const instance = createEchoInstance()
 
       if (instance) {

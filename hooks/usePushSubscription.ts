@@ -22,7 +22,7 @@ export function isPushSupported(): boolean {
  * 可在 PWA 安装后或用户开启「浏览器通知」后调用。
  */
 export function usePushSubscription() {
-  const token = useAuthStore(s => s.token)
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -32,7 +32,7 @@ export function usePushSubscription() {
       setStatus('error')
       return false
     }
-    if (!token) {
+    if (!isAuthenticated) {
       setErrorMessage('请先登录')
       setStatus('error')
       return false
@@ -75,11 +75,11 @@ export function usePushSubscription() {
       }
       return false
     }
-  }, [token])
+  }, [isAuthenticated])
 
   // 当用户已登录且已授权通知时，自动尝试注册一次（静默，不打扰用户）
   useEffect(() => {
-    if (!token || status !== 'idle' || !isPushSupported()) return
+    if (!isAuthenticated || status !== 'idle' || !isPushSupported()) return
     if (Notification.permission !== 'granted') return
 
     let cancelled = false
@@ -90,7 +90,7 @@ export function usePushSubscription() {
     return () => {
       cancelled = true
     }
-  }, [token, register, status])
+  }, [isAuthenticated, register, status])
 
   return {
     register,

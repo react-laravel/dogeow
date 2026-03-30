@@ -5,7 +5,22 @@ import type { User, AuthResponse } from '../../app'
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({
+  get: vi.fn(),
   post: vi.fn(),
+  apiRequest: vi.fn(),
+  ApiRequestError: class MockApiRequestError extends Error {
+    status: number
+
+    constructor(message: string, status: number) {
+      super(message)
+      this.name = 'ApiRequestError'
+      this.status = status
+    }
+  },
+}))
+
+vi.mock('@/lib/auth/redirect', () => ({
+  redirectTo: vi.fn(),
 }))
 
 // Mock the WebSocket auth module
@@ -17,11 +32,14 @@ vi.mock('@/lib/websocket/auth', () => ({
 }))
 
 // Import mocked functions
-import { post } from '@/lib/api'
+import { get, apiRequest, ApiRequestError } from '@/lib/api'
+import { redirectTo } from '@/lib/auth/redirect'
 import { getAuthManager } from '@/lib/websocket/auth'
 
 describe('authStore', () => {
-  const mockPost = vi.mocked(post)
+  const mockGet = vi.mocked(get)
+  const mockApiRequest = vi.mocked(apiRequest)
+  const mockRedirectTo = vi.mocked(redirectTo)
   const mockAuthManager = {
     setToken: vi.fn(),
     removeToken: vi.fn(),
@@ -52,6 +70,7 @@ describe('authStore', () => {
 
     // Reset all mocks
     vi.clearAllMocks()
+    mockApiRequest.mockResolvedValue({})
 
     // Setup auth manager mock
     mockGetAuthManager.mockReturnValue(mockAuthManager)
@@ -141,10 +160,7 @@ describe('authStore', () => {
     })
 
     expect(result.current.token).toBe('test-token')
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Failed to sync token with WebSocket auth manager:',
-      expect.any(Error)
-    )
+    expect(consoleSpy).toHaveBeenCalledWith('与WebSocket认证管理器同步失败:', expect.any(Error))
 
     consoleSpy.mockRestore()
   })
@@ -163,7 +179,7 @@ describe('authStore', () => {
   })
 
   it('should login successfully', async () => {
-    mockPost.mockResolvedValueOnce(mockAuthResponse)
+    mockApiRequest.mockResolvedValueOnce(mockAuthResponse)
     const { result } = renderHook(() => useAuthStore())
 
     let loginResult: AuthResponse
@@ -171,10 +187,19 @@ describe('authStore', () => {
       loginResult = await result.current.login('test@example.com', 'password')
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/login', {
-      email: 'test@example.com',
-      password: 'password',
-    })
+    expect(mockApiRequest).toHaveBeenCalledWith(
+      '/login',
+      'POST',
+      {
+        email: 'test@example.com',
+        password: 'password',
+      },
+      {
+        handleError: false,
+        suppressUnauthorizedRedirect: true,
+        includeAuthToken: false,
+      }
+    )
     expect(result.current.user).toEqual(mockUser)
     expect(result.current.token).toBe('test-token-123')
     expect(result.current.loading).toBe(false)
@@ -183,9 +208,23 @@ describe('authStore', () => {
     expect(localStorage.getItem('auth-token')).toBe('test-token-123')
   })
 
+  it('should redirect to github provider successfully', async () => {
+    mockGet.mockResolvedValueOnce({ url: 'https://github.com/login/oauth/authorize' })
+
+    const { result } = renderHook(() => useAuthStore())
+
+    await act(async () => {
+      await result.current.loginWithGithub()
+    })
+
+    expect(mockGet).toHaveBeenCalledWith('/auth/github')
+    expect(mockRedirectTo).toHaveBeenCalledWith('https://github.com/login/oauth/authorize')
+    expect(result.current.loading).toBe(true)
+  })
+
   it('should handle login failure', async () => {
     const loginError = new Error('Invalid credentials')
-    mockPost.mockRejectedValueOnce(loginError)
+    mockApiRequest.mockRejectedValueOnce(loginError)
     const { result } = renderHook(() => useAuthStore())
 
     await act(async () => {
@@ -223,6 +262,16 @@ describe('authStore', () => {
     expect(result.current.isAuthenticated).toBe(false)
     expect(localStorage.getItem('auth-token')).toBeNull()
     expect(mockAuthManager.removeToken).toHaveBeenCalled()
+    expect(mockApiRequest).toHaveBeenCalledWith(
+      '/logout',
+      'POST',
+      {},
+      {
+        handleError: false,
+        suppressUnauthorizedRedirect: true,
+        includeAuthToken: false,
+      }
+    )
   })
 
   it('should handle logout WebSocket sync errors gracefully', async () => {
@@ -247,10 +296,7 @@ describe('authStore', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.token).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Failed to sync logout with WebSocket auth manager:',
-      expect.any(Error)
-    )
+    expect(consoleSpy).toHaveBeenCalledWith('与WebSocket认证管理器同步失败:', expect.any(Error))
 
     consoleSpy.mockRestore()
   })
@@ -397,8 +443,8 @@ describe('authStore', () => {
       await result.current.setToken('')
     })
 
-    expect(result.current.token).toBe('')
-    expect(result.current.isAuthenticated).toBe(false) // Empty string is falsy
+    expect(result.current.token).toBeNull()
+    expect(result.current.isAuthenticated).toBe(false)
     expect(mockAuthManager.removeToken).toHaveBeenCalled()
   })
 
@@ -409,14 +455,14 @@ describe('authStore', () => {
       await result.current.setToken(undefined as any)
     })
 
-    expect(result.current.token).toBeUndefined()
-    expect(result.current.isAuthenticated).toBe(false) // undefined is falsy
+    expect(result.current.token).toBeNull()
+    expect(result.current.isAuthenticated).toBe(false)
     expect(mockAuthManager.removeToken).toHaveBeenCalled()
   })
 
   it('should handle login with empty credentials', async () => {
     const loginError = new Error('Empty credentials')
-    mockPost.mockRejectedValueOnce(loginError)
+    mockApiRequest.mockRejectedValueOnce(loginError)
     const { result } = renderHook(() => useAuthStore())
 
     await act(async () => {
@@ -434,17 +480,26 @@ describe('authStore', () => {
   })
 
   it('should handle login with special characters in credentials', async () => {
-    mockPost.mockResolvedValueOnce(mockAuthResponse)
+    mockApiRequest.mockResolvedValueOnce(mockAuthResponse)
     const { result } = renderHook(() => useAuthStore())
 
     await act(async () => {
       await result.current.login('test@example.com', 'password123!@#')
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/login', {
-      email: 'test@example.com',
-      password: 'password123!@#',
-    })
+    expect(mockApiRequest).toHaveBeenCalledWith(
+      '/login',
+      'POST',
+      {
+        email: 'test@example.com',
+        password: 'password123!@#',
+      },
+      {
+        handleError: false,
+        suppressUnauthorizedRedirect: true,
+        includeAuthToken: false,
+      }
+    )
     expect(result.current.user).toEqual(mockUser)
     expect(result.current.token).toBe('test-token-123')
   })
@@ -457,6 +512,52 @@ describe('authStore', () => {
 
     await act(async () => {
       await result.current.logout()
+    })
+
+    expect(result.current.user).toBeNull()
+    expect(result.current.token).toBeNull()
+    expect(result.current.isAuthenticated).toBe(false)
+    expect(localStorage.getItem('auth-token')).toBeNull()
+  })
+
+  it('should restore session user from cookie-based auth', async () => {
+    const { result } = renderHook(() => useAuthStore())
+    mockApiRequest.mockResolvedValueOnce({ user: mockUser })
+
+    let restoredUser: User | null = null
+    await act(async () => {
+      restoredUser = await result.current.restoreSession()
+    })
+
+    expect(restoredUser).toEqual(mockUser)
+    expect(result.current.user).toEqual(mockUser)
+    expect(result.current.isAuthenticated).toBe(true)
+    expect(mockApiRequest).toHaveBeenCalledWith('/user', 'GET', undefined, {
+      handleError: false,
+      suppressUnauthorizedRedirect: true,
+      includeAuthToken: false,
+    })
+  })
+
+  it('should clear local auth state when session restoration returns 401', async () => {
+    const { result } = renderHook(() => useAuthStore())
+    act(() => {
+      useAuthStore.setState({
+        user: mockUser,
+        token: 'stale-token',
+        loading: false,
+        isAuthenticated: true,
+      })
+    })
+    localStorage.setItem('auth-token', 'stale-token')
+
+    mockApiRequest
+      .mockRejectedValueOnce(new ApiRequestError('Unauthorized', 401))
+      .mockRejectedValueOnce(new ApiRequestError('Unauthorized', 401))
+
+    await act(async () => {
+      const restoredUser = await result.current.restoreSession()
+      expect(restoredUser).toBeNull()
     })
 
     expect(result.current.user).toBeNull()
@@ -488,7 +589,7 @@ describe('authStore', () => {
   })
 
   it('should handle multiple rapid login attempts', async () => {
-    mockPost.mockResolvedValueOnce(mockAuthResponse)
+    mockApiRequest.mockResolvedValueOnce(mockAuthResponse)
     const { result } = renderHook(() => useAuthStore())
 
     // First login
@@ -501,7 +602,7 @@ describe('authStore', () => {
     // Second login (should override previous state)
     const secondUser = { ...mockUser, id: '2', name: 'Second User' }
     const secondResponse = { ...mockAuthResponse, user: secondUser, token: 'second-token' }
-    mockPost.mockResolvedValueOnce(secondResponse)
+    mockApiRequest.mockResolvedValueOnce(secondResponse)
 
     await act(async () => {
       await result.current.login('test2@example.com', 'password2')
@@ -574,7 +675,10 @@ describe('authStore', () => {
   it('should test initializeAuth function directly', async () => {
     // Mock window to simulate browser environment
     const originalWindow = global.window
-    global.window = {} as any
+    global.window = {
+      ...originalWindow,
+      localStorage,
+    } as any
 
     // Set up localStorage with token
     localStorage.setItem('auth-token', 'test-initialization-token')
@@ -600,7 +704,10 @@ describe('authStore', () => {
   it('should test initializeAuth function with no token', async () => {
     // Mock window to simulate browser environment
     const originalWindow = global.window
-    global.window = {} as any
+    global.window = {
+      ...originalWindow,
+      localStorage,
+    } as any
 
     // Ensure localStorage is empty
     localStorage.removeItem('auth-token')

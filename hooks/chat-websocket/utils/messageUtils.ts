@@ -1,5 +1,7 @@
 import { getAuthManager } from '@/lib/websocket'
 import { unwrapApiPayload } from '@/lib/api'
+import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
+import { API_URL } from '@/lib/api/url'
 import useChatStore from '@/app/chat/chatStore'
 import type { ConnectionError } from '@/lib/websocket/error-handler'
 
@@ -13,27 +15,11 @@ export const sendMessageToServer = async (
   try {
     const authManager = getAuthManager()
     const token = authManager.getToken()
-
-    if (!token) {
-      return {
-        success: false,
-        error: {
-          type: 'authentication',
-          message: 'No authentication token available',
-          timestamp: new Date(),
-          retryable: false,
-        },
-      }
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/chat/rooms/${roomId}/messages`,
+    const response = await authenticatedBrowserFetch(
+      `${API_URL}/api/chat/rooms/${roomId}/messages`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        token,
         body: JSON.stringify({ message }),
       }
     )
@@ -47,6 +33,18 @@ export const sendMessageToServer = async (
       const errorMessage =
         errors[0] ??
         (typeof errorPayload?.message === 'string' ? errorPayload.message : response.statusText)
+
+      if (response.status === 401) {
+        return {
+          success: false,
+          error: {
+            type: 'authentication',
+            message: errorMessage || 'Authentication failed',
+            timestamp: new Date(),
+            retryable: false,
+          },
+        }
+      }
 
       // 处理禁言错误
       if (response.status === 403) {
@@ -67,7 +65,7 @@ export const sendMessageToServer = async (
         }
 
         // 尝试刷新 token
-        const newToken = await authManager.refreshToken()
+        const newToken = token ? await authManager.refreshToken() : null
         if (newToken) {
           // 递归重试
           return sendMessageToServer(roomId, message)
@@ -118,16 +116,13 @@ export const sendMessageToServer = async (
  */
 export const leaveRoomViaAPI = async (roomId: string): Promise<void> => {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/chat/rooms/${roomId}/leave`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${getAuthManager().getToken()}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    )
+    const response = await authenticatedBrowserFetch(`${API_URL}/api/chat/rooms/${roomId}/leave`, {
+      method: 'POST',
+      token: getAuthManager().getToken(),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
 
     if (response.ok) {
       console.log('WebSocket: Successfully left room via API')

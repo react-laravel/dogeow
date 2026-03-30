@@ -21,11 +21,10 @@ export const useConnection = () => {
     try {
       const authManager = getAuthManager()
       const token = authManager.getToken()
-
-      if (!token) {
-        console.error('No auth token available')
-        return false
-      }
+      console.log(
+        'WebSocket: Connecting with auth mode:',
+        token ? 'Bearer Token' : 'Session Cookie'
+      )
 
       const echoInstance = createEchoInstance()
       if (!echoInstance) {

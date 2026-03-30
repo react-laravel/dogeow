@@ -81,6 +81,7 @@ function ChatPageContent() {
   const chatStore = useChatStore()
   const {
     currentRoom,
+    rooms,
     retryLastAction,
     clearError,
     error: storeError,
@@ -317,6 +318,11 @@ function ChatPageContent() {
   useEffect(() => {
     if (!currentRoom || !isAuthenticated) return
 
+    const currentRoomExists = rooms.some(room => room.id === currentRoom.id)
+    if (!currentRoomExists) {
+      return
+    }
+
     // 加载在线用户 - 避免重复请求
     if (lastLoadedRoomRef.current !== currentRoom.id) {
       lastLoadedRoomRef.current = currentRoom.id
@@ -353,6 +359,7 @@ function ChatPageContent() {
     }
   }, [
     currentRoom,
+    rooms,
     isAuthenticated,
     connectionInfo.status,
     wsJoinRoom,

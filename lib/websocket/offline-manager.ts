@@ -1,4 +1,6 @@
 import { getAuthTokenFromStorage } from '@/lib/utils/storage'
+import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
+import { API_URL } from '@/lib/api/url'
 
 /**
  * Storage keys for offline queue
@@ -191,18 +193,12 @@ class OfflineManager {
 
   private async sendQueuedMessage(queuedMessage: QueuedMessage): Promise<void> {
     const token = this.getAuthToken()
-    if (!token) {
-      throw new Error('No authentication token available')
-    }
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/chat/rooms/${queuedMessage.roomId}/messages`,
+    const response = await authenticatedBrowserFetch(
+      `${API_URL}/api/chat/rooms/${queuedMessage.roomId}/messages`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        token,
         body: JSON.stringify({ message: queuedMessage.message }),
       }
     )
