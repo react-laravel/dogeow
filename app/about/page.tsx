@@ -6,6 +6,7 @@ const longCang = Long_Cang({
   subsets: ['latin'],
   variable: '--font-long-cang',
   display: 'swap',
+  preload: false,
 })
 
 const QUOTES = [
