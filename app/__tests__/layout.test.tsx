@@ -2,17 +2,6 @@ import { render } from '@testing-library/react'
 import { vi } from 'vitest'
 import RootLayout from '../layout'
 
-vi.mock('next/font/google', () => ({
-  Geist: () => ({
-    variable: '--font-geist-sans',
-    style: { fontFamily: 'Geist' },
-  }),
-  Geist_Mono: () => ({
-    variable: '--font-geist-mono',
-    style: { fontFamily: 'Geist Mono' },
-  }),
-}))
-
 vi.mock('@/components/app/ThemeProvider', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="theme-provider">{children}</div>
@@ -64,7 +53,6 @@ describe('RootLayout', () => {
     )
 
     expect(document.documentElement).toHaveAttribute('lang', 'zh-CN')
-    expect(document.body).toHaveClass('--font-geist-sans', '--font-geist-mono')
     expect(document.body).toHaveClass(
       'flex',
       'h-screen',

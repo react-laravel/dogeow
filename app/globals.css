@@ -88,6 +88,13 @@
 }
 
 @theme inline {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC',
+    'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono:
+    'Cascadia Code', 'Fira Code', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas,
+    'Source Code Pro', monospace;
+  --font-long-cang: 'Long Cang', 'Noto Serif SC', 'STSong', 'SimSun', serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

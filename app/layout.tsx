@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/app/ThemeProvider'
 import { UIThemeProvider } from '@/components/themes/UIThemeProvider'
 import { LayoutRenderer } from '@/components/themes/LayoutRenderer'
@@ -12,18 +11,6 @@ import { DeferredRuntimeClients } from '@/components/app/DeferredRuntimeClients'
 import { ErrorBoundary } from '@/components/error/ErrorBoundary'
 import '@/lib/themes/registry' // 初始化主题注册表
 import '@/lib/i18n/log-control'
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-  preload: false,
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-  preload: false,
-})
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -78,7 +65,6 @@ export const metadata: Metadata = {
     apple: [{ url: '/480.png', sizes: '480x480', type: 'image/png' }],
     shortcut: '/favicon.ico',
   },
-  manifest: '/manifest.json',
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
@@ -96,9 +82,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} flex h-screen flex-col overflow-hidden antialiased`}
-      >
+      <body className="flex h-screen flex-col overflow-hidden antialiased">
         <SWRProvider>
           <ThemeProvider>
             <UIThemeProvider>
