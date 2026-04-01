@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import useAuthStore from '@/stores/authStore'
 import type { ChatMessage } from '../types'
 
 interface UseMediaGeneratorsOptions {
@@ -14,6 +15,14 @@ export function useMediaGenerators({
   setGenerationError,
   setIsGeneratingMedia,
 }: UseMediaGeneratorsOptions) {
+  const buildJsonHeaders = useCallback((): HeadersInit => {
+    const token = useAuthStore.getState().token
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }
+  }, [])
+
   // 生成图片
   const handleGenerateImage = useCallback(
     async (prompt: string, onImageGenerated?: (url: string, prompt: string) => void) => {
@@ -36,12 +45,12 @@ export function useMediaGenerators({
       try {
         const res = await fetch('/api/minimax/image', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(),
           body: JSON.stringify({ prompt }),
         })
         const data = await res.json()
         if (!res.ok || !data.success) {
-          setGenerationError(data.error ?? '图片生成失败')
+          setGenerationError(data.message ?? data.error ?? '图片生成失败')
           setMessages(prev => prev.filter(m => m.id !== placeholderId))
           return
         }
@@ -72,7 +81,7 @@ export function useMediaGenerators({
         setIsGeneratingMedia(false)
       }
     },
-    [setMessages, setGenerationError, setIsGeneratingMedia]
+    [buildJsonHeaders, setMessages, setGenerationError, setIsGeneratingMedia]
   )
 
   // 生成视频
@@ -100,12 +109,12 @@ export function useMediaGenerators({
       try {
         const res = await fetch('/api/minimax/video', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(),
           body: JSON.stringify({ prompt }),
         })
         const data = await res.json()
         if (!res.ok || !data.success) {
-          setGenerationError(data.error ?? '视频生成失败')
+          setGenerationError(data.message ?? data.error ?? '视频生成失败')
           setMessages(prev => prev.filter(m => m.id !== placeholderId))
           return
         }
@@ -133,7 +142,7 @@ export function useMediaGenerators({
         setIsGeneratingMedia(false)
       }
     },
-    [setMessages, setGenerationError, setIsGeneratingMedia]
+    [buildJsonHeaders, setMessages, setGenerationError, setIsGeneratingMedia]
   )
 
   // 生成音乐
@@ -158,12 +167,12 @@ export function useMediaGenerators({
       try {
         const res = await fetch('/api/minimax/music', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(),
           body: JSON.stringify({ prompt, lyrics }),
         })
         const data = await res.json()
         if (!res.ok || !data.success) {
-          setGenerationError(data.error ?? '音乐生成失败')
+          setGenerationError(data.message ?? data.error ?? '音乐生成失败')
           setMessages(prev => prev.filter(m => m.id !== placeholderId))
           return
         }
@@ -189,7 +198,7 @@ export function useMediaGenerators({
         setIsGeneratingMedia(false)
       }
     },
-    [setMessages, setGenerationError, setIsGeneratingMedia]
+    [buildJsonHeaders, setMessages, setGenerationError, setIsGeneratingMedia]
   )
 
   return {

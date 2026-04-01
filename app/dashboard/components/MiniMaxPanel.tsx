@@ -14,6 +14,132 @@ import type {
 // 自动刷新间隔（毫秒）
 const REFRESH_INTERVAL = 10000
 
+interface MediaQuotaPlan {
+  id: string
+  label: string
+  speechDaily: string
+  imageDaily: string
+  videoFastDaily: string
+  videoDaily: string
+  musicDaily: string
+}
+
+const STANDARD_MEDIA_QUOTA_PLANS: MediaQuotaPlan[] = [
+  {
+    id: 'starter',
+    label: 'Starter',
+    speechDaily: '—',
+    imageDaily: '—',
+    videoFastDaily: '—',
+    videoDaily: '—',
+    musicDaily: '—',
+  },
+  {
+    id: 'plus',
+    label: 'Plus',
+    speechDaily: '4,000 字符/日',
+    imageDaily: '50 张/日',
+    videoFastDaily: '—',
+    videoDaily: '—',
+    musicDaily: '—',
+  },
+  {
+    id: 'max',
+    label: 'Max',
+    speechDaily: '11,000 字符/日',
+    imageDaily: '120 张/日',
+    videoFastDaily: '2 个/日',
+    videoDaily: '2 个/日',
+    musicDaily: '4 首/日（每首≤5分钟）',
+  },
+]
+
+const SPEED_MEDIA_QUOTA_PLANS: MediaQuotaPlan[] = [
+  {
+    id: 'plus-speed',
+    label: 'Plus-极速版',
+    speechDaily: '9,000 字符/日',
+    imageDaily: '100 张/日',
+    videoFastDaily: '—',
+    videoDaily: '—',
+    musicDaily: '—',
+  },
+  {
+    id: 'max-speed',
+    label: 'Max-极速版',
+    speechDaily: '19,000 字符/日',
+    imageDaily: '200 张/日',
+    videoFastDaily: '3 个/日',
+    videoDaily: '3 个/日',
+    musicDaily: '7 首/日（每首≤5分钟）',
+  },
+  {
+    id: 'ultra-speed',
+    label: 'Ultra-极速版',
+    speechDaily: '50,000 字符/日',
+    imageDaily: '800 张/日',
+    videoFastDaily: '5 个/日',
+    videoDaily: '5 个/日',
+    musicDaily: '15 首/日（每首≤5分钟）',
+  },
+]
+
+function normalizePlanTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[\-_/]/g, '')
+    .replace(/[()（）]/g, '')
+    .replace(/套餐/g, '')
+}
+
+function resolveCurrentPlanId(planTitle: string | undefined): string | null {
+  if (!planTitle) return null
+
+  const normalized = normalizePlanTitle(planTitle)
+  if (!normalized) return null
+
+  if (normalized.includes('ultra极速版') || normalized.includes('ultraspeed')) {
+    return 'ultra-speed'
+  }
+  if (normalized.includes('max极速版') || normalized.includes('maxspeed')) {
+    return 'max-speed'
+  }
+  if (normalized.includes('plus极速版') || normalized.includes('plusspeed')) {
+    return 'plus-speed'
+  }
+  if (normalized.includes('starter')) {
+    return 'starter'
+  }
+  if (normalized.includes('max')) {
+    return 'max'
+  }
+  if (normalized.includes('plus')) {
+    return 'plus'
+  }
+
+  return null
+}
+
+function getCurrentPlanSummary(planId: string | null): {
+  speechDaily: string
+  imageDaily: string
+  videoFastDaily: string
+  videoDaily: string
+  musicDaily: string
+} {
+  const allPlans = [...STANDARD_MEDIA_QUOTA_PLANS, ...SPEED_MEDIA_QUOTA_PLANS]
+  const matched = allPlans.find(plan => plan.id === planId)
+
+  return {
+    speechDaily: matched?.speechDaily ?? '—',
+    imageDaily: matched?.imageDaily ?? '—',
+    videoFastDaily: matched?.videoFastDaily ?? '—',
+    videoDaily: matched?.videoDaily ?? '—',
+    musicDaily: matched?.musicDaily ?? '—',
+  }
+}
+
 function MiniMaxRefreshButton() {
   const { isLoading, mutate } = useSWR<MiniMaxSubscriptionResponse>(
     '/minimax/subscription',
@@ -41,7 +167,7 @@ function MiniMaxRefreshButton() {
     return () => {
       if (timer) clearInterval(timer)
     }
-  }, [isLoading, REFRESH_INTERVAL])
+  }, [isLoading])
 
   // 手动刷新并重置倒计时
   const handleManualRefresh = async () => {
@@ -92,6 +218,38 @@ export function MiniMaxPanel() {
 
   const models = subData?.model_remains ?? []
   const subModel = models[0]
+  const currentPlanTitle = detailData?.current_subscribe?.current_subscribe_title
+  const currentPlanId = resolveCurrentPlanId(currentPlanTitle)
+  const currentPlanSummary = getCurrentPlanSummary(currentPlanId)
+
+  const findModelQuota = (candidates: string[]) => {
+    const target = models.find(model => candidates.includes(model.model_name))
+    if (!target) return null
+
+    const total = target.current_interval_total_count ?? 0
+    const remain = target.current_interval_usage_count ?? 0
+    const used = total - remain
+    const percent = total > 0 ? ((used / total) * 100).toFixed(1) : '0'
+
+    return {
+      modelName: target.model_name,
+      total,
+      remain,
+      used,
+      percent,
+    }
+  }
+
+  const musicQuota = findModelQuota(['music-2.5', 'music-2.0'])
+  const speechQuota = findModelQuota(['speech-2.8-hd', 'speech-hd', 'speech-2.8'])
+  const imageQuota = findModelQuota(['image-01'])
+  const videoFastQuota = findModelQuota(['MiniMax-Hailuo-2.3-Fast-6s-768p'])
+  const videoQuota = findModelQuota([
+    'MiniMax-Hailuo-2.3-6s-768p',
+    'MiniMax-Hailuo-02-6s-768p',
+    'MiniMax-Hailuo-2.3',
+    'MiniMax-Hailuo-02',
+  ])
 
   const fmtTime = (ms: number): string => {
     const s = Math.floor(ms / 1000)
@@ -296,24 +454,52 @@ export function MiniMaxPanel() {
             </div>
           )}
 
-          {/* 模型列表 */}
-          {models.length > 0 && (
-            <div>
-              <div className="text-muted-foreground mb-2 text-xs font-medium">
-                支持的模型 ({models.length})
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {models.map(m => (
-                  <span
-                    key={m.model_name}
-                    className="bg-muted text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs font-mono"
-                  >
-                    {m.model_name}
+          {/* 音乐/视频额度 */}
+          <div className="space-y-3 rounded-xl border bg-muted/30 p-3">
+            <div className="text-xs font-medium text-muted-foreground">音乐与视频额度</div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                {
+                  title: 'Speech 2.8',
+                  quota: speechQuota,
+                  dailyLimit: currentPlanSummary.speechDaily,
+                },
+                {
+                  title: 'image-01',
+                  quota: imageQuota,
+                  dailyLimit: currentPlanSummary.imageDaily,
+                },
+                {
+                  title: 'Hailuo-2.3-Fast 768P 6s',
+                  quota: videoFastQuota,
+                  dailyLimit: currentPlanSummary.videoFastDaily,
+                },
+                {
+                  title: 'Hailuo-2.3 768P 6s',
+                  quota: videoQuota,
+                  dailyLimit: currentPlanSummary.videoDaily,
+                },
+                {
+                  title: 'Music-2.5',
+                  quota: musicQuota,
+                  dailyLimit: currentPlanSummary.musicDaily,
+                },
+              ].map(item => (
+                <div
+                  key={item.title}
+                  className="flex items-center justify-between rounded-lg border bg-background/70 px-3 py-2"
+                >
+                  <span className="text-[11px] text-muted-foreground">{item.title}</span>
+                  <span className="text-sm font-medium">
+                    {item.quota
+                      ? `${item.quota.remain.toLocaleString()} / ${item.quota.total.toLocaleString()}`
+                      : '—'}
                   </span>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </>
       )}
 

@@ -12,7 +12,7 @@ const createMiniMaxHeaders = (apiKey: string) => ({
 export const MINIMAX_TOKEN_API_HEADERS = createMiniMaxHeaders(MINIMAX_TOKEN_API_KEY)
 
 export const MINIMAX_TTS_MODEL = process.env.MINIMAX_TTS_MODEL ?? 'speech-2.6-hd'
-export const MINIMAX_VIDEO_MODEL = process.env.MINIMAX_VIDEO_MODEL ?? 'MiniMax-Hailuo-02'
+export const MINIMAX_VIDEO_MODEL = process.env.MINIMAX_VIDEO_MODEL ?? 'MiniMax-Hailuo-2.3'
 export const MINIMAX_IMAGE_MODEL = process.env.MINIMAX_IMAGE_MODEL ?? 'image-01'
 export const MINIMAX_MUSIC_MODEL = process.env.MINIMAX_MUSIC_MODEL ?? 'music-2.0'
 
