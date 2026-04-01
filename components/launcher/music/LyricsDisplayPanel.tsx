@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/helpers'
 import { getLyricGlyphProgress, type LyricLine } from './lyrics'
 import type { LyricsState } from './useTrackLyrics'
@@ -20,35 +20,17 @@ interface LyricsDisplayPanelProps {
   syncKey?: string
 }
 
-function getEmptyText(status: LyricsState) {
-  if (status === 'loading') {
-    return '歌词加载中...'
-  }
-
-  if (status === 'error') {
-    return '歌词加载失败'
-  }
-
-  if (status === 'idle') {
-    return '选择歌曲后显示歌词'
-  }
-
-  if (status === 'missing') {
-    return '该歌曲暂无歌词'
-  }
-
-  return ''
+const EMPTY_TEXT_MAP: Record<LyricsState, string> = {
+  loading: '歌词加载中...',
+  error: '歌词加载失败',
+  idle: '选择歌曲后显示歌词',
+  missing: '该歌曲暂无歌词',
+  ready: '',
 }
 
-function renderGlyphChar(char: string) {
-  if (char === ' ') {
-    return '\u00A0'
-  }
-
-  if (char === '\t') {
-    return '\u00A0\u00A0'
-  }
-
+function renderGlyphChar(char: string): string {
+  if (char === ' ') return '\u00A0'
+  if (char === '\t') return '\u00A0\u00A0'
   return char
 }
 
@@ -68,25 +50,31 @@ export function LyricsDisplayPanel({
 }: LyricsDisplayPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const lineRefs = useRef<Array<HTMLParagraphElement | null>>([])
+  const prevLyricsLengthRef = useRef(0)
   const [containerHeight, setContainerHeight] = useState(0)
   const [activeLineHeight, setActiveLineHeight] = useState(28)
 
+  // Clear stale refs when lyrics change
+  useLayoutEffect(() => {
+    if (lyrics.length !== prevLyricsLengthRef.current) {
+      lineRefs.current = []
+      prevLyricsLengthRef.current = lyrics.length
+    }
+  }, [lyrics.length])
+
   const measureLayout = useCallback(() => {
     const container = scrollContainerRef.current
-    if (!container) {
-      return
-    }
+    if (!container) return
 
     const sampleLine =
       lineRefs.current[activeLyricIndex] ??
       lineRefs.current.find((line): line is HTMLParagraphElement => Boolean(line)) ??
       null
 
-    const nextContainerHeight = container.clientHeight
-    const nextLineHeight = sampleLine?.clientHeight ?? 28
-
-    setContainerHeight(prev => (prev === nextContainerHeight ? prev : nextContainerHeight))
-    setActiveLineHeight(prev => (prev === nextLineHeight ? prev : nextLineHeight))
+    setContainerHeight(prev => (prev === container.clientHeight ? prev : container.clientHeight))
+    setActiveLineHeight(prev =>
+      prev === (sampleLine?.clientHeight ?? 28) ? prev : (sampleLine?.clientHeight ?? 28)
+    )
   }, [activeLyricIndex])
 
   const edgeSpacerHeight = useMemo(
@@ -96,54 +84,39 @@ export function LyricsDisplayPanel({
 
   const syncToActiveLine = useCallback(
     (behavior: ScrollBehavior = 'smooth') => {
-      if (activeLyricIndex < 0) {
-        return
-      }
+      if (activeLyricIndex < 0) return
 
       const activeLine = lineRefs.current[activeLyricIndex]
       const container = scrollContainerRef.current
-
-      if (!activeLine || !container) {
-        return
-      }
+      if (!activeLine || !container) return
 
       const nextTop =
         activeLine.offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
-      container.scrollTo({
-        top: Math.max(0, nextTop),
-        behavior,
-      })
+      container.scrollTo({ top: Math.max(0, nextTop), behavior })
     },
     [activeLyricIndex]
   )
 
   useLayoutEffect(() => {
-    if (activeLyricIndex < 0) {
-      return
-    }
+    if (activeLyricIndex < 0) return
 
     measureLayout()
-
-    const frameId = window.requestAnimationFrame(() => {
+    const frameId = requestAnimationFrame(() => {
       measureLayout()
       syncToActiveLine('smooth')
     })
 
-    return () => window.cancelAnimationFrame(frameId)
-  }, [activeLyricIndex, edgeSpacerHeight, lyrics, measureLayout, syncKey, syncToActiveLine])
+    return () => cancelAnimationFrame(frameId)
+  }, [activeLyricIndex, measureLayout, syncToActiveLine, syncKey])
 
   useEffect(() => {
     const container = scrollContainerRef.current
-    if (!container) {
-      return
-    }
+    if (!container) return
 
     let frameId: number | null = null
     const syncOnResize = () => {
-      if (frameId) {
-        window.cancelAnimationFrame(frameId)
-      }
-      frameId = window.requestAnimationFrame(() => {
+      if (frameId !== null) cancelAnimationFrame(frameId)
+      frameId = requestAnimationFrame(() => {
         measureLayout()
         syncToActiveLine('auto')
       })
@@ -151,27 +124,24 @@ export function LyricsDisplayPanel({
 
     syncOnResize()
 
-    if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(syncOnResize)
-      observer.observe(container)
-
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', syncOnResize)
       return () => {
-        if (frameId) {
-          window.cancelAnimationFrame(frameId)
-        }
-        observer.disconnect()
+        if (frameId !== null) cancelAnimationFrame(frameId)
+        window.removeEventListener('resize', syncOnResize)
       }
     }
 
-    window.addEventListener('resize', syncOnResize)
+    const observer = new ResizeObserver(syncOnResize)
+    observer.observe(container)
 
     return () => {
-      if (frameId) {
-        window.cancelAnimationFrame(frameId)
-      }
-      window.removeEventListener('resize', syncOnResize)
+      if (frameId !== null) cancelAnimationFrame(frameId)
+      observer.disconnect()
     }
   }, [measureLayout, syncToActiveLine])
+
+  const emptyText = EMPTY_TEXT_MAP[status] ?? ''
 
   return (
     <div
@@ -198,7 +168,7 @@ export function LyricsDisplayPanel({
             emptyClassName
           )}
         >
-          {getEmptyText(status)}
+          {emptyText}
         </div>
       ) : (
         <div
@@ -212,50 +182,53 @@ export function LyricsDisplayPanel({
               paddingBottom: edgeSpacerHeight,
             }}
           >
-            {lyrics.map((line, index) => (
-              <p
-                key={`${line.time}-${index}`}
-                ref={node => {
-                  lineRefs.current[index] = node
-                }}
-                aria-label={line.text}
-                className={cn(
-                  'min-h-7 w-full max-w-2xl text-center text-sm leading-7 text-foreground/55 transition-all duration-200',
-                  lineClassName,
-                  index === activeLyricIndex &&
-                    cn('text-base font-semibold text-foreground', activeLineClassName)
-                )}
-              >
-                {index === activeLyricIndex && line.glyphs?.length ? (
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex max-w-full flex-wrap justify-center [text-wrap:balance]"
-                  >
-                    {line.glyphs.map((glyph, glyphIndex) => {
-                      const progress = getLyricGlyphProgress(glyph, currentTime)
-                      const displayChar = renderGlyphChar(glyph.char)
+            {lyrics.map((line, index) => {
+              const isActive = index === activeLyricIndex
 
-                      return (
-                        <span
-                          key={`${glyph.startTime}-${glyphIndex}-${glyph.char}`}
-                          className="relative inline-block"
-                        >
-                          <span className="select-none opacity-35">{displayChar}</span>
+              return (
+                <p
+                  key={`${line.time}-${index}`}
+                  ref={node => {
+                    lineRefs.current[index] = node
+                  }}
+                  aria-label={line.text}
+                  className={cn(
+                    'min-h-7 w-full max-w-2xl text-center text-sm leading-7 text-foreground/55 transition-all duration-200',
+                    lineClassName,
+                    isActive && cn('text-base font-semibold text-foreground', activeLineClassName)
+                  )}
+                >
+                  {isActive && line.glyphs?.length ? (
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex max-w-full flex-wrap justify-center [text-wrap:balance]"
+                    >
+                      {line.glyphs.map((glyph, glyphIndex) => {
+                        const progress = getLyricGlyphProgress(glyph, currentTime)
+                        const displayChar = renderGlyphChar(glyph.char)
+
+                        return (
                           <span
-                            className="absolute inset-y-0 left-0 overflow-hidden text-current"
-                            style={{ width: `${(progress * 100).toFixed(2)}%` }}
+                            key={`${glyph.startTime}-${glyphIndex}-${glyph.char}`}
+                            className="relative inline-block"
                           >
-                            <span className="select-none">{displayChar}</span>
+                            <span className="select-none opacity-35">{displayChar}</span>
+                            <span
+                              className="absolute inset-y-0 left-0 overflow-hidden text-current"
+                              style={{ width: `${(progress * 100).toFixed(2)}%` }}
+                            >
+                              <span className="select-none">{displayChar}</span>
+                            </span>
                           </span>
-                        </span>
-                      )
-                    })}
-                  </span>
-                ) : (
-                  line.text
-                )}
-              </p>
-            ))}
+                        )
+                      })}
+                    </span>
+                  ) : (
+                    line.text
+                  )}
+                </p>
+              )
+            })}
           </div>
         </div>
       )}
