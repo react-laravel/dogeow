@@ -53,10 +53,10 @@ export default function Dashboard() {
   )
 
   const sectionParam = searchParams.get('section')
-  const requestedSection = isDashboardSection(sectionParam) ? sectionParam : 'location'
+  const requestedSection = isDashboardSection(sectionParam) ? sectionParam : 'home'
   const activeSection = visibleNavItems.some(item => item.key === requestedSection)
     ? requestedSection
-    : 'location'
+    : 'home'
 
   const activeNavLabel = visibleNavItems.find(n => n.key === activeSection)?.label ?? '仪表盘'
 
