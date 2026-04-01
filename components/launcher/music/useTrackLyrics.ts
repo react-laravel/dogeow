@@ -6,7 +6,11 @@ import { extractTrackFilename, getActiveLyricIndex, parseLrcLyrics, type LyricLi
 
 export type LyricsState = 'idle' | 'loading' | 'ready' | 'missing' | 'error'
 
-export function useTrackLyrics(currentTrack: string, currentTime: number) {
+export function useTrackLyrics(
+  currentTrack: string,
+  currentTime: number,
+  trackHasLyrics?: boolean
+) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [status, setStatus] = useState<LyricsState>('idle')
 
@@ -16,6 +20,12 @@ export function useTrackLyrics(currentTrack: string, currentTime: number) {
     if (!filename) {
       setLyrics([])
       setStatus('idle')
+      return
+    }
+
+    if (trackHasLyrics === false) {
+      setLyrics([])
+      setStatus('missing')
       return
     }
 
@@ -61,7 +71,7 @@ export function useTrackLyrics(currentTrack: string, currentTime: number) {
     loadLyrics()
 
     return () => controller.abort()
-  }, [currentTrack])
+  }, [currentTrack, trackHasLyrics])
 
   const activeIndex = useMemo(() => getActiveLyricIndex(lyrics, currentTime), [lyrics, currentTime])
   const currentLyric = activeIndex >= 0 ? (lyrics[activeIndex]?.text ?? '') : ''

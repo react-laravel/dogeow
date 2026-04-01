@@ -5,6 +5,7 @@ export interface MusicTrack {
   path: string
   name: string
   duration: number
+  hasLyrics?: boolean
 }
 
 // 播放模式类型

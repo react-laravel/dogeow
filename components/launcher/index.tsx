@@ -142,6 +142,10 @@ export function AppLauncher({
     }
   }, [playMode, resetCurrentTime, audioRef, switchTrack])
   const switchToPrevTrack = useCallback(() => switchTrack('prev'), [switchTrack])
+  const currentTrackInfo = useMemo(
+    () => availableTracks.find(track => track.path === currentTrack),
+    [availableTracks, currentTrack]
+  )
   const handleFullscreenTrackPlay = useCallback(
     (trackPath: string) => {
       markUserInteracted()
@@ -175,7 +179,8 @@ export function AppLauncher({
     lyrics,
     activeLyricIndex,
     status: lyricsStatus,
-  } = useTrackLyrics(currentTrack || '', currentTime)
+    hasLyrics,
+  } = useTrackLyrics(currentTrack || '', currentTime, currentTrackInfo?.hasLyrics)
   // 媒体键盘事件处理
   useMediaKeys({ togglePlay, switchToPrevTrack, switchToNextTrack })
 
@@ -273,7 +278,7 @@ export function AppLauncher({
           handleProgressChange,
           getCurrentTrackName,
           currentLyric,
-          hasLyrics: lyrics.length > 0,
+          hasLyrics,
           lyrics,
           activeLyricIndex,
           lyricsStatus,
@@ -305,6 +310,7 @@ export function AppLauncher({
       isMuted,
       availableTracks,
       currentTrack,
+      currentTrackInfo,
       playMode,
       readyToPlay,
       toggleMute,
@@ -314,6 +320,7 @@ export function AppLauncher({
       handleProgressChange,
       getCurrentTrackName,
       currentLyric,
+      hasLyrics,
       lyrics,
       activeLyricIndex,
       lyricsStatus,

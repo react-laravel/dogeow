@@ -33,6 +33,10 @@ function getEmptyText(status: LyricsState) {
     return '选择歌曲后显示歌词'
   }
 
+  if (status === 'missing') {
+    return '该歌曲暂无歌词'
+  }
+
   return ''
 }
 
