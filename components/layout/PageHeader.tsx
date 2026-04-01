@@ -9,6 +9,7 @@ interface PageHeaderProps {
   actions?: React.ReactNode
   className?: string
   titleClassName?: string
+  singleLine?: boolean
   showBackButton?: boolean
   onBackClick?: () => void
   backButtonLabel?: string
@@ -23,6 +24,7 @@ export function PageHeader({
   actions,
   className,
   titleClassName,
+  singleLine = false,
   showBackButton = false,
   onBackClick,
   backButtonLabel = '返回',
@@ -30,11 +32,13 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
+        singleLine
+          ? 'mb-6 flex items-center justify-between gap-3'
+          : 'mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
         className
       )}
     >
-      <div className="min-w-0 space-y-1">
+      <div className={cn('min-w-0', singleLine ? 'flex items-center gap-3' : 'space-y-1')}>
         <div className="flex min-w-0 items-center gap-3">
           {showBackButton && (
             <Button
@@ -50,12 +54,18 @@ export function PageHeader({
           <PageTitle className={cn('text-xl sm:text-2xl', titleClassName)}>{title}</PageTitle>
         </div>
         {description ? (
-          <p className={cn('text-muted-foreground text-sm', showBackButton ? 'pl-12' : undefined)}>
+          <p
+            className={cn(
+              'text-muted-foreground text-sm',
+              singleLine ? 'truncate' : undefined,
+              showBackButton && !singleLine ? 'pl-12' : undefined
+            )}
+          >
             {description}
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div> : null}
     </header>
   )
 }
