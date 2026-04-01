@@ -117,10 +117,6 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     messagesEndRef,
   } = activeChat as typeof knowledgeChat
 
-  // 知识库模式的 provider
-  const knowledgeProvider = chatMode === 'knowledge' ? knowledgeChat.provider : undefined
-  const setKnowledgeProvider = chatMode === 'knowledge' ? knowledgeChat.setProvider : undefined
-
   const {
     provider,
     setProvider,
@@ -236,19 +232,6 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
             onChatModeChange={value => setChatMode(value as 'ai' | 'knowledge')}
           />
         </div>
-        {/* 知识库模式下的 AI Provider 选择 */}
-        {chatMode === 'knowledge' && knowledgeProvider !== undefined && (
-          <Button
-            variant={knowledgeProvider === 'minimax' ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() =>
-              knowledgeChat.setProvider(knowledgeProvider === 'ollama' ? 'minimax' : 'ollama')
-            }
-          >
-            {knowledgeProvider === 'ollama' ? '🤖 Ollama' : '☁️ MiniMax'}
-          </Button>
-        )}
         <Button
           variant="ghost"
           size="icon"
