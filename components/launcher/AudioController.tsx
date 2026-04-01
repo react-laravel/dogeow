@@ -54,19 +54,25 @@ export function AudioController({
   const buildAudioUrl = useCallback(
     (track: string) => {
       // 从路径中提取文件名
-      // 获取文件名部分
       return buildAudioUrlHelper(track, apiUrl)
     },
     [apiUrl]
   )
 
+  /**
+   * 检查是否支持 Web Audio API（用于可视化），并处理相关初始化逻辑
+     - 现代浏览器（包括移动端）都支持 Web Audio API，已移除对移动设备的禁用逻辑
+      - 使用 captureStream + MediaStreamSource 代替 createMediaElementSource，解决锁屏/后台播放问题
+      - 音频输出由 audio 元素原生处理，Web Audio 仅用于频谱分析可视化
+   * 该函数会在用户第一次尝试播放时调用，确保符合浏览器自动播放策略
+   * 返回值缓存结果，避免重复检测
+   * @returns 是否支持 Web Audio API
+   */
   const shouldUseWebAudio = useCallback(() => {
     if (shouldUseWebAudioRef.current !== null) {
       return shouldUseWebAudioRef.current
     }
 
-    // 现代浏览器（包括移动端）都支持 Web Audio API
-    // 不再禁用移动设备的可视化功能
     try {
       const AudioContextClass =
         window.AudioContext ||

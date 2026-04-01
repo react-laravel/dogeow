@@ -95,3 +95,14 @@ export function getOSInfo(userAgent?: string): OSInfo {
 
   return { label: '其他设备', Icon: Monitor }
 }
+
+/**
+ * 检测是否为移动设备
+ */
+export function isMobileDevice(): boolean {
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0
+  )
+}

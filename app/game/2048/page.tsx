@@ -8,6 +8,7 @@ import { GameRulesDialog } from '@/components/ui/game-rules-dialog'
 import Link from 'next/link'
 import { GameBoard } from './components/GameBoard'
 import { DirectionControls } from './components/DirectionControls'
+import { isMobileDevice } from '@/lib/utils/userAgent'
 import {
   type Board,
   type Direction,
@@ -41,11 +42,6 @@ const getNextDirection = (dir: Direction, clockwise: boolean): Direction => {
 }
 
 const getRandomDirection = (): Direction => DIRECTIONS[Math.floor(Math.random() * 4)]
-
-const isMobileDevice = (): boolean => {
-  if (typeof window === 'undefined') return false
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-}
 
 const getTileColor = (value: number): string => {
   const colorMap: Record<number, string> = {
