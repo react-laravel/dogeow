@@ -125,11 +125,10 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
             await ctx.resume()
           }
 
-          if (gainNodeRef.current) {
-            gainNodeRef.current.gain.value = isMuted ? 0 : volume
-          }
-
+          // 音量由 audio 元素直接控制
           if (audioRef.current) {
+            audioRef.current.volume = isMuted ? 0 : volume
+            audioRef.current.muted = isMuted
             await audioRef.current.play()
           }
         } catch (err) {
@@ -149,13 +148,11 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
             console.warn('AudioContext resume failed:', err)
           }
         }
-
-        if (gainNodeRef.current) {
-          gainNodeRef.current.gain.value = isMuted ? 0 : volume
-        }
       }
 
       if (audioRef.current) {
+        audioRef.current.volume = isMuted ? 0 : volume
+        audioRef.current.muted = isMuted
         audioRef.current.play().catch(handlePlayError)
       }
     }
@@ -177,7 +174,6 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     volume,
     initAudioContext,
     setAudioError,
-    gainNodeRef,
     audioContextRef,
     audioRef,
   ])
@@ -285,24 +281,15 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     [setCurrentTime, audioRef]
   )
 
-  // Sync volume
+  // Sync volume - 统一用 audio 元素控制音量
   useEffect(() => {
     const targetVolume = isMuted ? 0 : volume
 
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = targetVolume
-    }
-
     if (audioRef.current) {
-      if (gainNodeRef.current) {
-        audioRef.current.volume = volume
-        audioRef.current.muted = false
-      } else {
-        audioRef.current.volume = targetVolume
-        audioRef.current.muted = isMuted
-      }
+      audioRef.current.volume = targetVolume
+      audioRef.current.muted = isMuted
     }
-  }, [volume, isMuted, gainNodeRef, audioRef])
+  }, [volume, isMuted, audioRef])
 
   // Listen for audio ended
   useEffect(() => {
@@ -324,15 +311,20 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => {
-      const isDocumentHidden = typeof document !== 'undefined' && document.hidden
-      if (
-        shouldUpdatePlayingStateOnPause({
-          isEnded: audio.ended,
-          isDocumentHidden,
-        })
-      ) {
-        setIsPlaying(false)
-      }
+      // 延迟检查 document.hidden，避免与 visibilitychange 的竞态条件
+      // 切换 app / 锁屏时，pause 事件可能在 visibilitychange 之前触发，
+      // 此时 document.hidden 还是 false，会错误地将 isPlaying 设为 false
+      setTimeout(() => {
+        const isDocumentHidden = typeof document !== 'undefined' && document.hidden
+        if (
+          shouldUpdatePlayingStateOnPause({
+            isEnded: audio.ended,
+            isDocumentHidden,
+          })
+        ) {
+          setIsPlaying(false)
+        }
+      }, 100)
     }
 
     audio.addEventListener('play', handlePlay)
@@ -385,16 +377,9 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
     if (!audioRef.current) return
 
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = nextMuted ? 0 : volume
-      audioRef.current.volume = volume
-      audioRef.current.muted = false
-      return
-    }
-
     audioRef.current.volume = nextMuted ? 0 : volume
     audioRef.current.muted = nextMuted
-  }, [isMuted, volume, setIsMuted, audioRef, gainNodeRef])
+  }, [isMuted, volume, setIsMuted, audioRef])
 
   // Reset current time
   const resetCurrentTime = useCallback(() => {

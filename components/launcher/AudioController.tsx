@@ -44,7 +44,7 @@ export function AudioController({
   const shouldUseWebAudioRef = useRef<boolean | null>(null)
   const wasPlayingBeforeHiddenRef = useRef(false)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
   const { currentTrack, availableTracks, setCurrentTrack } = useMusicStore()
@@ -96,21 +96,24 @@ export function AudioController({
       const audioContext = new AudioContextClass()
       const analyser = audioContext.createAnalyser()
       const gainNode = audioContext.createGain()
-      const source = audioContext.createMediaElementSource(audioRef.current)
+
+      // 使用 captureStream + MediaStreamSource 代替 createMediaElementSource
+      // 这样音频元素可以独立播放（支持后台/锁屏播放），
+      // 而 MediaStreamSource 仅用于频谱分析可视化
+      const stream = (
+        audioRef.current as HTMLMediaElement & { captureStream(): MediaStream }
+      ).captureStream()
+      const source = audioContext.createMediaStreamSource(stream)
 
       // 配置 AnalyserNode
       analyser.fftSize = 64 // 频率分辨率
       analyser.smoothingTimeConstant = 0.8
 
-      // 设置初始音量（使用当前的值）
-      const currentVolume = isMuted ? 0 : volume
-      gainNode.gain.value = currentVolume
+      gainNode.gain.value = isMuted ? 0 : volume
 
-      // 连接音频节点：source -> analyser -> gain -> destination
-      // 这样静音只影响最终输出，不影响频谱分析和可视化
+      // 仅连接到 analyser 用于可视化，不连接到 destination
+      // 音频输出由 audio 元素原生处理
       source.connect(analyser)
-      analyser.connect(gainNode)
-      gainNode.connect(audioContext.destination)
 
       audioContextRef.current = audioContext
       analyserRef.current = analyser
@@ -120,7 +123,7 @@ export function AudioController({
 
       console.log('AudioContext 初始化成功', {
         state: audioContext.state,
-        volume: currentVolume,
+        volume: isMuted ? 0 : volume,
         isMuted,
       })
 
@@ -248,13 +251,10 @@ export function AudioController({
             await ctx.resume()
           }
 
-          // 设置 GainNode 音量
-          if (gainNodeRef.current) {
-            gainNodeRef.current.gain.value = isMuted ? 0 : volume
-          }
-
-          // 播放音频
+          // 音量由 audio 元素直接控制
           if (audioRef.current) {
+            audioRef.current.volume = isMuted ? 0 : volume
+            audioRef.current.muted = isMuted
             await audioRef.current.play()
           }
         } catch (err) {
@@ -275,11 +275,6 @@ export function AudioController({
           } catch (err) {
             console.warn('AudioContext resume 失败:', err)
           }
-        }
-
-        // 确保 GainNode 音量正确
-        if (gainNodeRef.current) {
-          gainNodeRef.current.gain.value = isMuted ? 0 : volume
         }
       }
 
@@ -451,24 +446,13 @@ export function AudioController({
     [setCurrentTime]
   )
 
-  // 同步音量 - 修复手机端静音问题
+  // 同步音量 - 统一用 audio 元素控制
   useEffect(() => {
     const targetVolume = isMuted ? 0 : volume
 
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = targetVolume
-    }
-
     if (audioRef.current) {
-      if (gainNodeRef.current) {
-        // Web Audio 已接管输出时，不再把元素本身静音，否则会让分析节点也拿到静音数据
-        audioRef.current.volume = volume
-        audioRef.current.muted = false
-      } else {
-        // 兜底：未初始化 Web Audio 时仍使用元素静音
-        audioRef.current.volume = targetVolume
-        audioRef.current.muted = isMuted
-      }
+      audioRef.current.volume = targetVolume
+      audioRef.current.muted = isMuted
     }
   }, [volume, isMuted])
 
@@ -492,15 +476,19 @@ export function AudioController({
 
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => {
-      const isDocumentHidden = typeof document !== 'undefined' && document.hidden
-      if (
-        shouldUpdatePlayingStateOnPause({
-          isEnded: audio.ended,
-          isDocumentHidden,
-        })
-      ) {
-        setIsPlaying(false)
-      }
+      // 延迟检查 document.hidden，避免与 visibilitychange 的竞态条件
+      // 切换 app / 锁屏时，pause 事件可能在 visibilitychange 之前触发
+      setTimeout(() => {
+        const isDocumentHidden = typeof document !== 'undefined' && document.hidden
+        if (
+          shouldUpdatePlayingStateOnPause({
+            isEnded: audio.ended,
+            isDocumentHidden,
+          })
+        ) {
+          setIsPlaying(false)
+        }
+      }, 100)
     }
 
     audio.addEventListener('play', handlePlay)
@@ -553,13 +541,6 @@ export function AudioController({
     setIsMuted(nextMuted)
 
     if (!audioRef.current) {
-      return
-    }
-
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = nextMuted ? 0 : volume
-      audioRef.current.volume = volume
-      audioRef.current.muted = false
       return
     }
 

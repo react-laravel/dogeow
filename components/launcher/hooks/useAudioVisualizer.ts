@@ -13,7 +13,7 @@ interface UseAudioVisualizerOptions {
 interface UseAudioVisualizerReturn {
   audioContextRef: React.MutableRefObject<AudioContext | null>
   analyserRef: React.MutableRefObject<AnalyserNode | null>
-  sourceRef: React.MutableRefObject<MediaElementAudioSourceNode | null>
+  sourceRef: React.MutableRefObject<MediaStreamAudioSourceNode | null>
   gainNodeRef: React.MutableRefObject<GainNode | null>
   analyserNode: AnalyserNode | null
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
@@ -25,7 +25,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   const audioContextRef = useRef<AudioContext | null>(null)
   const shouldUseWebAudioRef = useRef<boolean | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
 
@@ -65,17 +65,23 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
         const audioContext = new AudioContextClass()
         const analyser = audioContext.createAnalyser()
         const gainNode = audioContext.createGain()
-        const source = audioContext.createMediaElementSource(audioElement)
+
+        // 使用 captureStream + MediaStreamSource 代替 createMediaElementSource
+        // 这样音频元素可以独立播放（支持后台/锁屏播放），
+        // 而 MediaStreamSource 仅用于频谱分析可视化
+        const stream = (
+          audioElement as HTMLMediaElement & { captureStream(): MediaStream }
+        ).captureStream()
+        const source = audioContext.createMediaStreamSource(stream)
 
         analyser.fftSize = 64
         analyser.smoothingTimeConstant = 0.8
 
-        const currentVolume = isMuted ? 0 : volume
-        gainNode.gain.value = currentVolume
-
+        // 仅连接到 analyser 用于可视化，不连接到 destination
+        // 音频输出由 audio 元素原生处理
         source.connect(analyser)
-        analyser.connect(gainNode)
-        gainNode.connect(audioContext.destination)
+
+        gainNode.gain.value = isMuted ? 0 : volume
 
         audioContextRef.current = audioContext
         analyserRef.current = analyser
