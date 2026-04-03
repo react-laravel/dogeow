@@ -1,7 +1,11 @@
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { toast } from '@/components/ui/use-toast'
+import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   validateFileSize,
   isImageFile,
   createFilePreview,
@@ -9,7 +13,9 @@ import {
   formatFileSize,
 } from '@/app/chat/utils/message-input/utils'
 import { MAX_FILE_SIZE } from '@/app/chat/utils/message-input/constants'
+import { logger } from '@/lib/logger'
 import type { UploadedFile } from '@/app/chat/types/messageInput'
+import { logger } from '@/lib/logger'
 
 export function useFileUpload() {
   const { t } = useTranslation()
@@ -71,7 +77,7 @@ export function useFileUpload() {
             })
           }
         } catch (error) {
-          console.error('Error processing file:', file.name, error)
+          logger.error('Error processing file:', file.name, error)
           errors.push(
             t('chat.file_processing_error', 'Error processing file {name}').replace(
               '{name}',

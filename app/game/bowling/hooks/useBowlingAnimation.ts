@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import { PHYSICS_CONFIG, CAMERA_CONFIG } from '../config/constants'
@@ -103,7 +104,7 @@ export function useBowlingAnimation({
 
         // 每5秒输出一次球的状态用于调试
         if (elapsedTime % 5000 < 50) {
-          console.log(
+          logger.debug(
             `🎳 球状态: 位置(${ballPos.x.toFixed(1)}, ${ballPos.y.toFixed(1)}, ${ballPos.z.toFixed(1)}) 速度(${ballVel.length().toFixed(2)}) 时间(${(elapsedTime / 1000).toFixed(1)}s)`
           )
         }
@@ -117,7 +118,7 @@ export function useBowlingAnimation({
         ) {
           isProcessingResultRef.current = true
 
-          console.log('🎳 场景稳定，等待1秒后处理结果...')
+          logger.debug('🎳 场景稳定，等待1秒后处理结果...')
           setTimeout(() => {
             onResultProcessed()
           }, 1000)

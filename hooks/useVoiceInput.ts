@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 // 浏览器语音识别 API 类型（非标准，仅部分浏览器支持）
 interface SpeechRecognitionWindow extends Window {
@@ -208,7 +209,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'InvalidStateError') {
         // 已经在运行中
-        console.warn('语音识别已在运行')
+        logger.warn('语音识别已在运行')
       } else {
         const message = '启动语音识别失败'
         setError(message)
@@ -224,7 +225,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
         recognitionRef.current.stop()
         toast.success('语音识别已停止')
       } catch (err) {
-        console.error('停止语音识别失败:', err)
+        logger.error('停止语音识别失败:', err)
       }
     }
   }, [])

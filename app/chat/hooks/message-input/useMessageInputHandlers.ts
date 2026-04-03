@@ -1,10 +1,17 @@
 import { useCallback, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 import type React from 'react'
+import { logger } from '@/lib/logger'
 import { toast } from '@/components/ui/use-toast'
+import { logger } from '@/lib/logger'
 import { apiRequest } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import { isImageFile } from '@/app/chat/utils/message-input/utils'
+import { logger } from '@/lib/logger'
 import type { ChatMessage } from '@/app/chat/types'
+import { logger } from '@/lib/logger'
 import type { MentionSuggestion } from '@/app/chat/types/messageInput'
+import { logger } from '@/lib/logger'
 
 interface UseMessageInputHandlersParams {
   roomId: number
@@ -101,7 +108,7 @@ export function useMessageInputHandlers({
             )
             onImageUploadSuccess?.()
           } catch (error) {
-            console.error('图片上传失败:', error)
+            logger.error('图片上传失败:', error)
             toast.error(t('chat.file_processing_error', 'Error processing file'))
           }
         }

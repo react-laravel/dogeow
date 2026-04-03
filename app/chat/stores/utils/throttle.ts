@@ -54,7 +54,7 @@ export const createThrottledFunction = <T extends (...args: any[]) => any>(
         }, remainingTime)
       }
 
-      console.log(`Throttled function call ${leading ? 'queued' : 'skipped'} (${fn.name})`)
+      logger.debug(`Throttled function call ${leading ? 'queued' : 'skipped'} (${fn.name})`)
       return Promise.resolve()
     }
 

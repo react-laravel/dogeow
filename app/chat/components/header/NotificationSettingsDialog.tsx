@@ -1,13 +1,23 @@
 import React, { memo, useMemo, useCallback, useState } from 'react'
+import { logger } from '@/lib/logger'
 import { Bell, Volume2, MessageSquare, AtSign } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Switch } from '@/components/ui/switch'
+import { logger } from '@/lib/logger'
 import { Label } from '@/components/ui/label'
+import { logger } from '@/lib/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import { useNotificationService } from '@/app/chat/hooks/useNotificationService'
+import { logger } from '@/lib/logger'
 
 interface NotificationSettings {
   browserNotifications: boolean
@@ -55,7 +65,7 @@ export const NotificationSettingsDialog = memo<NotificationSettingsDialogProps>(
       try {
         await onRequestBrowserNotificationPermission()
       } catch (error) {
-        console.error('请求通知权限失败:', error)
+        logger.error('请求通知权限失败:', error)
       } finally {
         setIsRequestingPermission(false)
       }

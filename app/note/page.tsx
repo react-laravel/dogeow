@@ -1,6 +1,7 @@
 'use client'
 
 import './note-styles.css'
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { apiRequest } from '@/lib/api'
 import { List, Network, Search, X } from 'lucide-react'
@@ -84,7 +85,7 @@ export default function NotePage() {
         const data = await apiRequest<Note[] | { notes: Note[] }>('/notes')
         setNotes(normalizeNotes<Note>(data))
       } catch (error) {
-        console.error('获取笔记列表失败:', error)
+        logger.error('获取笔记列表失败:', error)
         toast.error('无法加载笔记列表')
         setNotes([])
       } finally {
@@ -101,7 +102,7 @@ export default function NotePage() {
       const graphData = await getWikiGraph()
       setGraphNodeCount(graphData.nodes.length)
     } catch (error) {
-      console.error('获取图谱数据失败:', error)
+      logger.error('获取图谱数据失败:', error)
       setGraphNodeCount(0)
     }
   }, [])

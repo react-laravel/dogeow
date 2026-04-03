@@ -15,7 +15,7 @@ export const handleApiResponse = async <T>(
       return { success: false, error: result.message || '请求失败' }
     }
   } catch (error) {
-    console.error('API响应处理错误:', error)
+    logger.error('API响应处理错误:', error)
     return { success: false, error: '响应解析错误' }
   }
 }
@@ -35,7 +35,7 @@ export const apiRequest = async <T>(
 
     return await handleApiResponse<T>(response)
   } catch (error) {
-    console.error('API请求错误:', error)
+    logger.error('API请求错误:', error)
     return { success: false, error: '网络请求失败' }
   }
 }

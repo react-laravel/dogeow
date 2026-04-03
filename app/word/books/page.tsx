@@ -20,7 +20,7 @@ export default function BooksPage() {
       router.push('/word')
     } catch (error) {
       toast.error('选择单词书失败')
-      console.error('选择单词书失败:', error)
+      logger.error('选择单词书失败:', error)
     }
   }
 

@@ -1,17 +1,29 @@
 'use client'
 
 import { useState } from 'react'
+import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Input } from '@/components/ui/input'
+import { logger } from '@/lib/logger'
 import { Card, CardContent } from '@/components/ui/card'
+import { logger } from '@/lib/logger'
 import { PageContainer } from '@/components/layout'
+import { logger } from '@/lib/logger'
 import { WordDataEditor } from '../components/WordDataEditor'
+import { logger } from '@/lib/logger'
 import { searchWord, createWord, classifyWordEducationLevel } from '../hooks/useWord'
+import { logger } from '@/lib/logger'
 import { Word } from '../types'
+import { logger } from '@/lib/logger'
 import { Search, ArrowLeft, Loader2, BookOpen } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import Link from 'next/link'
+import { logger } from '@/lib/logger'
 
 export default function SearchWordPage() {
   const router = useRouter()
@@ -40,7 +52,7 @@ export default function SearchWordPage() {
         toast.info('未找到该单词，可以使用 AI 生成')
       }
     } catch (error) {
-      console.error('搜索失败:', error)
+      logger.error('搜索失败:', error)
       toast.error('搜索失败')
     } finally {
       setIsSearching(false)
@@ -88,7 +100,7 @@ export default function SearchWordPage() {
         word: result.word,
       })
     } catch (error) {
-      console.error('创建单词失败:', error)
+      logger.error('创建单词失败:', error)
       throw error
     }
   }

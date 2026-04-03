@@ -1,4 +1,5 @@
 import type Echo from 'laravel-echo'
+import { logger } from '@/lib/logger'
 import { getAuthManager } from '@/lib/websocket'
 import type { ConnectionError } from '@/lib/websocket/error-handler'
 
@@ -15,7 +16,7 @@ export const isEchoConnected = (echo: Echo<'reverb'> | null): boolean => {
       return state === 'connected' || state === 'connecting'
     }
   } catch (error) {
-    console.warn('WebSocket: Error checking connection state:', error)
+    logger.warn('WebSocket: Error checking connection state:', error)
   }
 
   return false
@@ -31,7 +32,7 @@ export const getAuthToken = async (
   let token = authManager.getToken()
 
   if (!token && authTokenRefreshCallback) {
-    console.log('WebSocket: Refreshing auth token')
+    logger.debug('WebSocket: Refreshing auth token')
     token = await authTokenRefreshCallback()
   }
 

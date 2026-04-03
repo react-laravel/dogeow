@@ -31,6 +31,7 @@ import { TextButtons } from './selectors/text-buttons'
 import { slashCommand, suggestionItems } from './slash-command'
 import { countWords, extractTextFromJSON } from '@/lib/helpers/wordCount'
 import { registerHighlightLanguages, hljs } from './highlightLanguages'
+import { logger } from '@/lib/logger'
 
 // 注册高亮语言
 registerHighlightLanguages()
@@ -118,7 +119,7 @@ const TailwindAdvancedEditor = () => {
           try {
             hljs.highlightElement(block)
           } catch (error) {
-            console.warn('Failed to highlight code block:', error)
+            logger.warn('Failed to highlight code block:', error)
           }
         }
       })
@@ -139,7 +140,7 @@ const TailwindAdvancedEditor = () => {
               editor.commands.setTextSelection({ from: docSize, to: docSize })
             }
           } catch (error) {
-            console.warn('Failed to restore editor state:', error)
+            logger.warn('Failed to restore editor state:', error)
             // 至少保持焦点
             try {
               editor.commands.focus()
@@ -162,7 +163,7 @@ const TailwindAdvancedEditor = () => {
 
     // 添加全局复制事件监听器作为备选方案
     const handleGlobalCopy = (e: ClipboardEvent) => {
-      console.log('Global copy event detected')
+      logger.debug('Global copy event detected')
 
       // 检查是否有选中的文本
       const selection = window.getSelection()
@@ -171,7 +172,7 @@ const TailwindAdvancedEditor = () => {
       }
 
       const selectedText = selection.toString()
-      console.log('Selected text:', selectedText)
+      logger.debug('Selected text:', selectedText)
 
       // 简单的格式检测和转换
       if (
@@ -179,7 +180,7 @@ const TailwindAdvancedEditor = () => {
         selectedText.includes('**') ||
         selectedText.includes('`')
       ) {
-        console.log('Text already contains markdown formatting')
+        logger.debug('Text already contains markdown formatting')
         return
       }
 
@@ -216,7 +217,7 @@ const TailwindAdvancedEditor = () => {
         }
 
         if (markdownText !== selectedText) {
-          console.log('Converting to markdown:', markdownText)
+          logger.debug('Converting to markdown:', markdownText)
           e.clipboardData?.setData('text/plain', markdownText)
           e.preventDefault()
         }
@@ -255,7 +256,7 @@ const TailwindAdvancedEditor = () => {
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),
               copy: () => {
-                console.log('Copy event triggered in Novel Editor')
+                logger.debug('Copy event triggered in Novel Editor')
                 return false // 让默认的复制行为处理，但添加我们的逻辑
               },
             },
@@ -275,11 +276,11 @@ const TailwindAdvancedEditor = () => {
             debouncedUpdates(editor)
           }}
           onCreate={({ editor }) => {
-            console.log('Editor created, adding copy listener')
+            logger.debug('Editor created, adding copy listener')
 
             // 添加全局复制事件监听器
             const handleCopy = (e: ClipboardEvent) => {
-              console.log('Global copy event detected')
+              logger.debug('Global copy event detected')
 
               const selection = editor.state.selection
               if (selection.empty) {
@@ -289,11 +290,11 @@ const TailwindAdvancedEditor = () => {
               try {
                 // 获取当前完整的markdown
                 const fullMarkdown = editor.storage.markdown.getMarkdown()
-                console.log('Full markdown:', fullMarkdown)
+                logger.debug('Full markdown:', fullMarkdown)
 
                 // 获取选中的文本
                 const selectedText = editor.state.doc.textBetween(selection.from, selection.to)
-                console.log('Selected text:', selectedText)
+                logger.debug('Selected text:', selectedText)
 
                 // 检查选中内容是否有格式
                 const fragment = selection.content()
@@ -323,14 +324,14 @@ const TailwindAdvancedEditor = () => {
 
                   if (matchingLines.length > 0) {
                     const markdownResult = matchingLines.join('\n')
-                    console.log('Setting markdown to clipboard:', markdownResult)
+                    logger.debug('Setting markdown to clipboard:', markdownResult)
 
                     e.clipboardData?.setData('text/plain', markdownResult)
                     e.preventDefault()
                   }
                 }
               } catch (error) {
-                console.error('Copy processing failed:', error)
+                logger.error('Copy processing failed:', error)
               }
             }
 

@@ -1,8 +1,11 @@
 'use client'
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react'
+import { logger } from '@/lib/logger'
 import ErrorFallback from './ErrorFallback'
+import { logger } from '@/lib/logger'
 import { handleChatApiError, type ChatApiError } from '@/lib/api/chat-error-handler'
+import { logger } from '@/lib/logger'
 
 interface ChatErrorBoundaryState {
   hasError: boolean
@@ -119,7 +122,7 @@ export function useChatErrorHandler() {
         }
       } catch (err) {
         // ChatErrorBoundary: Error in error boundary
-        console.error('ChatErrorBoundary: Error in error boundary:', err)
+        logger.error('ChatErrorBoundary: Error in error boundary:', err)
         handleError(err as Error)
       }
     },

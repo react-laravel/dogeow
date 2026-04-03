@@ -1,11 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 import { useForm } from 'react-hook-form'
+import { logger } from '@/lib/logger'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 import { Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   Dialog,
   DialogContent,
   DialogDescription,
@@ -14,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+import { logger } from '@/lib/logger'
   Form,
   FormControl,
   FormDescription,
@@ -23,13 +30,21 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { logger } from '@/lib/logger'
 import { Textarea } from '@/components/ui/textarea'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Switch } from '@/components/ui/switch'
+import { logger } from '@/lib/logger'
 import { put } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import useChatStore from '@/app/chat/chatStore'
+import { logger } from '@/lib/logger'
 import type { ChatRoom } from '../types'
+import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
+import { logger } from '@/lib/logger'
 
 const editRoomSchema = z.object({
   name: z
@@ -92,7 +107,7 @@ export function EditRoomDialog({ room, open, onOpenChange }: EditRoomDialogProps
       // Close dialog
       onOpenChange(false)
     } catch (error) {
-      console.error('Failed to update room:', error)
+      logger.error('Failed to update room:', error)
       // Error is handled by the API helper and will be displayed as a toast
     } finally {
       setIsSubmitting(false)

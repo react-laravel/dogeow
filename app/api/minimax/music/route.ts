@@ -6,6 +6,7 @@ import {
   MINIMAX_MUSIC_MODEL,
 } from '../_lib/config'
 import { requireAuth } from '../../_lib/auth-guard'
+import { logger } from '@/lib/logger'
 
 export interface MusicRequest {
   prompt: string
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, musicUrl })
   } catch (err) {
-    console.error('[MiniMax Music]', err)
+    logger.error('[MiniMax Music]', err)
     return NextResponse.json({ error: '音乐生成请求失败' }, { status: 500 })
   }
 }

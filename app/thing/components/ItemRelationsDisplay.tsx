@@ -73,7 +73,7 @@ export function ItemRelationsDisplay({ itemId, canEdit = false }: ItemRelationsD
       setRelatedItems(response.related_items ?? [])
       setRelatingItems(response.relating_items ?? [])
     } catch (error) {
-      console.error('加载关联失败:', error)
+      logger.error('加载关联失败:', error)
     } finally {
       setLoading(false)
     }
@@ -90,7 +90,7 @@ export function ItemRelationsDisplay({ itemId, canEdit = false }: ItemRelationsD
       await apiRequest(`/things/items/${itemId}/relations/${relatedItemId}`, 'DELETE')
       await loadRelations()
     } catch (error) {
-      console.error('删除关联失败:', error)
+      logger.error('删除关联失败:', error)
       alert('删除关联失败，请重试')
     } finally {
       setDeletingId(null)

@@ -7,7 +7,7 @@ interface AutoSaveStatusProps {
 
 export default function AutoSaveStatus({ autoSaving, lastSaved }: AutoSaveStatusProps) {
   return (
-    <div className="text-muted-foreground flex items-center gap-2 text-sm">
+    <div className="text-muted-foreground flex items-center gap-2 text-sm" aria-live="polite" aria-atomic="true">
       {autoSaving && (
         <>
           <div className="border-primary h-4 w-4 animate-spin rounded-full border-b-2"></div>

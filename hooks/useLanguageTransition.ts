@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
 
 interface UseLanguageTransitionReturn {
@@ -78,12 +79,12 @@ export function useLanguageTransition(): UseLanguageTransitionReturn {
           clearTransitionTimers()
           setIsTransitioning(false)
           setTransitionProgress(TRANSITION_COMPLETE)
-          console.log('Transition timeout, forcing completion')
+          logger.debug('Transition timeout, forcing completion')
         }, TRANSITION_FALLBACK_TIMEOUT_MS)
       } catch (error) {
         clearTransitionTimers()
         if (process.env.NODE_ENV !== 'production') {
-          console.error('Language switch failed:', error)
+          logger.error('Language switch failed:', error)
         }
         setIsTransitioning(false)
         setTransitionProgress(0)
@@ -133,7 +134,7 @@ export function useLanguageTransitionWithDuration(duration: number = 300) {
         await setLanguage(languageCode)
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
-          console.error('Language switch failed:', error)
+          logger.error('Language switch failed:', error)
         }
         setIsTransitioning(false)
         return

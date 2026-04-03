@@ -1,4 +1,5 @@
 import type { GameCharacter, GameItem } from '../types'
+import { logger } from '@/lib/logger'
 
 // Re-export the GameState interface from gameStore for use in helpers
 // This is a minimal interface that represents the state properties needed by the helpers
@@ -57,7 +58,7 @@ export const getSelectedCharacterIdOrAbort = (
   if (selectedId) return selectedId
 
   if (warn) {
-    console.warn(`[GameStore] ${context} - no character selected, skipping`)
+    logger.warn(`[GameStore] ${context} - no character selected, skipping`)
   }
   if (stopLoading) {
     setState(state => ({ ...state, isLoading: false }))

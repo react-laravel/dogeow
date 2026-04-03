@@ -6,6 +6,7 @@ import {
   MINIMAX_IMAGE_MODEL,
 } from '../_lib/config'
 import { requireAuth } from '../../_lib/auth-guard'
+import { logger } from '@/lib/logger'
 
 export interface ImageRequest {
   prompt: string
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, imageUrls })
   } catch (err) {
-    console.error('[MiniMax Image]', err)
+    logger.error('[MiniMax Image]', err)
     return NextResponse.json({ error: '图片生成请求失败' }, { status: 500 })
   }
 }

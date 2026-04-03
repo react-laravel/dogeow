@@ -49,7 +49,7 @@ export const useLocationCreation = ({
         setSelectedAreaId(newArea.id.toString())
         onSelect('area', newArea.id, newArea.name)
       } catch (error) {
-        console.error('创建区域失败:', error)
+        logger.error('创建区域失败:', error)
         toast.error('创建区域失败：' + (error instanceof Error ? error.message : '未知错误'))
       }
     },
@@ -83,7 +83,7 @@ export const useLocationCreation = ({
           onSelect('room', newRoom.id, `${area.name} > ${newRoom.name}`)
         }
       } catch (error) {
-        console.error('创建房间失败:', error)
+        logger.error('创建房间失败:', error)
         toast.error('创建房间失败：' + (error instanceof Error ? error.message : '未知错误'))
       }
     },
@@ -123,7 +123,7 @@ export const useLocationCreation = ({
 
         toast.success(`已创建位置 "${spotName}"`)
       } catch (error) {
-        console.error('创建位置失败:', error)
+        logger.error('创建位置失败:', error)
         toast.error('创建位置失败：' + (error instanceof Error ? error.message : '未知错误'))
       }
     },

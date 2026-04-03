@@ -2,6 +2,7 @@
  * 通知服务
  * 处理浏览器通知、音效和通知权限
  */
+import { logger } from '@/lib/logger'
 
 // Value Objects for notification parameters (resolves Long Parameter List code smell)
 export interface NewMessageNotificationParams {
@@ -68,7 +69,7 @@ class NotificationService {
         this.audioContext = new AudioContext()
         await this.preloadSounds()
       } catch (error) {
-        console.warn('Failed to initialize audio context:', error)
+        logger.warn('Failed to initialize audio context:', error)
       }
     }
 
@@ -80,7 +81,7 @@ class NotificationService {
    */
   public async requestPermission(): Promise<NotificationPermission> {
     if (!('Notification' in window)) {
-      console.warn('Browser notifications are not supported')
+      logger.warn('Browser notifications are not supported')
       return 'denied'
     }
 
@@ -96,7 +97,7 @@ class NotificationService {
       const permission = await Notification.requestPermission()
       return permission
     } catch (error) {
-      console.error('Failed to request notification permission:', error)
+      logger.error('Failed to request notification permission:', error)
       return 'denied'
     }
   }
@@ -152,7 +153,7 @@ class NotificationService {
 
       return notification
     } catch (error) {
-      console.error('Failed to show notification:', error)
+      logger.error('Failed to show notification:', error)
       return null
     }
   }
@@ -179,7 +180,7 @@ class NotificationService {
           this.soundCache.set(sound.name, audioBuffer)
         }
       } catch (error) {
-        console.warn(`Failed to preload sound ${sound.name}:`, error)
+        logger.warn(`Failed to preload sound ${sound.name}:`, error)
       }
     }
   }
@@ -218,7 +219,7 @@ class NotificationService {
 
       source.start()
     } catch (error) {
-      console.error(`Failed to play sound ${soundName}:`, error)
+      logger.error(`Failed to play sound ${soundName}:`, error)
     }
   }
 
@@ -308,7 +309,7 @@ class NotificationService {
    * 清除所有指定标签模式的通知
    */
   public clearNotifications(tagPattern?: string): void {
-    console.log(`Clearing notifications with pattern: ${tagPattern}`)
+    logger.debug(`Clearing notifications with pattern: ${tagPattern}`)
   }
 
   /**

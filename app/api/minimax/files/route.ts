@@ -5,6 +5,7 @@ import {
   MINIMAX_TOKEN_API_KEY,
 } from '../_lib/config'
 import { requireAuth } from '../../_lib/auth-guard'
+import { logger } from '@/lib/logger'
 
 export interface MiniMaxFile {
   id: string
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, files, has_more: hasMore, next_cursor: nextCursor })
   } catch (err) {
-    console.error('[MiniMax Files]', err)
+    logger.error('[MiniMax Files]', err)
     return NextResponse.json(
       { success: false, error: '文件列表请求失败', files: [], has_more: false },
       { status: 500 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { Plus, Edit2, Link as LinkIcon, X, Check, FileText, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -99,7 +100,7 @@ export default function NoteNodeActionPanel({
       setIsEditingName(false)
       onNodeUpdated()
     } catch (error) {
-      console.error('更新节点名称失败:', error)
+      logger.error('更新节点名称失败:', error)
       toast.error('更新失败')
       handleCancelEditName()
     } finally {

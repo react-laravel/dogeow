@@ -21,7 +21,7 @@ export async function readAiChatStream(
       accumulatedContent += content
       onProgress(accumulatedContent)
     } catch {
-      console.warn(warningMessage, line)
+      logger.warn(warningMessage, line)
     }
   }
 
@@ -50,7 +50,7 @@ export async function readAiChatStream(
           JSON.parse(line.slice(2))
           return accumulatedContent
         } catch {
-          console.warn('Failed to parse metadata:', line)
+          logger.warn('Failed to parse metadata:', line)
         }
       }
     }

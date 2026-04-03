@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
+import { logger } from '@/lib/logger'
 import type { ChatRoom } from '@/app/chat/types'
+import { logger } from '@/lib/logger'
 import useChatStore from '@/app/chat/chatStore'
+import { logger } from '@/lib/logger'
 
 interface UseRoomFiltersProps {
   rooms: ChatRoom[]
@@ -21,7 +24,7 @@ export const useRoomFilters = ({
 
   const filteredRooms = useMemo(() => {
     if (!Array.isArray(rooms)) {
-      console.warn('ChatRoomList: rooms is not an array:', rooms)
+      logger.warn('ChatRoomList: rooms is not an array:', rooms)
       return []
     }
 

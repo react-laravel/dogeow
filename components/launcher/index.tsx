@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef, startTransition } from 'react'
 import dynamic from 'next/dynamic'
+import { logger } from '@/lib/logger'
 import { MusicPlayer } from './MusicPlayer'
 import { SettingsPanel, CustomBackground } from './SettingsPanel'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
@@ -134,7 +135,9 @@ export function AppLauncher({
       resetCurrentTime()
       const audioElement = audioRef.current
       if (audioElement) {
-        audioElement.play().catch(console.error)
+        audioElement.play().catch(err => {
+          if (err instanceof Error) logger.error('Audio playback failed:', err.message)
+        })
       }
     } else {
       // 列表循环、不循环、随机播放：播放下一首，如果到末尾则循环到第一首

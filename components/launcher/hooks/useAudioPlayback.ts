@@ -5,6 +5,7 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import { shouldUpdatePlayingStateOnPause } from '../audio/playbackStateUtils'
 import type {
   AudioControllerOptions,
@@ -73,7 +74,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       setIsTrackChanging(true)
       setReadyToPlay(false) // 重置加载状态，显示加载指示器
     } catch (err) {
-      console.error('setupMediaSource: failed to set audio source', err)
+      logger.error('setupMediaSource: failed to set audio source', err)
       setAudioError(`Failed to set audio source: ${err}`)
       toast.error('Failed to set audio source', { description: String(err) })
     }
@@ -132,7 +133,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
             await audioRef.current.play()
           }
         } catch (err) {
-          console.error('Failed to initialize AudioContext:', err)
+          logger.error('Failed to initialize AudioContext:', err)
           if (audioRef.current) {
             audioRef.current.play().catch(handlePlayError)
           }
@@ -145,7 +146,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
           try {
             await audioContextRef.current.resume()
           } catch (err) {
-            console.warn('AudioContext resume failed:', err)
+            logger.warn('AudioContext resume failed:', err)
           }
         }
       }
@@ -359,7 +360,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
             await audioRef.current.play()
           }
         } catch (err) {
-          console.warn('Failed to resume playback:', err)
+          logger.warn('Failed to resume playback:', err)
         }
       }
     }

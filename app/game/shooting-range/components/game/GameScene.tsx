@@ -1,18 +1,29 @@
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
+import { logger } from '@/lib/logger'
 import { useThree, useFrame } from '@react-three/fiber'
+import { logger } from '@/lib/logger'
 import { PointerLockControls, Environment } from '@react-three/drei'
+import { logger } from '@/lib/logger'
 import { PointerLockControls as PointerLockControlsImpl } from 'three-stdlib'
+import { logger } from '@/lib/logger'
 import * as THREE from 'three'
+import { logger } from '@/lib/logger'
 import { Target } from './Target'
+import { logger } from '@/lib/logger'
 import { Bullet } from './Bullet'
+import { logger } from '@/lib/logger'
 import { FPSWeapon } from './FPSWeapon'
+import { logger } from '@/lib/logger'
 import { Explosion } from './Explosion'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   difficultySettings,
   generateRandomPosition,
   generateRandomDirection,
 } from '../../utils/gameUtils'
 import { playShotSound, playHitSound } from '../../utils/audioUtils'
+import { logger } from '@/lib/logger'
 
 function generateStars(count: number) {
   const stars = []
@@ -133,7 +144,7 @@ export function GameScene({
   // 处理击中目标
   const handleTargetHit = useCallback(
     (id: number) => {
-      console.log('击中目标:', id)
+      logger.debug('击中目标:', id)
 
       // 播放击中音效
       playHitSound()
@@ -444,7 +455,7 @@ export function GameScene({
             }
           } catch (error) {
             if (!pointerLockErrorReported) {
-              console.error('锁定指针失败:', error)
+              logger.error('锁定指针失败:', error)
               onError('无法锁定鼠标指针，请尝试使用备用控制模式')
               pointerLockErrorReported = true
             }
@@ -454,7 +465,7 @@ export function GameScene({
         return () => clearTimeout(timeoutId)
       } catch (error) {
         if (!pointerLockErrorReported) {
-          console.error('请求动画帧失败:', error)
+          logger.error('请求动画帧失败:', error)
           onError('无法锁定鼠标指针，请尝试使用备用控制模式')
           pointerLockErrorReported = true
         }
@@ -472,7 +483,7 @@ export function GameScene({
       setPointerLocked(isLocked)
 
       if (gameStarted && !isLocked) {
-        console.log('指针锁定已退出，更新游戏状态')
+        logger.debug('指针锁定已退出，更新游戏状态')
         setGameStarted(false)
       }
     }
@@ -510,7 +521,7 @@ export function GameScene({
           }
         }
       } catch (e) {
-        console.error('释放指针锁出错:', e)
+        logger.error('释放指针锁出错:', e)
       }
 
       document.removeEventListener('pointerlockchange', handlePointerLockChange)

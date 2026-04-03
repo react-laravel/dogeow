@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useRef, forwardRef, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { useMazeStore } from '../store'
+import { logger } from '@/lib/logger'
 
 const MazeCanvas = forwardRef<HTMLCanvasElement>((props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { maze, ball, mazeSize } = useMazeStore()
 
-  // console.log('🎨 MazeCanvas 渲染状态:', {
+  // logger.debug('🎨 MazeCanvas 渲染状态:', {
   //   gameStarted,
   //   mazeLength: maze.length,
   //   ballPosition: ball,
@@ -47,7 +49,7 @@ const MazeCanvas = forwardRef<HTMLCanvasElement>((props, ref) => {
     const offsetX = (canvasWidth - mazeRenderSize) / 2
     const offsetY = (canvasHeight - mazeRenderSize) / 2
 
-    // console.log('🎨 Canvas尺寸:', {
+    // logger.debug('🎨 Canvas尺寸:', {
     //   rect: { width: rect.width, height: rect.height },
     //   canvas: { width: canvas.width, height: canvas.height },
     //   cellSize,
@@ -65,7 +67,7 @@ const MazeCanvas = forwardRef<HTMLCanvasElement>((props, ref) => {
 
     // 如果迷宫还没生成，只绘制背景
     if (maze.length === 0) {
-      // console.log('🎨 迷宫未生成，只绘制背景')
+      // logger.debug('🎨 迷宫未生成，只绘制背景')
       return
     }
 
@@ -137,7 +139,7 @@ const MazeCanvas = forwardRef<HTMLCanvasElement>((props, ref) => {
     const ballX = ballGridX * cellSize + cellSize / 2 + offsetX
     const ballY = ballGridY * cellSize + cellSize / 2 + offsetY
 
-    // console.log('🎨 绘制小球:', {
+    // logger.debug('🎨 绘制小球:', {
     //   ballGrid: { x: ballGridX, y: ballGridY },
     //   ballCanvas: { x: ballX, y: ballY },
     //   cellSize

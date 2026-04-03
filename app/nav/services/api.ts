@@ -11,7 +11,7 @@ export async function getCategories(filterName?: string) {
     const result = await apiRequest<NavCategory[]>(url)
     return Array.isArray(result) ? result : []
   } catch (error) {
-    console.error('获取分类API错误:', error)
+    logger.error('获取分类API错误:', error)
     return []
   }
 }
@@ -36,7 +36,7 @@ export async function getAllCategories() {
     const result = await apiRequest<NavCategory[]>(`/nav/categories?show_all=1`)
     return Array.isArray(result) ? result : []
   } catch (error) {
-    console.error('获取所有分类API错误:', error)
+    logger.error('获取所有分类API错误:', error)
     return []
   }
 }

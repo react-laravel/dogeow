@@ -1,11 +1,17 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { useForm } from 'react-hook-form'
+import { logger } from '@/lib/logger'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 import { Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   Dialog,
   DialogContent,
   DialogFooter,
@@ -13,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+import { logger } from '@/lib/logger'
   Form,
   FormControl,
   FormField,
@@ -21,13 +28,21 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { logger } from '@/lib/logger'
 import { Textarea } from '@/components/ui/textarea'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Switch } from '@/components/ui/switch'
+import { logger } from '@/lib/logger'
 import useChatStore from '@/app/chat/chatStore'
+import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
+import { logger } from '@/lib/logger'
 import { calculateCharLength } from '@/lib/helpers'
+import { logger } from '@/lib/logger'
 import type { CreateRoomData } from '../types'
+import { logger } from '@/lib/logger'
 
 // 房间名称长度限制（按字符数计算：中文/emoji算2，数字/字母算1）
 const MIN_ROOM_NAME_LENGTH = 2 // 最少2个字符
@@ -90,7 +105,7 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
         form.reset()
         onOpenChange(false)
       } catch (error) {
-        console.error('Failed to create room:', error)
+        logger.error('Failed to create room:', error)
         // 错误已由 store 处理并在 UI 显示
       } finally {
         setIsSubmitting(false)

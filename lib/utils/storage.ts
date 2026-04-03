@@ -26,7 +26,7 @@ export function getAuthTokenFromStorage(): string | null {
       return legacyToken
     }
   } catch (error) {
-    console.warn('Failed to read auth token from storage:', error)
+    logger.warn('Failed to read auth token from storage:', error)
   }
 
   return null

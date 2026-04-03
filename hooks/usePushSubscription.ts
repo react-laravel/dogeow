@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { logger } from '@/lib/logger'
 import useAuthStore from '@/stores/authStore'
 import {
   base64UrlToUint8Array,
@@ -71,7 +72,7 @@ export function usePushSubscription() {
       setErrorMessage(message)
       setStatus('error')
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('Web Push 订阅失败:', err)
+        logger.warn('Web Push 订阅失败:', err)
       }
       return false
     }

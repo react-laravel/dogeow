@@ -1,6 +1,7 @@
 // 国际化工具函数
 
 import { translations, SUPPORTED_LANGUAGES, type SupportedLanguage } from './translations'
+import { logger } from '@/lib/logger'
 
 // 默认语言
 const DEFAULT_LANGUAGE: SupportedLanguage = 'zh-CN'
@@ -68,7 +69,7 @@ export function detectBrowserLanguage(): SupportedLanguage {
       return systemLanguage
     }
   } catch (error) {
-    console.warn('检测浏览器语言失败:', error)
+    logger.warn('检测浏览器语言失败:', error)
   }
 
   return DEFAULT_LANGUAGE
@@ -108,7 +109,7 @@ function detectLanguageByGeolocation(): SupportedLanguage | null {
       }
     }
   } catch (error) {
-    console.warn('地理位置推测语言失败:', error)
+    logger.warn('地理位置推测语言失败:', error)
   }
 
   return null
@@ -179,7 +180,7 @@ function detectSystemLanguage(): SupportedLanguage | null {
       return 'en'
     }
   } catch (error) {
-    console.warn('系统语言检测失败:', error)
+    logger.warn('系统语言检测失败:', error)
   }
 
   return null
@@ -207,7 +208,7 @@ export function getTranslation(
   // 校验key合法性
   if (!key || typeof key !== 'string') {
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`无效的翻译key: ${key}`)
+      logger.warn(`无效的翻译key: ${key}`)
     }
     return fallback || ''
   }
@@ -226,7 +227,7 @@ export function getTranslation(
     if (fallbackTranslations && fallbackTranslations[key]) {
       // 开发环境下提示缺失
       if (process.env.NODE_ENV === 'development') {
-        console.warn(
+        logger.warn(
           `[i18n] 语言 "${language}" 缺少 key "${key}"，使用回退 "${fallbackLang}"。建议补全翻译。`
         )
       }
@@ -237,14 +238,14 @@ export function getTranslation(
   // 使用传入的备用文本
   if (fallback) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`[i18n] 语言 "${language}" 缺少 key "${key}"，使用传入备用: "${fallback}"`)
+      logger.warn(`[i18n] 语言 "${language}" 缺少 key "${key}"，使用传入备用: "${fallback}"`)
     }
     return fallback
   }
 
   // 最后返回key本身
   if (process.env.NODE_ENV === 'development') {
-    console.warn(`[i18n] 语言 "${language}" 缺少 key "${key}"，直接返回key。`)
+    logger.warn(`[i18n] 语言 "${language}" 缺少 key "${key}"，直接返回key。`)
   }
   return key
 }
@@ -332,9 +333,9 @@ export function validateTranslations(keys: string[]) {
 
   if (!isValid) {
     console.group('[i18n] 翻译完整性校验报告')
-    console.warn(`发现 ${missingTranslations.length} 处翻译缺失:`)
+    logger.warn(`发现 ${missingTranslations.length} 处翻译缺失:`)
     missingTranslations.forEach(({ key, language }) => {
-      console.warn(`  - "${key}" 缺少 "${language}" 语言`)
+      logger.warn(`  - "${key}" 缺少 "${language}" 语言`)
     })
     console.groupEnd()
   }

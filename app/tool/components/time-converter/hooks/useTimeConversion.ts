@@ -1,8 +1,13 @@
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { format, parse } from 'date-fns'
+import { logger } from '@/lib/logger'
 import { zhCN } from 'date-fns/locale'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   ERROR_MESSAGES,
   FLEXIBLE_DATE_REGEX,
   STANDARD_DATE_FORMAT,
@@ -11,6 +16,7 @@ import {
   MILLISECOND_THRESHOLD,
 } from '../constants'
 import { cleanTimestamp, standardizeDateTime, validateYear } from '../utils/conversionUtils'
+import { logger } from '@/lib/logger'
 
 export const useTimeConversion = () => {
   const [timestamp, setTimestamp] = useState('')
@@ -48,7 +54,7 @@ export const useTimeConversion = () => {
       const result = format(date, dateFormat, { locale: zhCN })
       setDateTime(result)
     } catch (error) {
-      console.error('时间戳转换错误:', error)
+      logger.error('时间戳转换错误:', error)
       setDateTime(ERROR_MESSAGES.CONVERSION_ERROR)
     }
   }, [timestamp, dateFormat])
@@ -81,7 +87,7 @@ export const useTimeConversion = () => {
       const result = Math.floor(date.getTime() / 1000).toString()
       setOutputTimestamp(result)
     } catch (error) {
-      console.error('日期转换错误:', error)
+      logger.error('日期转换错误:', error)
       setOutputTimestamp(ERROR_MESSAGES.CONVERSION_ERROR)
     }
   }, [inputDateTime])
@@ -98,7 +104,7 @@ export const useTimeConversion = () => {
         description: `${current} → ${result}`,
       })
     } catch (error) {
-      console.error('使用当前时间戳出错:', error)
+      logger.error('使用当前时间戳出错:', error)
       toast.error('获取当前时间戳失败')
     }
   }, [dateFormat])
@@ -115,7 +121,7 @@ export const useTimeConversion = () => {
         description: `${formattedDate} → ${result}`,
       })
     } catch (error) {
-      console.error('使用当前日期时间出错:', error)
+      logger.error('使用当前日期时间出错:', error)
       toast.error('获取当前日期时间失败')
     }
   }, [])

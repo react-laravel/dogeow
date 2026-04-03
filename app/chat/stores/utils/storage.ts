@@ -31,7 +31,7 @@ export const getSafeStorage = () => {
     storage.removeItem(testKey)
     return storage
   } catch (error) {
-    console.warn('本地存储不可用，已降级到内存存储:', error)
+    logger.warn('本地存储不可用，已降级到内存存储:', error)
     return memoryStorage
   }
 }

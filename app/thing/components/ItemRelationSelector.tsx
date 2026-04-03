@@ -69,7 +69,7 @@ export function ItemRelationSelector({
       const filtered = response.results.filter(item => item.id !== currentItemId)
       setSearchResults(filtered)
     } catch (error) {
-      console.error('搜索失败:', error)
+      logger.error('搜索失败:', error)
     } finally {
       setIsSearching(false)
     }
@@ -103,7 +103,7 @@ export function ItemRelationSelector({
       onRelationAdded()
       onOpenChange(false)
     } catch (error) {
-      console.error('添加关联失败:', error)
+      logger.error('添加关联失败:', error)
       alert('添加关联失败，请重试')
     } finally {
       setIsSaving(false)

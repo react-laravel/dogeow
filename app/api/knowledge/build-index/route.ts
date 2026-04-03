@@ -8,6 +8,7 @@ import {
   type IdempotentResult,
 } from '@/lib/utils/idempotency'
 import { distributedLock, LockAcquisitionError } from '@/lib/utils/distributed-lock'
+import { logger } from '@/lib/logger'
 
 /**
  * 构建向量索引的 API 端点
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
         lockTtl: BUILD_TTL,
         idempotencyTtl: BUILD_TTL,
         onDuplicate: existingResult => {
-          console.log(`[BuildIndex] Duplicate request detected: ${requestId}`)
+          logger.debug(`[BuildIndex] Duplicate request detected: ${requestId}`)
         },
       }
     )
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.error('构建向量索引失败:', error)
+      logger.error('构建向量索引失败:', error)
       return NextResponse.json(
         {
           success: false,
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
       requestId: result.requestId,
     })
   } catch (error: unknown) {
-    console.error('构建向量索引失败:', error)
+    logger.error('构建向量索引失败:', error)
     const errorMessage = error instanceof Error ? error.message : '未知错误'
     return NextResponse.json(
       {
@@ -263,7 +264,7 @@ export async function GET(request: NextRequest) {
       version: index.version,
     })
   } catch (error: unknown) {
-    console.error('获取索引状态失败:', error)
+    logger.error('获取索引状态失败:', error)
     return NextResponse.json(
       {
         exists: false,

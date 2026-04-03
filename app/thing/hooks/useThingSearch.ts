@@ -30,7 +30,7 @@ export function useThingSearch(): UseThingSearchReturn {
         }
         window.history.replaceState({}, '', url)
       } catch (error) {
-        console.error('搜索失败:', error)
+        logger.error('搜索失败:', error)
       } finally {
         setIsSearching(false)
       }

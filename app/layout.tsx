@@ -83,6 +83,13 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body className="flex h-screen flex-col overflow-hidden antialiased">
+        {/* Skip to content link for accessibility */}
+        <a
+          href="#main-content"
+          className="absolute left-[-9999px] top-0 z-50 inline-block bg-black px-4 py-2 text-white focus:left-0 focus:top-0"
+        >
+          Skip to main content
+        </a>
         <SWRProvider>
           <ThemeProvider>
             <UIThemeProvider>
@@ -90,7 +97,9 @@ export default function RootLayout({
                 <LayoutRenderer>
                   <ErrorBoundary>
                     <Suspense>
-                      <BackgroundWrapper>{children}</BackgroundWrapper>
+                      <main id="main-content">
+                        <BackgroundWrapper>{children}</BackgroundWrapper>
+                      </main>
                     </Suspense>
                   </ErrorBoundary>
                 </LayoutRenderer>

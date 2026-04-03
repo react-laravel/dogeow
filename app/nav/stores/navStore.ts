@@ -258,7 +258,7 @@ export const useNavStore = create<NavStore>((set, get) => ({
         categories: incrementItemClicks(state.categories, itemId),
       }))
     } catch (error) {
-      console.error('记录点击失败', error)
+      logger.error('记录点击失败', error)
     }
   },
 }))

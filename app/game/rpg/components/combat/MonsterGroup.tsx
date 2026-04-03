@@ -1,10 +1,15 @@
 'use client'
 
 import { type CombatMonster, type SkillUsedEntry } from '../../types'
+import { logger } from '@/lib/logger'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { logger } from '@/lib/logger'
 import { MonsterIcon } from './MonsterIcon'
+import { logger } from '@/lib/logger'
 import { MonsterInfoDialog } from './MonsterInfoDialog'
+import { logger } from '@/lib/logger'
 import styles from '../../rpg.module.css'
+import { logger } from '@/lib/logger'
 
 type MonsterWithMeta = CombatMonster & { damage_taken?: number; was_attacked?: boolean }
 
@@ -107,7 +112,7 @@ export function MonsterGroup({
     })
 
     if (newAppearing.length > 0) {
-      console.log('[MonsterGroup] New monsters appearing:', newAppearing)
+      logger.debug('[MonsterGroup] New monsters appearing:', newAppearing)
       // 立即更新 ref，用于渲染时判断
       newAppearingRef.current = new Set(newAppearing)
       queueMicrotask(() => {

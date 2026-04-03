@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { API_URL } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import { extractTrackFilename, getActiveLyricIndex, parseLrcLyrics, type LyricLine } from './lyrics'
 
 export type LyricsState = 'idle' | 'loading' | 'ready' | 'missing' | 'error'
@@ -63,7 +64,7 @@ export function useTrackLyrics(
           return
         }
 
-        console.warn('加载歌词失败:', error)
+        logger.warn('加载歌词失败:', error)
         setStatus('error')
       }
     }

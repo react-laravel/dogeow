@@ -8,6 +8,7 @@ import chatCache from '@/lib/cache/chat-cache'
 import { get as apiGet } from '@/lib/api'
 import { handleChatApiError } from '@/lib/api/chat-error-handler'
 import { toPagination, type JsonApiPaginatedResponse } from '@/lib/utils/pagination'
+import { logger } from '@/lib/logger'
 
 interface MessageState {
   messages: Record<string, ChatMessage[]>
@@ -37,7 +38,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
 
     const messageExists = currentMessages.some(m => m.id === message.id)
     if (messageExists) {
-      console.log('消息已存在，跳过:', message.id)
+      logger.debug('消息已存在，跳过:', message.id)
       return
     }
 
@@ -57,7 +58,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     if (page === 1) {
       const cached = chatCache.getCachedMessages(roomKey)
       if (cached) {
-        console.log('使用缓存的消息')
+        logger.debug('使用缓存的消息')
         set(state => ({
           messages: {
             ...state.messages,

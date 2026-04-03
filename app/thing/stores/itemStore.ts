@@ -19,7 +19,7 @@ const SPECIAL_FIELDS = ['images', 'image_paths', 'image_ids', 'tags'] as const
 // 统一错误处理
 const handleError = (error: unknown, defaultMessage = '未知错误'): string => {
   const message = error instanceof Error ? error.message : defaultMessage
-  console.error('ItemStore 错误:', error)
+  logger.error('ItemStore 错误:', error)
   return message
 }
 
@@ -177,7 +177,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
             }
           }
         } catch (error) {
-          console.warn('读取持久化筛选条件失败:', error)
+          logger.warn('读取持久化筛选条件失败:', error)
         }
 
         // 如果持久化筛选条件为空，使用 store 中的筛选条件
@@ -301,13 +301,13 @@ export const useItemStore = create<ItemState>((set, get) => ({
       async () => {
         // Check if request already in flight - wait for it to complete
         if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-          console.log('[Idempotency] Create item request already in progress, waiting for result')
+          logger.debug('[Idempotency] Create item request already in progress, waiting for result')
           const pendingRequest = idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
           if (pendingRequest) {
             return pendingRequest
           }
           // Fall through to make a new request if pending somehow disappeared
-          console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
+          logger.warn('[Idempotency] Pending request disappeared, proceeding with new request')
         }
 
         const formData = prepareFormData(data)
@@ -360,13 +360,13 @@ export const useItemStore = create<ItemState>((set, get) => ({
       async () => {
         // Check if request already in flight - wait for it to complete
         if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-          console.log('[Idempotency] Update item request already in progress, waiting for result')
+          logger.debug('[Idempotency] Update item request already in progress, waiting for result')
           const pendingRequest = idempotencyTracker.getPendingRequest<{ item: Item }>(idempotencyKey)
           if (pendingRequest) {
             return pendingRequest
           }
           // Fall through to make a new request if pending somehow disappeared
-          console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
+          logger.warn('[Idempotency] Pending request disappeared, proceeding with new request')
         }
 
         const formData = prepareFormData(data)

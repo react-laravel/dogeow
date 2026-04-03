@@ -1,9 +1,13 @@
 // 游戏状态管理
 
 import { create } from 'zustand'
+import { logger } from '@/lib/logger'
 import { persist } from 'zustand/middleware'
+import { logger } from '@/lib/logger'
 import type { StateCreator } from 'zustand'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   GameCharacter,
   CombatStats,
   CombatStatsBreakdown,
@@ -27,10 +31,13 @@ import {
   GameLevelUpEvent,
 } from '../types'
 import { apiGet, post, put, del } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import { soundManager } from '../utils/soundManager'
+import { logger } from '@/lib/logger'
 
 // Imports from extracted helpers
 import {
+import { logger } from '@/lib/logger'
   reportCombatDebug,
   extractCombatLogId,
   mergeCombatLogsWithUpdate,
@@ -38,6 +45,7 @@ import {
   type CombatLogEntry,
 } from './combatHelpers'
 import {
+import { logger } from '@/lib/logger'
   normalizeEquipmentResponse,
   getSelectedCharacterIdOrAbort,
   setRequestError,
@@ -262,7 +270,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         experienceTable: response?.experience_table ?? state.experienceTable,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch characters error:', error)
+      logger.error('[GameStore] Fetch characters error:', error)
       set(state => ({
         ...state,
         error: (error as Error).message,
@@ -281,7 +289,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       // 获取该角色的详细信息
       await get().fetchCharacter()
     } catch (error) {
-      console.error('[GameStore] Select character error:', error)
+      logger.error('[GameStore] Select character error:', error)
       setRequestError(set, error)
     }
   },
@@ -310,7 +318,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         isLoading: false,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch character error:', error)
+      logger.error('[GameStore] Fetch character error:', error)
       setRequestError(set, error)
     }
   },
@@ -955,7 +963,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         currentCombatMonsterFromStatus: fromStatus,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch combat status error:', error)
+      logger.error('[GameStore] Fetch combat status error:', error)
     }
   },
 
@@ -975,7 +983,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         combatLogs: response.logs || [],
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch combat logs error:', error)
+      logger.error('[GameStore] Fetch combat logs error:', error)
     }
   },
 
@@ -997,7 +1005,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         combatLogDetail: response.log || null,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch combat log detail error:', error)
+      logger.error('[GameStore] Fetch combat log detail error:', error)
     }
   },
 
@@ -1142,7 +1150,7 @@ const store: StateCreator<GameState> = (set, get) => ({
             skill_ids: enabledIds,
           })
         } catch (error) {
-          console.error('[GameStore] Failed to update combat skills:', error)
+          logger.error('[GameStore] Failed to update combat skills:', error)
         }
       }
     }
@@ -1316,7 +1324,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         isLoading: false,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch shop items error:', error)
+      logger.error('[GameStore] Fetch shop items error:', error)
       setRequestError(set, error)
     }
   },
@@ -1341,7 +1349,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         isLoading: false,
       }))
     } catch (error) {
-      console.error('[GameStore] Refresh shop error:', error)
+      logger.error('[GameStore] Refresh shop error:', error)
       setRequestError(set, error)
     }
   },
@@ -1425,7 +1433,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         isLoading: false,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch compendium items error:', error)
+      logger.error('[GameStore] Fetch compendium items error:', error)
       setRequestError(set, error)
     }
   },
@@ -1447,7 +1455,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         isLoading: false,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch compendium monsters error:', error)
+      logger.error('[GameStore] Fetch compendium monsters error:', error)
       setRequestError(set, error)
     }
   },
@@ -1462,7 +1470,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         compendiumMonsterDrops: response,
       }))
     } catch (error) {
-      console.error('[GameStore] Fetch compendium monster drops error:', error)
+      logger.error('[GameStore] Fetch compendium monster drops error:', error)
       set(state => ({ ...state, error: (error as Error).message }))
     }
   },

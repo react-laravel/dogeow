@@ -51,7 +51,7 @@ export function NavCard({ item, highlight }: NavCardProps) {
         window.location.href = item.url
       }
     } catch (error) {
-      console.error('访问失败:', error)
+      logger.error('访问失败:', error)
     }
   }
 

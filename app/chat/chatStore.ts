@@ -26,6 +26,7 @@ import {
 } from './stores/utils/notificationHelpers'
 import type { NotificationSettings, RoomNotification, MentionInfo } from './stores/types'
 import { toPagination, type JsonApiPaginatedResponse } from '@/lib/utils/pagination'
+import { logger } from '@/lib/logger'
 
 export interface ChatState {
   // 核心状态
@@ -188,7 +189,7 @@ const useChatStore = create<ChatState>()(
       // 房间操作
       setCurrentRoom: room => {
         if (process.env.NODE_ENV === 'development') {
-          console.log('ChatStore: Setting current room:', room)
+          logger.debug('ChatStore: Setting current room:', room)
         }
 
         set(state => {
@@ -199,7 +200,7 @@ const useChatStore = create<ChatState>()(
             const roomExists = state.rooms.find(r => r.id === room.id)
             if (!roomExists) {
               if (process.env.NODE_ENV === 'development') {
-                console.log('ChatStore: Adding current room to room list:', room)
+                logger.debug('ChatStore: Adding current room to room list:', room)
               }
               newState.rooms = [...state.rooms, room]
             }
@@ -211,7 +212,7 @@ const useChatStore = create<ChatState>()(
           } else {
             // 如果没有当前房间，清空所有在线用户数据
             if (process.env.NODE_ENV === 'development') {
-              console.log('ChatStore: No current room, clearing all online users')
+              logger.debug('ChatStore: No current room, clearing all online users')
             }
             newState.onlineUsers = {}
           }
@@ -249,7 +250,7 @@ const useChatStore = create<ChatState>()(
 
         try {
           if (process.env.NODE_ENV === 'development') {
-            console.log('ChatStore: Loading rooms from API...')
+            logger.debug('ChatStore: Loading rooms from API...')
           }
           const authState = useAuthStore.getState()
 
@@ -263,7 +264,7 @@ const useChatStore = create<ChatState>()(
             isLoading: false,
           }))
         } catch (error) {
-          console.error('ChatStore: Failed to load rooms:', error)
+          logger.error('ChatStore: Failed to load rooms:', error)
           const chatError = handleChatApiError(error, '加载聊天室失败', {
             showToast: true,
             retryable: true,
@@ -426,7 +427,7 @@ const useChatStore = create<ChatState>()(
           const cached = chatCache.getCachedMessages(roomKey)
           if (cached) {
             if (process.env.NODE_ENV === 'development') {
-              console.log('ChatStore: Using cached messages for room:', roomKey)
+              logger.debug('ChatStore: Using cached messages for room:', roomKey)
             }
             set(state => ({
               messages: {
@@ -605,7 +606,7 @@ const useChatStore = create<ChatState>()(
             }))
           }
 
-          console.error('ChatStore: Failed to load online users:', error)
+          logger.error('ChatStore: Failed to load online users:', error)
           const chatError = handleChatApiError(error, '加载在线用户失败', {
             showToast: false,
             retryable: true,

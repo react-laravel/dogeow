@@ -1,9 +1,15 @@
 import React, { memo } from 'react'
+import { logger } from '@/lib/logger'
 import Image from 'next/image'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { File, FileText, Download } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import { PREVIEW_TYPES, type PreviewType } from '../utils/previewTypes'
+import { logger } from '@/lib/logger'
 import type { CloudFile } from '@/app/file/types'
+import { logger } from '@/lib/logger'
 
 interface PreviewContentProps {
   previewType: PreviewType | null
@@ -44,7 +50,7 @@ export const PreviewContent = memo<PreviewContentProps>(
               src={previewUrl}
               className="h-full w-full border-0"
               title={previewFile?.name}
-              onError={() => console.error('PDF iframe failed to load')}
+              onError={() => logger.error('PDF iframe failed to load')}
             />
           </div>
           <div className="text-muted-foreground mt-2 text-center text-sm">

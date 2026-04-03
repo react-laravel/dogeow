@@ -1,16 +1,27 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Textarea } from '@/components/ui/textarea'
+import { logger } from '@/lib/logger'
 import { Card, CardContent } from '@/components/ui/card'
+import { logger } from '@/lib/logger'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { logger } from '@/lib/logger'
 import { PageContainer } from '@/components/layout'
+import { logger } from '@/lib/logger'
 import { WordDataEditor } from '../components/WordDataEditor'
+import { logger } from '@/lib/logger'
 import { searchWord, createWord, classifyWordEducationLevel } from '../hooks/useWord'
+import { logger } from '@/lib/logger'
 import { ArrowLeft, FileInput, Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 const MIN_WORD_LENGTH = 2
 const CONCURRENCY = 8
@@ -122,7 +133,7 @@ export default function WordImportPage() {
       })
       setSelectedKeyword(null)
     } catch (error) {
-      console.error('创建单词失败:', error)
+      logger.error('创建单词失败:', error)
       throw error
     }
   }

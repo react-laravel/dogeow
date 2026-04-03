@@ -3,6 +3,8 @@
  * 提供控制台命令用于控制日志输出
  */
 
+import { logger } from '@/lib/logger'
+
 interface LogControlOptions {
   verbose: boolean
   showDetection: boolean
@@ -43,7 +45,7 @@ class LogControl {
           this.options.showDetection = false
           this.options.showStore = false
           this.options.showPrompt = false
-          console.log('🚫 已禁用所有语言检测日志')
+          logger.debug('🚫 已禁用所有语言检测日志')
           this.saveOptions()
         },
 
@@ -53,7 +55,7 @@ class LogControl {
           this.options.showDetection = true
           this.options.showStore = true
           this.options.showPrompt = true
-          console.log('✅ 已启用所有语言检测日志')
+          logger.debug('✅ 已启用所有语言检测日志')
           this.saveOptions()
         },
 
@@ -63,13 +65,13 @@ class LogControl {
           this.options.showDetection = true
           this.options.showStore = true
           this.options.showPrompt = false
-          console.log('🔇 语言检测日志已切换为安静模式（只显示重要日志）')
+          logger.debug('🔇 语言检测日志已切换为安静模式（只显示重要日志）')
           this.saveOptions()
         },
 
         // 显示当前设置
         status: () => {
-          console.log('📊 当前语言检测日志设置:', this.options)
+          logger.debug('📊 当前语言检测日志设置:', this.options)
         },
 
         // 重置到默认设置
@@ -80,13 +82,13 @@ class LogControl {
             showStore: true,
             showPrompt: true,
           }
-          console.log('🔄 语言检测日志已重置为默认设置')
+          logger.debug('🔄 语言检测日志已重置为默认设置')
           this.saveOptions()
         },
       }
 
       // 显示帮助信息
-      console.log(`
+      logger.debug(`
 🎯 语言检测日志控制命令：
 
 dogeowLogs.disable()    - 禁用所有语言检测日志
@@ -119,7 +121,7 @@ dogeowLogs.reset()      - 重置到默认设置
           this.options = { ...this.options, ...JSON.parse(saved) }
         }
       } catch (error) {
-        console.warn('加载日志控制设置失败:', error)
+        logger.warn('加载日志控制设置失败:', error)
       }
     }
   }

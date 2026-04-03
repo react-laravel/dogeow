@@ -1,16 +1,24 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { logger } from '@/lib/logger'
 import { toast } from '@/components/ui/use-toast'
+import { logger } from '@/lib/logger'
 import { useDebounce } from '@/hooks/useDebounce'
+import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
+import { logger } from '@/lib/logger'
 import useChatStore from '@/app/chat/chatStore'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   MAX_MESSAGE_LENGTH,
   MAX_TEXTAREA_HEIGHT,
   TYPING_TIMEOUT,
   DEBOUNCE_DELAY,
 } from '@/app/chat/utils/message-input/constants'
 import { getDraftKey } from '@/app/chat/utils/message-input/utils'
+import { logger } from '@/lib/logger'
 import type { MessageInputProps } from '@/app/chat/types/messageInput'
+import { logger } from '@/lib/logger'
 
 /**
  * Idempotency cache for sent messages
@@ -259,7 +267,7 @@ export function useMessageInput({
 
     // 防止重复发送（基于 isSending 状态）
     if (isSending) {
-      console.warn('Message sending already in progress')
+      logger.warn('Message sending already in progress')
       return
     }
 
@@ -292,7 +300,7 @@ export function useMessageInput({
 
     // Idempotency check: Prevent duplicate sends within the time window
     if (isMessageRecentlySent(messageToSend, roomKey)) {
-      console.warn('[Idempotency] Duplicate message detected, ignoring')
+      logger.warn('[Idempotency] Duplicate message detected, ignoring')
       toast.warning(t('chat.message_already_sent', 'Message already being sent'))
       setIsSending(false)
       return
@@ -325,7 +333,7 @@ export function useMessageInput({
         toast.error(result.errorMessage ?? t('chat.failed_to_send', 'Failed to send message'))
       }
     } catch (error) {
-      console.error('发送消息错误:', error)
+      logger.error('发送消息错误:', error)
 
       // 根据错误类型提供更具体的错误信息
       let errorMessage = t('chat.failed_to_send', 'Failed to send message')
@@ -432,7 +440,7 @@ export function useMessageInput({
         textareaRef.current.focus()
       }
     } catch (error) {
-      console.warn('Failed to focus textarea:', error)
+      logger.warn('Failed to focus textarea:', error)
     }
   }, [replyingTo])
 
@@ -450,7 +458,7 @@ export function useMessageInput({
           typingTimeoutRef.current = null
         }
       } catch (error) {
-        console.warn('Error during cleanup:', error)
+        logger.warn('Error during cleanup:', error)
       }
     }
   }, [])

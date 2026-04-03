@@ -14,7 +14,7 @@ export function useLocationData(isCreateMode: boolean) {
       setAreas(data)
       return data
     } catch (error) {
-      console.error('加载区域失败', error)
+      logger.error('加载区域失败', error)
       return []
     }
   }, [isCreateMode])
@@ -31,7 +31,7 @@ export function useLocationData(isCreateMode: boolean) {
         setRooms(data)
         return data
       } catch (error) {
-        console.error('加载房间失败', error)
+        logger.error('加载房间失败', error)
         return []
       }
     },
@@ -50,7 +50,7 @@ export function useLocationData(isCreateMode: boolean) {
         setSpots(data)
         return data
       } catch (error) {
-        console.error('加载位置失败', error)
+        logger.error('加载位置失败', error)
         return []
       }
     },

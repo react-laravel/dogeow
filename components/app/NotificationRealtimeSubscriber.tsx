@@ -5,6 +5,7 @@ import { useSWRConfig } from 'swr'
 import { createEchoInstance, getEchoInstance } from '@/lib/websocket'
 import { fetchCurrentUser } from '@/lib/api'
 import useAuthStore from '@/stores/authStore'
+import { logger } from '@/lib/logger'
 
 interface NotificationCreatedEvent {
   notification?: {
@@ -59,7 +60,7 @@ export function NotificationRealtimeSubscriber() {
             channel.stopListening(eventName)
           } catch (error) {
             if (process.env.NODE_ENV === 'development') {
-              console.warn('通知频道停止监听失败:', error)
+              logger.warn('通知频道停止监听失败:', error)
             }
           }
 
@@ -67,13 +68,13 @@ export function NotificationRealtimeSubscriber() {
             echo.leave(channelName)
           } catch (error) {
             if (process.env.NODE_ENV === 'development') {
-              console.warn('通知频道离开失败:', error)
+              logger.warn('通知频道离开失败:', error)
             }
           }
         }
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('通知频道订阅前同步当前用户失败:', error)
+          logger.warn('通知频道订阅前同步当前用户失败:', error)
         }
       }
     }

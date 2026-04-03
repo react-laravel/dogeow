@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 
 interface GameStats {
   bestTime: number | null
@@ -33,7 +34,7 @@ export function useGameStats(difficulty: 3 | 4 | 5): GameStatsHook {
         setStats(parsedStats)
       }
     } catch (error) {
-      console.error('Failed to load game stats:', error)
+      logger.error('Failed to load game stats:', error)
     }
   }, [storageKey])
 
@@ -50,7 +51,7 @@ export function useGameStats(difficulty: 3 | 4 | 5): GameStatsHook {
       try {
         localStorage.setItem(storageKey, JSON.stringify(newStats))
       } catch (error) {
-        console.error('Failed to save game stats:', error)
+        logger.error('Failed to save game stats:', error)
       }
 
       return newStats
@@ -69,7 +70,7 @@ export function useGameStats(difficulty: 3 | 4 | 5): GameStatsHook {
     try {
       localStorage.removeItem(storageKey)
     } catch (error) {
-      console.error('Failed to reset game stats:', error)
+      logger.error('Failed to reset game stats:', error)
     }
   }
 

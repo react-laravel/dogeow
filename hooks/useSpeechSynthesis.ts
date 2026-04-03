@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { logger } from '@/lib/logger'
 
 interface SpeechOptions {
   rate?: number
@@ -84,7 +85,7 @@ export function useSpeechSynthesis() {
 
         speechSynthesis.speak(utterance)
       } catch (error) {
-        console.error('发音失败:', error)
+        logger.error('发音失败:', error)
       }
     },
     [voices, cancel]

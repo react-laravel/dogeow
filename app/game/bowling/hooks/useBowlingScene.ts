@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import { PHYSICS_CONFIG, CAMERA_CONFIG, PIN_POSITIONS } from '../config/constants'
@@ -113,7 +114,7 @@ export function useBowlingScene(canvasRef: React.RefObject<HTMLCanvasElement | n
   const resetScene = useCallback(() => {
     resetBall()
     resetPins()
-    console.log('✅ 场景已完全重置')
+    logger.debug('✅ 场景已完全重置')
   }, [resetBall, resetPins])
 
   // 处理窗口大小变化
@@ -152,7 +153,7 @@ export function useBowlingScene(canvasRef: React.RefObject<HTMLCanvasElement | n
     // 设置投球开始时间
     sceneRef.current.throwStartTime = Date.now()
 
-    console.log('🎳 投球完成', { power, force, angle: aimAngle })
+    logger.debug('🎳 投球完成', { power, force, angle: aimAngle })
   }, [])
 
   // 计算击倒的球瓶数量

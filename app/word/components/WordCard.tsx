@@ -1,22 +1,34 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { Card, CardContent } from '@/components/ui/card'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Volume2, Bot, MoreVertical, Edit, CheckCircle } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import {
+import { logger } from '@/lib/logger'
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { Word } from '../types'
+import { logger } from '@/lib/logger'
 import { useWordStore } from '../stores/wordStore'
+import { logger } from '@/lib/logger'
 import { markWord, markWordAsSimple } from '../hooks/useWord'
+import { logger } from '@/lib/logger'
 import { WordAIDialog } from './WordAIDialog'
+import { logger } from '@/lib/logger'
 import { EditWordDialog } from './EditWordDialog'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
+import { logger } from '@/lib/logger'
 
 interface WordCardProps {
   word: Word
@@ -65,7 +77,7 @@ export function WordCard({ word, onNext }: WordCardProps) {
       // 进入下一个单词
       setTimeout(onNext, 150)
     } catch (error) {
-      console.error('标记单词失败:', error)
+      logger.error('标记单词失败:', error)
     } finally {
       setIsMarking(false)
     }
@@ -83,7 +95,7 @@ export function WordCard({ word, onNext }: WordCardProps) {
       updateDailyProgress('learned')
       onNext()
     } catch (error) {
-      console.error('设为简单词失败:', error)
+      logger.error('设为简单词失败:', error)
       toast.error('操作失败')
     } finally {
       setIsMarkingSimple(false)

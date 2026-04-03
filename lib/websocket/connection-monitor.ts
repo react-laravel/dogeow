@@ -1,4 +1,5 @@
 import Echo from 'laravel-echo'
+import { logger } from '@/lib/logger'
 import { getEchoInstance, destroyEchoInstance } from './echo'
 import WebSocketErrorHandler, { ConnectionError } from './error-handler'
 
@@ -39,12 +40,12 @@ class WebSocketConnectionMonitor {
         this.isRetrying = true
         this.reconnectAttempts = attempt
         this.updateStatus('reconnecting')
-        console.log(`WebSocket retry attempt ${attempt} in ${delay}ms`)
+        logger.debug(`WebSocket retry attempt ${attempt} in ${delay}ms`)
       },
       onMaxRetriesReached: () => {
         this.isRetrying = false
         this.updateStatus('error')
-        console.error('WebSocket max retry attempts reached')
+        logger.error('WebSocket max retry attempts reached')
       },
       retryConfig: {
         maxAttempts: this.maxReconnectAttempts,
@@ -62,12 +63,12 @@ class WebSocketConnectionMonitor {
   }
 
   public initializeWithEcho(echo: Echo<'reverb'>) {
-    console.log('🔥 ConnectionMonitor: 开始初始化，Echo实例:', !!echo)
+    logger.debug('🔥 ConnectionMonitor: 开始初始化，Echo实例:', !!echo)
     if (echo && echo.connector && echo.connector.pusher) {
-      console.log('🔥 ConnectionMonitor: Echo实例有效，开始绑定事件')
+      logger.debug('🔥 ConnectionMonitor: Echo实例有效，开始绑定事件')
       // Pusher 连接事件
       echo.connector.pusher.connection.bind('connected', () => {
-        console.log('🔥 ConnectionMonitor: 连接成功事件触发')
+        logger.debug('🔥 ConnectionMonitor: 连接成功事件触发')
         this.updateStatus('connected')
         this.lastConnected = new Date()
         this.reconnectAttempts = 0
@@ -75,16 +76,16 @@ class WebSocketConnectionMonitor {
         this.isRetrying = false
         this.errorHandler.resetRetryCount()
         this.clearReconnectTimeout()
-        console.log('🔥 ConnectionMonitor: 状态已更新为connected')
+        logger.debug('🔥 ConnectionMonitor: 状态已更新为connected')
       })
 
       echo.connector.pusher.connection.bind('connecting', () => {
-        console.log('🔥 ConnectionMonitor: 正在连接事件触发')
+        logger.debug('🔥 ConnectionMonitor: 正在连接事件触发')
         this.updateStatus('connecting')
       })
 
       echo.connector.pusher.connection.bind('disconnected', () => {
-        console.log('🔥 ConnectionMonitor: 连接断开事件触发')
+        logger.debug('🔥 ConnectionMonitor: 连接断开事件触发')
         this.updateStatus('disconnected')
         // 暂时禁用自动重连以避免循环
         // this.scheduleReconnect()
@@ -95,12 +96,15 @@ class WebSocketConnectionMonitor {
         this.updateStatus('error')
 
         if (connectionError.type === 'authentication') {
-          console.warn('ConnectionMonitor: 认证失败，销毁 Echo 实例以便下次用新 token 重建')
+          logger.warn('🔌 ConnectionMonitor: 认证失败，销毁 Echo 实例以便下次用新 token 重建')
           destroyEchoInstance()
           return
         }
         if (this.errorHandler.shouldRetry(connectionError)) {
+          logger.warn(`🔌 ConnectionMonitor: WebSocket error (${connectionError.type}), scheduling reconnect...`)
           this.scheduleReconnectWithErrorHandler()
+        } else {
+          logger.error(`🔌 ConnectionMonitor: Non-retryable error (${connectionError.type}): ${connectionError.message}`)
         }
       })
 
@@ -112,11 +116,12 @@ class WebSocketConnectionMonitor {
         this.updateStatus('error')
 
         if (connectionError.type === 'authentication') {
-          console.warn('ConnectionMonitor: 认证失败，销毁 Echo 实例以便下次用新 token 重建')
+          logger.warn('🔌 ConnectionMonitor: 认证失败，销毁 Echo 实例以便下次用新 token 重建')
           destroyEchoInstance()
           return
         }
         if (this.errorHandler.shouldRetry(connectionError)) {
+          logger.warn('🔌 ConnectionMonitor: WebSocket unavailable, scheduling reconnect...')
           this.scheduleReconnectWithErrorHandler()
         }
       })
@@ -127,12 +132,15 @@ class WebSocketConnectionMonitor {
         this.updateStatus('error')
 
         if (connectionError.type === 'authentication') {
-          console.warn('ConnectionMonitor: 认证失败，销毁 Echo 实例以便下次用新 token 重建')
+          logger.warn('🔌 ConnectionMonitor: 认证失败，销毁 Echo 实例以便下次用新 token 重建')
           destroyEchoInstance()
           return
         }
         if (this.errorHandler.shouldRetry(connectionError)) {
+          logger.warn(`🔌 ConnectionMonitor: WebSocket failed (${connectionError.type}), scheduling reconnect...`)
           this.scheduleReconnectWithErrorHandler()
+        } else {
+          logger.error(`🔌 ConnectionMonitor: Non-retryable failure: ${connectionError.message}`)
         }
       })
     }
@@ -143,27 +151,8 @@ class WebSocketConnectionMonitor {
     this.notifyListeners()
   }
 
-  private scheduleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      return
-    }
-
-    this.clearReconnectTimeout()
-
-    // 指数退避：1秒、2秒、4秒、8秒、16秒
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 16000)
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectAttempts++
-      this.updateStatus('reconnecting')
-
-      const echo = getEchoInstance()
-      if (echo) {
-        echo.connector.pusher.connect()
-      }
-    }, delay)
-  }
-
+  // Unified reconnection with exponential backoff and jitter
+  // Uses error handler's retry logic: 1s → 2s → 4s → 8s → 16s → 30s (capped) + jitter
   private scheduleReconnectWithErrorHandler() {
     this.errorHandler.scheduleRetry(() => {
       const echo = getEchoInstance()

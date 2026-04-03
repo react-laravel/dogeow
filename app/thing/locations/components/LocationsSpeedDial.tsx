@@ -123,7 +123,7 @@ export default function LocationsSpeedDial({
         setSelectedRoomId(null)
       }
     } catch (error) {
-      console.error('添加位置失败:', error)
+      logger.error('添加位置失败:', error)
     }
   }
 

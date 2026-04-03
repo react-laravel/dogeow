@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import { apiRequest } from '@/lib/api'
 import type { Area, Room, Spot } from '@/app/thing/types'
 
@@ -20,7 +21,7 @@ export function useLocationData() {
       const areasData = Array.isArray(response) ? response : (response?.areas ?? [])
       setAreas(Array.isArray(areasData) ? areasData : [])
     } catch (error) {
-      console.error('加载区域失败:', error)
+      logger.error('加载区域失败:', error)
       toast.error('加载区域失败')
       setAreas([])
     } finally {
@@ -39,7 +40,7 @@ export function useLocationData() {
       const roomsData = Array.isArray(response) ? response : (response?.rooms ?? [])
       setRooms(Array.isArray(roomsData) ? roomsData : [])
     } catch (error) {
-      console.error('加载房间失败:', error)
+      logger.error('加载房间失败:', error)
       toast.error('加载房间失败')
       setRooms([])
     }
@@ -56,7 +57,7 @@ export function useLocationData() {
       const spotsData = Array.isArray(response) ? response : (response?.spots ?? [])
       setSpots(Array.isArray(spotsData) ? spotsData : [])
     } catch (error) {
-      console.error('加载位置失败:', error)
+      logger.error('加载位置失败:', error)
       toast.error('加载位置失败')
       setSpots([])
     }

@@ -1,4 +1,4 @@
-// import { ConnectionStatus } from './connection-monitor'
+import { logger } from '@/lib/logger'
 
 export interface ConnectionError {
   type: 'connection' | 'authentication' | 'network' | 'timeout' | 'permission' | 'unknown'
@@ -171,16 +171,22 @@ class WebSocketErrorHandler {
     const backoffMultiplier = this.retryConfig.backoffMultiplier
     const maxDelay = this.retryConfig.maxDelay
 
-    // Exponential backoff
+    // Exponential backoff: baseDelay * (multiplier ^ (attempt - 1))
     let delay = baseDelay * Math.pow(backoffMultiplier, this.currentAttempt - 1)
 
-    // Apply jitter to prevent thundering herd
+    // Apply jitter to prevent thundering herd (50%-100% of calculated delay)
     if (this.retryConfig.jitter) {
-      delay = delay * (0.5 + Math.random() * 0.5)
+      const jitterFactor = 0.5 + Math.random() * 0.5
+      delay = delay * jitterFactor
     }
 
     // Cap at max delay
-    return Math.min(delay, maxDelay)
+    const finalDelay = Math.min(delay, maxDelay)
+
+    // Log retry strategy
+    logger.debug(`WebSocket retry backoff: attempt ${this.currentAttempt}, delay ${finalDelay}ms (max ${maxDelay}ms)`)
+
+    return finalDelay
   }
 
   public resetRetryCount(): void {

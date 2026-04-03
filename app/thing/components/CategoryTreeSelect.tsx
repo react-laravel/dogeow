@@ -234,7 +234,7 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
 
         await createParentCategory(normalizedInput)
       } catch (error) {
-        console.error('创建分类失败:', error)
+        logger.error('创建分类失败:', error)
         toast.error('创建分类失败：' + (error instanceof Error ? error.message : '未知错误'))
       }
     },

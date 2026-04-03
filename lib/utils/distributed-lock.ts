@@ -5,6 +5,7 @@
  */
 
 import { loadOptionalNodeModule } from './optional-node-module'
+import { logger } from '@/lib/logger'
 
 // Redis client types (will be loaded dynamically)
 interface RedisClient {
@@ -39,7 +40,7 @@ async function initRedisClient(): Promise<boolean> {
 
   const redisUrl = process.env.REDIS_URL
   if (!redisUrl) {
-    console.log('[DistributedLock] No REDIS_URL configured, using in-memory locks')
+    logger.debug('[DistributedLock] No REDIS_URL configured, using in-memory locks')
     return false
   }
 
@@ -52,7 +53,7 @@ async function initRedisClient(): Promise<boolean> {
         : redisModule.default
 
     if (!Redis) {
-      console.log('[DistributedLock] Node runtime module loader unavailable, using in-memory locks')
+      logger.debug('[DistributedLock] Node runtime module loader unavailable, using in-memory locks')
       return false
     }
 
@@ -67,10 +68,10 @@ async function initRedisClient(): Promise<boolean> {
 
     await redisClient.ping()
     redisAvailable = true
-    console.log('[DistributedLock] Redis connection established')
+    logger.debug('[DistributedLock] Redis connection established')
     return true
   } catch (error) {
-    console.warn(
+    logger.warn(
       '[DistributedLock] Redis unavailable, using in-memory locks:',
       error instanceof Error ? error.message : error
     )
@@ -200,7 +201,7 @@ class DistributedLockManager {
    */
   private log(operation: string, message: string): void {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[DistributedLock:${operation}] ${message}`)
+      logger.debug(`[DistributedLock:${operation}] ${message}`)
     }
   }
 
@@ -572,7 +573,7 @@ class DistributedLockManager {
       // Ensure lock is always released, even if function throws
       const released = await this.release(resource, token)
       if (!released) {
-        console.warn(`[DistributedLock] Lock release may have failed for: ${resource}`)
+        logger.warn(`[DistributedLock] Lock release may have failed for: ${resource}`)
       }
     }
   }

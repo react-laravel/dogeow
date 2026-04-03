@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User, AuthResponse } from '../app'
 import { ApiRequestError, apiRequest, get as apiGet, post } from '@/lib/api'
 import { redirectTo } from '@/lib/auth/redirect'
+import { logger } from '@/lib/logger'
 
 // 常量定义
 const AUTH_TOKEN_KEY = 'auth-token'
@@ -48,7 +49,7 @@ const syncWithWebSocketAuth = async (token: string | null): Promise<void> => {
       authManager.removeToken()
     }
   } catch (error) {
-    console.warn('与WebSocket认证管理器同步失败:', error)
+    logger.warn('与WebSocket认证管理器同步失败:', error)
   }
 }
 
@@ -103,7 +104,7 @@ const getSafeStorage = () => {
     storage.removeItem(testKey)
     return storage
   } catch (error) {
-    console.warn('本地存储不可用，已降级到内存存储:', error)
+    logger.warn('本地存储不可用，已降级到内存存储:', error)
     return memoryStorage
   }
 }
@@ -309,7 +310,7 @@ const useAuthStore = create<AuthState>()(
         } catch (error) {
           if (!(error instanceof ApiRequestError) || error.status !== 401 || !get().token) {
             if (process.env.NODE_ENV === 'development') {
-              console.warn('登出请求失败，继续清理本地状态:', error)
+              logger.warn('登出请求失败，继续清理本地状态:', error)
             }
           } else {
             try {
@@ -324,7 +325,7 @@ const useAuthStore = create<AuthState>()(
               )
             } catch (retryError) {
               if (process.env.NODE_ENV === 'development') {
-                console.warn('Bearer 登出重试失败，继续清理本地状态:', retryError)
+                logger.warn('Bearer 登出重试失败，继续清理本地状态:', retryError)
               }
             }
           }
@@ -360,7 +361,7 @@ const useAuthStore = create<AuthState>()(
             .restoreSession()
             .catch(error => {
               if (process.env.NODE_ENV === 'development') {
-                console.warn('恢复登录态失败:', error)
+                logger.warn('恢复登录态失败:', error)
               }
               useAuthStore.getState().setLoading(false)
             })
@@ -382,7 +383,7 @@ const initializeAuth = async (): Promise<void> => {
       await setToken(token)
     }
   } catch (error) {
-    console.warn('初始化认证状态失败:', error)
+    logger.warn('初始化认证状态失败:', error)
   } finally {
     setLoading(false)
   }

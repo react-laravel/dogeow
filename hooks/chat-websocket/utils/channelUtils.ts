@@ -1,4 +1,5 @@
 import type Echo from 'laravel-echo'
+import { logger } from '@/lib/logger'
 
 /** 私有「输入中」频道包装：监听 whisper + 发送 whisper */
 export type TypingChannelWrapper = {
@@ -29,14 +30,14 @@ export const createTypingChannel = (
         channel.stopListeningForWhisper('typing')
         echoInstance.leave(`chat.room.${roomId}.typing`)
       } catch (e) {
-        console.warn('WebSocket: Error leaving typing channel', e)
+        logger.warn('WebSocket: Error leaving typing channel', e)
       }
     },
     whisper: (payload: { id: number; name: string }) => {
       try {
         channel.whisper('typing', payload)
       } catch (e) {
-        console.warn('WebSocket: Error sending typing whisper', e)
+        logger.warn('WebSocket: Error sending typing whisper', e)
       }
     },
   }
@@ -57,7 +58,7 @@ export const createChannelWrapper = (
 } => {
   // 创建普通频道用于消息
   const channel = echoInstance.channel(`chat.room.${roomId}`)
-  console.log('WebSocket: Created channel for room', roomId, 'channel:', channel)
+  logger.debug('WebSocket: Created channel for room', roomId, 'channel:', channel)
 
   if (!channel) {
     throw new Error(`Failed to create channel for room ${roomId}`)
@@ -65,7 +66,7 @@ export const createChannelWrapper = (
 
   // 使用普通频道代替presence频道
   const presenceChannel = echoInstance.channel(`chat.room.${roomId}.users`)
-  console.log('WebSocket: ✅ 用户状态频道创建成功（使用普通频道）')
+  logger.debug('WebSocket: ✅ 用户状态频道创建成功（使用普通频道）')
 
   return {
     listen: (event: string, callback: (data: unknown) => void) => {
@@ -78,7 +79,7 @@ export const createChannelWrapper = (
           presenceChannel.listen(event, callback)
         }
       } catch (error) {
-        console.error('WebSocket: Error listening to event', event, ':', error)
+        logger.error('WebSocket: Error listening to event', event, ':', error)
       }
     },
     bind: (event: string, callback: (data?: unknown) => void) => {
@@ -87,7 +88,7 @@ export const createChannelWrapper = (
         channel.listen(event, callback)
         presenceChannel.listen(event, callback)
       } catch (error) {
-        console.error('WebSocket: Error binding to event', event, ':', error)
+        logger.error('WebSocket: Error binding to event', event, ':', error)
       }
     },
     stopListening: (event?: string, callback?: () => void) => {
@@ -96,18 +97,18 @@ export const createChannelWrapper = (
           channel.stopListening(event, callback)
           presenceChannel.stopListening(event, callback)
         } else if (event) {
-          console.log('WebSocket: Cannot stop listening without callback, event:', event)
+          logger.debug('WebSocket: Cannot stop listening without callback, event:', event)
         } else {
           // 停止所有监听
           try {
             channel.stopListening('*', () => {})
             presenceChannel.stopListening('*', () => {})
           } catch {
-            console.warn('WebSocket: Using alternative cleanup method')
+            logger.warn('WebSocket: Using alternative cleanup method')
           }
         }
       } catch (error) {
-        console.error('WebSocket: Error stopping channels:', error)
+        logger.error('WebSocket: Error stopping channels:', error)
       }
     },
     channel,
@@ -124,11 +125,11 @@ export const setupRoomEventListeners = (
   onMessage?: (data: unknown) => void
 ): void => {
   if (!channelWrapper || typeof channelWrapper.listen !== 'function') {
-    console.error('WebSocket: Channel reference is invalid - missing listen method')
+    logger.error('WebSocket: Channel reference is invalid - missing listen method')
     return
   }
 
-  console.log('WebSocket: Setting up event listeners for room', roomId)
+  logger.debug('WebSocket: Setting up event listeners for room', roomId)
 
   const safeOnMessage = (data: unknown, type: string = 'message') => {
     if (onMessage && data) onMessage({ type, ...data })
@@ -157,10 +158,10 @@ export const setupRoomEventListeners = (
   // 绑定系统事件
   if (typeof channelWrapper.bind === 'function') {
     channelWrapper.bind('pusher:subscription_succeeded', () => {
-      console.log('WebSocket: Subscription succeeded for room', roomId)
+      logger.debug('WebSocket: Subscription succeeded for room', roomId)
     })
     channelWrapper.bind('pusher:subscription_error', () => {
-      console.error('WebSocket: Subscription error for room', roomId)
+      logger.error('WebSocket: Subscription error for room', roomId)
     })
   }
 }

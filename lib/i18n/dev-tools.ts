@@ -4,6 +4,7 @@
  */
 
 import { validateTranslations, getAllTranslationKeys, hasTranslationKey } from './utils'
+import { logger } from '@/lib/logger'
 
 /**
  * 校验系统中所有翻译，并报告问题
@@ -11,21 +12,21 @@ import { validateTranslations, getAllTranslationKeys, hasTranslationKey } from '
  */
 export function validateAllTranslations() {
   if (process.env.NODE_ENV !== 'development') {
-    console.log('[i18n] 生产环境下跳过翻译校验')
+    logger.debug('[i18n] 生产环境下跳过翻译校验')
     return
   }
 
   console.group('[i18n] 全量翻译校验')
 
   const allKeys = getAllTranslationKeys()
-  console.log(`发现 ${allKeys.length} 个待校验的翻译 key`)
+  logger.debug(`发现 ${allKeys.length} 个待校验的翻译 key`)
 
   const validation = validateTranslations(allKeys)
 
   if (validation.isValid) {
-    console.log('✅ 所有翻译均已完成！')
+    logger.debug('✅ 所有翻译均已完成！')
   } else {
-    console.log(`❌ 发现 ${validation.missingTranslations.length} 处缺失翻译`)
+    logger.debug(`❌ 发现 ${validation.missingTranslations.length} 处缺失翻译`)
 
     // 按语言分组缺失的翻译
     const missingByLanguage = validation.missingTranslations.reduce(
@@ -39,7 +40,7 @@ export function validateAllTranslations() {
 
     Object.entries(missingByLanguage).forEach(([language, keys]) => {
       console.group(`在 ${language} 缺失 (${keys.length} 个 key):`)
-      keys.forEach(key => console.log(`  - ${key}`))
+      keys.forEach(key => logger.debug(`  - ${key}`))
       console.groupEnd()
     })
   }
@@ -66,8 +67,8 @@ export function checkTranslationKeys(keys: string[]) {
 
   if (missing.length > 0) {
     console.group('[i18n] 翻译 Key 检查')
-    console.warn(`有 ${missing.length} 个翻译 key 缺失:`)
-    missing.forEach(({ key }) => console.warn(`  - ${key}`))
+    logger.warn(`有 ${missing.length} 个翻译 key 缺失:`)
+    missing.forEach(({ key }) => logger.warn(`  - ${key}`))
     console.groupEnd()
   }
 
@@ -86,7 +87,7 @@ export function logTranslationStats() {
   const allKeys = getAllTranslationKeys()
 
   console.group('[i18n] 翻译统计信息')
-  console.log(`翻译 key 总数: ${allKeys.length}`)
+  logger.debug(`翻译 key 总数: ${allKeys.length}`)
 
   // 按命名空间（第一个点前缀）分组
   const namespaces = allKeys.reduce(
@@ -99,11 +100,11 @@ export function logTranslationStats() {
     {} as Record<string, number>
   )
 
-  console.log('各命名空间下的 key 数量:')
+  logger.debug('各命名空间下的 key 数量:')
   Object.entries(namespaces)
     .sort(([, a], [, b]) => b - a)
     .forEach(([namespace, count]) => {
-      console.log(`  ${namespace}: ${count} 个 key`)
+      logger.debug(`  ${namespace}: ${count} 个 key`)
     })
 
   console.groupEnd()

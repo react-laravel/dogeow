@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { apiRequest } from '@/lib/api'
 import { normalizeNote } from '../utils/api'
 
@@ -61,7 +62,7 @@ export function useNoteLoader(noteId: string | string[]) {
         setNote(normalizedNote)
         loadNoteContent(normalizedNote)
       } catch (err) {
-        console.error('获取笔记失败', err)
+        logger.error('获取笔记失败', err)
         setError('无法加载笔记，请重试')
       } finally {
         setLoading(false)

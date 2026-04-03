@@ -5,6 +5,7 @@ import { getKnowledgeConfig, type KnowledgeSearchMethod } from '@/lib/knowledge/
 import { callMiniMaxAPI } from '@/app/api/generate/_lib/clients'
 import { createMiniMaxStreamResponse } from '@/app/api/generate/_lib/streams'
 import { requireAuth } from '../../_lib/auth-guard'
+import { logger } from '@/lib/logger'
 
 type AIProvider = 'ollama' | 'minimax'
 
@@ -112,7 +113,7 @@ function createStreamResponse(ollamaResponse: Response, promptTokens: number): R
                 return
               }
             } catch (e) {
-              console.warn('JSON解析错误:', e, '行内容:', line)
+              logger.warn('JSON解析错误:', e, '行内容:', line)
             }
           }
         }
@@ -132,13 +133,13 @@ function createStreamResponse(ollamaResponse: Response, promptTokens: number): R
               controller.enqueue(encoder.encode(`d:${JSON.stringify(finalData)}\n`))
             }
           } catch (e) {
-            console.warn('处理剩余缓冲区时出错:', e)
+            logger.warn('处理剩余缓冲区时出错:', e)
           }
         }
 
         controller.close()
       } catch (e) {
-        console.error('流处理错误:', e)
+        logger.error('流处理错误:', e)
         controller.error(e)
       } finally {
         reader.releaseLock()
@@ -176,7 +177,7 @@ async function buildSystemPromptWithContext(
 
     // 根据方法选择搜索策略
     if (method === 'rag') {
-      console.log('[知识库搜索] 使用 RAG 方法')
+      logger.debug('[知识库搜索] 使用 RAG 方法')
       const ragResults = await searchWithRAG(query, 5)
       results = ragResults.map(r => ({
         doc: r.doc,
@@ -184,7 +185,7 @@ async function buildSystemPromptWithContext(
         similarity: r.similarity,
       }))
     } else {
-      console.log('[知识库搜索] 使用简单关键词匹配方法')
+      logger.debug('[知识库搜索] 使用简单关键词匹配方法')
       const simpleResults = await searchDocuments(query, 5)
       results = simpleResults.map(r => ({
         doc: r.doc,
@@ -193,7 +194,7 @@ async function buildSystemPromptWithContext(
       }))
     }
 
-    console.log(`[知识库搜索] 查询: "${query}", 找到 ${results.length} 个相关文档`)
+    logger.debug(`[知识库搜索] 查询: "${query}", 找到 ${results.length} 个相关文档`)
 
     // 检查是否是询问知识库内容的通用问题
     const isGeneralQuery = /知识库|内容|有什么|哪些|包含/.test(query.toLowerCase())
@@ -260,7 +261,7 @@ ${context}
 
 请用中文以第一人称"我"回答问题，优先使用知识库内容，但也可以使用通用知识回答常识性问题。`
   } catch (error) {
-    console.error('构建知识库上下文失败:', error)
+    logger.error('构建知识库上下文失败:', error)
     return `你是 DogeOW 网站的作者本人。DogeOW 是一个集学习、生活、工作于一体的综合性平台。由于技术错误，无法加载知识库内容。
 
 请以第一人称"我"告诉用户："抱歉，我的知识库加载失败，请稍后重试。"`
@@ -329,13 +330,13 @@ export async function POST(request: NextRequest) {
 
     // 根据 provider 选择调用不同的 AI
     if (provider === 'minimax') {
-      console.log('[知识库] 使用 MiniMax AI')
+      logger.debug('[知识库] 使用 MiniMax AI')
       const minimaxResponse = await callMiniMaxAPI(chatMessages)
       return createMiniMaxStreamResponse(minimaxResponse)
     }
 
     // 默认使用 Ollama
-    console.log('[知识库] 使用 Ollama AI')
+    logger.debug('[知识库] 使用 Ollama AI')
     const ollamaResponse = await callOllamaChatAPI(chatMessages, model)
 
     // 计算 prompt tokens
@@ -343,7 +344,7 @@ export async function POST(request: NextRequest) {
 
     return createStreamResponse(ollamaResponse, promptTokens)
   } catch (error: unknown) {
-    console.error('知识库问答API错误:', error)
+    logger.error('知识库问答API错误:', error)
     let errorMessage = 'AI服务发生未知错误'
     if (error instanceof Error) {
       if (provider === 'minimax') {

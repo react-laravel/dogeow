@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { logger } from '@/lib/logger'
 
 export interface MazeCell {
   top: boolean
@@ -61,7 +62,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
   autoMoveInterrupt: false,
 
   startGame: () => {
-    console.log('🎮 开始游戏')
+    logger.debug('🎮 开始游戏')
     const state = get()
 
     if (!state.gameStarted) {
@@ -87,7 +88,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
         }
       }, 1000)
 
-      console.log('🎮 游戏已开始，小球位置:', { x: 0, y: 0, z: 0 })
+      logger.debug('🎮 游戏已开始，小球位置:', { x: 0, y: 0, z: 0 })
     }
   },
 
@@ -108,7 +109,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
 
   generateMaze: () => {
     const { mazeSize } = get()
-    console.log('🏗️ 生成迷宫, 大小:', mazeSize)
+    logger.debug('🏗️ 生成迷宫, 大小:', mazeSize)
     const maze: MazeCell[][] = []
 
     // 初始化迷宫网格
@@ -163,18 +164,18 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
     }
 
     set({ maze })
-    console.log('✅ 迷宫生成完成')
-    console.log('🚪 起点(0,0)墙壁状态:', maze[0][0])
-    console.log('🎯 终点墙壁状态:', maze[mazeSize - 1][mazeSize - 1])
+    logger.debug('✅ 迷宫生成完成')
+    logger.debug('🚪 起点(0,0)墙壁状态:', maze[0][0])
+    logger.debug('🎯 终点墙壁状态:', maze[mazeSize - 1][mazeSize - 1])
   },
 
   moveBall: (direction: 'up' | 'down' | 'left' | 'right') => {
     const state = get()
 
-    console.log('🎯 尝试移动:', direction, '当前位置:', { x: state.ball.x, z: state.ball.z })
+    logger.debug('🎯 尝试移动:', direction, '当前位置:', { x: state.ball.x, z: state.ball.z })
 
     if (state.isMoving || state.gameCompleted) {
-      console.log(
+      logger.debug(
         '❌ 移动被阻止 - isMoving:',
         state.isMoving,
         'gameCompleted:',
@@ -184,7 +185,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
     }
 
     if (state.maze.length === 0) {
-      console.log('❌ 迷宫未生成')
+      logger.debug('❌ 迷宫未生成')
       return
     }
 
@@ -194,21 +195,21 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
     const gridX = ball.x
     const gridY = ball.z
 
-    console.log('📍 当前网格位置:', { gridX, gridY })
-    console.log('🚪 当前位置墙壁状态:', maze[gridY] ? maze[gridY][gridX] : '位置无效')
+    logger.debug('📍 当前网格位置:', { gridX, gridY })
+    logger.debug('🚪 当前位置墙壁状态:', maze[gridY] ? maze[gridY][gridX] : '位置无效')
 
     // 检查是否可以移动
     const canMove = canMoveInDirection(gridX, gridY, direction, maze, mazeSize)
-    console.log('🚶 可以移动?', canMove)
+    logger.debug('🚶 可以移动?', canMove)
 
     if (!canMove) {
-      console.log('❌ 无法向', direction, '方向移动')
+      logger.debug('❌ 无法向', direction, '方向移动')
       return
     }
 
     // 获取下一个位置（单步移动）
     const nextPos = getNextPosition(gridX, gridY, direction)
-    console.log('🎯 下一个位置:', nextPos)
+    logger.debug('🎯 下一个位置:', nextPos)
 
     set({ isMoving: true, moves: state.moves + 1 })
 
@@ -218,11 +219,11 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
       isMoving: false,
     })
 
-    console.log('✅ 移动完成，新位置:', { x: nextPos.x, z: nextPos.y })
+    logger.debug('✅ 移动完成，新位置:', { x: nextPos.x, z: nextPos.y })
 
     // 检查是否到达终点
     if (nextPos.x === mazeSize - 1 && nextPos.y === mazeSize - 1) {
-      console.log('🎉 到达终点!')
+      logger.debug('🎉 到达终点!')
       set({ gameCompleted: true })
     }
   },
@@ -235,7 +236,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
 
     // 如果当前正在自动移动，先中断
     if (state.isAutoMoving) {
-      console.log('🛑 中断当前自动移动')
+      logger.debug('🛑 中断当前自动移动')
       set({ autoMoveInterrupt: true })
       // 等待一小段时间确保中断生效
       setTimeout(() => {
@@ -246,7 +247,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
 
     const { ball, maze, mazeSize } = state
 
-    // console.log('🎯 moveToPosition 调用:', { targetX, targetY, currentBall: ball })
+    // logger.debug('🎯 moveToPosition 调用:', { targetX, targetY, currentBall: ball })
 
     // 使用网格坐标
     const gridX = ball.x
@@ -258,7 +259,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
     const endX = Math.max(0, Math.min(mazeSize - 1, targetX))
     const endY = Math.max(0, Math.min(mazeSize - 1, targetY))
 
-    // console.log('🎯 坐标处理:', {
+    // logger.debug('🎯 坐标处理:', {
     //   start: { x: startX, y: startY },
     //   end: { x: endX, y: endY }
     // })
@@ -272,7 +273,7 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
     const path = findPath(startX, startY, endX, endY, maze, mazeSize)
 
     if (path.length > 0) {
-      console.log('🚗 自动寻路成功，路径长度:', path.length)
+      logger.debug('🚗 自动寻路成功，路径长度:', path.length)
 
       set({ autoPath: path, isAutoMoving: true, autoMoveInterrupt: false })
 
@@ -280,12 +281,12 @@ export const useMazeStore = create<MazeStore>((set, get) => ({
       autoMove(ball, path, () => {
         const currentState = get()
         if (!currentState.autoMoveInterrupt) {
-          console.log('🎉 到达目标位置!')
+          logger.debug('🎉 到达目标位置!')
           set({ isAutoMoving: false })
 
           // 如果目标是终点，确保游戏完成
           if (endX === mazeSize - 1 && endY === mazeSize - 1) {
-            console.log('🏆 确认到达终点，游戏完成!')
+            logger.debug('🏆 确认到达终点，游戏完成!')
             set({ gameCompleted: true })
           }
         }
@@ -484,7 +485,7 @@ function autoMove(ball: Ball, path: { x: number; y: number }[], onComplete: () =
     // 检查是否需要中断
     const state = useMazeStore.getState()
     if (state.autoMoveInterrupt) {
-      console.log('🛑 自动移动被中断')
+      logger.debug('🛑 自动移动被中断')
       useMazeStore.setState({
         isAutoMoving: false,
         autoMoveInterrupt: false,

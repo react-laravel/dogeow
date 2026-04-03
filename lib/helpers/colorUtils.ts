@@ -3,6 +3,8 @@
  * @param color 十六进制颜色值，格式为 #RGB 或 #RRGGBB
  * @returns 如果是浅色返回 true，否则返回 false
  */
+import { logger } from '@/lib/logger'
+
 export const isLightColor = (color: string): boolean => {
   // 移除 # 前缀并验证格式
   let hex = color.replace('#', '')
@@ -17,7 +19,7 @@ export const isLightColor = (color: string): boolean => {
 
   // 验证十六进制格式
   if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
-    console.warn(`无效的颜色格式: ${color}，默认为深色`)
+    logger.warn(`无效的颜色格式: ${color}，默认为深色`)
     return false
   }
 
@@ -68,7 +70,7 @@ export function hexToHSL(hex: string): string {
 
   // 验证格式
   if (cleanHex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(cleanHex)) {
-    console.warn(`无效的颜色格式: ${hex}，返回默认 HSL 值`)
+    logger.warn(`无效的颜色格式: ${hex}，返回默认 HSL 值`)
     return 'hsl(0 0% 0%)'
   }
 

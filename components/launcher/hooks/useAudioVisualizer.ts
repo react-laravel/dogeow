@@ -4,6 +4,7 @@
  */
 
 import { useRef, useCallback, useState } from 'react'
+import { logger } from '@/lib/logger'
 
 interface UseAudioVisualizerOptions {
   volume: number
@@ -91,11 +92,11 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
 
         if (audioContext.state === 'suspended') {
           audioContext.resume().catch(err => {
-            console.warn('AudioContext resume 失败:', err)
+            logger.warn('AudioContext resume 失败:', err)
           })
         }
       } catch (error) {
-        console.warn('Web Audio API 初始化失败:', error)
+        logger.warn('Web Audio API 初始化失败:', error)
       }
     },
     [isMuted, volume, shouldUseWebAudio]

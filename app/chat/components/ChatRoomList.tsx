@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import { useFormModal } from '@/hooks/useFormModal'
-import { Skeleton } from '@/components/ui/skeleton'
 import useChatStore from '@/app/chat/chatStore'
 import { CreateRoomDialog } from './CreateRoomDialog'
 import { EditRoomDialog } from './EditRoomDialog'
@@ -13,6 +13,7 @@ import { RoomListHeader } from './room-list/components/RoomListHeader'
 import { RoomListItem } from './room-list/components/RoomListItem'
 import { RoomListEmpty } from './room-list/components/RoomListEmpty'
 import { RoomListError } from './room-list/components/RoomListError'
+import { RoomListSkeleton } from './room-list/components/RoomListSkeleton'
 import type { ChatRoom } from '../types'
 
 interface ChatRoomListProps {
@@ -56,13 +57,13 @@ export function ChatRoomList({ onRoomSelect, showHeader = true }: ChatRoomListPr
       }
 
       try {
-        console.log('ChatRoomList: Selecting room:', room)
+        logger.debug('ChatRoomList: Selecting room:', room)
 
         setCurrentRoom(room)
         await joinRoom(room.id)
         addRecentRoom(room.id)
       } catch (error) {
-        console.error('Failed to join room:', error)
+        logger.error('Failed to join room:', error)
         setCurrentRoom(null)
       } finally {
         onRoomSelect?.()
@@ -105,7 +106,7 @@ export function ChatRoomList({ onRoomSelect, showHeader = true }: ChatRoomListPr
 
   // 刷新房间列表
   const handleRefresh = useCallback(() => {
-    console.log('ChatRoomList: Manual refresh triggered')
+    logger.debug('ChatRoomList: Manual refresh triggered')
     loadRooms()
   }, [loadRooms])
 
@@ -127,12 +128,9 @@ export function ChatRoomList({ onRoomSelect, showHeader = true }: ChatRoomListPr
       {/* 房间列表 */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && rooms.length === 0 ? (
-          <div className="space-y-3 p-4">
+          <div className="space-y-1 p-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
+              <RoomListSkeleton key={i} />
             ))}
           </div>
         ) : filteredRooms.length === 0 ? (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { logger } from '@/lib/logger'
 
 export interface OllamaModelListItem {
   name: string
@@ -52,7 +53,7 @@ export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllama
     } catch (error) {
       if (!cancelled) {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('Failed to load Ollama models:', error)
+          logger.warn('Failed to load Ollama models:', error)
         }
         setOllamaModels([])
       }

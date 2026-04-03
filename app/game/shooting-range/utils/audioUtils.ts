@@ -27,9 +27,9 @@ export const playSound = (
       }, maxDuration)
     }
 
-    audio.play().catch(err => console.log('音频播放失败', err))
+    audio.play().catch(err => logger.debug('音频播放失败', err))
   } catch (e) {
-    console.log('音频初始化失败', e)
+    logger.debug('音频初始化失败', e)
   }
 }
 

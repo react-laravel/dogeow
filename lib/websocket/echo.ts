@@ -2,6 +2,7 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { getAuthTokenFromStorage } from '@/lib/utils/storage'
 import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
+import { logger } from '@/lib/logger'
 import { API_URL } from '@/lib/api/url'
 
 // 让 Pusher 在全局可用，供 Laravel Echo 使用
@@ -98,7 +99,7 @@ function getAuthEndpoint(): string {
 
 export function createEchoInstance(): Echo<'reverb'> | null {
   if (typeof window === 'undefined') {
-    console.warn('Echo: Window 不可用，跳过 Echo 创建')
+    logger.warn('Echo: Window 不可用，跳过 Echo 创建')
     return null
   }
 
@@ -106,7 +107,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
 
   // 防止短时间内重复创建（React strict mode 保护）
   if (isCreating) {
-    console.log('Echo: 跳过创建 - 正在创建中')
+    logger.debug('Echo: 跳过创建 - 正在创建中')
     return echoInstance!
   }
 
@@ -118,14 +119,14 @@ export function createEchoInstance(): Echo<'reverb'> | null {
     (currentToken !== lastAuthToken || (currentToken === '' && lastAuthToken !== null))
 
   if (tokenChanged) {
-    console.log('Echo: token 已变化，销毁旧实例并重建')
+    logger.debug('Echo: token 已变化，销毁旧实例并重建')
     destroyEchoInstance()
     lastAuthToken = null
   }
 
   // 检查现有实例是否可用
   if (echoInstance && now - lastCreatedAt < 10000) {
-    console.log('Echo: 跳过创建 - 已有可用实例', {
+    logger.debug('Echo: 跳过创建 - 已有可用实例', {
       hasExistingInstance: !!echoInstance,
       timeSinceLastCreation: now - lastCreatedAt,
       instanceType: typeof echoInstance,
@@ -136,14 +137,14 @@ export function createEchoInstance(): Echo<'reverb'> | null {
       if (echoInstance.connector && 'pusher' in echoInstance.connector) {
         const connector = echoInstance.connector as { pusher?: { connection?: { state?: string } } }
         const state = connector.pusher?.connection?.state
-        console.log('Echo: 现有实例连接状态:', state)
+        logger.debug('Echo: 现有实例连接状态:', state)
         if (state === 'connected' || state === 'connecting') {
-          console.log('Echo: 复用现有连接实例')
+          logger.debug('Echo: 复用现有连接实例')
           return echoInstance
         }
       }
     } catch (error) {
-      console.warn('Echo: 检查现有实例状态失败:', error)
+      logger.warn('Echo: 检查现有实例状态失败:', error)
     }
 
     return echoInstance
@@ -151,7 +152,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
 
   isCreating = true
 
-  console.log('Echo: 正在创建新的 Echo 实例')
+  logger.debug('Echo: 正在创建新的 Echo 实例')
 
   // 刷新/新开页后清除 Pusher 的 transport 缓存，避免沿用上一会话的缓存导致连接失败
   try {
@@ -194,7 +195,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
           .then(async response => {
             if (!response.ok) {
               const errorText = await response.text()
-              console.error('Echo: 频道认证失败:', {
+              logger.error('Echo: 频道认证失败:', {
                 status: response.status,
                 channel: channel.name,
                 error: errorText,
@@ -204,14 +205,14 @@ export function createEchoInstance(): Echo<'reverb'> | null {
             }
 
             const data = await response.json()
-            console.log('Echo: 频道认证成功:', {
+            logger.debug('Echo: 频道认证成功:', {
               channel: channel.name,
               response: data,
             })
             callback(false, data)
           })
           .catch(error => {
-            console.error('Echo: 频道认证请求异常:', {
+            logger.error('Echo: 频道认证请求异常:', {
               channel: channel.name,
               error,
             })
@@ -221,7 +222,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
     }),
   }
 
-  console.log('Echo: 配置参数:', {
+  logger.debug('Echo: 配置参数:', {
     broadcaster: config.broadcaster,
     key: config.key,
     wsHost: config.wsHost,
@@ -229,7 +230,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
     authEndpoint: config.authEndpoint,
   })
 
-  console.log('Echo: 认证token状态:', {
+  logger.debug('Echo: 认证token状态:', {
     hasToken: !!authToken,
     tokenLength: authToken.length,
     tokenPrefix: authToken.substring(0, 10) + '...',
@@ -238,7 +239,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
   // 认证端点诊断完成，无需继续测试
 
   // 添加环境变量调试信息
-  console.log('Echo: 环境变量:', {
+  logger.debug('Echo: 环境变量:', {
     NEXT_PUBLIC_REVERB_APP_KEY: process.env.NEXT_PUBLIC_REVERB_APP_KEY,
     NEXT_PUBLIC_REVERB_HOST: process.env.NEXT_PUBLIC_REVERB_HOST,
     NEXT_PUBLIC_REVERB_PORT: process.env.NEXT_PUBLIC_REVERB_PORT,
@@ -248,10 +249,10 @@ export function createEchoInstance(): Echo<'reverb'> | null {
 
   // 检查是否需要销毁已有实例
   if (echoInstance) {
-    console.log('Echo: 发现已有实例，检查是否需要重新创建')
+    logger.debug('Echo: 发现已有实例，检查是否需要重新创建')
     // 若当前 token 与已有实例创建时使用的 token 不同，必须重建
     if (authToken !== previousToken) {
-      console.log('Echo: 认证已变化，销毁已有实例并重新创建')
+      logger.debug('Echo: 认证已变化，销毁已有实例并重新创建')
       destroyEchoInstance()
     } else {
       try {
@@ -260,15 +261,15 @@ export function createEchoInstance(): Echo<'reverb'> | null {
             pusher?: { connection?: { state?: string } }
           }
           if (connector.pusher?.connection?.state === 'connected') {
-            console.log('Echo: 已有实例连接正常，复用现有实例')
+            logger.debug('Echo: 已有实例连接正常，复用现有实例')
             isCreating = false
             return echoInstance
           }
         }
       } catch (error) {
-        console.warn('Echo: 检查现有连接状态失败:', error)
+        logger.warn('Echo: 检查现有连接状态失败:', error)
       }
-      console.log('Echo: 销毁已有实例并重新创建')
+      logger.debug('Echo: 销毁已有实例并重新创建')
       destroyEchoInstance()
     }
   }
@@ -277,9 +278,9 @@ export function createEchoInstance(): Echo<'reverb'> | null {
 
   try {
     // 创建新实例
-    console.log('Echo: 最终配置:', config)
+    logger.debug('Echo: 最终配置:', config)
     const echo = new Echo(config as unknown as ConstructorParameters<typeof Echo>[0])
-    console.log('Echo: 实例创建成功，类型:', typeof echo)
+    logger.debug('Echo: 实例创建成功，类型:', typeof echo)
 
     // 校验实例有效性
     if (!echo || typeof echo.connect !== 'function') {
@@ -296,13 +297,13 @@ export function createEchoInstance(): Echo<'reverb'> | null {
         const monitor = getConnectionMonitor()
         if (monitor && typeof monitor.initializeWithEcho === 'function') {
           monitor.initializeWithEcho(echo as Echo<'reverb'>)
-          console.log('Echo: 连接监控已初始化')
+          logger.debug('Echo: 连接监控已初始化')
         } else {
-          console.warn('Echo: 连接监控不可用，跳过')
+          logger.warn('Echo: 连接监控不可用，跳过')
         }
       })
     } catch (monitorError) {
-      console.warn('Echo: 初始化连接监控失败:', monitorError)
+      logger.warn('Echo: 初始化连接监控失败:', monitorError)
       // 监控初始化失败不影响主流程
     }
 
@@ -310,7 +311,7 @@ export function createEchoInstance(): Echo<'reverb'> | null {
     try {
       if (echo && typeof echo.connect === 'function') {
         echo.connect()
-        console.log('Echo: 已发起连接')
+        logger.debug('Echo: 已发起连接')
 
         // 添加连接状态监听
         if (echo.connector && 'pusher' in echo.connector && echo.connector.pusher) {
@@ -320,40 +321,40 @@ export function createEchoInstance(): Echo<'reverb'> | null {
             }
           }
           pusherConnector.pusher.connection.bind('connected', () => {
-            console.log('🔥 Echo: 连接成功！')
+            logger.debug('🔥 Echo: 连接成功！')
           })
 
           pusherConnector.pusher.connection.bind('connecting', () => {
-            console.log('🔥 Echo: 正在连接...')
+            logger.debug('🔥 Echo: 正在连接...')
           })
 
           pusherConnector.pusher.connection.bind('disconnected', () => {
-            console.log('🔥 Echo: 连接断开')
+            logger.debug('🔥 Echo: 连接断开')
           })
 
           pusherConnector.pusher.connection.bind('error', (error: unknown) => {
-            console.error('🔥 Echo: 连接错误:', error)
+            logger.error('🔥 Echo: 连接错误:', error)
           })
 
           pusherConnector.pusher.connection.bind('unavailable', (error: unknown) => {
             // WebSocket 连接不可用，但不影响非实时功能（如 Wiki、笔记等）
             // 只在开发环境显示详细错误
             if (process.env.NODE_ENV === 'development') {
-              console.warn('🔥 Echo: 连接不可用（不影响 Wiki 等 REST API 功能）:', error)
+              logger.warn('🔥 Echo: 连接不可用（不影响 Wiki 等 REST API 功能）:', error)
             }
           })
         }
       }
     } catch (connectError) {
-      console.warn('Echo: 发起连接失败:', connectError)
+      logger.warn('Echo: 发起连接失败:', connectError)
     }
 
-    console.log('Echo: 实例初始化完成，已就绪')
+    logger.debug('Echo: 实例初始化完成，已就绪')
     lastCreatedAt = now
     isCreating = false
     return echo as Echo<'reverb'>
   } catch (error) {
-    console.error('Echo: 创建实例失败:', error)
+    logger.error('Echo: 创建实例失败:', error)
     echoInstance = null
     isCreating = false
     throw error
@@ -365,13 +366,13 @@ let destroyTimer: NodeJS.Timeout | null = null
 
 export function destroyEchoInstance(immediate = false): void {
   if (!echoInstance) {
-    console.log('Echo: 无实例需要销毁')
+    logger.debug('Echo: 无实例需要销毁')
     return
   }
 
   // 如果不是立即销毁，使用延迟机制
   if (!immediate) {
-    console.log('Echo: 延迟销毁 Echo 实例 (500ms)')
+    logger.debug('Echo: 延迟销毁 Echo 实例 (500ms)')
 
     // 清除之前的定时器
     if (destroyTimer) {
@@ -380,10 +381,10 @@ export function destroyEchoInstance(immediate = false): void {
 
     destroyTimer = setTimeout(() => {
       if (echoInstance) {
-        console.log('Echo: 执行延迟销毁')
+        logger.debug('Echo: 执行延迟销毁')
         performDestroy()
       } else {
-        console.log('Echo: 实例已被清理，跳过销毁')
+        logger.debug('Echo: 实例已被清理，跳过销毁')
       }
       destroyTimer = null
     }, 500)
@@ -397,11 +398,11 @@ export function destroyEchoInstance(immediate = false): void {
 function performDestroy(): void {
   if (!echoInstance) return
 
-  console.log('Echo: 正在销毁 Echo 实例')
+  logger.debug('Echo: 正在销毁 Echo 实例')
   try {
     echoInstance.disconnect()
   } catch (error) {
-    console.warn('Echo: 断开连接时出错:', error)
+    logger.warn('Echo: 断开连接时出错:', error)
   }
   echoInstance = null
   lastAuthToken = null
@@ -411,7 +412,7 @@ function performDestroy(): void {
 // 取消延迟销毁
 export function cancelDestroyEchoInstance(): void {
   if (destroyTimer) {
-    console.log('Echo: 取消延迟销毁')
+    logger.debug('Echo: 取消延迟销毁')
     clearTimeout(destroyTimer)
     destroyTimer = null
   }

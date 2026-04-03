@@ -1,13 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { logger } from '@/lib/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 import { Input } from '@/components/ui/input'
+import { logger } from '@/lib/logger'
 import { Textarea } from '@/components/ui/textarea'
+import { logger } from '@/lib/logger'
 import { Loader2, Save, RefreshCw, Bot } from 'lucide-react'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import { parseEducationLevelNames, getEducationLevelNames } from '../hooks/useWord'
+import { logger } from '@/lib/logger'
 
 interface WordDataEditorProps {
   wordContent: string
@@ -132,7 +140,7 @@ export function WordDataEditor({
 
       toast.success('数据已生成，请检查后保存')
     } catch (error) {
-      console.error('生成数据失败:', error)
+      logger.error('生成数据失败:', error)
       toast.error('生成数据失败')
     } finally {
       setIsGenerating(false)
@@ -168,7 +176,7 @@ export function WordDataEditor({
 
       toast.success('保存成功')
     } catch (error) {
-      console.error('保存失败:', error)
+      logger.error('保存失败:', error)
       if (error instanceof Error) {
         toast.error(error.message)
       } else {

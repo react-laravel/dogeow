@@ -22,7 +22,7 @@ export const useLocationData = () => {
       const data = await apiRequest<Room[]>(`/areas/${areaId}/rooms`)
       setRooms(data)
     } catch (error) {
-      console.error('加载房间失败:', error)
+      logger.error('加载房间失败:', error)
       toast.error('加载房间失败')
     }
   }, [])
@@ -33,7 +33,7 @@ export const useLocationData = () => {
       const data = await apiRequest<Area[]>('/areas')
       setAreas(data)
     } catch (error) {
-      console.error('加载区域失败:', error)
+      logger.error('加载区域失败:', error)
       toast.error('加载区域失败')
     } finally {
       setLoading(false)
@@ -50,7 +50,7 @@ export const useLocationData = () => {
       const data = await apiRequest<Spot[]>(`/rooms/${roomId}/spots`)
       setSpots(data)
     } catch (error) {
-      console.error('加载位置失败:', error)
+      logger.error('加载位置失败:', error)
       toast.error('加载位置失败')
     }
   }, [])

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { logger } from '@/lib/logger'
 
 export interface Ball {
   x: number
@@ -98,7 +99,7 @@ export const useBowlingStore = create<GameState>((set, get) => ({
 
   // 游戏控制
   startGame: () => {
-    console.log('🎳 开始游戏')
+    logger.debug('🎳 开始游戏')
     get().resetGame()
     set({
       isPlaying: true,
@@ -107,7 +108,7 @@ export const useBowlingStore = create<GameState>((set, get) => ({
   },
 
   resetGame: () => {
-    console.log('🔄 重置游戏')
+    logger.debug('🔄 重置游戏')
     set({
       isPlaying: false,
       gameStarted: false,
@@ -133,7 +134,7 @@ export const useBowlingStore = create<GameState>((set, get) => ({
 
   processThrowResult: (knockedDownCount: number) => {
     const { currentFrame, currentThrow, pinsStanding } = get()
-    console.log(
+    logger.debug(
       `🧠 Processing: F${currentFrame} T${currentThrow}, Pins Standing: ${pinsStanding}, Knocked: ${knockedDownCount}`
     )
 
@@ -147,7 +148,7 @@ export const useBowlingStore = create<GameState>((set, get) => ({
 
     const gameOver = () => {
       setTimeout(() => {
-        console.log('🏁 Game Over - 重置游戏')
+        logger.debug('🏁 Game Over - 重置游戏')
         get().resetGame()
       }, 2500) // 结果显示2.5秒后才重置
     }
@@ -155,22 +156,22 @@ export const useBowlingStore = create<GameState>((set, get) => ({
     if (currentThrow === 1) {
       if (knockedDownCount >= pinsStanding) {
         // Strike
-        console.log('🎉 STRIKE!')
+        logger.debug('🎉 STRIKE!')
         if (currentFrame === 5) {
-          console.log('🏁 Game Over')
+          logger.debug('🏁 Game Over')
           gameOver()
         } else {
           advance({ currentFrame: currentFrame + 1, currentThrow: 1, pinsStanding: 10 })
         }
       } else {
         // Not a strike
-        console.log('⚾️ Go for spare')
+        logger.debug('⚾️ Go for spare')
         advance({ currentThrow: 2, pinsStanding: pinsStanding - knockedDownCount })
       }
     } else {
       // Second throw
       if (currentFrame === 5) {
-        console.log('🏁 Game Over')
+        logger.debug('🏁 Game Over')
         gameOver()
       } else {
         advance({ currentFrame: currentFrame + 1, currentThrow: 1, pinsStanding: 10 })
@@ -181,7 +182,7 @@ export const useBowlingStore = create<GameState>((set, get) => ({
   updateTilt: (x: number, y: number) => set({ tiltX: x, tiltY: y }),
 
   requestGyroPermission: async () => {
-    console.log('🔐 开始请求陀螺仪权限...')
+    logger.debug('🔐 开始请求陀螺仪权限...')
 
     // 检测设备支持
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -189,10 +190,10 @@ export const useBowlingStore = create<GameState>((set, get) => ({
     const isMobile = isIOS || isAndroid
     const hasDeviceOrientation = 'DeviceOrientationEvent' in window
 
-    console.log('📱 设备信息:', { isIOS, isAndroid, isMobile, hasDeviceOrientation })
+    logger.debug('📱 设备信息:', { isIOS, isAndroid, isMobile, hasDeviceOrientation })
 
     if (!hasDeviceOrientation) {
-      console.log('❌ 设备不支持陀螺仪')
+      logger.debug('❌ 设备不支持陀螺仪')
       set({ gyroSupported: false, gyroPermission: false })
       return
     }
@@ -206,28 +207,28 @@ export const useBowlingStore = create<GameState>((set, get) => ({
       'requestPermission' in DeviceOrientationEvent
     ) {
       try {
-        console.log('📱 iOS设备，显示系统权限对话框')
+        logger.debug('📱 iOS设备，显示系统权限对话框')
         const permission = await (
           DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }
         ).requestPermission()
-        console.log('🔐 iOS权限请求结果:', permission)
+        logger.debug('🔐 iOS权限请求结果:', permission)
 
         const granted = permission === 'granted'
         set({ gyroPermission: granted })
 
         if (granted) {
-          console.log('✅ iOS陀螺仪权限已获得')
+          logger.debug('✅ iOS陀螺仪权限已获得')
         } else {
-          console.log('❌ iOS陀螺仪权限被拒绝')
+          logger.debug('❌ iOS陀螺仪权限被拒绝')
         }
       } catch (error) {
-        console.error('❌ iOS权限请求失败:', error)
+        logger.error('❌ iOS权限请求失败:', error)
         set({ gyroPermission: false })
       }
     }
     // Android 和其他移动设备
     else if (isMobile) {
-      console.log('🤖 Android/移动设备，测试陀螺仪可用性')
+      logger.debug('🤖 Android/移动设备，测试陀螺仪可用性')
 
       // 对于Android设备，我们需要测试陀螺仪是否真的可用
       let testPassed = false
@@ -235,7 +236,7 @@ export const useBowlingStore = create<GameState>((set, get) => ({
       const testHandler = (event: DeviceOrientationEvent) => {
         if (event.alpha !== null || event.beta !== null || event.gamma !== null) {
           testPassed = true
-          console.log('✅ 陀螺仪测试成功')
+          logger.debug('✅ 陀螺仪测试成功')
         }
       }
 
@@ -248,15 +249,15 @@ export const useBowlingStore = create<GameState>((set, get) => ({
 
       if (testPassed) {
         set({ gyroPermission: true })
-        console.log('✅ Android陀螺仪权限已获得')
+        logger.debug('✅ Android陀螺仪权限已获得')
       } else {
-        console.log('⚠️ Android陀螺仪可能需要用户手动开启')
+        logger.debug('⚠️ Android陀螺仪可能需要用户手动开启')
         set({ gyroPermission: true }) // 假设有权限，让用户尝试
       }
     }
     // 桌面设备
     else {
-      console.log('💻 桌面设备，陀螺仪不可用')
+      logger.debug('💻 桌面设备，陀螺仪不可用')
       set({ gyroPermission: false })
     }
   },
@@ -270,19 +271,19 @@ export const useBowlingStore = create<GameState>((set, get) => ({
     const hasDeviceOrientation = 'DeviceOrientationEvent' in window
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
-    console.log('🔍 检测陀螺仪支持:', { hasDeviceOrientation, isIOS })
+    logger.debug('🔍 检测陀螺仪支持:', { hasDeviceOrientation, isIOS })
 
     if (hasDeviceOrientation) {
       set({ gyroSupported: true })
-      console.log('✅ 陀螺仪硬件支持')
+      logger.debug('✅ 陀螺仪硬件支持')
 
       // 如果是iOS设备，需要用户手动触发权限请求
       if (!isIOS) {
         set({ gyroPermission: true })
-        console.log('🤖 非iOS设备，默认有权限')
+        logger.debug('🤖 非iOS设备，默认有权限')
       }
     } else {
-      console.log('❌ 设备不支持陀螺仪')
+      logger.debug('❌ 设备不支持陀螺仪')
       set({ gyroSupported: false, gyroPermission: false })
     }
   },

@@ -76,7 +76,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       toast.success('图片上传成功')
     } catch (error) {
       toast.error('图片上传失败')
-      console.error('上传图片失败:', error)
+      logger.error('上传图片失败:', error)
     } finally {
       setUploading(false)
       // 清空文件输入框，以便可以重复选择相同的文件

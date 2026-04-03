@@ -2,6 +2,7 @@
  * 存储偏好检测策略
  */
 import type { SupportedLanguage } from '../translations'
+import { logger } from '@/lib/logger'
 
 export interface DetectionResult {
   language: SupportedLanguage
@@ -25,7 +26,7 @@ export class StoredPreferenceStrategy {
         }
       }
     } catch (error) {
-      console.warn('获取已存储偏好失败:', error)
+      logger.warn('获取已存储偏好失败:', error)
     }
 
     return null
