@@ -40,6 +40,28 @@ copy_deploy_snapshot() {
   done < <(find "$APP_ROOT" -maxdepth 1 -type f \( -name '.env*' -o -name '.npmrc' \) -print0)
 }
 
+sync_pm2_app() {
+  local runtime_cwd="$1"
+  local app_name="dogeow-nextjs"
+  local ecosystem_path="${APP_ROOT}/ecosystem.config.js"
+
+  if pm2 info "$app_name" >/dev/null 2>&1; then
+    echo "[deploy] 重载 PM2 应用: $app_name"
+
+    # 优先按 ecosystem 配置执行 reload，保证 cwd / env / instances 与配置同步。
+    if PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 reload "$ecosystem_path" --only "$app_name" --update-env; then
+      return 0
+    fi
+
+    echo "[deploy] PM2 reload 失败，尝试重建应用进程表"
+    pm2 delete "$app_name" || true
+  else
+    echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
+  fi
+
+  PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 start "$ecosystem_path" --only "$app_name" --update-env
+}
+
 # ---------- 模式一：发布目录 + 符号链接（推荐，零停机 + 可回滚）----------
 if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
   echo "[deploy] 使用发布目录模式（零停机）"
@@ -72,11 +94,7 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
   (cd "$RELEASES_DIR" && ls -1t | grep -E '^[0-9]{14}$' | tail -n +$((KEEP + 1)) | while read -r d; do [ -n "$d" ] && rm -rf "$RELEASES_DIR/$d"; done)
   rm -rf "${RELEASES_DIR}"/.staging.* 2>/dev/null || true
 
-  if pm2 info dogeow-nextjs >/dev/null 2>&1; then
-    pm2 reload dogeow-nextjs
-  else
-    PM2_CWD="${CURRENT_LINK}" pm2 start "$APP_ROOT/ecosystem.config.js" --only dogeow-nextjs
-  fi
+  sync_pm2_app "$CURRENT_LINK"
   pm2 status
   echo "[deploy] 完成（零停机）"
   exit 0
@@ -105,10 +123,6 @@ cd "$APP_ROOT"
 mv .next.new .next
 rm -rf .next.old
 
-if pm2 info dogeow-nextjs >/dev/null 2>&1; then
-  pm2 reload dogeow-nextjs
-else
-  pm2 start ecosystem.config.js --only dogeow-nextjs
-fi
+sync_pm2_app "$APP_ROOT"
 pm2 status
 echo "[deploy] 完成"
