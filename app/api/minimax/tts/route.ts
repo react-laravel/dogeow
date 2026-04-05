@@ -7,7 +7,6 @@ import {
   MINIMAX_DEFAULT_VOICE_ID,
 } from '../_lib/config'
 import { requireAuth } from '../../_lib/auth-guard'
-import { logger } from '@/lib/logger'
 
 export interface TTSRequest {
   text: string
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, audioUrl })
   } catch (err) {
-    logger.error('[MiniMax TTS]', err)
+    console.error('[MiniMax TTS]', err)
     return NextResponse.json({ error: 'TTS 请求失败' }, { status: 500 })
   }
 }

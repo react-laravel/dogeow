@@ -1,5 +1,4 @@
 import * as CANNON from 'cannon-es'
-import { logger } from '@/lib/logger'
 import { MATERIALS_CONFIG } from '../config/constants'
 import type { PhysicsMaterials } from '../types/scene'
 
@@ -70,7 +69,7 @@ export function checkSceneIsStable(
 
   // 超时检查（15秒）
   if (elapsedTime > 15000) {
-    logger.debug('⏰ 投球时间到（15秒），强制处理结果')
+    console.log('⏰ 投球时间到（15秒），强制处理结果')
     return true
   }
 
@@ -103,6 +102,6 @@ export function checkSceneIsStable(
   }
 
   // 如果所有物体都已结束运动，则场景稳定
-  logger.debug('✅ 所有物体均已稳定或出界，处理结果')
+  console.log('✅ 所有物体均已稳定或出界，处理结果')
   return true
 }

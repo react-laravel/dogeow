@@ -1,17 +1,11 @@
 'use client'
 
 import React, { useMemo, useState, Suspense } from 'react'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { logger } from '@/lib/logger'
 import dynamic from 'next/dynamic'
-import { logger } from '@/lib/logger'
 import { GameRulesDialog } from '@/components/ui/game-rules-dialog'
-import { logger } from '@/lib/logger'
 import Link from 'next/link'
-import { logger } from '@/lib/logger'
 
 // 使用动态导入的滑块拼图游戏组件
 const SlidingPuzzle = dynamic(() => import('./components/SlidingPuzzle'), {
@@ -50,7 +44,7 @@ function SlidingPuzzleGame() {
   }
 
   const startGame = (level: 3 | 4 | 5) => {
-    logger.debug('开始游戏，难度:', level)
+    console.log('开始游戏，难度:', level)
     setCompletionMessage('')
     setGameKey(prev => prev + 1) // 重置游戏实例
     updateUrlParams(level)
@@ -63,7 +57,7 @@ function SlidingPuzzleGame() {
 
   // 处理游戏完成
   const handleGameComplete = () => {
-    logger.debug('游戏完成！')
+    console.log('游戏完成！')
     setCompletionMessage(`恭喜！你完成了 ${difficulty}×${difficulty} 的拼图！`)
   }
 

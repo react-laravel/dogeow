@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 import { AI_SYSTEM_PROMPT, type ChatMessage } from '../types'
 import { getRequestModel, type AIProvider } from '../request-model'
 import { readAiChatStream } from './chatStream'
@@ -252,7 +251,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
         return
       }
 
-      logger.error('AI chat error:', error)
+      console.error('AI chat error:', error)
       const errorMessage =
         error instanceof Error
           ? error.message.includes('fetch')

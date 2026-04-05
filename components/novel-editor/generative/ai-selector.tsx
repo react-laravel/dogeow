@@ -1,7 +1,6 @@
 'use client'
 
 import { Command, CommandInput } from '@/components/tailwind/ui/command'
-import { logger } from '@/lib/logger'
 
 import { useCompletion } from '@ai-sdk/react'
 import { ArrowUp } from 'lucide-react'
@@ -51,11 +50,11 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
       if (response.status === 429) {
         toast.error('You have reached your request limit for the day.')
       }
-      logger.debug('API Response status:', response.status)
+      console.log('API Response status:', response.status)
       return response
     },
     onError: (e: Error) => {
-      logger.error('AI API Error:', e)
+      console.error('AI API Error:', e)
       toast.error(e.message)
     },
   })

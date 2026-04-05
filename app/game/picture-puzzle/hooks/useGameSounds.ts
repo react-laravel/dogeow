@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 
 export function useGameSounds() {
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -13,7 +12,7 @@ export function useGameSounds() {
           (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
         )()
       } catch (error) {
-        logger.warn('Audio context not supported:', error)
+        console.warn('Audio context not supported:', error)
       }
     }
   }, [])
@@ -40,7 +39,7 @@ export function useGameSounds() {
       oscillator.start(ctx.currentTime)
       oscillator.stop(ctx.currentTime + 0.1)
     } catch (error) {
-      logger.warn('Failed to play move sound:', error)
+      console.warn('Failed to play move sound:', error)
     }
   }, [initAudioContext])
 
@@ -72,7 +71,7 @@ export function useGameSounds() {
         oscillator.stop(ctx.currentTime + index * 0.15 + 0.3)
       })
     } catch (error) {
-      logger.warn('Failed to play complete sound:', error)
+      console.warn('Failed to play complete sound:', error)
     }
   }, [initAudioContext])
 

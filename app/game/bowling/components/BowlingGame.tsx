@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { logger } from '@/lib/logger'
 import { useBowlingStore } from '../store'
 import { BowlingCanvas } from './BowlingCanvas'
 import { GameStats } from './GameStats'
@@ -46,7 +45,7 @@ export function BowlingGame() {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
       if (isMobile || isIOS) {
-        logger.debug('📱 检测到移动设备，立即显示权限对话框')
+        console.log('📱 检测到移动设备，立即显示权限对话框')
         // 稍微延迟显示，让页面完全加载
         setTimeout(() => {
           setShowPermissionDialog(true)
@@ -57,7 +56,7 @@ export function BowlingGame() {
 
   // 处理权限请求
   const handleRequestPermission = async () => {
-    logger.debug('🔐 用户点击申请权限')
+    console.log('🔐 用户点击申请权限')
     await requestGyroPermission()
     setShowPermissionDialog(false)
   }
@@ -65,11 +64,11 @@ export function BowlingGame() {
   // 陀螺仪监听
   useEffect(() => {
     if (!isMounted || !gyroSupported || !gyroPermission) {
-      logger.warn('⚠️ 陀螺仪不可用:', { isMounted, gyroSupported, gyroPermission })
+      console.log('⚠️ 陀螺仪不可用:', { isMounted, gyroSupported, gyroPermission })
       return
     }
 
-    logger.debug('🎯 启动陀螺仪监听')
+    console.log('🎯 启动陀螺仪监听')
 
     const handleOrientation = (event: DeviceOrientationEvent) => {
       const { beta, gamma } = event
@@ -84,11 +83,11 @@ export function BowlingGame() {
     }
 
     window.addEventListener('deviceorientation', handleOrientation)
-    logger.debug('✅ 陀螺仪监听器已添加')
+    console.log('✅ 陀螺仪监听器已添加')
 
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation)
-      logger.debug('🔄 陀螺仪监听器已移除')
+      console.log('🔄 陀螺仪监听器已移除')
     }
   }, [gyroSupported, gyroPermission, isMounted])
 

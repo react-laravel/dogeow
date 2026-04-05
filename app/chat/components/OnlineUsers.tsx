@@ -3,23 +3,14 @@
 'use client'
 
 import React, { useState, useMemo, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { logger } from '@/lib/logger'
 import { Users } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import useChatStore from '@/app/chat/chatStore'
-import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
-import { logger } from '@/lib/logger'
 import { UserListItem } from './users/UserListItem'
-import { logger } from '@/lib/logger'
 import { UserSearchBar } from './users/UserSearchBar'
-import { logger } from '@/lib/logger'
 import { UserFilters } from './users/UserFilters'
-import { logger } from '@/lib/logger'
 import {
-import { logger } from '@/lib/logger'
   filterUsers,
   filterByStatus,
   sortUsers,
@@ -27,7 +18,6 @@ import { logger } from '@/lib/logger'
   type FilterOption,
 } from '@/app/chat/utils/users/filterUtils'
 import type { OnlineUser } from '../types'
-import { logger } from '@/lib/logger'
 
 const EMPTY_USERS: OnlineUser[] = []
 
@@ -61,7 +51,7 @@ export default function OnlineUsers({
   const filteredAndSortedUsers = useMemo(() => {
     // 确保 roomUsers 是数组
     if (!Array.isArray(roomUsers)) {
-      logger.warn('OnlineUsers: roomUsers is not an array:', roomUsers)
+      console.warn('OnlineUsers: roomUsers is not an array:', roomUsers)
       return []
     }
 

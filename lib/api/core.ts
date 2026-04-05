@@ -3,8 +3,9 @@
 import { mutate } from 'swr'
 import useAuthStore from '../../stores/authStore'
 import { getEchoInstance } from '@/lib/websocket'
+
 import { API_URL } from './url'
-import{
+import {
   ApiRequestError,
   type StandardApiResponse,
   unwrapApiPayload,
@@ -12,7 +13,6 @@ import{
   validateAndNormalizeError,
 } from './errors'
 import type { ApiError } from '@/app'
-import { logger } from '@/lib/logger'
 
 const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 let csrfCookiePromise: Promise<void> | null = null
@@ -125,9 +125,9 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
       if (errorData?.errors && Object.keys(errorData.errors).length > 0) {
         if (process.env.NODE_ENV !== 'production') {
           if (response.status === 422) {
-            logger.warn('验证失败:', errorData.errors)
+            console.warn('验证失败:', errorData.errors)
           } else {
-            logger.error('API错误详情:', errorData.errors)
+            console.error('API错误详情:', errorData.errors)
           }
         }
       }
@@ -158,7 +158,7 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     return unwrapApiPayload<T>(payload)
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
-      logger.error('解析JSON响应失败:', error)
+      console.error('解析JSON响应失败:', error)
     }
     throw new Error('解析响应失败')
   }
@@ -267,14 +267,14 @@ export async function apiRequest<T>(
     // 添加错误调试信息（仅在开发环境且错误不是标准Error实例时）
     if (process.env.NODE_ENV === 'development' && !(error instanceof Error)) {
       console.group('API Request Error Debug - Non-standard Error')
-      logger.error('Endpoint:', endpoint)
-      logger.error('Method:', method)
-      logger.error('Original error type:', typeof error)
-      logger.error('Original error value:', error)
-      logger.error('Normalized error:', normalizedError)
-      logger.error('Error instanceof Error:', error instanceof Error)
-      logger.error('Error instanceof ApiRequestError:', error instanceof ApiRequestError)
-      logger.error('Error instanceof DOMException:', error instanceof DOMException)
+      console.error('Endpoint:', endpoint)
+      console.error('Method:', method)
+      console.error('Original error type:', typeof error)
+      console.error('Original error value:', error)
+      console.error('Normalized error:', normalizedError)
+      console.error('Error instanceof Error:', error instanceof Error)
+      console.error('Error instanceof ApiRequestError:', error instanceof ApiRequestError)
+      console.error('Error instanceof DOMException:', error instanceof DOMException)
       console.groupEnd()
     }
 

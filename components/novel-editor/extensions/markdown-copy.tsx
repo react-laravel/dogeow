@@ -1,7 +1,6 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { logger } from '@/lib/logger'
 
 // 简单的Markdown序列化器
 const serializeToMarkdown = (node: ProseMirrorNode): string => {
@@ -101,7 +100,7 @@ export const MarkdownCopyExtension = Extension.create({
   name: 'markdownCopy',
 
   onCreate() {
-    logger.debug('MarkdownCopyExtension loaded successfully')
+    console.log('MarkdownCopyExtension loaded successfully')
   },
 
   addProseMirrorPlugins() {
@@ -111,13 +110,13 @@ export const MarkdownCopyExtension = Extension.create({
         props: {
           handleDOMEvents: {
             copy: (view, event) => {
-              logger.debug('Copy event triggered')
+              console.log('Copy event triggered')
               const { state } = view
               const { selection } = state
 
               // 如果没有选中内容，让浏览器默认处理
               if (selection.empty) {
-                logger.debug('No selection, using default copy')
+                console.log('No selection, using default copy')
                 return false
               }
 
@@ -143,16 +142,16 @@ export const MarkdownCopyExtension = Extension.create({
                   markdownResult !== plainText.trim() &&
                   hasMarkdownFormatting(markdownResult)
                 ) {
-                  logger.debug('Copying formatted text as markdown:', markdownResult)
+                  console.log('Copying formatted text as markdown:', markdownResult)
                   // 设置剪贴板内容
                   event.clipboardData?.setData('text/plain', markdownResult)
                   event.preventDefault()
                   return true
                 }
 
-                logger.debug('No formatting detected, using default copy behavior')
+                console.log('No formatting detected, using default copy behavior')
               } catch (error) {
-                logger.warn('Failed to convert selection to markdown:', error)
+                console.warn('Failed to convert selection to markdown:', error)
               }
 
               // 如果没有格式或转换失败，让浏览器默认处理

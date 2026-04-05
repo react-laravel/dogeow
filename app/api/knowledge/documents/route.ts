@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadAllDocuments } from '@/lib/knowledge/search'
 import { requireAuth } from '../../_lib/auth-guard'
-import { logger } from '@/lib/logger'
 
 /**
  * 获取所有文档列表的 API 端点
@@ -23,7 +22,7 @@ export async function GET(request: NextRequest) {
       })),
     })
   } catch (error: unknown) {
-    logger.error('获取文档列表失败:', error)
+    console.error('获取文档列表失败:', error)
     const errorMessage = error instanceof Error ? error.message : '未知错误'
     return NextResponse.json(
       {

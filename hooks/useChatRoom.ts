@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import { usePagination } from '@/hooks/usePagination'
 import { useChatWebSocket } from './useChatWebSocket'
 import type { SendMessageResult } from './chat-websocket/types'
@@ -287,7 +286,7 @@ export const useChatRoom = (options: UseChatRoomOptions = {}): UseChatRoomReturn
     try {
       await apiCall(`/chat/rooms/${currentRoom.id}/leave`, { method: 'POST' })
     } catch (err) {
-      logger.error('Error leaving room:', err)
+      console.error('Error leaving room:', err)
     }
 
     setCurrentRoom(null)
@@ -350,7 +349,7 @@ export const useChatRoom = (options: UseChatRoomOptions = {}): UseChatRoomReturn
       const data = await apiCall<RoomUsersResponse>(`/chat/rooms/${currentRoom.id}/users`)
       setOnlineUsers(resolveUsersResponse(data))
     } catch (err) {
-      logger.error('Error loading online users:', err)
+      console.error('Error loading online users:', err)
     }
   }, [currentRoom, apiCall])
 
@@ -363,13 +362,13 @@ export const useChatRoom = (options: UseChatRoomOptions = {}): UseChatRoomReturn
 
         // 检查是否已经在目标房间中
         if (currentRoom?.id.toString() === roomId) {
-          logger.debug('Already in target room, skipping join')
+          console.log('Already in target room, skipping join')
           return true
         }
 
         // 只有在有当前房间且不是目标房间时才离开
         if (currentRoom && currentRoom.id.toString() !== roomId) {
-          logger.debug('Leaving current room before joining new one:', currentRoom.id)
+          console.log('Leaving current room before joining new one:', currentRoom.id)
           await leaveRoom()
         }
 

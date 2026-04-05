@@ -3,8 +3,6 @@
  * Provides proper transaction boundaries with rollback support for frontend operations
  */
 
-import { logger } from '@/lib/logger'
-
 type TransactionState<T> = {
   /** Whether the transaction has been committed */
   committed: boolean
@@ -38,7 +36,7 @@ export class TransactionContext<T = unknown> {
    */
   checkpoint(state: T): void {
     if (this.state.committed || this.state.rolledBack) {
-      logger.warn('[Transaction] Cannot create checkpoint - transaction already finalized')
+      console.warn('[Transaction] Cannot create checkpoint - transaction already finalized')
       return
     }
 
@@ -66,12 +64,12 @@ export class TransactionContext<T = unknown> {
    */
   rollback(error?: Error): T | null {
     if (this.state.committed) {
-      logger.warn('[Transaction] Cannot rollback - transaction already committed')
+      console.warn('[Transaction] Cannot rollback - transaction already committed')
       return null
     }
 
     if (this.state.rolledBack) {
-      logger.warn('[Transaction] Already rolled back')
+      console.warn('[Transaction] Already rolled back')
       return null
     }
 
@@ -95,7 +93,7 @@ export class TransactionContext<T = unknown> {
    */
   commit(result: T): void {
     if (this.state.rolledBack) {
-      logger.warn('[Transaction] Cannot commit - transaction already rolled back')
+      console.warn('[Transaction] Cannot commit - transaction already rolled back')
       return
     }
 
@@ -192,27 +190,27 @@ export async function executeTransaction<T, R = T>(
     const operation = operations[i]
 
     try {
-      logger.debug(`[Transaction] Executing: ${operation.name}`)
+      console.log(`[Transaction] Executing: ${operation.name}`)
       const result = await operation.execute()
       results.push(result)
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
-      logger.error(`[Transaction] Error in ${operation.name}:`, err)
+      console.error(`[Transaction] Error in ${operation.name}:`, err)
 
       errors.push({ name: operation.name, error: err })
       onError?.(err, i)
 
       if (stopOnFailure) {
         // Rollback previous successful operations
-        logger.debug(`[Transaction] Rolling back ${results.length} previous operations`)
+        console.log(`[Transaction] Rolling back ${results.length} previous operations`)
         for (let j = results.length - 1; j >= 0; j--) {
           const rollbackOp = operations[j].rollback
           if (rollbackOp) {
             try {
-              logger.debug(`[Transaction] Rolling back: ${operations[j].name}`)
+              console.log(`[Transaction] Rolling back: ${operations[j].name}`)
               await rollbackOp(results[j])
             } catch (rollbackError) {
-              logger.error(
+              console.error(
                 `[Transaction] Rollback failed for ${operations[j].name}:`,
                 rollbackError
               )
@@ -274,7 +272,7 @@ export async function withRetry<T>(
       // Calculate delay with exponential backoff
       const delay = Math.min(initialDelayMs * Math.pow(backoffMultiplier, attempt - 1), maxDelayMs)
 
-      logger.debug(`[Retry] Attempt ${attempt} failed, retrying in ${delay}ms:`, lastError.message)
+      console.log(`[Retry] Attempt ${attempt} failed, retrying in ${delay}ms:`, lastError.message)
       onRetry?.(attempt, lastError)
 
       await new Promise(resolve => setTimeout(resolve, delay))

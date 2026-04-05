@@ -41,7 +41,7 @@ export function SettingsForm() {
         }
       } catch (error) {
         toast.error('保存设置失败')
-        logger.error('保存设置失败:', error)
+        console.error('保存设置失败:', error)
       }
     },
     [setSettings]

@@ -120,7 +120,7 @@ export default function ItemFormWrapper({
       const itemData = transformFormDataForSubmit(data, uploadedImages, selectedTags)
       await onSubmit(itemData)
     } catch (error) {
-      logger.error('提交失败:', error)
+      console.error('提交失败:', error)
       toast.error(error instanceof Error ? error.message : '发生错误，请重试')
     } finally {
       setLoading(false)

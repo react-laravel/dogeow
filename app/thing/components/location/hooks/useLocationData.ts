@@ -18,7 +18,7 @@ export const useLocationData = () => {
         const areas = Array.isArray(response) ? response : (response?.areas ?? [])
         setAreas(Array.isArray(areas) ? areas : [])
       } catch (error) {
-        logger.error('加载区域失败:', error)
+        console.error('加载区域失败:', error)
         toast.error('加载区域失败')
         setAreas([])
       } finally {
@@ -41,7 +41,7 @@ export const useLocationData = () => {
       const rooms = Array.isArray(response) ? response : (response?.rooms ?? [])
       setRooms(Array.isArray(rooms) ? rooms : [])
     } catch (error) {
-      logger.error('加载房间失败:', error)
+      console.error('加载房间失败:', error)
       toast.error('加载房间失败')
       setRooms([])
     }
@@ -59,7 +59,7 @@ export const useLocationData = () => {
       const spots = Array.isArray(response) ? response : (response?.spots ?? [])
       setSpots(Array.isArray(spots) ? spots : [])
     } catch (error) {
-      logger.error('加载位置失败:', error)
+      console.error('加载位置失败:', error)
       toast.error('加载位置失败')
       setSpots([])
     }

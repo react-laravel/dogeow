@@ -1,13 +1,8 @@
 import { useRef, useState, useLayoutEffect, useEffect, Suspense } from 'react'
-import { logger } from '@/lib/logger'
 import { useFrame, ThreeEvent } from '@react-three/fiber'
-import { logger } from '@/lib/logger'
 import * as THREE from 'three'
-import { logger } from '@/lib/logger'
 import { Explosion } from './Explosion'
-import { logger } from '@/lib/logger'
 import { playExplosionSound } from '../../utils/audioUtils'
-import { logger } from '@/lib/logger'
 
 interface TargetProps {
   position: [number, number, number]
@@ -120,7 +115,7 @@ export function Target({ position, hit, scale, onClick, id }: TargetProps) {
       e.stopPropagation()
     }
 
-    logger.debug(`直接点击了目标 ${id}`)
+    console.log(`直接点击了目标 ${id}`)
     if (!hit) {
       onClick()
     }

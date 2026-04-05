@@ -1,5 +1,4 @@
 import { createEchoInstance, destroyEchoInstance, getEchoInstance } from './echo'
-import { logger } from '@/lib/logger'
 import { getAuthTokenFromStorage } from '@/lib/utils/storage'
 
 export interface AuthTokenManager {
@@ -29,7 +28,7 @@ class WebSocketAuthManager {
           this.reconnectWithNewToken(token)
         }
       } catch (error) {
-        logger.warn('解析 auth storage 数据失败:', error)
+        console.warn('解析 auth storage 数据失败:', error)
       }
     }
   }
@@ -65,10 +64,10 @@ class WebSocketAuthManager {
         const authData = JSON.parse(authStorage)
         authData.state = { ...authData.state, token }
         localStorage.setItem('auth-storage', JSON.stringify(authData))
-        logger.debug('WebSocket 认证: 已更新localStorage中的token')
+        console.log('WebSocket 认证: 已更新localStorage中的token')
       }
     } catch (error) {
-      logger.warn('更新 auth storage 失败:', error)
+      console.warn('更新 auth storage 失败:', error)
     }
 
     // 仅在已有连接时重建，避免无意义的初始化认证请求
@@ -87,7 +86,7 @@ class WebSocketAuthManager {
         localStorage.setItem('auth-storage', JSON.stringify(authData))
       }
     } catch (error) {
-      logger.warn('从 auth storage 移除 token 失败:', error)
+      console.warn('从 auth storage 移除 token 失败:', error)
     }
 
     // token 被移除时断开连接
@@ -100,7 +99,7 @@ class WebSocketAuthManager {
 
   public async refreshToken(): Promise<string | null> {
     if (!this.refreshCallback) {
-      logger.warn('WebSocket 认证未设置刷新回调')
+      console.warn('WebSocket 认证未设置刷新回调')
       return null
     }
 
@@ -111,7 +110,7 @@ class WebSocketAuthManager {
         return newToken
       }
     } catch (error) {
-      logger.error('WebSocket 认证 token 刷新失败:', error)
+      console.error('WebSocket 认证 token 刷新失败:', error)
     }
 
     return null
@@ -119,21 +118,21 @@ class WebSocketAuthManager {
 
   public async initializeConnection(): Promise<boolean> {
     const token = this.getToken()
-    logger.debug('WebSocket 认证: 认证方式:', token ? 'Bearer Token' : 'Session Cookie')
+    console.log('WebSocket 认证: 认证方式:', token ? 'Bearer Token' : 'Session Cookie')
 
     try {
-      logger.debug('WebSocket 认证: 创建 Echo 实例')
+      console.log('WebSocket 认证: 创建 Echo 实例')
       const instance = createEchoInstance()
 
       if (instance) {
-        logger.debug('WebSocket 认证: Echo 实例创建成功')
+        console.log('WebSocket 认证: Echo 实例创建成功')
         return true
       } else {
-        logger.error('WebSocket 认证: Echo 实例创建失败')
+        console.error('WebSocket 认证: Echo 实例创建失败')
         return false
       }
     } catch (error) {
-      logger.error('WebSocket 认证: 创建 Echo 实例出错:', error)
+      console.error('WebSocket 认证: 创建 Echo 实例出错:', error)
       return false
     }
   }
@@ -165,28 +164,28 @@ export const destroyAuthManager = (): void => {
 
 export const refreshEchoAuth = async () => {
   try {
-    logger.debug('WebSocket 认证: 正在刷新 Echo 认证')
+    console.log('WebSocket 认证: 正在刷新 Echo 认证')
 
     // 销毁当前实例
     destroyEchoInstance()
 
     // 用新 token 创建新实例
     try {
-      logger.debug('WebSocket 认证: 使用刷新后的 token 重试')
+      console.log('WebSocket 认证: 使用刷新后的 token 重试')
       const retryInstance = createEchoInstance()
 
       if (retryInstance) {
-        logger.debug('WebSocket 认证: 重试成功')
+        console.log('WebSocket 认证: 重试成功')
         return retryInstance
       }
     } catch (retryError) {
-      logger.error('WebSocket 认证: 重试失败:', retryError)
+      console.error('WebSocket 认证: 重试失败:', retryError)
     }
 
-    logger.debug('WebSocket 认证: Echo 认证刷新成功')
+    console.log('WebSocket 认证: Echo 认证刷新成功')
     return true
   } catch (error) {
-    logger.error('WebSocket 认证: 刷新 Echo 认证失败:', error)
+    console.error('WebSocket 认证: 刷新 Echo 认证失败:', error)
     return false
   }
 }

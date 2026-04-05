@@ -153,7 +153,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
           }
         }
       } catch (error) {
-        logger.error('AI 请求失败:', error)
+        console.error('AI 请求失败:', error)
         const apiMsg = error instanceof Error ? error.message : ''
         const toShow =
           typeof apiMsg === 'string' && apiMsg && apiMsg !== 'AI 请求失败'
@@ -252,7 +252,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
 
       toast.success('数据已生成，请检查后保存')
     } catch (error) {
-      logger.error('生成数据失败:', error)
+      console.error('生成数据失败:', error)
       toast.error('生成数据失败')
     } finally {
       setIsGenerating(false)
@@ -292,7 +292,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
       mutate('/api/word/learn/daily')
       onOpenChange(false)
     } catch (error) {
-      logger.error('保存失败:', error)
+      console.error('保存失败:', error)
       toast.error('保存失败')
     } finally {
       setIsSaving(false)

@@ -1,27 +1,16 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import { ChatRoom } from '../types'
-import { logger } from '@/lib/logger'
 import { Skeleton } from '@/components/ui/skeleton'
-import { logger } from '@/lib/logger'
 import { cn } from '@/lib/helpers'
-import { logger } from '@/lib/logger'
 import chatCache from '@/lib/cache/chat-cache'
-import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
-import { logger } from '@/lib/logger'
 import { Search, Users, MessageSquare, Clock } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import { Input } from '@/components/ui/input'
-import { logger } from '@/lib/logger'
 import { Badge } from '@/components/ui/badge'
-import { logger } from '@/lib/logger'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { logger } from '@/lib/logger'
 import { useChatStore } from '../chatStore'
-import { logger } from '@/lib/logger'
 
 interface LazyRoomListProps {
   onRoomSelect: (room: ChatRoom) => void
@@ -196,7 +185,7 @@ export function LazyRoomList({ onRoomSelect, selectedRoomId, className }: LazyRo
       await loadRooms()
       // Cache will be updated in the store
     } catch (error) {
-      logger.error('Failed to load rooms:', error)
+      console.error('Failed to load rooms:', error)
     }
   }, [loadRooms])
 
@@ -208,7 +197,7 @@ export function LazyRoomList({ onRoomSelect, selectedRoomId, className }: LazyRo
   // 筛选+排序房间
   const filteredAndSortedRooms = useMemo(() => {
     if (!Array.isArray(rooms)) {
-      logger.warn('LazyRoomList: rooms is not an array:', rooms)
+      console.warn('LazyRoomList: rooms is not an array:', rooms)
       return []
     }
 

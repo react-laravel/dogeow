@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import dynamic from 'next/dynamic'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -80,7 +79,7 @@ export default function NoteNodeEditor({
           window.localStorage.removeItem('markdown')
         }
       } catch (error) {
-        logger.error('加载节点内容失败:', error)
+        console.error('加载节点内容失败:', error)
       }
     },
     [resetEditorStorage]
@@ -197,7 +196,7 @@ export default function NoteNodeEditor({
             })
             toast.success('节点已创建并自动连接')
           } catch (linkError) {
-            logger.error('创建节点链接失败:', linkError)
+            console.error('创建节点链接失败:', linkError)
             toast.warning('节点已创建，但未能自动连线，请手动补充链接')
           }
         } else {
@@ -215,7 +214,7 @@ export default function NoteNodeEditor({
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      logger.error('保存节点错误:', error)
+      console.error('保存节点错误:', error)
       toast.error('保存失败')
     } finally {
       setIsSaving(false)

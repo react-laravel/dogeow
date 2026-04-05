@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { logger } from '@/lib/logger'
 import { performFullSearch } from '../api/searchApi'
 import type { SearchResult } from '../types'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -114,7 +113,7 @@ export function useSearchData({
       if (error instanceof Error && error.name === 'AbortError') {
         return
       }
-      logger.error('搜索出错:', error)
+      console.error('搜索出错:', error)
     } finally {
       setLoading(false)
       setHasSearched(true)

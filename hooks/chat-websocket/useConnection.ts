@@ -2,7 +2,6 @@
  * WebSocket 连接管理 Hook
  */
 import { useState, useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import Echo from 'laravel-echo'
 import { createEchoInstance, getAuthManager } from '@/lib/websocket'
 
@@ -22,14 +21,14 @@ export const useConnection = () => {
     try {
       const authManager = getAuthManager()
       const token = authManager.getToken()
-      logger.debug(
+      console.log(
         'WebSocket: Connecting with auth mode:',
         token ? 'Bearer Token' : 'Session Cookie'
       )
 
       const echoInstance = createEchoInstance()
       if (!echoInstance) {
-        logger.error('Failed to create Echo instance')
+        console.error('Failed to create Echo instance')
         return false
       }
 
@@ -38,7 +37,7 @@ export const useConnection = () => {
       setIsConnected(true)
       return true
     } catch (error) {
-      logger.error('Connection failed:', error)
+      console.error('Connection failed:', error)
       setConnectionStatus('disconnected')
       setIsConnected(false)
       return false

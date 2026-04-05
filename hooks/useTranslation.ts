@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useCallback, useState, useMemo } from 'react'
-import { logger } from '@/lib/logger'
 import { useLanguageStore, getCurrentLanguageInfo } from '@/stores/languageStore'
 import { getTranslation, getAvailableLanguages, type SupportedLanguage } from '@/lib/i18n'
 
@@ -50,7 +49,7 @@ export function useTranslation(): UseTranslationReturn {
       await initializeLanguage()
       setIsLanguageLoaded(true)
     } catch (error) {
-      logger.error('初始化语言失败:', error)
+      console.error('初始化语言失败:', error)
       setIsLanguageLoaded(true) // 即使出错也设置为 true，防止无限加载
     }
   }, [initializeLanguage, isLanguageLoaded])
@@ -107,7 +106,7 @@ export function useT() {
       try {
         await initializeLanguage()
       } catch (error) {
-        logger.error('初始化语言失败:', error)
+        console.error('初始化语言失败:', error)
       }
     }
 
@@ -130,7 +129,7 @@ export function useTranslationWithLanguage() {
       try {
         await initializeLanguage()
       } catch (error) {
-        logger.error('初始化语言失败:', error)
+        console.error('初始化语言失败:', error)
       }
     }
 

@@ -5,7 +5,6 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
-import { logger } from '@/lib/logger'
 import { shouldUpdatePlayingStateOnPause } from '../audio/playbackStateUtils'
 import type {
   AudioControllerOptions,
@@ -74,7 +73,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       setIsTrackChanging(true)
       setReadyToPlay(false) // 重置加载状态，显示加载指示器
     } catch (err) {
-      logger.error('setupMediaSource: failed to set audio source', err)
+      console.error('setupMediaSource: failed to set audio source', err)
       setAudioError(`Failed to set audio source: ${err}`)
       toast.error('Failed to set audio source', { description: String(err) })
     }
@@ -133,7 +132,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
             await audioRef.current.play()
           }
         } catch (err) {
-          logger.error('Failed to initialize AudioContext:', err)
+          console.error('Failed to initialize AudioContext:', err)
           if (audioRef.current) {
             audioRef.current.play().catch(handlePlayError)
           }
@@ -146,7 +145,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
           try {
             await audioContextRef.current.resume()
           } catch (err) {
-            logger.warn('AudioContext resume failed:', err)
+            console.warn('AudioContext resume failed:', err)
           }
         }
       }
@@ -310,17 +309,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     const audio = audioRef.current
     if (!audio) return
 
-    const handlePlay = () => {
-      if (!audioContextRef.current) {
-        initAudioContext(audio)
-      } else if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().catch(err => {
-          logger.warn('AudioContext resume failed after play:', err)
-        })
-      }
-
-      setIsPlaying(true)
-    }
+    const handlePlay = () => setIsPlaying(true)
     const handlePause = () => {
       // 延迟检查 document.hidden，避免与 visibilitychange 的竞态条件
       // 切换 app / 锁屏时，pause 事件可能在 visibilitychange 之前触发，
@@ -345,7 +334,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [audioContextRef, audioRef, initAudioContext, setIsPlaying])
+  }, [setIsPlaying, audioRef])
 
   // Handle page visibility changes
   useEffect(() => {
@@ -370,7 +359,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
             await audioRef.current.play()
           }
         } catch (err) {
-          logger.warn('Failed to resume playback:', err)
+          console.warn('Failed to resume playback:', err)
         }
       }
     }

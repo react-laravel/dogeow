@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 
 interface UseAutoSaveOptions<T> {
-  onSave: (data: T, signal: AbortSignal) => Promise<void>
+  onSave: (data: T) => Promise<void>
   delay?: number
   initialData?: T
 }
@@ -23,36 +22,20 @@ export function useAutoSave<T>({
   const [autoSaving, setAutoSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const savingRef = useRef(false)
   const initialDataRef = useRef<T | null>(initialData || null)
 
   const autoSave = useCallback(async () => {
     if (!initialDataRef.current) return
 
-    // Prevent concurrent saves
-    if (savingRef.current) return
-    savingRef.current = true
-
-    // Cancel any previous save attempt
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    abortControllerRef.current = new AbortController()
-
     setAutoSaving(true)
     try {
-      await onSave(initialDataRef.current, abortControllerRef.current.signal)
+      await onSave(initialDataRef.current)
       setLastSaved(new Date())
     } catch (error) {
-      // Only log if not aborted
-      if (error instanceof Error && error.name !== 'AbortError') {
-        logger.error('自动保存失败:', error)
-      }
+      console.error('自动保存失败:', error)
+      // 自动保存失败不显示错误提示，避免打扰用户
     } finally {
       setAutoSaving(false)
-      savingRef.current = false
-      abortControllerRef.current = null
     }
   }, [onSave])
 
@@ -75,20 +58,13 @@ export function useAutoSave<T>({
       clearTimeout(autoSaveTimeoutRef.current)
       autoSaveTimeoutRef.current = null
     }
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-    }
   }, [])
 
-  // Cleanup on unmount
+  // 清理定时器
   useEffect(() => {
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current)
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
       }
     }
   }, [])

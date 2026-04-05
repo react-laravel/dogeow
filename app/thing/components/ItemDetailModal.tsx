@@ -154,7 +154,7 @@ export function ItemDetailModal({
         await apiRequest<Room[]>(`/areas/${areaId}/rooms`)
         refreshRooms()
       } catch (error) {
-        logger.error('加载房间失败', error)
+        console.error('加载房间失败', error)
       }
     },
     [refreshRooms]
@@ -167,7 +167,7 @@ export function ItemDetailModal({
         await apiRequest<Spot[]>(`/rooms/${roomId}/spots`)
         refreshSpots()
       } catch (error) {
-        logger.error('加载位置失败', error)
+        console.error('加载位置失败', error)
       }
     },
     [refreshSpots]
@@ -295,7 +295,7 @@ export function ItemDetailModal({
       }
       setInitialData(initialData)
     } catch (error) {
-      logger.error('初始化编辑数据失败', error)
+      console.error('初始化编辑数据失败', error)
       toast.error('加载编辑数据失败')
     } finally {
       setEditLoading(false)

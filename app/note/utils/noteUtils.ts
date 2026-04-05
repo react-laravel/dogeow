@@ -3,13 +3,9 @@
  */
 
 import { format } from 'date-fns'
-import { logger } from '@/lib/logger'
 import { zhCN } from 'date-fns/locale'
-import { logger } from '@/lib/logger'
 import type { Note } from '../types/note'
-import { logger } from '@/lib/logger'
 import { extractTextFromJSON } from '@/lib/helpers/wordCount'
-import { logger } from '@/lib/logger'
 
 const CONTENT_PREVIEW_MAX_LENGTH = 150
 
@@ -114,7 +110,7 @@ export const getNotePreviewText = (note: Note, maxLength = CONTENT_PREVIEW_MAX_L
         const parsedContent = JSON.parse(trimmedContent)
 
         if (process.env.NODE_ENV === 'development') {
-          logger.debug('笔记JSON结构:', parsedContent)
+          console.log('笔记JSON结构:', parsedContent)
         }
 
         let extractedText = extractTextFromJSON(parsedContent)
@@ -124,7 +120,7 @@ export const getNotePreviewText = (note: Note, maxLength = CONTENT_PREVIEW_MAX_L
         }
 
         if (process.env.NODE_ENV === 'development') {
-          logger.debug('提取的文本:', extractedText)
+          console.log('提取的文本:', extractedText)
         }
 
         if (extractedText && extractedText.trim()) {
@@ -137,7 +133,7 @@ export const getNotePreviewText = (note: Note, maxLength = CONTENT_PREVIEW_MAX_L
 
         return ''
       } catch (error) {
-        logger.warn('解析笔记JSON内容失败:', error)
+        console.warn('解析笔记JSON内容失败:', error)
         return getContentPreview(note.content, maxLength)
       }
     } else {

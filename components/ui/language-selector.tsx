@@ -18,7 +18,6 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { getLanguageFlag } from '@/lib/helpers/languageFlags'
-import { logger } from '@/lib/logger'
 
 interface LanguageSelectorProps {
   className?: string
@@ -74,14 +73,14 @@ export function LanguageSelector({
   }
 
   const handleLanguageChange = async (languageCode: string) => {
-    logger.debug('[LanguageSelector] User requested language change:', {
+    console.log('[LanguageSelector] User requested language change:', {
       from: currentLanguage,
       to: languageCode,
     })
 
     await switchLanguage(languageCode)
 
-    logger.debug('[LanguageSelector] Language change completed:', {
+    console.log('[LanguageSelector] Language change completed:', {
       newLanguage: languageCode,
       success: true,
     })
@@ -89,7 +88,7 @@ export function LanguageSelector({
 
   const handleResetToDetected = async () => {
     if (detectedLanguage) {
-      logger.debug('[LanguageSelector] User requested reset to detected language:', detectedLanguage)
+      console.log('[LanguageSelector] User requested reset to detected language:', detectedLanguage)
 
       // 显示检测中的提示
       toast.info(t('language.detection.detecting', '正在检测语言...'))
@@ -99,12 +98,12 @@ export function LanguageSelector({
       // 显示成功提示
       toast.success(t('language.detection.switched', `已切换到检测到的语言: ${detectedLanguage}`))
 
-      logger.debug('[LanguageSelector] Reset to detected language completed:', {
+      console.log('[LanguageSelector] Reset to detected language completed:', {
         detectedLanguage,
         success: true,
       })
     } else {
-      logger.debug('[LanguageSelector] No detected language available for reset')
+      console.log('[LanguageSelector] No detected language available for reset')
       toast.warning(t('language.detection.refresh_failed', '语言检测刷新失败'))
     }
   }

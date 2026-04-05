@@ -1,7 +1,7 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { logger } from '@/lib/logger'
 
-interface UseSoundOptions {
+export interface UseSoundOptions {
   /**
    * Frequency start (Hz)
    * @default 700
@@ -58,6 +58,7 @@ export function useGameSound({
 }: UseSoundOptions = {}) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const isInitializedRef = useRef(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   /**
    * Initialize Web Audio API context
@@ -75,6 +76,7 @@ export function useGameSound({
     try {
       audioContextRef.current = new AudioCtx()
       isInitializedRef.current = true
+      setIsInitialized(true)
       logger.debug('useGameSound: Initialized')
     } catch (error) {
       logger.error('useGameSound: Failed to initialize', error)
@@ -114,7 +116,6 @@ export function useGameSound({
     // Resume context if suspended
     if (ctx.state === 'suspended') {
       await resume()
-      if (ctx.state !== 'running') return
     }
 
     try {
@@ -171,6 +172,6 @@ export function useGameSound({
   return {
     playSound,
     isSupported: typeof window !== 'undefined' && typeof AudioContext !== 'undefined',
-    isInitialized: isInitializedRef.current,
+    isInitialized,
   }
 }

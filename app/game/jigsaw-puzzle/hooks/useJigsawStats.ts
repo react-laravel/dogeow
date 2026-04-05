@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 
 interface JigsawStats {
   bestTime: number | null
@@ -34,7 +33,7 @@ export function useJigsawStats(difficulty: number): JigsawStatsHook {
         setStats(parsedStats)
       }
     } catch (error) {
-      logger.error('Failed to load jigsaw stats:', error)
+      console.error('Failed to load jigsaw stats:', error)
     }
   }, [storageKey])
 
@@ -51,7 +50,7 @@ export function useJigsawStats(difficulty: number): JigsawStatsHook {
       try {
         localStorage.setItem(storageKey, JSON.stringify(newStats))
       } catch (error) {
-        logger.error('Failed to save jigsaw stats:', error)
+        console.error('Failed to save jigsaw stats:', error)
       }
 
       return newStats
@@ -70,7 +69,7 @@ export function useJigsawStats(difficulty: number): JigsawStatsHook {
     try {
       localStorage.removeItem(storageKey)
     } catch (error) {
-      logger.error('Failed to reset jigsaw stats:', error)
+      console.error('Failed to reset jigsaw stats:', error)
     }
   }
 

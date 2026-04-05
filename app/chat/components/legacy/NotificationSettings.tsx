@@ -1,17 +1,11 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { Switch } from '@/components/ui/switch'
-import { logger } from '@/lib/logger'
 import { Label } from '@/components/ui/label'
-import { logger } from '@/lib/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { logger } from '@/lib/logger'
 import {
-import { logger } from '@/lib/logger'
   Dialog,
   DialogContent,
   DialogHeader,
@@ -19,11 +13,8 @@ import { logger } from '@/lib/logger'
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Settings, Bell, Volume2, MessageSquare, AtSign } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import useChatStore from '@/app/chat/chatStore'
-import { logger } from '@/lib/logger'
 import NotificationService from '@/lib/services/notificationService'
-import { logger } from '@/lib/logger'
 
 interface NotificationSettingsProps {
   className?: string
@@ -61,7 +52,7 @@ export default function NotificationSettings({ className }: NotificationSettings
       await requestBrowserNotificationPermission()
     } catch (error) {
       // 保留原有注释
-      logger.error('Failed to request notification permission:', error)
+      console.error('Failed to request notification permission:', error)
     } finally {
       setIsRequestingPermission(false)
     }

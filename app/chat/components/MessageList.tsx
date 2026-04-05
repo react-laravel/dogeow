@@ -1,13 +1,12 @@
 'use client'
 
 import React, { useEffect, useCallback, useMemo } from 'react'
-import { logger } from '@/lib/logger'
 import Image from 'next/image'
 import { format, isToday, isYesterday } from 'date-fns'
+
 import { cn } from '@/lib/helpers'
 import useChatStore from '@/app/chat/chatStore'
 import { useMessageScroll } from '@/app/chat/hooks/message-list/useMessageScroll'
-import { useMessageVirtualization } from '@/app/chat/hooks/useMessageVirtualization'
 import type { ChatMessage } from '../types'
 import { MessageInteractions } from './MessageInteractions'
 import { MentionHighlight, useMentionDetection } from './MentionHighlight'
@@ -210,7 +209,7 @@ function MessageListContent({
       .filter((message): message is ChatMessage => message !== null)
 
     if (process.env.NODE_ENV === 'development' && normalized.length !== messagesForRoom.length) {
-      logger.warn('MessageList: dropped malformed messages', {
+      console.warn('MessageList: dropped malformed messages', {
         roomId,
         total: messagesForRoom.length,
         usable: normalized.length,
@@ -236,9 +235,10 @@ function MessageListContent({
     // Reaction functionality placeholder
   }, [])
 
-  // Get the actual scroll container - prefer passed ref, fallback to querySelector
-  const actualScrollContainer = scrollContainerRef?.current ??
-    (typeof document !== 'undefined' ? document.querySelector('.chat-messages-mobile') as HTMLDivElement | null : null)
+  const getScrollContainer = useCallback(() => {
+    if (scrollContainerRef?.current) return scrollContainerRef.current
+    return document.querySelector('.chat-messages-mobile') as HTMLDivElement | null
+  }, [scrollContainerRef])
 
   // 分组，优化分组逻辑与类型推断
   const groupedMessages = useMemo(() => {
@@ -275,33 +275,6 @@ function MessageListContent({
     return groups
   }, [filteredMessages, typingByRoom, roomKey])
 
-  // Setup virtualization for message groups
-  // Note: Estimated height of ~120px per group (avatar + messages + spacing)
-  // For media-heavy messages, actual height may be larger, causing virtualization gaps
-  // This is acceptable trade-off for performance with large message lists
-  const containerHeight = actualScrollContainer?.clientHeight ?? 600
-  const {
-    containerRef: virtualContainerRef,
-    virtualRange,
-    offsetY,
-    isNearBottom: isNearBottomVirtual,
-  } = useMessageVirtualization(groupedMessages.length, {
-    itemHeight: 120, // Estimated average group height (avatar 32px + messages ~60-80px + spacing 16px)
-    containerHeight,
-    bufferSize: 5, // Conservative buffer due to variable heights
-    overscan: 3, // Fewer extra items to reduce unnecessary renders
-  })
-
-  // Link the external scroll container to the virtualization hook
-  useEffect(() => {
-    if (actualScrollContainer && virtualContainerRef.current !== actualScrollContainer) {
-      virtualContainerRef.current = actualScrollContainer as any
-    }
-  }, [virtualContainerRef, actualScrollContainer])
-
-  // Calculate space for items after the visible range
-  const offsetHeightAfter = Math.max(0, (groupedMessages.length - virtualRange.endIndex) * 120)
-
   useEffect(() => {
     if (roomId) {
       stableLoadMessages(roomId).catch(error => {
@@ -316,13 +289,10 @@ function MessageListContent({
             code: errObj.code ?? 'No code',
           })
         } else errMsg = String(error)
-        logger.error('Failed to load messages:', errMsg)
+        console.error('Failed to load messages:', errMsg)
       })
     }
   }, [roomId, stableLoadMessages])
-
-  // Create a stable getter for the scroll container
-  const getScrollContainer = useCallback(() => actualScrollContainer, [actualScrollContainer])
 
   useMessageScroll({
     roomId,
@@ -338,9 +308,6 @@ function MessageListContent({
       </div>
     )
   }
-
-  // Get visible message groups based on virtualization
-  const visibleGroups = groupedMessages.slice(virtualRange.startIndex, virtualRange.endIndex)
 
   return (
     <div
@@ -358,15 +325,10 @@ function MessageListContent({
           </div>
         </div>
       )}
-
-      {/* Virtual spacer for groups before visible range */}
-      <div style={{ height: offsetY }} />
-
-      {/* Visible message groups */}
       <div className="space-y-4">
-        {visibleGroups.map((group, idx) => (
+        {groupedMessages.map((group, idx) => (
           <MessageGroup
-            key={`group-${group.user.id}-${group.timestamp.getTime()}-${virtualRange.startIndex + idx}`}
+            key={`group-${group.user.id}-${group.timestamp.getTime()}-${idx}`}
             messages={group.messages}
             user={group.user}
             timestamp={group.timestamp}
@@ -376,9 +338,6 @@ function MessageListContent({
           />
         ))}
       </div>
-
-      {/* Virtual spacer for groups after visible range */}
-      <div style={{ height: offsetHeightAfter }} />
     </div>
   )
 }

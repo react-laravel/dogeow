@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { logger } from '@/lib/logger'
 
 export interface ComboboxOption {
   value: string
@@ -51,7 +50,7 @@ export function Combobox({
 
   const handleCreateOption = React.useCallback(() => {
     if (onCreateOption && searchQuery && searchQuery.trim()) {
-      logger.debug('正在创建选项:', searchQuery.trim())
+      console.log('正在创建选项:', searchQuery.trim())
       onCreateOption(searchQuery.trim())
       setSearchQuery('')
       setOpen(false)
@@ -60,7 +59,7 @@ export function Combobox({
 
   const handleSelect = React.useCallback(
     (selectedOption: ComboboxOption) => {
-      logger.debug('handleSelect called with:', selectedOption)
+      console.log('handleSelect called with:', selectedOption)
       onChange(selectedOption.value)
       setSearchQuery('')
       setOpen(false)
@@ -159,7 +158,7 @@ export function Combobox({
                     )}
                     onClick={() => {
                       if (!option.disabled) {
-                        logger.debug('点击选项:', option)
+                        console.log('点击选项:', option)
                         handleSelect(option)
                       }
                     }}

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import { useMusicStore, MusicTrack } from '@/stores/musicStore'
 import { useAudioPlayback } from '@/components/launcher/hooks/useAudioPlayback'
 import { useAudioVisualizer } from '@/components/launcher/hooks/useAudioVisualizer'
@@ -131,7 +130,7 @@ export const useAudioManager = () => {
         }
       }
     } catch (error) {
-      logger.error('Failed to load audio list:', error)
+      console.error('Failed to load audio list:', error)
       setAudioError('Failed to load audio list')
     } finally {
       setIsLoadingTracks(false)

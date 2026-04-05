@@ -1,29 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import { apiRequest } from '@/lib/api'
-import { logger } from '@/lib/logger'
 import { useParams } from 'next/navigation'
-import { logger } from '@/lib/logger'
 import dynamic from 'next/dynamic'
-import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
-import { logger } from '@/lib/logger'
 import { useNoteLoader } from '../../hooks/useNoteLoader'
-import { logger } from '@/lib/logger'
 import { useNoteContent } from '../../hooks/useNoteContent'
-import { logger } from '@/lib/logger'
 import { useNoteShortcuts } from '../../hooks/useNoteShortcuts'
-import { logger } from '@/lib/logger'
 import { NoteEditorToolbar } from '../../components/NoteEditorToolbar'
-import { logger } from '@/lib/logger'
 import { NoteLoadingState } from '../../components/NoteLoadingState'
-import { logger } from '@/lib/logger'
 import { NoteErrorState } from '../../components/NoteErrorState'
-import { logger } from '@/lib/logger'
 import { PageContainer } from '@/components/layout'
-import { logger } from '@/lib/logger'
 
 // 使用dynamic import避免服务端渲染问题
 const TailwindAdvancedEditor = dynamic(() => import('@/components/novel-editor'), { ssr: false })
@@ -82,7 +70,7 @@ export default function EditNotePage() {
       setIsPrivate(newPrivacyStatus)
       toast.success(newPrivacyStatus ? '已私密' : '已公开')
     } catch (error) {
-      logger.error('切换隐私状态错误:', error)
+      console.error('切换隐私状态错误:', error)
       toast.error('操作失败')
     } finally {
       setIsSaving(false)
@@ -112,7 +100,7 @@ export default function EditNotePage() {
 
       toast.success('笔记已更新')
     } catch (error) {
-      logger.error('保存笔记错误:', error)
+      console.error('保存笔记错误:', error)
       toast.error('保存失败')
     } finally {
       setIsSaving(false)

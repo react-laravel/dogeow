@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Input } from '@/components/ui/input'
@@ -98,7 +97,7 @@ export default function NewNotePage() {
       // 跳转到编辑页面
       router.push(`/note/edit/${normalizedNote.id}`)
     } catch (error) {
-      logger.error('保存笔记错误:', error)
+      console.error('保存笔记错误:', error)
       toast.error('保存失败')
     } finally {
       setIsSaving(false)

@@ -1,15 +1,9 @@
 import React, { memo } from 'react'
-import { logger } from '@/lib/logger'
 import { ArrowLeft, Settings, Users, Hash, MenuIcon } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { Badge } from '@/components/ui/badge'
-import { logger } from '@/lib/logger'
 import { useTranslation } from '@/hooks/useTranslation'
-import { logger } from '@/lib/logger'
 import type { ChatRoom } from '@/app/chat/types'
-import { logger } from '@/lib/logger'
 
 interface ChatHeaderMobileProps {
   room: ChatRoom
@@ -48,7 +42,7 @@ export const ChatHeaderMobile = memo<ChatHeaderMobileProps>(
               size="icon"
               onClick={() => {
                 if (process.env.NODE_ENV === 'development') {
-                  logger.debug('Menu button clicked')
+                  console.log('Menu button clicked')
                 }
                 onOpenRoomList()
               }}
@@ -89,7 +83,7 @@ export const ChatHeaderMobile = memo<ChatHeaderMobileProps>(
                 }
                 onClick={() => {
                   if (process.env.NODE_ENV === 'development') {
-                    logger.debug('🔍 连接状态详情:', {
+                    console.log('🔍 连接状态详情:', {
                       isConnected,
                       connectionStatus,
                       timestamp: new Date().toLocaleTimeString(),
@@ -110,7 +104,7 @@ export const ChatHeaderMobile = memo<ChatHeaderMobileProps>(
               size="icon"
               onClick={() => {
                 if (process.env.NODE_ENV === 'development') {
-                  logger.debug('Users list button clicked')
+                  console.log('Users list button clicked')
                 }
                 onOpenUsersList()
               }}

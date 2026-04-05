@@ -1,5 +1,4 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import { useBowlingStore } from '../store'
 
 interface GameStateRefs {
@@ -24,7 +23,7 @@ export function useBowlingGameState() {
   // 同步状态到refs
   useEffect(() => {
     ballThrownRef.current = ballThrown
-    logger.debug('🎳 ballThrown状态更新:', ballThrown)
+    console.log('🎳 ballThrown状态更新:', ballThrown)
   }, [ballThrown])
 
   useEffect(() => {
@@ -39,10 +38,10 @@ export function useBowlingGameState() {
   const handleResultProcessed = useCallback(
     (knockedDownCount: number) => {
       if (showingResult) {
-        logger.warn('⚠️ 结果正在显示中，跳过处理')
+        console.log('⚠️ 结果正在显示中，跳过处理')
         return
       }
-      logger.debug(`🎳 最终击倒球瓶数: ${knockedDownCount}`)
+      console.log(`🎳 最终击倒球瓶数: ${knockedDownCount}`)
       processThrowResult(knockedDownCount)
       isProcessingResultRef.current = false
     },

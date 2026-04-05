@@ -4,7 +4,6 @@
  */
 
 import { loadAllDocuments } from './search'
-import { logger } from '@/lib/logger'
 import { searchSimilarDocuments, buildVectorIndex, loadVectorIndex } from './vector-store'
 import { getKnowledgeConfig } from './config'
 
@@ -29,10 +28,10 @@ export async function searchWithRAG(query: string, topK: number = 5): Promise<RA
 
   // 如果索引不存在，构建新索引
   if (!index) {
-    logger.debug('[RAG搜索] 向量索引不存在，开始构建...')
+    console.log('[RAG搜索] 向量索引不存在，开始构建...')
     const documents = await loadAllDocuments()
     if (documents.length === 0) {
-      logger.warn('[RAG搜索] 没有找到任何文档')
+      console.warn('[RAG搜索] 没有找到任何文档')
       return []
     }
 
@@ -84,11 +83,11 @@ export async function searchWithRAG(query: string, topK: number = 5): Promise<RA
 export async function ensureVectorIndex(): Promise<void> {
   const index = loadVectorIndex()
   if (!index) {
-    logger.debug('[RAG] 向量索引不存在，需要构建')
+    console.log('[RAG] 向量索引不存在，需要构建')
     return
   }
 
   // 可以在这里添加检查逻辑，判断是否需要更新索引
   // 例如：比较文档的修改时间等
-  logger.debug('[RAG] 向量索引已存在')
+  console.log('[RAG] 向量索引已存在')
 }

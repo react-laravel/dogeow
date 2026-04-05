@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 import { useBowlingStore } from '../store'
 import { GameControls } from './GameControls'
 import { useBowlingControls } from '../hooks/useBowlingControls'
@@ -87,7 +86,7 @@ export function BowlingCanvas() {
   // 重置效果 - 新一轮时完全重置
   useEffect(() => {
     if (isMounted.current && !gameState.showingResult) {
-      logger.debug(`GAME: New frame detected (${gameState.currentFrame}). Performing full reset.`)
+      console.log(`GAME: New frame detected (${gameState.currentFrame}). Performing full reset.`)
       resetScene()
       resetProcessingState()
     }
@@ -96,7 +95,7 @@ export function BowlingCanvas() {
   // 重置效果 - 第二次投球时只重置球
   useEffect(() => {
     if (isMounted.current && gameState.currentThrow === 2 && !gameState.showingResult) {
-      logger.debug(
+      console.log(
         `GAME: Second throw detected in frame ${gameState.currentFrame}. Resetting ball only.`
       )
       resetBall()
@@ -117,7 +116,7 @@ export function BowlingCanvas() {
 
     // eslint-disable-next-line react-hooks/immutability -- refs.current 为合法的可变写入
     refs.ballThrownRef.current = true
-    logger.debug('🎳 Three.js 投球！', { aimAngle, power })
+    console.log('🎳 Three.js 投球！', { aimAngle, power })
 
     throwBall(aimAngle, power)
   }, [gameState.ballThrown, aimAngle, power, throwBall, refs.ballThrownRef, sceneRef])

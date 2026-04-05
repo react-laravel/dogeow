@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/lib/logger'
 
 const GITHUB_CATALOG_URL = 'https://models.github.ai/catalog/models'
 const FETCH_TIMEOUT_MS = 20000
@@ -88,7 +87,7 @@ export async function GET(request: NextRequest) {
       )
     }
     const msg = e instanceof Error ? e.message : String(e)
-    logger.error('GitHub catalog error:', e)
+    console.error('GitHub catalog error:', e)
     return NextResponse.json(
       {
         error: '获取目录失败',

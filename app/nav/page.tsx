@@ -155,7 +155,7 @@ function NavContent() {
           applySampleData()
         }
       } catch (error) {
-        logger.error('获取导航数据失败:', error)
+        console.error('获取导航数据失败:', error)
       } finally {
         setLoading(false)
       }

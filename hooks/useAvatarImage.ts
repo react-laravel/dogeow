@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 
 interface UseAvatarImageProps {
   seed: string
@@ -31,13 +30,13 @@ export function useAvatarImage({ seed, fallbackInitials }: UseAvatarImageProps) 
   }, [seed])
 
   const handleImageError = () => {
-    logger.error('Avatar image failed to load:', getCurrentUrl())
+    console.error('Avatar image failed to load:', getCurrentUrl())
     if (currentUrlIndex < fallbackUrls.length - 1) {
       setCurrentUrlIndex(prev => prev + 1)
-      logger.debug('Trying fallback URL:', fallbackUrls[currentUrlIndex + 1])
+      console.log('Trying fallback URL:', fallbackUrls[currentUrlIndex + 1])
     } else {
       setImageError(true)
-      logger.debug('All avatar URLs failed, showing fallback')
+      console.log('All avatar URLs failed, showing fallback')
     }
     setIsLoading(false)
   }

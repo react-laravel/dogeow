@@ -1,11 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { logger } from '@/lib/logger'
 import { useGameStore } from '../../stores/gameStore'
-import { logger } from '@/lib/logger'
 import { post } from '@/lib/api'
-import { logger } from '@/lib/logger'
 
 interface PotionSettings {
   autoUseHpPotion: boolean
@@ -80,7 +77,7 @@ export function PotionSettings() {
         setCharacter(prev => (prev ? { ...prev, ...response.character } : prev))
       }
     } catch (error) {
-      logger.error('更新药水设置失败:', error)
+      console.error('更新药水设置失败:', error)
     } finally {
       setSaving(false)
     }

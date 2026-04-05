@@ -1,27 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 import { SettingsForm } from '../components/SettingsForm'
-import { logger } from '@/lib/logger'
 import { useBooks, useWordSettings, updateWordSettings } from '../hooks/useWord'
-import { logger } from '@/lib/logger'
 import { Card, CardContent } from '@/components/ui/card'
-import { logger } from '@/lib/logger'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import Link from 'next/link'
-import { logger } from '@/lib/logger'
 import { ArrowLeft, ChevronDown } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import { PageContainer } from '@/components/layout'
-import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
-import { logger } from '@/lib/logger'
 import { mutate } from 'swr'
-import { logger } from '@/lib/logger'
 
 const STORAGE_KEY_BOOKS_EXPANDED = 'word_books_expanded'
 
@@ -55,7 +44,7 @@ export default function SettingsPage() {
       mutate('/word/stats')
     } catch (error) {
       toast.error('选择单词书失败')
-      logger.error('选择单词书失败:', error)
+      console.error('选择单词书失败:', error)
     } finally {
       setSelectingBookId(null)
     }
@@ -134,7 +123,7 @@ export default function SettingsPage() {
               })
             ) : (
               <p className="text-muted-foreground py-2 text-sm">
-                暂无单词书
+                暂无单词书，请先运行 db:seed 导入数据
               </p>
             )}
           </CardContent>

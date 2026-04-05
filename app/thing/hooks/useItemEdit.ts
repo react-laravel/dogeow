@@ -82,7 +82,7 @@ export function useItemEdit() {
         await apiRequest<Room[]>(`/areas/${areaId}/rooms`)
         refreshRooms()
       } catch (error) {
-        logger.error(ERROR_MESSAGES.LOAD_ROOMS_FAILED, error)
+        console.error(ERROR_MESSAGES.LOAD_ROOMS_FAILED, error)
       }
     },
     [refreshRooms]
@@ -95,7 +95,7 @@ export function useItemEdit() {
         await apiRequest<Spot[]>(`/rooms/${roomId}/spots`)
         refreshSpots()
       } catch (error) {
-        logger.error(ERROR_MESSAGES.LOAD_SPOTS_FAILED, error)
+        console.error(ERROR_MESSAGES.LOAD_SPOTS_FAILED, error)
       }
     },
     [refreshSpots]

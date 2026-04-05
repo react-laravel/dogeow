@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import useSWR from 'swr'
-import { logger } from '@/lib/logger'
 import { Calendar } from 'lucide-react'
 import {
   Select,
@@ -63,7 +62,7 @@ export function LogPanel() {
           })
         }
       } catch (error) {
-        logger.warn('WebSocket 连接失败:', error)
+        console.warn('WebSocket 连接失败:', error)
       }
     }
 

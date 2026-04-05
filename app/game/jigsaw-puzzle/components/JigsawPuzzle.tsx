@@ -1,21 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { logger } from '@/lib/logger'
 import { Card } from '@/components/ui/card'
-import { logger } from '@/lib/logger'
 import { useJigsawStats } from '../hooks/useJigsawStats'
-import { logger } from '@/lib/logger'
 import { usePuzzleActions } from '../hooks/usePuzzleActions'
-import { logger } from '@/lib/logger'
 import { usePuzzleLayout } from '../hooks/usePuzzleLayout'
-import { logger } from '@/lib/logger'
 import { usePuzzleInteraction } from '../hooks/usePuzzleInteraction'
-import { logger } from '@/lib/logger'
 import { loadImage, getBackgroundSize, getBackgroundPosition } from '../utils/imageUtils'
-import { logger } from '@/lib/logger'
 import {
-import { logger } from '@/lib/logger'
   initializePuzzlePieces,
   initializePuzzleSlots,
   isGameComplete,
@@ -23,7 +15,6 @@ import { logger } from '@/lib/logger'
   type PuzzleSlot,
 } from '../utils/puzzleUtils'
 import {
-import { logger } from '@/lib/logger'
   GameInfoCard,
   FloatingReference,
   PuzzleBoard,
@@ -86,7 +77,7 @@ export default function JigsawPuzzle({ imageUrl, size, onComplete }: JigsawPuzzl
           initializePuzzle()
         })
         .catch(() => {
-          logger.error('图片加载失败')
+          console.error('图片加载失败')
           setImageLoaded(false)
         })
     }

@@ -4,7 +4,6 @@
  */
 
 import { getKnowledgeConfig } from './config'
-import { logger } from '@/lib/logger'
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
 const OLLAMA_EMBEDDING_URL = `${OLLAMA_BASE_URL}/api/embeddings`
@@ -37,7 +36,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     const data = await response.json()
     return data.embedding || []
   } catch (error) {
-    logger.error('生成向量嵌入失败:', error)
+    console.error('生成向量嵌入失败:', error)
     throw error
   }
 }

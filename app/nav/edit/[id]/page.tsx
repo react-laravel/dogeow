@@ -36,7 +36,7 @@ export default function EditNavPage() {
           setItem(currentItem)
         }
       } catch (error) {
-        logger.error('加载数据失败:', error)
+        console.error('加载数据失败:', error)
         if (isMounted) {
           toast.error('加载数据失败')
         }

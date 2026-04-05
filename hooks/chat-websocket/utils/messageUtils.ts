@@ -1,4 +1,3 @@
-import { logger } from '@/lib/logger'
 import { getAuthManager } from '@/lib/websocket'
 import { unwrapApiPayload } from '@/lib/api'
 import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
@@ -126,11 +125,11 @@ export const leaveRoomViaAPI = async (roomId: string): Promise<void> => {
     })
 
     if (response.ok) {
-      logger.debug('WebSocket: Successfully left room via API')
+      console.log('WebSocket: Successfully left room via API')
     } else {
-      logger.warn('WebSocket: Failed to leave room via API:', response.status)
+      console.warn('WebSocket: Failed to leave room via API:', response.status)
     }
   } catch (error) {
-    logger.error('WebSocket: Error leaving room via API:', error)
+    console.error('WebSocket: Error leaving room via API:', error)
   }
 }

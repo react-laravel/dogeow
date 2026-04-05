@@ -1,25 +1,15 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import { useFilePreview } from './grid/hooks/useFilePreview'
-import { logger } from '@/lib/logger'
 import { useGridViewActions } from '@/app/file/hooks/useGridViewActions'
-import { logger } from '@/lib/logger'
 import { useFileEdit } from '@/app/file/hooks/useFileEdit'
-import { logger } from '@/lib/logger'
 import { useMoveFiles } from '@/app/file/hooks/useFileOperations'
-import { logger } from '@/lib/logger'
 import { FileGridItem } from './grid/components/FileGridItem'
-import { logger } from '@/lib/logger'
 import { EditFileDialog } from './grid/components/EditFileDialog'
-import { logger } from '@/lib/logger'
 import { FilePreviewDialog } from './grid/components/FilePreviewDialog'
-import { logger } from '@/lib/logger'
 import useFileStore from '@/app/file/store/useFileStore'
-import { logger } from '@/lib/logger'
 import type { CloudFile } from '@/app/file/types'
-import { logger } from '@/lib/logger'
 
 interface GridViewProps {
   files: CloudFile[]
@@ -46,7 +36,7 @@ export default function GridView({ files }: GridViewProps) {
   const [dragOverFolderId, setDragOverFolderId] = useState<number | null>(null)
 
   const handleDragStart = useCallback((file: CloudFile, event: React.DragEvent) => {
-    logger.debug('DragStart - file:', file.id, file.name, 'is_folder:', file.is_folder)
+    console.log('DragStart - file:', file.id, file.name, 'is_folder:', file.is_folder)
     event.dataTransfer.setData('text/plain', file.id.toString())
     event.dataTransfer.effectAllowed = 'move'
   }, [])
@@ -71,20 +61,20 @@ export default function GridView({ files }: GridViewProps) {
       setDragOverFolderId(null)
 
       const fileId = parseInt(event.dataTransfer.getData('text/plain'), 10)
-      logger.debug('Drop event - fileId:', fileId, 'targetFolder:', targetFolder.id)
+      console.log('Drop event - fileId:', fileId, 'targetFolder:', targetFolder.id)
 
       if (isNaN(fileId)) {
-        logger.debug('Invalid fileId, no action taken')
+        console.log('Invalid fileId, no action taken')
         return
       }
 
       // 不能将文件夹移动到自身
       if (fileId === targetFolder.id) {
-        logger.debug('Cannot move folder to itself')
+        console.log('Cannot move folder to itself')
         return
       }
 
-      logger.debug('Calling moveFiles with:', fileId, targetFolder.id)
+      console.log('Calling moveFiles with:', fileId, targetFolder.id)
       // 移动文件到目标文件夹
       await moveFiles([fileId], targetFolder.id)
     },

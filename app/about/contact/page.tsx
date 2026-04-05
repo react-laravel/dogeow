@@ -2,7 +2,6 @@
 
 import { PageContainer } from '@/components/layout'
 import { useState } from 'react'
-import { logger } from '@/lib/logger'
 
 export default function ContactPage() {
   const [copied, setCopied] = useState(false)
@@ -13,7 +12,7 @@ export default function ContactPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      logger.error('Failed to copy:', err)
+      console.error('Failed to copy:', err)
     }
   }
 

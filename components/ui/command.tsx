@@ -7,7 +7,6 @@ import { Search } from 'lucide-react'
 
 import { cn } from '@/lib/helpers'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { logger } from '@/lib/logger'
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -115,7 +114,7 @@ const CommandItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
 >(({ className, onSelect, ...props }, ref) => {
   const handleSelect = (value: string) => {
-    logger.debug('CommandItem 点击:', value)
+    console.log('CommandItem 点击:', value)
     if (onSelect) {
       onSelect(value)
     }

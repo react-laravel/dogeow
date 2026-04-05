@@ -57,7 +57,7 @@ export function useSwipeControls({
       }
     }
 
-    const onMove = (e: TouchEvent) => {
+    const onTouchMove = (e: TouchEvent) => {
       if (!state.touching || !state.startX || !state.startY) return
 
       const now = Date.now()
@@ -100,12 +100,12 @@ export function useSwipeControls({
     }
 
     document.addEventListener('touchstart', onStart)
-    document.addEventListener('touchmove', onMove)
+    document.addEventListener('touchmove', onTouchMove)
     document.addEventListener('touchend', onEnd)
 
     return () => {
       document.removeEventListener('touchstart', onStart)
-      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchmove', onTouchMove)
       document.removeEventListener('touchend', onEnd)
     }
   }, [onMove, enabled, minDistance, throttleMs, targetSelector])

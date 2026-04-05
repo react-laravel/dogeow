@@ -82,7 +82,7 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
       }
       toast.success('数据已生成，请检查后保存')
     } catch (error) {
-      logger.error('生成数据失败:', error)
+      console.error('生成数据失败:', error)
       toast.error('生成数据失败')
     } finally {
       setIsGenerating(false)
@@ -108,7 +108,7 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
         example_sentences: examplePairs,
       }
 
-      logger.debug('PATCH /word payload:', payload)
+      console.log('PATCH /word payload:', payload)
 
       await patch(`/word/${word.id}`, payload)
 
@@ -116,7 +116,7 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
       mutate('/word/daily')
       onOpenChange(false)
     } catch (error) {
-      logger.error('保存失败:', error)
+      console.error('保存失败:', error)
 
       // 如果是后端验证错误，尝试展示具体字段错误信息
       if (error instanceof ApiRequestError && error.data?.errors) {

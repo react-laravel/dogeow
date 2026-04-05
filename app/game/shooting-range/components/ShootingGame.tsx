@@ -1,17 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import { Canvas } from '@react-three/fiber'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { GameScene } from './game/GameScene'
-import { logger } from '@/lib/logger'
 import { GameUI } from './game/GameUI'
-import { logger } from '@/lib/logger'
 import { Crosshair } from './game/Crosshair'
-import { logger } from '@/lib/logger'
 
 interface ShootingGameProps {
   difficulty: 'easy' | 'medium' | 'hard'
@@ -95,7 +89,7 @@ export default function ShootingGame({ difficulty, setGameStarted }: ShootingGam
             canvasRef.current.requestPointerLock()
           }
         } catch (e) {
-          logger.error('锁定指针失败:', e)
+          console.error('锁定指针失败:', e)
           setBrowserSupport(prev => ({ ...prev, useFallback: true }))
         }
       }
@@ -180,7 +174,7 @@ export default function ShootingGame({ difficulty, setGameStarted }: ShootingGam
         document.exitPointerLock()
       }
     } catch (e) {
-      logger.error('释放指针锁失败:', e)
+      console.error('释放指针锁失败:', e)
     }
 
     setGameStartedState(false)
@@ -196,7 +190,7 @@ export default function ShootingGame({ difficulty, setGameStarted }: ShootingGam
         document.exitPointerLock()
       }
     } catch (e) {
-      logger.error('释放指针锁失败:', e)
+      console.error('释放指针锁失败:', e)
     }
 
     setGameStartedState(false)

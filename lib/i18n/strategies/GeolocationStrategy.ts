@@ -2,7 +2,6 @@
  * 地理位置检测策略
  */
 import type { SupportedLanguage } from '../translations'
-import { logger } from '@/lib/logger'
 
 export interface DetectionResult {
   language: SupportedLanguage
@@ -38,7 +37,7 @@ export class GeolocationStrategy {
         return timezoneResult
       }
     } catch (error) {
-      logger.error('地理位置检测失败:', error)
+      console.error('地理位置检测失败:', error)
     }
 
     return null
@@ -59,7 +58,7 @@ export class GeolocationStrategy {
         }
       }
     } catch (error) {
-      logger.warn('时区检测失败:', error)
+      console.warn('时区检测失败:', error)
     }
 
     return null
@@ -80,7 +79,7 @@ export class GeolocationStrategy {
         }
       }
     } catch (error) {
-      logger.warn('解析缓存失败:', error)
+      console.warn('解析缓存失败:', error)
     }
 
     return null
@@ -96,7 +95,7 @@ export class GeolocationStrategy {
         })
       )
     } catch (error) {
-      logger.warn('缓存失败:', error)
+      console.warn('缓存失败:', error)
     }
   }
 }

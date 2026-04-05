@@ -4,7 +4,6 @@
  */
 
 import fs from 'node:fs'
-import { logger } from '@/lib/logger'
 import path from 'node:path'
 import { Document } from './search'
 import { generateEmbedding } from './embedding'
@@ -53,7 +52,7 @@ export function loadVectorIndex(): VectorIndex | null {
     const content = fs.readFileSync(VECTOR_INDEX_FILE, 'utf8')
     return JSON.parse(content) as VectorIndex
   } catch (error) {
-    logger.error('加载向量索引失败:', error)
+    console.error('加载向量索引失败:', error)
     return null
   }
 }
@@ -66,7 +65,7 @@ export function saveVectorIndex(index: VectorIndex): void {
     ensureIndexDir()
     fs.writeFileSync(VECTOR_INDEX_FILE, JSON.stringify(index, null, 2), 'utf8')
   } catch (error) {
-    logger.error('保存向量索引失败:', error)
+    console.error('保存向量索引失败:', error)
     throw error
   }
 }
@@ -110,14 +109,14 @@ function chunkDocument(doc: Document, chunkSize: number = 1000, overlap: number 
  * 构建向量索引
  */
 export async function buildVectorIndex(documents: Document[]): Promise<VectorIndex> {
-  logger.debug(`[向量索引] 开始构建索引，文档数量: ${documents.length}`)
+  console.log(`[向量索引] 开始构建索引，文档数量: ${documents.length}`)
 
   const vectorDocs: VectorDocument[] = []
   const config = getKnowledgeConfig()
 
   for (let i = 0; i < documents.length; i++) {
     const doc = documents[i]
-    logger.debug(`[向量索引] 处理文档 ${i + 1}/${documents.length}: ${doc.title}`)
+    console.log(`[向量索引] 处理文档 ${i + 1}/${documents.length}: ${doc.title}`)
 
     // 将文档分块
     const chunks = chunkDocument(doc, 1000, 200)
@@ -146,7 +145,7 @@ export async function buildVectorIndex(documents: Document[]): Promise<VectorInd
           await new Promise(resolve => setTimeout(resolve, 100))
         }
       } catch (error) {
-        logger.warn(`[向量索引] 文档 ${doc.title} 块 ${chunkIndex} 生成向量失败:`, error)
+        console.warn(`[向量索引] 文档 ${doc.title} 块 ${chunkIndex} 生成向量失败:`, error)
       }
     }
   }
@@ -158,7 +157,7 @@ export async function buildVectorIndex(documents: Document[]): Promise<VectorInd
     documents: vectorDocs,
   }
 
-  logger.debug(`[向量索引] 索引构建完成，共 ${vectorDocs.length} 个向量文档`)
+  console.log(`[向量索引] 索引构建完成，共 ${vectorDocs.length} 个向量文档`)
   return index
 }
 
@@ -195,7 +194,7 @@ export async function searchSimilarDocuments(
 ): Promise<Array<{ doc: VectorDocument; similarity: number }>> {
   const index = loadVectorIndex()
   if (!index || index.documents.length === 0) {
-    logger.warn('[向量搜索] 向量索引不存在或为空')
+    console.warn('[向量搜索] 向量索引不存在或为空')
     return []
   }
 
@@ -213,10 +212,10 @@ export async function searchSimilarDocuments(
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, topK)
 
-    logger.debug(`[向量搜索] 查询: "${query}", 找到 ${results.length} 个相似文档`)
+    console.log(`[向量搜索] 查询: "${query}", 找到 ${results.length} 个相似文档`)
     return results
   } catch (error) {
-    logger.error('[向量搜索] 搜索失败:', error)
+    console.error('[向量搜索] 搜索失败:', error)
     return []
   }
 }

@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { ChatMessage } from '../../chat/types'
-import { logger } from '@/lib/logger'
 
 interface UseKnowledgeChatOptions {
   open?: boolean
@@ -184,7 +183,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
                 setCompletion(accumulatedContentRef.current)
               }
             } catch (e) {
-              logger.warn('Failed to parse content chunk:', line, e)
+              console.warn('Failed to parse content chunk:', line, e)
             }
           }
 
@@ -208,7 +207,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
               setIsLoading(false)
               return
             } catch (e) {
-              logger.warn('Failed to parse metadata:', line)
+              console.warn('Failed to parse metadata:', line)
             }
           }
         }
@@ -224,7 +223,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
               setCompletion(accumulatedContentRef.current)
             }
           } catch (e) {
-            logger.warn('Failed to parse remaining buffer:', buffer, e)
+            console.warn('Failed to parse remaining buffer:', buffer, e)
           }
         }
       }
@@ -249,7 +248,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
         return
       }
 
-      logger.error('Knowledge chat error:', error)
+      console.error('Knowledge chat error:', error)
       const errorMessage =
         error instanceof Error
           ? error.message.includes('fetch')

@@ -1,5 +1,4 @@
 import { extractTextFromJSON } from '../helpers/wordCount'
-import { logger } from '@/lib/logger'
 
 export interface Document {
   title: string
@@ -27,8 +26,8 @@ export async function loadDocumentsFromDatabase(): Promise<Document[]> {
     const apiBaseUrl = resolveKnowledgeApiBaseUrl()
     const apiUrl = `${apiBaseUrl}/notes/wiki/articles`
 
-    logger.debug(`[文档加载] API URL: ${apiBaseUrl}`)
-    logger.debug(`[文档加载] 请求 URL: ${apiUrl}`)
+    console.log(`[文档加载] API URL: ${apiBaseUrl}`)
+    console.log(`[文档加载] 请求 URL: ${apiUrl}`)
 
     const response = await fetch(apiUrl, {
       cache: 'no-store',
@@ -39,13 +38,13 @@ export async function loadDocumentsFromDatabase(): Promise<Document[]> {
 
     if (!response.ok) {
       const errorText = await response.text()
-      logger.error(`[文档加载] 请求失败: ${response.status} ${response.statusText}`)
-      logger.error(`[文档加载] 错误内容: ${errorText}`)
+      console.error(`[文档加载] 请求失败: ${response.status} ${response.statusText}`)
+      console.error(`[文档加载] 错误内容: ${errorText}`)
       throw new Error(`知识库文档接口请求失败: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
-    logger.debug(`[文档加载] 原始响应数据结构:`, {
+    console.log(`[文档加载] 原始响应数据结构:`, {
       hasData: !!data.data,
       hasArticles: !!data.articles,
       message: data.message,
@@ -53,7 +52,7 @@ export async function loadDocumentsFromDatabase(): Promise<Document[]> {
     })
 
     const articles = data.data?.articles || data.articles || []
-    logger.debug(`[文档加载] 解析到的文章数量: ${articles.length}`)
+    console.log(`[文档加载] 解析到的文章数量: ${articles.length}`)
 
     // 处理每个文章的内容
     const documents: Document[] = []
@@ -73,7 +72,7 @@ export async function loadDocumentsFromDatabase(): Promise<Document[]> {
             const extractedText = extractTextFromJSON(parsedContent)
             if (extractedText) {
               content = extractedText
-              logger.debug(
+              console.log(
                 `[文档加载] 从 JSON 提取文本: ${article.slug} -> ${extractedText.substring(0, 50)}...`
               )
             } else {
@@ -83,7 +82,7 @@ export async function loadDocumentsFromDatabase(): Promise<Document[]> {
           } catch (e) {
             // 如果不是有效的 JSON，使用原始内容作为纯文本
             content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
-            logger.debug(
+            console.log(
               `[文档加载] 非 JSON 内容: ${article.slug} -> ${content.substring(0, 50)}...`
             )
           }
@@ -96,21 +95,21 @@ export async function loadDocumentsFromDatabase(): Promise<Document[]> {
             content,
             source: 'database',
           })
-          logger.debug(
+          console.log(
             `[文档加载] 已加载文档: ${article.title} (${article.slug}), 内容长度: ${content.length}`
           )
         } else {
-          logger.warn(`[文档加载] 文档 ${article.slug} 没有可用内容`)
+          console.warn(`[文档加载] 文档 ${article.slug} 没有可用内容`)
         }
       } catch (error) {
-        logger.warn(`Failed to process article ${article.slug}:`, error)
+        console.warn(`Failed to process article ${article.slug}:`, error)
       }
     }
 
-    logger.debug(`[文档加载] 总共加载了 ${documents.length} 个文档`)
+    console.log(`[文档加载] 总共加载了 ${documents.length} 个文档`)
     return documents
   } catch (error) {
-    logger.error('Failed to load documents from database:', error)
+    console.error('Failed to load documents from database:', error)
     throw error instanceof Error ? error : new Error(`知识库文档加载失败: ${String(error)}`)
   }
 }
@@ -252,10 +251,10 @@ export async function searchDocuments(
 ): Promise<Array<{ doc: Document; snippet: string; score: number }>> {
   const documents = await loadAllDocuments()
 
-  logger.debug(`[文档搜索] 加载了 ${documents.length} 个文档，搜索查询: "${query}"`)
+  console.log(`[文档搜索] 加载了 ${documents.length} 个文档，搜索查询: "${query}"`)
 
   if (documents.length === 0) {
-    logger.warn('[文档搜索] 没有找到任何文档')
+    console.warn('[文档搜索] 没有找到任何文档')
     return []
   }
 
@@ -278,7 +277,7 @@ export async function searchDocuments(
     ? sortedDocs.slice(0, limit) // 通用查询：返回评分最高的N个
     : sortedDocs.filter(item => item.score > 0).slice(0, limit) // 具体查询：只返回有评分的
 
-  logger.debug(
+  console.log(
     `[文档搜索] 找到 ${topDocs.length} 个相关文档，评分:`,
     topDocs.map(t => ({ title: t.doc.title, score: t.score }))
   )

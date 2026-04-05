@@ -37,7 +37,7 @@ export default function NavCardActions({ item, deleteItem }: NavCardActionsProps
       setConfirmOpen(false)
     } catch (error) {
       toast.error('删除失败，请稍后再试')
-      logger.error('Failed to delete nav item:', error)
+      console.error('Failed to delete nav item:', error)
     } finally {
       setLoading(false)
     }

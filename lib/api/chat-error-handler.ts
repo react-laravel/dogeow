@@ -1,7 +1,5 @@
 import { toast } from 'sonner'
-import { logger } from '@/lib/logger'
 import { reportChatError } from '@/lib/services/errorReportingService'
-import { logger } from '@/lib/logger'
 
 export interface ChatApiError extends Error {
   type: 'network' | 'authentication' | 'validation' | 'server' | 'timeout' | 'unknown'
@@ -103,7 +101,7 @@ class ChatApiErrorHandler {
         stack: new Error().stack,
       }
 
-      logger.warn('Chat API: Received empty error object:', debugInfo)
+      console.warn('Chat API: Received empty error object:', debugInfo)
 
       return {
         name: 'ChatApiError',
@@ -281,19 +279,19 @@ class ChatApiErrorHandler {
     switch (error.type) {
       case 'network':
       case 'timeout':
-        logger.warn('Chat API Network Error:', logData)
+        console.warn('Chat API Network Error:', logData)
         break
       case 'authentication':
-        logger.warn('Chat API Auth Error:', logData)
+        console.warn('Chat API Auth Error:', logData)
         break
       case 'validation':
         console.info('Chat API Validation Error:', logData)
         break
       case 'server':
-        logger.error('Chat API Server Error:', logData)
+        console.error('Chat API Server Error:', logData)
         break
       default:
-        logger.error('Chat API Unknown Error:', {
+        console.error('Chat API Unknown Error:', {
           ...logData,
           errorType: typeof error,
           errorValue: error,
@@ -311,7 +309,7 @@ class ChatApiErrorHandler {
             label: 'Retry',
             onClick: () => {
               // This would be handled by the calling component
-              logger.debug('Retry requested for error:', error.message)
+              console.log('Retry requested for error:', error.message)
             },
           }
         : undefined,

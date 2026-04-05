@@ -43,23 +43,6 @@ vi.mock('@/app/chat/hooks/message-list/useMessageScroll', () => ({
   },
 }))
 
-vi.mock('@/app/chat/hooks/useMessageVirtualization', () => ({
-  useMessageVirtualization: (totalItems: number) => ({
-    containerRef: { current: null },
-    virtualRange: {
-      startIndex: 0,
-      endIndex: totalItems,
-      visibleCount: totalItems,
-    },
-    offsetY: 0,
-    offsetHeight: 0,
-    scrollToBottom: vi.fn(),
-    scrollToTop: vi.fn(),
-    isNearBottom: () => true,
-    visibleItemCount: totalItems,
-  }),
-}))
-
 vi.mock('../MentionHighlight', () => ({
   MentionHighlight: ({ text, className }: { text: string; className?: string }) => (
     <span className={className}>{text}</span>

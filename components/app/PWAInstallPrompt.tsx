@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Download, X, Smartphone } from 'lucide-react'
-import { logger } from '@/lib/logger'
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[]
@@ -57,15 +56,15 @@ export function PWAInstallPrompt() {
       const { outcome } = await deferredPrompt.userChoice
 
       if (outcome === 'accepted') {
-        logger.debug('用户接受了安装提示')
+        console.log('用户接受了安装提示')
       } else {
-        logger.debug('用户拒绝了安装提示')
+        console.log('用户拒绝了安装提示')
       }
 
       setDeferredPrompt(null)
       setShowInstallPrompt(false)
     } catch (error) {
-      logger.error('安装过程中出现错误:', error)
+      console.error('安装过程中出现错误:', error)
     }
   }
 

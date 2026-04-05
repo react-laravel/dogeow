@@ -29,12 +29,7 @@ interface AutoSaveData {
   uploadedImages: UploadedImage[]
 }
 
-export function useItemDetailEdit({
-  itemId,
-  item,
-  mode,
-  open,
-}: UseItemDetailEditProps) {
+export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEditProps) {
   // Edit mode state
   const [editLoading, setEditLoading] = useState(false)
   const [formData, setFormData] = useState<ItemFormData>(INITIAL_FORM_DATA)
@@ -75,30 +70,33 @@ export function useItemDetailEdit({
   }, [formData, selectedTags, uploadedImages])
 
   // Auto-save handler
-  const handleAutoSave = useCallback(async (_signal: AbortSignal) => {
-    if (!itemId || !item || mode !== 'edit' || !open) return
-    if (!formData.name || !formData.name.trim()) return
+  const handleAutoSave = useCallback(
+    async (_data: AutoSaveData) => {
+      if (!itemId || !item || mode !== 'edit' || !open) return
+      if (!formData.name || !formData.name.trim()) return
 
-    const updateData: Parameters<typeof updateItem>[1] = {
-      ...formData,
-      purchase_date: formData.purchase_date ?? null,
-      expiry_date: formData.expiry_date ?? null,
-      purchase_price: formData.purchase_price ? Number(formData.purchase_price) : null,
-      category_id: formData.category_id ? String(formData.category_id) : '',
-      area_id: formData.area_id ? String(formData.area_id) : '',
-      room_id: formData.room_id ? String(formData.room_id) : '',
-      spot_id: formData.spot_id ? String(formData.spot_id) : '',
-      image_ids: uploadedImages
-        .filter(img => img.id)
-        .map(img => img.id!)
-        .filter((id): id is number => id !== undefined),
-      image_paths: uploadedImages.filter(img => !img.id).map(img => img.path),
-      tags: selectedTags.map(id => Number(id)).filter(id => Number.isFinite(id)),
-    }
-    const updatedItem = await updateItem(itemId, updateData)
-    const { mutate } = await import('swr')
-    await mutate(`/things/items/${itemId}`, updatedItem, false)
-  }, [formData, uploadedImages, selectedTags, updateItem, itemId, item, mode, open])
+      const updateData: Parameters<typeof updateItem>[1] = {
+        ...formData,
+        purchase_date: formData.purchase_date ?? null,
+        expiry_date: formData.expiry_date ?? null,
+        purchase_price: formData.purchase_price ? Number(formData.purchase_price) : null,
+        category_id: formData.category_id ? String(formData.category_id) : '',
+        area_id: formData.area_id ? String(formData.area_id) : '',
+        room_id: formData.room_id ? String(formData.room_id) : '',
+        spot_id: formData.spot_id ? String(formData.spot_id) : '',
+        image_ids: uploadedImages
+          .filter(img => img.id)
+          .map(img => img.id!)
+          .filter((id): id is number => id !== undefined),
+        image_paths: uploadedImages.filter(img => !img.id).map(img => img.path),
+        tags: selectedTags.map(id => Number(id)).filter(id => Number.isFinite(id)),
+      }
+      const updatedItem = await updateItem(itemId, updateData)
+      const { mutate } = await import('swr')
+      await mutate(`/things/items/${itemId}`, updatedItem, false)
+    },
+    [formData, uploadedImages, selectedTags, updateItem, itemId, item, mode, open]
+  )
 
   const { autoSaving, lastSaved, triggerAutoSave, setInitialData, cancelAutoSave } =
     useAutoSave<AutoSaveData>({
@@ -252,14 +250,7 @@ export function useItemDetailEdit({
     } finally {
       setEditLoading(false)
     }
-  }, [
-    itemId,
-    fetchCategories,
-    fetchTags,
-    loadRooms,
-    loadSpots,
-    setInitialData,
-  ])
+  }, [itemId, fetchCategories, fetchTags, loadRooms, loadSpots, setInitialData])
 
   // Auto-save effect
   useEffect(() => {

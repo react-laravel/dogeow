@@ -1,11 +1,8 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import { Copy, MoreVertical, Reply, Heart, ThumbsUp, Laugh } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import {
-import { logger } from '@/lib/logger'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -13,13 +10,9 @@ import { logger } from '@/lib/logger'
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { cn } from '@/lib/helpers'
-import { logger } from '@/lib/logger'
 import { useMessageInteractions } from '@/app/chat/hooks/message-interactions/useMessageInteractions'
-import { logger } from '@/lib/logger'
 import type { ChatMessage } from '../types'
-import { logger } from '@/lib/logger'
 
 interface MessageInteractionsProps {
   message: ChatMessage
@@ -86,7 +79,7 @@ export function MessageInteractions({
       await navigator.clipboard.writeText(message.message)
       // Could show a toast notification here
     } catch (error) {
-      logger.error('Failed to copy message:', error)
+      console.error('Failed to copy message:', error)
     }
   }
 

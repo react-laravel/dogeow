@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { logger } from '@/lib/logger'
 import { useBowlingStore } from '../store'
 
 export function useBowlingControls() {
@@ -89,7 +88,7 @@ export function useBowlingControls() {
     (event?: React.MouseEvent | React.TouchEvent, canvasElement?: HTMLCanvasElement) => {
       if (!canThrow || ballThrown || showingResult) return
 
-      logger.debug('🎯 开始蓄力')
+      console.log('🎯 开始蓄力')
       setIsCharging(true)
       setIsDragging(true)
       setChargePower(20)
@@ -116,7 +115,7 @@ export function useBowlingControls() {
     if (!isCharging) return
 
     const chargeDuration = Date.now() - chargeStartTime
-    logger.debug('🚀 结束蓄力，投球！', {
+    console.log('🚀 结束蓄力，投球！', {
       power: chargePower,
       angle: currentAimAngle,
       chargeDuration: `${chargeDuration}ms`,

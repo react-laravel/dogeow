@@ -1,4 +1,3 @@
-import { logger } from '@/lib/logger'
 import {
   Package,
   FlaskConical,
@@ -45,8 +44,8 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   if (!globalWindow[hasLogged]) {
     globalWindow[hasLogged] = true
     scheduleIdleTask(() => {
-      logger.debug(`%c${LOGO_TEXT}`, 'color: yellow')
-      logger.debug('🎯 本地开发环境')
+      console.log(`%c${LOGO_TEXT}`, 'color: yellow')
+      console.log('🎯 本地开发环境')
     })
   }
 }

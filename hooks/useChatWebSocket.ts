@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { logger } from '@/lib/logger'
 import Echo from 'laravel-echo'
 import {
   createEchoInstance,
@@ -78,7 +77,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
       onMessageSent,
       onMessageFailed,
       onQueueFull: () => {
-        logger.warn('WebSocket: Offline message queue is full, removing oldest messages')
+        console.warn('WebSocket: Offline message queue is full, removing oldest messages')
       },
     })
     offlineManagerRef.current = offlineManager
@@ -110,7 +109,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
     }
 
     connectionMonitorUnsubscribeRef.current = monitor.subscribe(info => {
-      logger.debug('WebSocket: Connection status updated:', info.status)
+      console.log('WebSocket: Connection status updated:', info.status)
       setConnectionInfo(prevInfo =>
         prevInfo.status !== info.status ||
         prevInfo.reconnectAttempts !== info.reconnectAttempts ||
@@ -152,10 +151,10 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
   useEffect(() => {
     isComponentMountedRef.current = true
     cancelDestroyEchoInstance()
-    logger.debug('WebSocket: Component mounted, cancelled any pending cleanup')
+    console.log('WebSocket: Component mounted, cancelled any pending cleanup')
 
     return () => {
-      logger.debug('WebSocket: Component cleanup triggered')
+      console.log('WebSocket: Component cleanup triggered')
       isComponentMountedRef.current = false
 
       try {
@@ -165,7 +164,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
         typingChannelRef.current?.stopListening()
         typingChannelRef.current = null
       } catch (error) {
-        logger.error('WebSocket: Error during channel cleanup:', error)
+        console.error('WebSocket: Error during channel cleanup:', error)
       }
       channelRef.current = null
       currentRoomRef.current = null
@@ -177,41 +176,41 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
 
   const connect = useCallback(async (): Promise<boolean> => {
     if (!isComponentMountedRef.current) {
-      logger.debug('WebSocket: Component unmounted, skipping connect')
+      console.log('WebSocket: Component unmounted, skipping connect')
       return false
     }
 
     // 检查是否已有连接
     if (echo && isEchoConnected(echo)) {
-      logger.debug('WebSocket: Reusing existing connection')
+      console.log('WebSocket: Reusing existing connection')
       return true
     }
 
     try {
-      logger.debug('WebSocket: Starting connection process')
+      console.log('WebSocket: Starting connection process')
       const token = await getAuthToken(authTokenRefreshCallback)
-      logger.debug('WebSocket: Using auth mode:', token ? 'Bearer Token' : 'Session Cookie')
+      console.log('WebSocket: Using auth mode:', token ? 'Bearer Token' : 'Session Cookie')
 
-      logger.debug('WebSocket: Creating Echo instance')
+      console.log('WebSocket: Creating Echo instance')
       const echoInstance = createEchoInstance()
       if (!echoInstance) {
-        logger.error('WebSocket: Failed to create Echo instance')
+        console.error('WebSocket: Failed to create Echo instance')
         onError?.(createConnectionError('Failed to create WebSocket connection', true))
         return false
       }
 
-      logger.debug('WebSocket: Echo instance created successfully')
+      console.log('WebSocket: Echo instance created successfully')
 
       const monitor = getConnectionMonitor()
       monitor.initializeWithEcho(echoInstance)
-      logger.debug('WebSocket: Connection monitor initialized')
+      console.log('WebSocket: Connection monitor initialized')
 
       setEcho(echoInstance)
-      logger.debug('WebSocket: Echo instance set in state')
+      console.log('WebSocket: Echo instance set in state')
 
       return true
     } catch (error) {
-      logger.error('WebSocket: Connection failed:', error)
+      console.error('WebSocket: Connection failed:', error)
       onError?.(
         createConnectionError(
           error instanceof Error ? error.message : 'Failed to connect to WebSocket',
@@ -224,7 +223,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
 
   const disconnect = useCallback(async () => {
     if (!isComponentMountedRef.current) {
-      logger.debug('WebSocket: Component unmounted, skipping disconnect')
+      console.log('WebSocket: Component unmounted, skipping disconnect')
       return
     }
 
@@ -234,13 +233,13 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
 
     try {
       if (channelRef.current && typeof channelRef.current.stopListening === 'function') {
-        logger.debug('WebSocket: Disconnecting and stopping listening')
+        console.log('WebSocket: Disconnecting and stopping listening')
         channelRef.current.stopListening()
       }
       typingChannelRef.current?.stopListening()
       typingChannelRef.current = null
     } catch (error) {
-      logger.error('WebSocket: Error during disconnect:', error)
+      console.error('WebSocket: Error during disconnect:', error)
     }
     channelRef.current = null
     currentRoomRef.current = null
@@ -251,11 +250,11 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
   const joinRoom = useCallback(
     async (roomId: string, echoInstance?: Echo<'reverb'>) => {
       if (!isComponentMountedRef.current) {
-        logger.debug('WebSocket: Component unmounted, skipping joinRoom')
+        console.log('WebSocket: Component unmounted, skipping joinRoom')
         return
       }
 
-      logger.debug('WebSocket: Attempting to join room:', roomId)
+      console.log('WebSocket: Attempting to join room:', roomId)
 
       let echoToUse = echoInstance || echo
       if (!echoToUse) {
@@ -271,13 +270,13 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
       if (channelRef.current && currentRoomRef.current !== roomId) {
         try {
           if (typeof channelRef.current.stopListening === 'function') {
-            logger.debug('WebSocket: Stopping listening for room', currentRoomRef.current)
+            console.log('WebSocket: Stopping listening for room', currentRoomRef.current)
             channelRef.current.stopListening()
           }
           typingChannelRef.current?.stopListening()
           typingChannelRef.current = null
         } catch (error) {
-          logger.error('WebSocket: Error stopping listening:', error)
+          console.error('WebSocket: Error stopping listening:', error)
         }
       }
 
@@ -294,7 +293,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
         })
         typingChannelRef.current = typingChannel
       } catch (error) {
-        logger.error('WebSocket: Error creating channel for room', roomId, ':', error)
+        console.error('WebSocket: Error creating channel for room', roomId, ':', error)
       }
     },
     [echo, onMessage, onTyping]

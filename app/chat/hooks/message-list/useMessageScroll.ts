@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { logger } from '@/lib/logger'
 
 interface UseMessageScrollParams {
   roomId: number
@@ -55,7 +54,7 @@ export function useMessageScroll({
         if (scrollContainer) {
           scrollContainer.scrollTop = scrollContainer.scrollHeight
           if (process.env.NODE_ENV === 'development') {
-            logger.debug('🔥 MessageList: auto scroll to bottom', scrollContainer.scrollHeight)
+            console.log('🔥 MessageList: auto scroll to bottom', scrollContainer.scrollHeight)
           }
         }
       })

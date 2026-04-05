@@ -1,7 +1,6 @@
 'use client'
 
 import './novel-editor.css'
-import { logger } from '@/lib/logger'
 import { EditorContent, EditorRoot, type JSONContent } from 'novel'
 import { useEffect } from 'react'
 import hljs from 'highlight.js/lib/core'
@@ -190,7 +189,7 @@ const ReadonlyEditor = ({ content, className }: ReadonlyEditorProps) => {
           try {
             hljs.highlightElement(block)
           } catch (error) {
-            logger.warn('Failed to highlight code block:', error)
+            console.warn('Failed to highlight code block:', error)
           }
         }
       })

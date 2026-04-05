@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { logger } from '@/lib/logger'
 import { FolderGit2, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -64,7 +63,7 @@ export default function RepoWatchTool({
       const data = await listWatchedPackages()
       setWatchedPackages(data)
     } catch (error) {
-      logger.error('加载依赖关注列表失败', error)
+      console.error('加载依赖关注列表失败', error)
     } finally {
       setLoadingList(false)
     }

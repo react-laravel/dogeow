@@ -58,7 +58,6 @@ import { Markdown } from 'tiptap-markdown'
 import { StarterKit } from 'novel'
 import { useEditor } from '@tiptap/react'
 import { cx } from 'class-variance-authority'
-import { logger } from '@/lib/logger'
 
 // 简化的预览扩展，只包含基本的 Markdown 渲染功能
 const previewExtensions = [
@@ -151,7 +150,7 @@ const MarkdownPreview = ({ content, className }: MarkdownPreviewProps) => {
           setJsonContent(parsedContent)
         })
       } catch (error) {
-        logger.error('Failed to parse markdown:', error)
+        console.error('Failed to parse markdown:', error)
         // 如果解析失败，使用简单的段落包装
         startTransition(() => {
           setJsonContent({
@@ -177,7 +176,7 @@ const MarkdownPreview = ({ content, className }: MarkdownPreviewProps) => {
           try {
             hljs.highlightElement(block)
           } catch (error) {
-            logger.warn('Failed to highlight code block:', error)
+            console.warn('Failed to highlight code block:', error)
           }
         }
       })

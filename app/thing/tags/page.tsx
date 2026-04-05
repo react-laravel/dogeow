@@ -50,7 +50,7 @@ export default function ThingTags() {
       mutate('/things/tags')
       toast.success('标签删除成功')
     } catch (deleteError) {
-      logger.error('删除标签失败:', deleteError)
+      console.error('删除标签失败:', deleteError)
     } finally {
       setDeleting(false)
       setAlertOpen(false)
@@ -102,7 +102,7 @@ export default function ThingTags() {
       mutate('/things/tags')
       setEditingTags(prev => ({ ...prev, [tagId]: newName.trim() }))
     } catch (error) {
-      logger.error('更新标签失败:', error)
+      console.error('更新标签失败:', error)
       toast.error('更新标签失败')
       // 恢复原始名称
       const tag = tags?.find(t => t.id === tagId)

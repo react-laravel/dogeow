@@ -1,17 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import Image from 'next/image'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { Card } from '@/components/ui/card'
-import { logger } from '@/lib/logger'
 import { useGameStats } from '../hooks/useGameStats'
-import { logger } from '@/lib/logger'
 import { useGameSounds } from '../hooks/useGameSounds'
-import { logger } from '@/lib/logger'
 
 // 计时器组件
 function Timer({ startTime }: { startTime: Date }) {
@@ -175,7 +169,7 @@ export default function PicturePuzzle({ imageUrl, size, onComplete }: PicturePuz
         initializePuzzle()
       }
       img.onerror = () => {
-        logger.error('图片加载失败')
+        console.error('图片加载失败')
         setImageLoaded(false)
       }
       img.src = imageUrl

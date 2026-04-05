@@ -1,57 +1,33 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import dynamic from 'next/dynamic'
-import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
-import { logger } from '@/lib/logger'
 import { deleteNode, type WikiNode } from '@/lib/api/wiki'
-import { logger } from '@/lib/logger'
 import { isAdminSync } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 import NoteNodeEditor from './NoteNodeEditor'
-import { logger } from '@/lib/logger'
 import NoteLinkCreator from './NoteLinkCreator'
-import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
-import { logger } from '@/lib/logger'
 import { nodeDataToWikiNode } from '../utils/themeUtils'
-import { logger } from '@/lib/logger'
 import {
-import { logger } from '@/lib/logger'
   createNodeCanvasRenderer,
   createLinkColorGetter,
   createLinkWidthGetter,
 } from '../utils/nodeRenderer'
 import { useGraphData } from '../hooks/useGraphData'
-import { logger } from '@/lib/logger'
 import { useArticleLoader } from '../hooks/useArticleLoader'
-import { logger } from '@/lib/logger'
 import { useThemeColors } from '../hooks/useThemeColors'
-import { logger } from '@/lib/logger'
 import { useGraphFilter } from '../hooks/useGraphFilter'
-import { logger } from '@/lib/logger'
 import { useGraphPalette } from '../hooks/useGraphPalette'
-import { logger } from '@/lib/logger'
 import { useGraphZoom } from '../hooks/useGraphZoom'
-import { logger } from '@/lib/logger'
 import { useZoomFilter } from '../hooks/useZoomFilter'
-import { logger } from '@/lib/logger'
 import NoteGraphToolbar from './NoteGraphToolbar'
-import { logger } from '@/lib/logger'
 import { NoteArticleDialog } from './NoteArticleDialog'
-import { logger } from '@/lib/logger'
 import { NoteGraphEmptyState } from './NoteGraphEmptyState'
-import { logger } from '@/lib/logger'
 import { NoteGraphLoadingState } from './NoteGraphLoadingState'
-import { logger } from '@/lib/logger'
 import NoteNodeActionPanel from './NoteNodeActionPanel'
-import { logger } from '@/lib/logger'
 import NoteLinkActionPanel from './NoteLinkActionPanel'
-import { logger } from '@/lib/logger'
 import type { NodeData, LinkData, ForceGraphInstance } from '../types/graph'
-import { logger } from '@/lib/logger'
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
   ssr: false,
@@ -290,7 +266,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
       setActiveNode(null)
       loadGraphData()
     } catch (error) {
-      logger.error('删除节点失败:', error)
+      console.error('删除节点失败:', error)
       toast.error('删除失败')
     }
   }, [activeNode, loadGraphData])

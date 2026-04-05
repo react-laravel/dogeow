@@ -1,5 +1,4 @@
 import {
-import { logger } from '@/lib/logger'
   File,
   FileText,
   FileArchive,
@@ -10,11 +9,8 @@ import { logger } from '@/lib/logger'
   Folder,
 } from 'lucide-react'
 import Image from 'next/image'
-import { logger } from '@/lib/logger'
 import { getFileStorageUrl } from '@/app/file/services/api'
-import { logger } from '@/lib/logger'
 import type { CloudFile } from '@/app/file/types'
-import { logger } from '@/lib/logger'
 
 export const FILE_TYPE_ICONS = {
   pdf: { icon: FileType, color: 'text-red-500' },
@@ -50,7 +46,7 @@ export const FileIcon = ({ file }: FileIconProps) => {
           className="object-cover"
           loading="lazy"
           sizes="64px"
-          onError={() => logger.error('图片加载失败:', file.name)}
+          onError={() => console.error('图片加载失败:', file.name)}
         />
       </div>
     )

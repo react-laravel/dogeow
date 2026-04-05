@@ -20,7 +20,6 @@ import useAuthStore from '@/stores/authStore'
 import { useChatWebSocket } from '@/hooks/useChatWebSocket'
 import type { ChatMessage, MessageData } from './types'
 import './styles/chat-mobile.css'
-import { logger } from '@/lib/logger'
 
 // 通用空函数
 const noop = () => {}
@@ -179,7 +178,7 @@ function ChatPageContent() {
               if (normalizedMessage) {
                 addMessage(normalizedMessage.room_id, normalizedMessage)
               } else {
-                logger.warn('ChatPage: ignored malformed realtime message payload', messageData)
+                console.warn('ChatPage: ignored malformed realtime message payload', messageData)
               }
             }
             break
@@ -228,7 +227,7 @@ function ChatPageContent() {
       if (currentRoom && normalizedMessage) {
         addMessage(currentRoom.id, normalizedMessage)
       } else {
-        logger.warn('ChatPage: ignored malformed sendMessage response payload', messageData)
+        console.warn('ChatPage: ignored malformed sendMessage response payload', messageData)
       }
     },
     [currentRoom, addMessage]
@@ -307,7 +306,7 @@ function ChatPageContent() {
         // WebSocket连接失败不阻断初始化流程
         connect().catch(noop)
       } catch (error) {
-        logger.error('Chat initialization failed:', error)
+        console.error('Chat initialization failed:', error)
         handleError(error as Error)
       }
     }

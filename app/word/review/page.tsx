@@ -1,31 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
-import { logger } from '@/lib/logger'
 import { WordCard } from '../components/WordCard'
-import { logger } from '@/lib/logger'
 import { useReviewWords, useWordSettings, checkIn } from '../hooks/useWord'
-import { logger } from '@/lib/logger'
 import { useWordStore } from '../stores/wordStore'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
-import { logger } from '@/lib/logger'
 import { Card, CardContent } from '@/components/ui/card'
-import { logger } from '@/lib/logger'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
-import { logger } from '@/lib/logger'
 import { CheckCircle2, BookX, ArrowLeft, PartyPopper } from 'lucide-react'
-import { logger } from '@/lib/logger'
 import Link from 'next/link'
-import { logger } from '@/lib/logger'
 import { PageContainer } from '@/components/layout'
-import { logger } from '@/lib/logger'
 import { normalizeWordsResponse } from '../types'
-import { logger } from '@/lib/logger'
 
 export default function ReviewPage() {
   const router = useRouter()
@@ -75,7 +62,7 @@ export default function ReviewPage() {
       toast.success('复习完成！已打卡')
     } catch (error) {
       toast.error('打卡失败')
-      logger.error('打卡失败:', error)
+      console.error('打卡失败:', error)
     } finally {
       setIsCompleting(false)
     }

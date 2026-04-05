@@ -10,7 +10,7 @@ export const getSafeStorage = (): Storage | null => {
     storage.removeItem(testKey)
     return storage
   } catch (error) {
-    logger.warn('本地存储不可用，已跳过偏好读取:', error)
+    console.warn('本地存储不可用，已跳过偏好读取:', error)
     return null
   }
 }
@@ -28,7 +28,7 @@ export const loadFavoriteRooms = (): Set<number> => {
       return new Set(JSON.parse(savedFavorites))
     }
   } catch (error) {
-    logger.error('Failed to load favorite rooms:', error)
+    console.error('Failed to load favorite rooms:', error)
   }
 
   return new Set()
@@ -44,7 +44,7 @@ export const saveFavoriteRooms = (favorites: Set<number>): void => {
   try {
     storage.setItem('chat-favorite-rooms', JSON.stringify([...favorites]))
   } catch (error) {
-    logger.error('Failed to save favorite rooms:', error)
+    console.error('Failed to save favorite rooms:', error)
   }
 }
 
@@ -61,7 +61,7 @@ export const loadRecentRooms = (): number[] => {
       return JSON.parse(savedRecent)
     }
   } catch (error) {
-    logger.error('Failed to load recent rooms:', error)
+    console.error('Failed to load recent rooms:', error)
   }
 
   return []
@@ -77,6 +77,6 @@ export const saveRecentRooms = (recent: number[]): void => {
   try {
     storage.setItem('chat-recent-rooms', JSON.stringify(recent))
   } catch (error) {
-    logger.error('Failed to save recent rooms:', error)
+    console.error('Failed to save recent rooms:', error)
   }
 }

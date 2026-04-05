@@ -4,7 +4,6 @@
  */
 
 import type { ThemeRegistry, UITheme } from './types'
-import { logger } from '@/lib/logger'
 import { defaultTheme } from './default'
 import { sidebarTheme } from './sidebar'
 import { minimalTheme } from './minimal'
@@ -28,7 +27,7 @@ if (!themeRegistry.default) {
  */
 export function registerTheme(theme: UITheme): void {
   if (themeRegistry[theme.id]) {
-    logger.warn(`主题 ${theme.id} 已存在，将被覆盖`)
+    console.warn(`主题 ${theme.id} 已存在，将被覆盖`)
   }
   themeRegistry[theme.id] = theme
 }
@@ -70,7 +69,7 @@ export function hasTheme(themeId: string): boolean {
  */
 export function unregisterTheme(themeId: string): void {
   if (themeId === 'default') {
-    logger.warn('不能删除默认主题')
+    console.warn('不能删除默认主题')
     return
   }
   delete themeRegistry[themeId]

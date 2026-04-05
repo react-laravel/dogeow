@@ -5,7 +5,6 @@
  */
 
 import { loadOptionalNodeModule } from './optional-node-module'
-import { logger } from '@/lib/logger'
 
 // Redis client types (will be loaded dynamically)
 interface RedisClient {
@@ -40,7 +39,7 @@ async function initRedisClient(): Promise<boolean> {
 
   const redisUrl = process.env.REDIS_URL
   if (!redisUrl) {
-    logger.debug('[Idempotency] No REDIS_URL configured, using in-memory storage')
+    console.log('[Idempotency] No REDIS_URL configured, using in-memory storage')
     return false
   }
 
@@ -53,7 +52,7 @@ async function initRedisClient(): Promise<boolean> {
         : redisModule.default
 
     if (!Redis) {
-      logger.debug('[Idempotency] Node runtime module loader unavailable, using in-memory storage')
+      console.log('[Idempotency] Node runtime module loader unavailable, using in-memory storage')
       return false
     }
 
@@ -68,10 +67,10 @@ async function initRedisClient(): Promise<boolean> {
 
     await redisClient.ping()
     redisAvailable = true
-    logger.debug('[Idempotency] Redis connection established')
+    console.log('[Idempotency] Redis connection established')
     return true
   } catch (error) {
-    logger.warn(
+    console.warn(
       '[Idempotency] Redis unavailable, using in-memory storage:',
       error instanceof Error ? error.message : error
     )
@@ -266,7 +265,7 @@ class IdempotencyTracker {
         return { completed: true, result: parsed.result }
       }
     } catch (error) {
-      logger.warn(
+      console.warn(
         '[Idempotency] Redis check failed:',
         error instanceof Error ? error.message : error
       )
@@ -293,7 +292,7 @@ class IdempotencyTracker {
       // Store with TTL slightly longer than HISTORY_TTL to allow for cleanup
       await redisClient.set(redisKey, value, 'PX', this.HISTORY_TTL + 60000)
     } catch (error) {
-      logger.warn(
+      console.warn(
         '[Idempotency] Redis store failed:',
         error instanceof Error ? error.message : error
       )
@@ -320,7 +319,7 @@ class IdempotencyTracker {
       const result = await redisClient.set(redisKey, Date.now().toString(), 'NX', 'PX', ttl)
       return result === 'OK'
     } catch (error) {
-      logger.warn(
+      console.warn(
         '[Idempotency] Redis lock acquisition failed:',
         error instanceof Error ? error.message : error
       )
@@ -342,7 +341,7 @@ class IdempotencyTracker {
       const redisKey = `${IDEMPOTENCY_KEY_PREFIX}lock:${key}`
       await redisClient.del(redisKey)
     } catch (error) {
-      logger.warn(
+      console.warn(
         '[Idempotency] Redis lock release failed:',
         error instanceof Error ? error.message : error
       )
@@ -367,7 +366,7 @@ export function generateRequestId(): string {
 export function deduplicateRequest<T>(key: string, requestFactory: () => Promise<T>): Promise<T> {
   const existing = idempotencyTracker.getPendingRequest<T>(key)
   if (existing) {
-    logger.debug(`[Idempotency] Reusing in-flight request: ${key}`)
+    console.log(`[Idempotency] Reusing in-flight request: ${key}`)
     return existing
   }
 
@@ -391,7 +390,7 @@ export async function withIdempotency<T>(
 
   // Check if request was recently completed - return cached result if so
   if (idempotencyTracker.wasRecentlyCompleted(key)) {
-    logger.debug(`[Idempotency] Request already completed recently: ${key}`)
+    console.log(`[Idempotency] Request already completed recently: ${key}`)
     const cachedResult = idempotencyTracker.getRecentResult<T>(key)
     if (cachedResult !== undefined) {
       return cachedResult
@@ -399,7 +398,7 @@ export async function withIdempotency<T>(
   }
 
   if (deduplicateConcurrent && idempotencyTracker.isRequestPending(key)) {
-    logger.debug(`[Idempotency] Request already in-flight: ${key}`)
+    console.log(`[Idempotency] Request already in-flight: ${key}`)
     const existing = idempotencyTracker.getPendingRequest<T>(key)
     if (existing) return existing
   }
@@ -452,7 +451,7 @@ export async function withIdempotencyAndLock<T>(
     // Check if there's a cached result we can return
     const cachedResult = idempotencyTracker.getRecentResult<T>(key)
     if (cachedResult !== undefined) {
-      logger.debug(
+      console.log(
         `[IdempotencyAndLock] Duplicate request detected, returning cached result: ${key}`
       )
       onDuplicate?.(cachedResult)
@@ -467,7 +466,7 @@ export async function withIdempotencyAndLock<T>(
     // Also check Redis for completed result in distributed environment
     const redisCheck = await idempotencyTracker.checkRedisForCompleted(key)
     if (redisCheck.completed && redisCheck.result !== undefined) {
-      logger.debug(
+      console.log(
         `[IdempotencyAndLock] Duplicate request detected (from Redis), returning cached result: ${key}`
       )
       onDuplicate?.(redisCheck.result)
@@ -482,7 +481,7 @@ export async function withIdempotencyAndLock<T>(
     // Request is still in progress, wait for it
     const existingRequest = idempotencyTracker.getPendingRequest<T>(key)
     if (existingRequest) {
-      logger.debug(`[IdempotencyAndLock] Request in progress, waiting: ${key}`)
+      console.log(`[IdempotencyAndLock] Request in progress, waiting: ${key}`)
       try {
         const result = await existingRequest
         return {
@@ -493,7 +492,7 @@ export async function withIdempotencyAndLock<T>(
         }
       } catch (error) {
         // The in-progress request failed, allow retry
-        logger.warn(`[IdempotencyAndLock] Previous request failed, allowing retry: ${key}`)
+        console.warn(`[IdempotencyAndLock] Previous request failed, allowing retry: ${key}`)
       }
     }
   }

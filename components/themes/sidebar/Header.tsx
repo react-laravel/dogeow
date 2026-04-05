@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useUITheme } from '@/components/themes/UIThemeProvider'
 import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
 import { Menu } from 'lucide-react'
 import { usePathname } from 'next/navigation'
-import { toast } from 'sonner'
 
 const AiDialog = dynamic(
   () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
@@ -16,27 +15,11 @@ const AiDialog = dynamic(
 function RouteAwareAiLauncher() {
   const [isAiOpen, setIsAiOpen] = useState(false)
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isAiOpen) {
-        toast.dismiss()
-        setIsAiOpen(false)
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isAiOpen])
-
-  const handleOpenAi = () => {
-    toast.dismiss()
-    setIsAiOpen(prev => !prev)
-  }
-
   return (
     <>
       <AiDialog open={isAiOpen} onOpenChange={setIsAiOpen} />
       <LazyAppLauncher
-        onOpenAi={handleOpenAi}
+        onOpenAi={() => setIsAiOpen(prev => !prev)}
         isAiOpen={isAiOpen}
         onCloseAi={() => setIsAiOpen(false)}
       />

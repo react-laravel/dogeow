@@ -21,7 +21,6 @@ import {
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
 import { requireAuth } from '../_lib/auth-guard'
 import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
-import { logger } from '@/lib/logger'
 
 function buildChatMessages(messages: ChatMessage[], command?: string): ChatMessage[] {
   if (messages.some(m => m.role === 'system')) return messages
@@ -117,13 +116,13 @@ export async function POST(request: NextRequest) {
   })
 
   try {
-    logger.debug('[Generate API] 接收到的请求:', { provider, model, useChat, hasImages })
-    logger.debug('[Generate API] 实际使用的 AI 提供商:', getAIProvider(provider))
-    logger.debug('[Generate API] Request ID:', requestId)
+    console.log('[Generate API] 接收到的请求:', { provider, model, useChat, hasImages })
+    console.log('[Generate API] 实际使用的 AI 提供商:', getAIProvider(provider))
+    console.log('[Generate API] Request ID:', requestId)
 
     // Check for duplicate in-flight requests
     if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-      logger.debug('[Generate API] Request already in progress, waiting for result')
+      console.log('[Generate API] Request already in progress, waiting for result')
       const pendingRequest = idempotencyTracker.getPendingRequest<unknown>(idempotencyKey)
       if (pendingRequest) {
         // For streaming responses, we can't directly return the pending result
@@ -159,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     return await handleGenerateRequest(body)
   } catch (error: unknown) {
-    logger.error('AI API错误:', error)
+    console.error('AI API错误:', error)
     return NextResponse.json({ error: getErrorMessage(error, provider) }, { status: 500 })
   }
 }

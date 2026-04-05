@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef, startTransition } from 'react'
 import dynamic from 'next/dynamic'
-import { logger } from '@/lib/logger'
 import { MusicPlayer } from './MusicPlayer'
 import { SettingsPanel, CustomBackground } from './SettingsPanel'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
@@ -135,9 +134,7 @@ export function AppLauncher({
       resetCurrentTime()
       const audioElement = audioRef.current
       if (audioElement) {
-        audioElement.play().catch(err => {
-          if (err instanceof Error) logger.error('Audio playback failed:', err.message)
-        })
+        audioElement.play().catch(console.error)
       }
     } else {
       // 列表循环、不循环、随机播放：播放下一首，如果到末尾则循环到第一首
@@ -313,6 +310,7 @@ export function AppLauncher({
       isMuted,
       availableTracks,
       currentTrack,
+      currentTrackInfo,
       playMode,
       readyToPlay,
       toggleMute,
@@ -440,7 +438,7 @@ export function AppLauncher({
         className="bg-background/80 relative z-50 flex h-full w-full flex-col backdrop-blur-md"
       >
         {/* 音频可视化 - 作为背景层，覆盖整个 app-launcher-bar，包括 padding */}
-        {displayMode === 'music' && (audioManager.analyserNode || isPlaying) && (
+        {displayMode === 'music' && audioManager.analyserNode && (
           <div className="pointer-events-none absolute inset-y-0 left-1/2 z-0 w-screen -translate-x-1/2 overflow-hidden">
             <AudioVisualizer
               analyserNode={audioManager.analyserNode}

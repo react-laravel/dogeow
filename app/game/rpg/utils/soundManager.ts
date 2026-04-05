@@ -1,8 +1,6 @@
 // 游戏音效管理器
 import type { SkillUsedEntry } from '../types'
-import { logger } from '@/lib/logger'
 import { getAllSkillSoundUrls, getSkillSoundUrl } from './skillSoundRegistry'
-import { logger } from '@/lib/logger'
 
 type SoundEffect =
   | 'combat_start'
@@ -42,7 +40,7 @@ class SoundManager {
           (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
         if (Ctor) this.audioContext = new Ctor()
       } catch (error) {
-        logger.warn('SoundManager: 无法创建 AudioContext', error)
+        console.warn('SoundManager: 无法创建 AudioContext', error)
         return null
       }
     }
@@ -147,7 +145,7 @@ class SoundManager {
 
       return true
     } catch (error) {
-      logger.warn(`SoundManager: 技能音效播放失败 ${url}`, error)
+      console.warn(`SoundManager: 技能音效播放失败 ${url}`, error)
 
       return false
     }

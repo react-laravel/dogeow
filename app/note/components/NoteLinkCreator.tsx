@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
-import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Loader2, X, Plus, MousePointerClick } from 'lucide-react'
@@ -134,7 +133,7 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
         onSuccess()
         onOpenChange(false)
       } catch (error) {
-        logger.error('创建链接错误:', error)
+        console.error('创建链接错误:', error)
         toast.error('创建失败')
       } finally {
         setIsCreating(false)

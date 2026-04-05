@@ -1,11 +1,8 @@
 'use client'
 
 import { useEffect, useCallback, useRef } from 'react'
-import { logger } from '@/lib/logger'
 import { useMazeStore } from '../store'
-import { logger } from '@/lib/logger'
 import MazeCanvas from './MazeCanvas'
-import { logger } from '@/lib/logger'
 
 export default function MazeGame() {
   const {
@@ -74,7 +71,7 @@ export default function MazeGame() {
       const clampedX = Math.max(0, Math.min(mazeSize - 1, mazeX))
       const clampedY = Math.max(0, Math.min(mazeSize - 1, mazeY))
 
-      logger.debug('🎯 坐标转换:', {
+      console.log('🎯 坐标转换:', {
         click: { x: clientX, y: clientY },
         canvas: { x, y },
         canvasSize: { width: rect.width, height: rect.height },
@@ -95,11 +92,11 @@ export default function MazeGame() {
   // 处理画布点击
   const handleCanvasClick = useCallback(
     (event: MouseEvent) => {
-      logger.debug('🖱️ 画布点击事件:', { gameStarted, gameCompleted })
+      console.log('🖱️ 画布点击事件:', { gameStarted, gameCompleted })
 
       if (!gameStarted) {
         // 如果游戏未开始，点击开始游戏
-        logger.debug('🎮 点击开始游戏')
+        console.log('🎮 点击开始游戏')
         startGame()
         return
       }
@@ -111,7 +108,7 @@ export default function MazeGame() {
       const coordinates = screenToMazeCoordinates(event.clientX, event.clientY)
       if (!coordinates) return
 
-      logger.debug('🎯 点击坐标:', coordinates)
+      console.log('🎯 点击坐标:', coordinates)
       moveToPosition(coordinates.x, coordinates.y)
     },
     [gameStarted, gameCompleted, screenToMazeCoordinates, moveToPosition, startGame]
@@ -137,7 +134,7 @@ export default function MazeGame() {
         const coordinates = screenToMazeCoordinates(touch.clientX, touch.clientY)
         if (!coordinates) return
 
-        // logger.debug('🎯 触摸坐标:', coordinates)
+        // console.log('🎯 触摸坐标:', coordinates)
         moveToPosition(coordinates.x, coordinates.y)
       }
     },

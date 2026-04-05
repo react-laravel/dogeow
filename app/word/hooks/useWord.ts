@@ -1,13 +1,8 @@
 import useSWR from 'swr'
-import { logger } from '@/lib/logger'
 import useSWRInfinite from 'swr/infinite'
-import { logger } from '@/lib/logger'
 import { format } from 'date-fns'
-import { logger } from '@/lib/logger'
 import { get, post, put } from '@/lib/api'
-import { logger } from '@/lib/logger'
 import type {
-import { logger } from '@/lib/logger'
   Word,
   Book,
   UserWordSetting,
@@ -44,7 +39,7 @@ const fetcher = async <T>(url: string): Promise<T> => {
     const response = await get<unknown>(url)
     return parseApiResponse<T>(response)
   } catch (error) {
-    logger.error('Word API 请求失败:', error)
+    console.error('Word API 请求失败:', error)
     throw error
   }
 }

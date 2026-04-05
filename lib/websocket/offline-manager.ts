@@ -1,9 +1,6 @@
 import { getAuthTokenFromStorage } from '@/lib/utils/storage'
-import { logger } from '@/lib/logger'
 import { authenticatedBrowserFetch } from '@/lib/api/browser-auth'
-import { logger } from '@/lib/logger'
 import { API_URL } from '@/lib/api/url'
-import { logger } from '@/lib/logger'
 
 /**
  * Storage keys for offline queue
@@ -26,7 +23,7 @@ function loadQueueFromStorage(): QueuedMessage[] {
       }))
     }
   } catch (error) {
-    logger.warn('Failed to load offline queue from storage:', error)
+    console.warn('Failed to load offline queue from storage:', error)
   }
   return []
 }
@@ -37,7 +34,7 @@ function saveQueueToStorage(queuedMessages: QueuedMessage[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(queuedMessages))
   } catch (error) {
-    logger.warn('Failed to save offline queue to storage:', error)
+    console.warn('Failed to save offline queue to storage:', error)
   }
 }
 

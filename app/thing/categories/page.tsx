@@ -155,7 +155,7 @@ export default function Categories() {
       cancelCreateChild()
       await refreshCategories()
     } catch (error) {
-      logger.error('创建子分类失败:', error)
+      console.error('创建子分类失败:', error)
       toast.error('创建子分类失败：' + (error instanceof Error ? error.message : '未知错误'))
     } finally {
       setCreatingChild(false)

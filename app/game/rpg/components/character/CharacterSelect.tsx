@@ -1,19 +1,12 @@
 'use client'
 
 import Image from 'next/image'
-import { logger } from '@/lib/logger'
 import { gameAsset } from '@/lib/helpers/assets'
-import { logger } from '@/lib/logger'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { logger } from '@/lib/logger'
 import { useGameStore } from '../../stores/gameStore'
-import { logger } from '@/lib/logger'
 import { CreateCharacter } from './CreateCharacter'
-import { logger } from '@/lib/logger'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { logger } from '@/lib/logger'
 import {
-import { logger } from '@/lib/logger'
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
@@ -23,7 +16,6 @@ import { logger } from '@/lib/logger'
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Trash2 } from 'lucide-react'
-import { logger } from '@/lib/logger'
 
 interface Character {
   id: number
@@ -118,7 +110,7 @@ export function CharacterSelect({ onBack, onCreateCharacter }: CharacterSelectPr
       try {
         await selectCharacter(characterId)
       } catch (error) {
-        logger.error('选择角色失败:', error)
+        console.error('选择角色失败:', error)
       }
     },
     [selectCharacter, isDeleteMode, openCharacterId]

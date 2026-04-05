@@ -143,14 +143,16 @@ export function FullscreenVisualizer({
     >
       {/* 可视化背景 - 全屏 */}
       <div className="absolute inset-0 bg-black">
-        <AudioVisualizer
-          analyserNode={analyserNode}
-          isPlaying={isPlaying}
-          type={vizType}
-          barCount={64}
-          showGradient={true}
-          className="h-full w-full bg-black"
-        />
+        {analyserNode && (
+          <AudioVisualizer
+            analyserNode={analyserNode}
+            isPlaying={isPlaying}
+            type={vizType}
+            barCount={64}
+            showGradient={true}
+            className="h-full w-full bg-black"
+          />
+        )}
       </div>
 
       <div

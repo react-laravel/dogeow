@@ -84,7 +84,7 @@ export default function EnhancedSearchInput({
       const history = await apiRequest<SearchHistoryItem[]>('/things/search/history?limit=10')
       setSearchHistory(history)
     } catch (error) {
-      logger.error('加载搜索历史失败:', error)
+      console.error('加载搜索历史失败:', error)
       // 失败时使用本地历史
       setLocalHistory(getLocalSearchHistory())
     }
@@ -104,7 +104,7 @@ export default function EnhancedSearchInput({
       )
       setSuggestions(results)
     } catch (error) {
-      logger.error('加载搜索建议失败:', error)
+      console.error('加载搜索建议失败:', error)
       setSuggestions([])
     } finally {
       setLoadingSuggestions(false)
@@ -230,7 +230,7 @@ export default function EnhancedSearchInput({
         await apiRequest('/things/search/history', 'DELETE')
         setSearchHistory([])
       } catch (error) {
-        logger.error('清除远程搜索历史失败:', error)
+        console.error('清除远程搜索历史失败:', error)
       }
     }
 

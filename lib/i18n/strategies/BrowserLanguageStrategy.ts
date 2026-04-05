@@ -2,7 +2,6 @@
  * 浏览器语言检测策略
  */
 import type { SupportedLanguage } from '../translations'
-import { logger } from '@/lib/logger'
 
 export interface DetectionResult {
   language: SupportedLanguage
@@ -39,7 +38,7 @@ export class BrowserLanguageStrategy {
         }
       }
     } catch (error) {
-      logger.error('浏览器语言检测失败:', error)
+      console.error('浏览器语言检测失败:', error)
     }
 
     return null

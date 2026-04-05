@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/lib/helpers'
 import Image from 'next/image'
-import { logger } from '@/lib/logger'
 
 const Avatar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -45,10 +44,10 @@ const AvatarImage = React.forwardRef<HTMLImageElement, React.ImgHTMLAttributes<H
         height={typeof height === 'number' ? height : undefined}
         unoptimized={shouldUnoptimize}
         onLoad={() => {
-          logger.debug('Avatar image loaded:', src)
+          console.log('Avatar image loaded:', src)
         }}
         onError={e => {
-          logger.error('Avatar image failed to load:', src, e)
+          console.error('Avatar image failed to load:', src, e)
           setImageError(true)
         }}
         {...props}
