@@ -6,6 +6,8 @@
 import { useRef, useCallback, useState } from 'react'
 import { logger } from '@/lib/logger'
 
+type VisualizerSourceNode = MediaElementAudioSourceNode | MediaStreamAudioSourceNode
+
 interface UseAudioVisualizerOptions {
   volume: number
   isMuted: boolean
@@ -14,7 +16,7 @@ interface UseAudioVisualizerOptions {
 interface UseAudioVisualizerReturn {
   audioContextRef: React.MutableRefObject<AudioContext | null>
   analyserRef: React.MutableRefObject<AnalyserNode | null>
-  sourceRef: React.MutableRefObject<MediaStreamAudioSourceNode | null>
+  sourceRef: React.MutableRefObject<AudioNode | null>
   gainNodeRef: React.MutableRefObject<GainNode | null>
   analyserNode: AnalyserNode | null
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
@@ -25,8 +27,9 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const shouldUseWebAudioRef = useRef<boolean | null>(null)
+  const shouldPreserveNativePlaybackRef = useRef<boolean | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const sourceRef = useRef<AudioNode | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
 
@@ -49,10 +52,79 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     return shouldUseWebAudioRef.current
   }, [])
 
+  const shouldPreserveNativePlayback = useCallback(() => {
+    if (shouldPreserveNativePlaybackRef.current !== null) {
+      return shouldPreserveNativePlaybackRef.current
+    }
+
+    try {
+      const userAgent = navigator.userAgent
+      const platform = navigator.platform
+      const maxTouchPoints = navigator.maxTouchPoints ?? 0
+      const isIOSDevice =
+        /iPad|iPhone|iPod/i.test(userAgent) || (platform === 'MacIntel' && maxTouchPoints > 1)
+
+      shouldPreserveNativePlaybackRef.current = isIOSDevice
+    } catch {
+      shouldPreserveNativePlaybackRef.current = false
+    }
+
+    return shouldPreserveNativePlaybackRef.current
+  }, [])
+
+  const createSourceNode = useCallback(
+    (
+      audioContext: AudioContext,
+      audioElement: HTMLAudioElement
+    ): { source: VisualizerSourceNode; usesNativeAudioOutput: boolean } | null => {
+      const mediaElement = audioElement as HTMLMediaElement & {
+        captureStream?: () => MediaStream
+        mozCaptureStream?: () => MediaStream
+      }
+      const captureStream =
+        typeof mediaElement.captureStream === 'function'
+          ? mediaElement.captureStream.bind(mediaElement)
+          : typeof mediaElement.mozCaptureStream === 'function'
+            ? mediaElement.mozCaptureStream.bind(mediaElement)
+            : null
+
+      if (captureStream) {
+        try {
+          const stream = captureStream()
+
+          if (stream.getAudioTracks().length > 0) {
+            return {
+              source: audioContext.createMediaStreamSource(stream),
+              usesNativeAudioOutput: true,
+            }
+          }
+
+          logger.warn('captureStream() 暂未提供音轨，等待播放开始后重试可视化初始化')
+        } catch (error) {
+          logger.warn('captureStream() 初始化失败:', error)
+        }
+      }
+
+      // iPhone / iPad 上如果回退到 createMediaElementSource，播放会重新路由进 Web Audio，
+      // 锁屏和切后台时容易再次被系统挂起。这里优先保留原生播放，再由 UI 做可视化降级。
+      if (shouldPreserveNativePlayback()) {
+        return null
+      }
+
+      return {
+        source: audioContext.createMediaElementSource(audioElement),
+        usesNativeAudioOutput: false,
+      }
+    },
+    [shouldPreserveNativePlayback]
+  )
+
   const initAudioContext = useCallback(
     (audioElement: HTMLAudioElement | null) => {
       if (!audioElement || audioContextRef.current) return
       if (!shouldUseWebAudio()) return
+
+      let audioContext: AudioContext | null = null
 
       try {
         const AudioContextClass =
@@ -63,26 +135,28 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
           return
         }
 
-        const audioContext = new AudioContextClass()
+        audioContext = new AudioContextClass()
         const analyser = audioContext.createAnalyser()
         const gainNode = audioContext.createGain()
+        const sourceResult = createSourceNode(audioContext, audioElement)
 
-        // 使用 captureStream + MediaStreamSource 代替 createMediaElementSource
-        // 这样音频元素可以独立播放（支持后台/锁屏播放），
-        // 而 MediaStreamSource 仅用于频谱分析可视化
-        const stream = (
-          audioElement as HTMLMediaElement & { captureStream(): MediaStream }
-        ).captureStream()
-        const source = audioContext.createMediaStreamSource(stream)
+        if (!sourceResult) {
+          void audioContext.close().catch(() => {})
+          return
+        }
+
+        const { source, usesNativeAudioOutput } = sourceResult
 
         analyser.fftSize = 64
         analyser.smoothingTimeConstant = 0.8
 
-        // 仅连接到 analyser 用于可视化，不连接到 destination
-        // 音频输出由 audio 元素原生处理
         source.connect(analyser)
+        gainNode.gain.value = usesNativeAudioOutput ? (isMuted ? 0 : volume) : 1
 
-        gainNode.gain.value = isMuted ? 0 : volume
+        if (!usesNativeAudioOutput) {
+          analyser.connect(gainNode)
+          gainNode.connect(audioContext.destination)
+        }
 
         audioContextRef.current = audioContext
         analyserRef.current = analyser
@@ -96,10 +170,13 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
           })
         }
       } catch (error) {
+        if (audioContext) {
+          void audioContext.close().catch(() => {})
+        }
         logger.warn('Web Audio API 初始化失败:', error)
       }
     },
-    [isMuted, volume, shouldUseWebAudio]
+    [createSourceNode, isMuted, volume, shouldUseWebAudio]
   )
 
   return {

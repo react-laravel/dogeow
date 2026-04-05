@@ -52,7 +52,7 @@ export interface AudioRefs {
   audioRef: React.RefObject<HTMLAudioElement | null>
   audioContextRef: React.MutableRefObject<AudioContext | null>
   analyserRef: React.MutableRefObject<AnalyserNode | null>
-  sourceRef: React.MutableRefObject<MediaStreamAudioSourceNode | null>
+  sourceRef: React.MutableRefObject<AudioNode | null>
   gainNodeRef: React.MutableRefObject<GainNode | null>
 }
 

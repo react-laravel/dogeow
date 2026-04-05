@@ -9,6 +9,24 @@ import { drawSpectrum } from './drawSpectrum'
 import { drawParticles, drawSilk } from './drawAmbient'
 
 const MAX_HISTORY_LENGTH = 200
+const MIN_FALLBACK_BIN_COUNT = 64
+
+function fillFallbackFrequencyData(dataArray: Uint8Array, timestamp: number) {
+  const time = timestamp / 1000
+  const beat = (Math.sin(time * 2.4) + 1) / 2
+  const sweep = (Math.sin(time * 0.65) + 1) / 2
+
+  for (let index = 0; index < dataArray.length; index += 1) {
+    const position = index / Math.max(1, dataArray.length - 1)
+    const lowBoost = 1 - position * 0.72
+    const pulse = (Math.sin(time * 4.5 + position * 10) + 1) / 2
+    const shimmer = (Math.sin(time * 7.8 - position * 18) + 1) / 2
+    const energy = 0.14 + pulse * 0.34 + shimmer * 0.2 + beat * 0.18
+    const value = 255 * energy * lowBoost * (0.7 + sweep * 0.3)
+
+    dataArray[index] = Math.max(12, Math.min(255, Math.round(value)))
+  }
+}
 
 export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
   analyserNode,
@@ -46,14 +64,16 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
   const spectrumSmoothedRef = useRef<Float32Array | null>(null)
 
   useEffect(() => {
-    if (analyserNode) {
-      dataArrayRef.current = new Uint8Array(analyserNode.frequencyBinCount)
-    }
-  }, [analyserNode])
+    const binCount = analyserNode
+      ? analyserNode.frequencyBinCount
+      : Math.max(MIN_FALLBACK_BIN_COUNT, barCount * 2)
+
+    dataArrayRef.current = new Uint8Array(binCount)
+  }, [analyserNode, barCount])
 
   useEffect(() => {
     const draw = () => {
-      if (!canvasRef.current || !analyserNode || !dataArrayRef.current) return
+      if (!canvasRef.current || !dataArrayRef.current) return
 
       const canvas = canvasRef.current
       const ctx = canvas.getContext('2d')
@@ -75,7 +95,11 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
       const height = displayHeight
       const dataArray = dataArrayRef.current
 
-      analyserNode.getByteFrequencyData(dataArray as Uint8Array<ArrayBuffer>)
+      if (analyserNode) {
+        analyserNode.getByteFrequencyData(dataArray as Uint8Array<ArrayBuffer>)
+      } else {
+        fillFallbackFrequencyData(dataArray, performance.now())
+      }
 
       if (prevTypeRef.current !== type) {
         ctx.clearRect(0, 0, width, height)
@@ -117,16 +141,24 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
           break
       }
 
-      if (isPlaying && analyserNode) {
+      if (isPlaying) {
         animationFrameRef.current = requestAnimationFrame(draw)
       }
     }
 
-    if (isPlaying && analyserNode) {
+    if (isPlaying) {
       draw()
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
+    } else {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+
+      const canvas = canvasRef.current
+      const ctx = canvas?.getContext('2d')
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      }
     }
 
     return () => {

@@ -310,7 +310,17 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     const audio = audioRef.current
     if (!audio) return
 
-    const handlePlay = () => setIsPlaying(true)
+    const handlePlay = () => {
+      if (!audioContextRef.current) {
+        initAudioContext(audio)
+      } else if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(err => {
+          logger.warn('AudioContext resume failed after play:', err)
+        })
+      }
+
+      setIsPlaying(true)
+    }
     const handlePause = () => {
       // 延迟检查 document.hidden，避免与 visibilitychange 的竞态条件
       // 切换 app / 锁屏时，pause 事件可能在 visibilitychange 之前触发，
@@ -335,7 +345,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [setIsPlaying, audioRef])
+  }, [audioContextRef, audioRef, initAudioContext, setIsPlaying])
 
   // Handle page visibility changes
   useEffect(() => {

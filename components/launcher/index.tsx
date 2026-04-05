@@ -313,7 +313,6 @@ export function AppLauncher({
       isMuted,
       availableTracks,
       currentTrack,
-      currentTrackInfo,
       playMode,
       readyToPlay,
       toggleMute,
@@ -441,7 +440,7 @@ export function AppLauncher({
         className="bg-background/80 relative z-50 flex h-full w-full flex-col backdrop-blur-md"
       >
         {/* 音频可视化 - 作为背景层，覆盖整个 app-launcher-bar，包括 padding */}
-        {displayMode === 'music' && audioManager.analyserNode && (
+        {displayMode === 'music' && (audioManager.analyserNode || isPlaying) && (
           <div className="pointer-events-none absolute inset-y-0 left-1/2 z-0 w-screen -translate-x-1/2 overflow-hidden">
             <AudioVisualizer
               analyserNode={audioManager.analyserNode}
