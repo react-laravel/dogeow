@@ -1,4 +1,13 @@
 import { PageContainer } from '@/components/layout'
+import { Long_Cang } from 'next/font/google'
+
+const longCang = Long_Cang({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-long-cang',
+  display: 'swap',
+  preload: false,
+})
 
 const QUOTES = [
   '世界需要更多的英雄。有时候英雄可能为了一辆摩托车而死，但英雄不论成败，只要是对面邪恶，绝不袖手旁观，那就是英雄。',
@@ -31,11 +40,12 @@ const QUOTES = [
   '人生不相见，动如参与商',
   '微尘中，各现无边刹海；刹海之中，复有微尘；彼诸微尘内，复有刹海；如是重重，不可穷尽，非是心识思量境界。',
   '每个人都是有思想的，所以要尊重每个人，当然狗也是，它也有情感。',
+  '',
 ]
 
 export default function AboutPage() {
   return (
-    <PageContainer className="flex h-full min-h-0 flex-col">
+    <PageContainer className={`${longCang.variable} flex h-full min-h-0 flex-col`}>
       <div className="flex flex-1 flex-col gap-8 overflow-auto p-6">
         <section className="space-y-4">
           <h2 className="text-lg font-medium text-foreground">自言自语</h2>
