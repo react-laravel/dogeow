@@ -54,3 +54,10 @@ logs/
 
 # AI
 .claude
+.github/prompts
+.github/agents
+.specify
+.agents
+.vscode
+.codex
+.cursor
