@@ -4,7 +4,7 @@
   "private": false,
   "packageManager": "npm@10.9.4",
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "npm": ">=10"
   },
   "scripts": {
@@ -115,7 +115,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/diff": "^7.0.2",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.4",
