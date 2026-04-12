@@ -2,7 +2,7 @@ import React, { memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TableRow, TableCell } from '@/components/ui/table'
-import { FileText, Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 interface CreateChildRowProps {
   name: string
@@ -16,13 +16,9 @@ interface CreateChildRowProps {
 export const CreateChildRow = memo<CreateChildRowProps>(
   ({ name, loading, onNameChange, onSave, onCancel, onKeyDown }) => {
     return (
-      <TableRow className="bg-accent/10 border-l-primary/40 border-l-2">
+      <TableRow className="bg-accent/10 border-l-border/40 border-l-2">
         <TableCell>
-          <div className="ml-8 flex items-center gap-3">
-            <div className="flex h-6 w-6 items-center justify-center">
-              <div className="bg-primary/60 h-2 w-2 animate-pulse rounded-full"></div>
-            </div>
-            <FileText className="text-primary/60 h-4 w-4" />
+          <div className="ml-8 flex items-center">
             <div className="flex flex-1 items-center gap-2">
               <Input
                 value={name}

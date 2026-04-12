@@ -2,7 +2,7 @@ import React, { memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TableRow, TableCell } from '@/components/ui/table'
-import { FileText, Trash2, Check, X } from 'lucide-react'
+import { Trash2, Check, X } from 'lucide-react'
 import type { Category } from '../../types'
 
 interface CategoryChildRowProps {
@@ -36,13 +36,9 @@ export const CategoryChildRow = memo<CategoryChildRowProps>(
     inputRef,
   }) => {
     return (
-      <TableRow className="hover:bg-accent/20 border-l-primary/20 border-l-2 transition-colors">
+      <TableRow className="hover:bg-accent/20 border-l-border/40 border-l-2 transition-colors">
         <TableCell>
-          <div className="ml-8 flex items-center gap-3">
-            <div className="flex h-6 w-6 items-center justify-center">
-              <div className="bg-primary/40 h-2 w-2 rounded-full"></div>
-            </div>
-            <FileText className="text-primary/60 h-4 w-4" />
+          <div className="ml-8 flex items-center">
             {isEditing ? (
               <div className="flex flex-1 items-center gap-2">
                 <Input
