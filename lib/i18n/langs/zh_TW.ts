@@ -18,7 +18,6 @@ export const zh_TW = {
   'nav.ai': 'AI',
   'nav.game': '遊戲',
   'nav.chat': '聊天',
-  'nav.roleplay': '角色對話',
   'nav.about': '關於',
   'nav.word': '單詞',
 

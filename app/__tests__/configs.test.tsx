@@ -83,17 +83,7 @@ describe('App Configs', () => {
     })
 
     it('should have all expected tile names', () => {
-      const expectedNames = [
-        'thing',
-        'lab',
-        'file',
-        'tool',
-        'nav',
-        'note',
-        'game',
-        'chat',
-        'roleplay',
-      ]
+      const expectedNames = ['thing', 'lab', 'file', 'tool', 'nav', 'note', 'game', 'chat']
       const actualNames = configs.tiles.map(tile => tile.name)
 
       expectedNames.forEach(name => {

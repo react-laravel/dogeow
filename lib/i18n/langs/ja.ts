@@ -19,7 +19,6 @@ export const ja = {
   'nav.ai': 'AI',
   'nav.game': 'ゲーム',
   'nav.chat': 'チャット',
-  'nav.roleplay': 'ロールプレイ',
   'nav.about': 'について',
   'nav.word': '単語',
 

@@ -19,7 +19,6 @@ export const en = {
   'nav.ai': 'AI',
   'nav.game': 'Games',
   'nav.chat': 'Chat',
-  'nav.roleplay': 'Roleplay',
   'nav.about': 'About',
   'nav.word': 'Word',
 

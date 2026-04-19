@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Languages,
   ListTodo,
-  Sparkles,
 } from 'lucide-react'
 import { PRESET_THEME_COLORS } from '@/lib/constants/theme-colors'
 
@@ -124,14 +123,6 @@ const TILES = [
     needLogin: true,
   },
   {
-    name: 'roleplay',
-    nameKey: 'nav.roleplay',
-    icon: <Sparkles />,
-    href: '/roleplay',
-    color: '#F97316',
-    needLogin: false,
-  },
-  {
     name: 'word',
     nameKey: 'nav.word',
     icon: <Languages />,
@@ -224,10 +215,10 @@ export const configs = {
   gridLayout: {
     columns: 3,
     templateAreas: `
-      "thing word roleplay"
-      "chat file todos"
+      "thing word file"
       "chat tool lab"
-      "nav note game"
+      "chat note nav"
+      "game todos ."
     `,
   },
   games: GAMES,
