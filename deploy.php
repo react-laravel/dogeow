@@ -141,8 +141,8 @@ task('deploy', [
     'deploy:symlink',
     'pm2:reload',
     'deploy:unlock',
-    'cleanup',
-    'success',
+    'deploy:cleanup',
+    'deploy:success',
 ]);
 
 // =====================
