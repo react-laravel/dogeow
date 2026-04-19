@@ -137,18 +137,20 @@ dep releases production
 
 如果是手动执行，请先确保当前目录已经是目标提交对应的项目工作树。
 
+`dep rollback production` 会切回上一个 release，并在切换后执行一次 `pm2 reload`，让线上进程真正加载回滚后的代码。
+
 ---
 
 ## 7. 故障排查
 
-| 现象                   | 排查                                                                   |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `Deploy is locked`     | 执行 `dep deploy:unlock production`                                    |
-| `deploy:writable` 失败 | 确认 `deploy.php` 已使用 `chmod` 模式                                  |
-| `npm ci` 失败          | 检查 Node / npm 版本，以及服务器本地 `.npmrc`                          |
-| `next build` 失败      | 在 release 目录手动执行 `npm run build` 复现                           |
-| `pm2 reload` 失败      | `pm2 logs dogeow-nextjs`、`pm2 status`                                 |
-| 页面没更新             | `readlink /example/dogeow/current` 确认 `current` 是否已切到新 release |
+| 现象                   | 排查                                                                       |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `Deploy is locked`     | 执行 `dep deploy:unlock production`                                        |
+| `deploy:writable` 失败 | 确认 `deploy.php` 已使用 `chmod` 模式                                      |
+| `npm ci` 失败          | 检查 Node / npm 版本，以及服务器本地 `.npmrc`                              |
+| `next build` 失败      | 在 release 目录手动执行 `npm run build` 复现                               |
+| `pm2 reload` 失败      | `pm2 logs dogeow-nextjs`、`pm2 status`；当前策略会直接终止部署，保留旧进程 |
+| 页面没更新             | `readlink /example/dogeow/current` 确认 `current` 是否已切到新 release     |
 
 查看本次部署详细输出：
 

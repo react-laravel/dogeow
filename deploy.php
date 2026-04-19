@@ -111,8 +111,8 @@ if pm2 info "$app_name" >/dev/null 2>&1; then
     exit 0
   fi
 
-  echo "[deploy] PM2 reload 失败，尝试重建应用进程表"
-  pm2 delete "$app_name" || true
+  echo "[deploy] PM2 reload 失败，为避免中断线上服务，终止本次部署"
+  exit 1
 else
   echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
 fi
@@ -149,3 +149,4 @@ task('deploy', [
 // Hooks
 // =====================
 after('deploy:failed', 'deploy:unlock');
+after('rollback', 'pm2:reload');
