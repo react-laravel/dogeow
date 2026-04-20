@@ -3,7 +3,7 @@
 import { ProgressStats } from './components/ProgressStats'
 import { CheckInCalendar } from './components/CheckInCalendar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import {
   BookOpen,
@@ -14,6 +14,7 @@ import {
   Search,
   ScanLine,
   FileInput,
+  ChevronRight,
 } from 'lucide-react'
 import { useWordSettings, useWordStats } from './hooks/useWord'
 import { PageContainer } from '@/components/layout'
@@ -63,6 +64,33 @@ export default function WordPage() {
           </Link>
         </div>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <BookOpen className="text-primary h-4 w-4" />
+            <CardTitle className="text-base">单词书</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Link href="/word/books">
+            <button
+              type="button"
+              className="hover:bg-accent/40 flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors"
+            >
+              <div className="min-w-0">
+                <div className="font-medium">{settings?.current_book?.name ?? '选择单词书'}</div>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {settings?.current_book
+                    ? `当前已选择，${settings.current_book.total_words} 词`
+                    : '进入单词书内页查看和切换学习内容'}
+                </p>
+              </div>
+              <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+            </button>
+          </Link>
+        </CardContent>
+      </Card>
 
       {/* 统计数据 */}
       <ProgressStats />

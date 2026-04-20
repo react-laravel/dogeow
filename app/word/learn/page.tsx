@@ -116,15 +116,12 @@ export default function LearnPage() {
             <div>
               <h2 className="mb-1 text-lg font-semibold">请先选择单词书</h2>
               <p className="text-muted-foreground text-sm">
-                在设置中选择要学习的单词书后才能开始学习
+                请先在首页选择要学习的单词书，再开始学习
               </p>
             </div>
             <div className="flex justify-center gap-2">
-              <Link href="/word/settings">
-                <Button>去设置</Button>
-              </Link>
               <Link href="/word">
-                <Button variant="outline">返回首页</Button>
+                <Button>返回首页选书</Button>
               </Link>
             </div>
           </CardContent>

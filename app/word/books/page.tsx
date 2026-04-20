@@ -1,17 +1,21 @@
 'use client'
 
-import { useBooks } from '../hooks/useWord'
+import Link from 'next/link'
+import { useBooks, useWordSettings } from '../hooks/useWord'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { updateWordSettings } from '../hooks/useWord'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { PageContainer, PageTitle } from '@/components/layout'
+import { ArrowLeft, Check, X } from 'lucide-react'
+import { PageContainer } from '@/components/layout'
 
 export default function BooksPage() {
   const router = useRouter()
   const { data: books, isLoading } = useBooks()
+  const { data: settings } = useWordSettings()
+  const currentBookId = settings?.current_book_id
 
   const handleSelectBook = async (bookId: number) => {
     try {
@@ -34,7 +38,19 @@ export default function BooksPage() {
 
   return (
     <PageContainer className="space-y-6">
-      <PageTitle>选择单词书</PageTitle>
+      <div className="flex items-center gap-3">
+        <Link href="/word">
+          <Button variant="ghost" size="icon" aria-label="返回背单词首页">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <h1 className="flex-1 text-2xl font-bold">单词书</h1>
+        <Link href="/word">
+          <Button variant="ghost" size="icon" aria-label="关闭单词书页面">
+            <X className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
 
       {books && books.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -45,11 +61,23 @@ export default function BooksPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground text-sm">{book.description}</p>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground text-sm">
                     共 {book.total_words} 个单词
                   </span>
-                  <Button onClick={() => handleSelectBook(book.id)}>选择</Button>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/word/books/${book.id}`}>
+                      <Button variant="outline">查看</Button>
+                    </Link>
+                    {currentBookId === book.id ? (
+                      <span className="text-primary inline-flex items-center gap-1 text-sm">
+                        <Check className="h-4 w-4" />
+                        当前使用
+                      </span>
+                    ) : (
+                      <Button onClick={() => handleSelectBook(book.id)}>选择</Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
