@@ -21,7 +21,6 @@ import { PageContainer } from '@/components/layout'
 export default function WordPage() {
   const { data: settings } = useWordSettings()
   const { data: stats } = useWordStats()
-  const hasSelectedBook = !!settings?.current_book_id
   const todayCheckedIn = stats?.today_checked_in ?? false
 
   return (
@@ -64,30 +63,6 @@ export default function WordPage() {
           </Link>
         </div>
       </div>
-
-      {/* 未选择单词书提示 */}
-      {!hasSelectedBook && settings !== undefined && (
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div>
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  请先选择单词书
-                </p>
-                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  在设置中选择要学习的单词书后才能开始学习
-                </p>
-                <Link href="/word/settings">
-                  <Button size="sm" variant="outline" className="mt-2">
-                    去设置
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* 统计数据 */}
       <ProgressStats />
