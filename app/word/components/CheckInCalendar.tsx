@@ -61,7 +61,7 @@ export function CheckInCalendar() {
     const cellStyle = (bg: string) => ({ background: bg, borderRadius: 3 })
 
     if (fillHeight) {
-      // 全屏模式：整体填满屏幕（矩形），今天第一行第一个，按行延伸至 365 天前；列数少一点、间距大一点，避免太密
+      // 全屏模式：使用固定正方形格子，避免被容器高度拉伸成长方形
       const today = new Date()
       const dateList: Date[] = []
       for (let i = 0; i < 365; i++) {
@@ -69,15 +69,20 @@ export function CheckInCalendar() {
       }
       const cols = 15
       const rows = Math.ceil(365 / cols)
+      const gridStyle: CSSProperties = fitOneScreen
+        ? {
+            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          }
+        : {
+            gridTemplateColumns: `repeat(${cols}, 1.4rem)`,
+            gridAutoRows: '1.4rem',
+          }
 
       return (
-        <div className="h-full min-h-0 p-4">
+        <div className="h-full min-h-0 overflow-auto p-4">
           <div
-            className="grid h-full min-h-[120px] w-full gap-1.5"
-            style={{
-              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-            }}
+            className={`mx-auto grid gap-1.5 ${fitOneScreen ? 'w-full max-w-full' : 'w-fit'}`}
+            style={gridStyle}
           >
             {dateList.map(d => {
               const dateStr = format(d, 'yyyy-MM-dd')
@@ -89,14 +94,14 @@ export function CheckInCalendar() {
                   key={dateStr}
                   title={`${dateStr}${dayObj ? ` — ${(dayObj.new_words_count ?? 0) + (dayObj.review_words_count ?? 0)}` : ''}`}
                   style={isEmpty ? undefined : cellStyle(bg)}
-                  className={`h-full min-h-0 w-full min-w-0 rounded-[3px] ${isEmpty ? 'bg-muted' : ''}`}
+                  className={`aspect-square h-full w-full rounded-[3px] ${isEmpty ? 'bg-muted' : ''}`}
                 />
               )
             })}
             {Array.from({ length: cols * rows - 365 }).map((_, i) => (
               <div
                 key={`empty-${i}`}
-                className="bg-muted h-full min-h-0 w-full min-w-0 rounded-[3px]"
+                className="bg-muted aspect-square h-full w-full rounded-[3px]"
               />
             ))}
           </div>
