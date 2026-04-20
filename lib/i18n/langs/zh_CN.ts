@@ -9,7 +9,6 @@ export const zh_CN = {
 
   // Navigation
   'nav.thing': '物品管理',
-  'nav.lab': '实验室',
   'nav.file': '文件',
   'nav.tool': '工具',
   'nav.nav': '导航',
@@ -96,8 +95,6 @@ export const zh_CN = {
   'module.note.desc': '支持Markdown格式的在线笔记编辑器',
   'module.file.name': '文件管理',
   'module.file.desc': '在线文件存储和管理系统',
-  'module.lab.name': '实验室工具',
-  'module.lab.desc': '各种实用的在线工具和实验功能',
 
   // Theme colors
   'theme.overwatch': '守望先锋',
@@ -172,7 +169,6 @@ export const zh_CN = {
 
   // Categories
   'category.thing': '物品',
-  'category.lab': '实验室',
   'category.note': '笔记',
   'category.file': '文件',
   'category.game': '游戏',

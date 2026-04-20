@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -30,6 +31,57 @@ vi.mock('@/hooks/useTranslation', () => ({
     t: (key: string, fallback?: string) => fallback || key,
   }),
 }))
+
+vi.mock('@/components/ui/dialog', async () => {
+  const React = await import('react')
+
+  type DialogContextValue = {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+  }
+
+  const DialogContext = React.createContext<DialogContextValue>({
+    open: false,
+    onOpenChange: () => {},
+  })
+
+  return {
+    Dialog: ({
+      open,
+      onOpenChange,
+      children,
+    }: {
+      open: boolean
+      onOpenChange: (open: boolean) => void
+      children: React.ReactNode
+    }) => (
+      <DialogContext.Provider value={{ open, onOpenChange }}>{children}</DialogContext.Provider>
+    ),
+    DialogOverlay: ({ className }: { className?: string }) => {
+      const { open, onOpenChange } = React.useContext(DialogContext)
+      if (!open) return null
+      return <div data-state="open" className={className} onClick={() => onOpenChange(false)} />
+    },
+    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => {
+      const { open, onOpenChange } = React.useContext(DialogContext)
+      if (!open) return null
+      return (
+        <div role="dialog" className={className}>
+          {children}
+          <button aria-label="关闭" onClick={() => onOpenChange(false)}>
+            close
+          </button>
+        </div>
+      )
+    },
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div className={className}>{children}</div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div className={className}>{children}</div>
+    ),
+  }
+})
 
 // Mock configs
 vi.mock('@/app/configs', () => ({

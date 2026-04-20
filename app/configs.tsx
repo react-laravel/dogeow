@@ -1,6 +1,5 @@
 import {
   Package,
-  FlaskConical,
   FileText,
   Wrench,
   Compass,
@@ -56,14 +55,6 @@ const TILES = [
     icon: <Package />,
     href: '/thing',
     color: '#2196F3',
-    needLogin: true,
-  },
-  {
-    name: 'lab',
-    nameKey: 'nav.lab',
-    icon: <FlaskConical />,
-    href: '/lab',
-    color: '#388e3c',
     needLogin: true,
   },
   {
@@ -216,16 +207,15 @@ export const configs = {
     columns: 3,
     templateAreas: `
       "thing word file"
-      "chat tool lab"
-      "chat note nav"
-      "game todos ."
+      "chat tool nav"
+      "chat note todos"
+      "game . ."
     `,
   },
   games: GAMES,
   navigation: [createModule('nav-1', 'module.nav.name', 'module.nav.desc', '/nav')],
   notes: [createModule('note-1', 'module.note.name', 'module.note.desc', '/note')],
   files: [createModule('file-1', 'module.file.name', 'module.file.desc', '/file')],
-  lab: [createModule('lab-1', 'module.lab.name', 'module.lab.desc', '/lab')],
   systemBackgrounds: SYSTEM_BACKGROUNDS,
   themeColors: PRESET_THEME_COLORS,
 }
@@ -283,7 +273,6 @@ export const getTranslatedConfigs = (t: (key: string, fallback?: string) => stri
   navigation: mapWithTranslation(configs.navigation, t, ['nameKey', 'descriptionKey']),
   notes: mapWithTranslation(configs.notes, t, ['nameKey', 'descriptionKey']),
   files: mapWithTranslation(configs.files, t, ['nameKey', 'descriptionKey']),
-  lab: mapWithTranslation(configs.lab, t, ['nameKey', 'descriptionKey']),
   systemBackgrounds: mapWithTranslation(configs.systemBackgrounds, t, ['nameKey']),
   themeColors: mapWithTranslation(configs.themeColors, t, ['nameKey']),
 })

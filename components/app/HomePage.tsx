@@ -87,18 +87,11 @@ export function HomePage() {
 
   return (
     <>
-      <div className="sr-only">
-        <h1>{t('home.title', 'DogeOW - 个人工具和游戏平台')}</h1>
-        <p>
-          {t('home.description', '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！')}
-        </p>
-      </div>
-
       <PageContainer className={`py-4 sm:py-6 ${HOME_SECTION_SPACING}`}>
         <header className="space-y-1">
-          <h2 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
             {t('home.title', 'DogeOW - 个人工具和游戏平台')}
-          </h2>
+          </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             {t('home.description', '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！')}
           </p>

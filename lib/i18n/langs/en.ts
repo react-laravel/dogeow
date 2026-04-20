@@ -10,7 +10,6 @@ export const en = {
 
   // Navigation
   'nav.thing': 'Things',
-  'nav.lab': 'Lab',
   'nav.file': 'Files',
   'nav.tool': 'Tools',
   'nav.nav': 'Navigation',
@@ -99,8 +98,6 @@ export const en = {
   'module.note.desc': 'Online note editor with Markdown format support',
   'module.file.name': 'File Manager',
   'module.file.desc': 'Online file storage and management system',
-  'module.lab.name': 'Lab Tools',
-  'module.lab.desc': 'Various useful online tools and experimental features',
 
   // Theme colors
   'theme.overwatch': 'Overwatch',
@@ -177,7 +174,6 @@ export const en = {
 
   // Categories
   'category.thing': 'Things',
-  'category.lab': 'Lab',
   'category.note': 'Notes',
   'category.file': 'Files',
   'category.game': 'Games',

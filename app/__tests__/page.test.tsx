@@ -18,10 +18,10 @@ vi.mock('@/hooks/useTileManagement', () => ({
         needLogin: true,
       },
       {
-        name: 'lab',
-        nameKey: 'nav.lab',
-        href: '/lab',
-        color: '#388e3c',
+        name: 'nav',
+        nameKey: 'nav.nav',
+        href: '/nav',
+        color: '#FFA000',
         needLogin: false,
       },
     ],
@@ -34,7 +34,7 @@ vi.mock('@/hooks/useTileManagement', () => ({
 vi.mock('@/app/configs', () => ({
   configs: {
     gridLayout: {
-      templateAreas: '"thing lab"',
+      templateAreas: '"thing nav"',
     },
   },
 }))
@@ -69,14 +69,14 @@ describe('Home Page', () => {
   it('should render the home page with correct structure', async () => {
     render(<Home />)
 
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('DogeOW')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('DogeOW')
     const descriptions = screen.getAllByText(
       '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！'
     )
     expect(descriptions.length).toBeGreaterThanOrEqual(1)
 
     expect(screen.getByTestId('tile-thing')).toBeInTheDocument()
-    expect(screen.getByTestId('tile-lab')).toBeInTheDocument()
+    expect(screen.getByTestId('tile-nav')).toBeInTheDocument()
 
     // Footer is dynamically loaded, wait for it
     await waitFor(() => {
@@ -97,16 +97,15 @@ describe('Home Page', () => {
     render(<Home />)
 
     expect(screen.getByTestId('tile-thing')).toBeInTheDocument()
-    expect(screen.getByTestId('tile-lab')).toBeInTheDocument()
+    expect(screen.getByTestId('tile-nav')).toBeInTheDocument()
   })
 
   it('should have correct accessibility structure', () => {
     render(<Home />)
 
-    // Check for single h1 in sr-only (SEO)
     const h1 = screen.getByRole('heading', { level: 1 })
     expect(h1).toHaveTextContent('DogeOW')
-    expect(h1.closest('.sr-only')).toBeInTheDocument()
+    expect(h1.closest('.sr-only')).not.toBeInTheDocument()
   })
 
   it('should render with correct container classes', () => {
@@ -120,9 +119,9 @@ describe('Home Page', () => {
     render(<Home />)
 
     const thingTile = screen.getByTestId('tile-thing').parentElement
-    const labTile = screen.getByTestId('tile-lab').parentElement
+    const navTile = screen.getByTestId('tile-nav').parentElement
 
     expect(thingTile).toHaveStyle({ gridArea: 'thing' })
-    expect(labTile).toHaveStyle({ gridArea: 'lab' })
+    expect(navTile).toHaveStyle({ gridArea: 'nav' })
   })
 })

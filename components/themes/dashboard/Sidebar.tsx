@@ -10,7 +10,6 @@ import { cn } from '@/lib/helpers'
 import { useState } from 'react'
 import {
   Package,
-  FlaskConical,
   FileText,
   Wrench,
   Compass,
@@ -23,7 +22,6 @@ import {
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   thing: Package,
-  lab: FlaskConical,
   file: FileText,
   tool: Wrench,
   nav: Compass,

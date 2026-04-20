@@ -35,11 +35,6 @@ const localDataSources: LocalDataSource[] = [
     requireAuth: true,
     getData: configs => configs.files,
   },
-  {
-    category: 'lab',
-    requireAuth: false,
-    getData: configs => configs.lab,
-  },
 ]
 
 /**

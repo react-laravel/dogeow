@@ -75,15 +75,10 @@ describe('App Configs', () => {
       expect(thingTile).toBeDefined()
       expect(thingTile?.href).toBe('/thing')
       expect(thingTile?.needLogin).toBe(true)
-
-      const labTile = configs.tiles.find(tile => tile.name === 'lab')
-      expect(labTile).toBeDefined()
-      expect(labTile?.href).toBe('/lab')
-      expect(labTile?.needLogin).toBe(true)
     })
 
     it('should have all expected tile names', () => {
-      const expectedNames = ['thing', 'lab', 'file', 'tool', 'nav', 'note', 'game', 'chat']
+      const expectedNames = ['thing', 'file', 'tool', 'nav', 'note', 'game', 'chat']
       const actualNames = configs.tiles.map(tile => tile.name)
 
       expectedNames.forEach(name => {

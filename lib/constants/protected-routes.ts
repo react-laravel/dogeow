@@ -6,7 +6,6 @@ type RouteAccessRule = {
 // Keep this list lightweight so route-guard checks do not pull UI-heavy tile configs into the root bundle.
 const TILE_ROUTE_ACCESS_RULES: ReadonlyArray<RouteAccessRule> = [
   { href: '/thing', needLogin: true },
-  { href: '/lab', needLogin: true },
   { href: '/file', needLogin: true },
   { href: '/tool', needLogin: true },
   { href: '/nav', needLogin: true },

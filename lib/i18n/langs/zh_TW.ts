@@ -9,7 +9,6 @@ export const zh_TW = {
 
   // Navigation
   'nav.thing': '物品管理',
-  'nav.lab': '實驗室',
   'nav.file': '檔案',
   'nav.tool': '工具',
   'nav.nav': '導航',
@@ -93,8 +92,6 @@ export const zh_TW = {
   'module.note.desc': '支援Markdown格式的線上筆記編輯器',
   'module.file.name': '檔案管理',
   'module.file.desc': '線上檔案儲存和管理系統',
-  'module.lab.name': '實驗室工具',
-  'module.lab.desc': '各種實用的線上工具和實驗功能',
 
   // Theme colors
   'theme.overwatch': '鬥陣特攻',
@@ -169,7 +166,6 @@ export const zh_TW = {
 
   // Categories
   'category.thing': '物品',
-  'category.lab': '實驗室',
   'category.note': '筆記',
   'category.file': '檔案',
   'category.game': '遊戲',

@@ -38,10 +38,10 @@ vi.mock('@/app/configs', () => ({
         needLogin: true,
       },
       {
-        name: 'lab',
-        nameKey: 'nav.lab',
-        href: '/lab',
-        color: '#388e3c',
+        name: 'nav',
+        nameKey: 'nav.nav',
+        href: '/nav',
+        color: '#FFA000',
         needLogin: false,
       },
     ],
@@ -106,7 +106,7 @@ describe('useTileManagement', () => {
       result.current.handleTileClick(result.current.tiles[1])
     })
 
-    expect(mockPush).toHaveBeenCalledWith('/lab')
+    expect(mockPush).toHaveBeenCalledWith('/nav')
   })
 
   it('delegates protected navigation to requireLogin', () => {

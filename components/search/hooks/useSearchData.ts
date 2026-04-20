@@ -135,6 +135,20 @@ export function useSearchData({
       return
     }
 
+    const currentParams = {
+      searchTerm: trimmedTerm,
+      activeCategory,
+    }
+
+    const isSameAsLastSearch =
+      lastSearchRef.current.searchTerm === currentParams.searchTerm &&
+      lastSearchRef.current.activeCategory === currentParams.activeCategory
+
+    if (!isSameAsLastSearch) {
+      setLoading(true)
+      setHasSearched(false)
+    }
+
     const timer = setTimeout(() => {
       performSearch()
     }, debounceMs)

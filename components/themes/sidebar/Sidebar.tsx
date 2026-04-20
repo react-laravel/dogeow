@@ -7,20 +7,10 @@ import { getTranslatedConfigs } from '@/app/configs'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/helpers'
-import {
-  Package,
-  FlaskConical,
-  FileText,
-  Wrench,
-  Compass,
-  BookOpen,
-  Gamepad2,
-  MessageSquare,
-} from 'lucide-react'
+import { Package, FileText, Wrench, Compass, BookOpen, Gamepad2, MessageSquare } from 'lucide-react'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   thing: Package,
-  lab: FlaskConical,
   file: FileText,
   tool: Wrench,
   nav: Compass,

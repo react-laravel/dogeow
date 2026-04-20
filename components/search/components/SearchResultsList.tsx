@@ -61,6 +61,16 @@ export const SearchResultsList = memo<SearchResultsListProps>(
       )
     }
 
+    // 已输入搜索词但结果尚未返回时，避免出现空白区域
+    if (searchTerm && filteredResults.length === 0 && !hasSearched) {
+      return (
+        <div className="flex min-h-[120px] flex-col items-center justify-center py-8">
+          <Loader2 className="text-muted-foreground mx-auto h-5 w-5 animate-spin" />
+          <p className="text-muted-foreground mt-2 text-sm">正在搜索...</p>
+        </div>
+      )
+    }
+
     // 有搜索词但没有结果
     if (searchTerm && filteredResults.length === 0 && hasSearched) {
       return (

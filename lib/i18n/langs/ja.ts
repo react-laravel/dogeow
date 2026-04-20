@@ -10,7 +10,6 @@ export const ja = {
 
   // Navigation
   'nav.thing': 'アイテム',
-  'nav.lab': 'ラボ',
   'nav.file': 'ファイル',
   'nav.tool': 'ツール',
   'nav.nav': 'ナビ',
@@ -98,8 +97,6 @@ export const ja = {
   'module.note.desc': 'Markdown形式対応のオンラインノートエディター',
   'module.file.name': 'ファイル管理',
   'module.file.desc': 'オンラインファイルストレージと管理システム',
-  'module.lab.name': 'ラボツール',
-  'module.lab.desc': '様々な便利なオンラインツールと実験機能',
 
   // Theme colors
   'theme.overwatch': 'オーバーウォッチ',
@@ -176,7 +173,6 @@ export const ja = {
 
   // Categories
   'category.thing': 'アイテム',
-  'category.lab': 'ラボ',
   'category.note': 'ノート',
   'category.file': 'ファイル',
   'category.game': 'ゲーム',
