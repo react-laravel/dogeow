@@ -47,7 +47,15 @@ const createEmptyEditorContent = (): JSONContent => ({
   ],
 })
 
-const TailwindAdvancedEditor = () => {
+interface TailwindAdvancedEditorProps {
+  showStatusBar?: boolean
+  onStatusChange?: (status: { saveStatus: string; wordCount?: number }) => void
+}
+
+const TailwindAdvancedEditor = ({
+  showStatusBar = true,
+  onStatusChange,
+}: TailwindAdvancedEditorProps) => {
   const pathname = usePathname()
 
   const readInitialContent = useCallback((): JSONContent => {
@@ -80,6 +88,10 @@ const TailwindAdvancedEditor = () => {
   useEffect(() => {
     setInitialContent(readInitialContent())
   }, [readInitialContent])
+
+  useEffect(() => {
+    onStatusChange?.({ saveStatus, wordCount: charsCount })
+  }, [charsCount, onStatusChange, saveStatus])
 
   //Apply Codeblock Highlighting on the HTML from editor.getHTML()
   const highlightCodeblocks = (content: string) => {
@@ -234,23 +246,25 @@ const TailwindAdvancedEditor = () => {
 
   return (
     <div className="relative w-full max-w-screen-lg">
-      <div className="flex justify-end gap-2">
-        <div className="bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm">
-          {saveStatus}
+      {showStatusBar && (
+        <div className="mb-2 flex justify-end gap-2 pr-1">
+          <div className="bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm">
+            {saveStatus}
+          </div>
+          <div
+            className={
+              charsCount ? 'bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm' : 'hidden'
+            }
+          >
+            {charsCount} Words
+          </div>
         </div>
-        <div
-          className={
-            charsCount ? 'bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm' : 'hidden'
-          }
-        >
-          {charsCount} Words
-        </div>
-      </div>
+      )}
       <EditorRoot>
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
-          className="border-muted bg-background relative min-h-[500px] w-full max-w-screen-lg p-4 sm:mb-[calc(20vh)] sm:rounded-lg sm:border sm:shadow-lg"
+          className="border-border/80 bg-background relative min-h-[500px] w-full max-w-screen-lg rounded-[24px] border p-5 shadow-sm sm:mb-[calc(20vh)]"
           editorProps={{
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),
