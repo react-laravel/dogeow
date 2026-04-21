@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { CheckCircle, XCircle, Volume2 } from 'lucide-react'
+import { CheckCircle, XCircle } from 'lucide-react'
 import { Word } from '../types'
 import { toast } from 'sonner'
-import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
+import { useWordPronunciation } from '../hooks/useWordPronunciation'
 
 interface FillBlankCardProps {
   word: Word
@@ -19,7 +19,7 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
   const [showResult, setShowResult] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
 
-  const { speakWord } = useSpeechSynthesis()
+  const { playBritishPronunciation, playAmericanPronunciation } = useWordPronunciation()
 
   // 随机选择一个例句
   const [selectedExample] = useState(() => {
@@ -90,20 +90,29 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
         {/* 提示信息 */}
         <div className="text-center">
           <h3 className="text-muted-foreground mb-2 text-sm">根据例句填写单词</h3>
-          {word.phonetic_us && (
-            <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
-              <span>/{word.phonetic_us}/</span>
+          <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+            {word.phonetic_us && <span>/{word.phonetic_us}/</span>}
+            <div className="flex items-center gap-1">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => speakWord(word.content)}
-                className="h-6 w-6 p-0"
-                aria-label="发音"
+                onClick={() => void playBritishPronunciation(word.content)}
+                className="h-7 min-w-7 px-2 text-xs"
+                aria-label="英式发音"
               >
-                <Volume2 className="h-3 w-3" />
+                英
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void playAmericanPronunciation(word.content)}
+                className="h-7 min-w-7 px-2 text-xs"
+                aria-label="美式发音"
+              >
+                美
               </Button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* 例句（挖空） */}

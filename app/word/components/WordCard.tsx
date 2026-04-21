@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Volume2, Bot, MoreVertical, Edit, CheckCircle } from 'lucide-react'
+import { Bot, MoreVertical, Edit, CheckCircle } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,7 +16,7 @@ import { markWord, markWordAsSimple } from '../hooks/useWord'
 import { WordAIDialog } from './WordAIDialog'
 import { EditWordDialog } from './EditWordDialog'
 import { toast } from 'sonner'
-import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
+import { useWordPronunciation } from '../hooks/useWordPronunciation'
 
 interface WordCardProps {
   word: Word
@@ -30,24 +30,27 @@ export function WordCard({ word, onNext }: WordCardProps) {
   const [showAIDialog, setShowAIDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
 
-  const { speak, speakWord, cancel, voicesLoaded } = useSpeechSynthesis()
+  const { cancel, playBritishPronunciation, playAmericanPronunciation } = useWordPronunciation()
 
   // 自动发音
   useEffect(() => {
-    if (!voicesLoaded) return
-
     const timer = setTimeout(() => {
-      speakWord(word.content)
+      void playAmericanPronunciation(word.content, { suppressErrors: true })
     }, 200)
 
     return () => {
       clearTimeout(timer)
       cancel()
     }
-  }, [word.content, voicesLoaded, speakWord, cancel])
+  }, [word.content, playAmericanPronunciation, cancel])
 
-  const handlePronounce = () => {
-    speakWord(word.content)
+  const handlePronounce = (accent: 'uk' | 'us') => {
+    if (accent === 'uk') {
+      void playBritishPronunciation(word.content)
+      return
+    }
+
+    void playAmericanPronunciation(word.content)
   }
 
   const handleMarkAndNext = async (remembered: boolean) => {
@@ -121,15 +124,26 @@ export function WordCard({ word, onNext }: WordCardProps) {
             <h2 className="mb-2 text-3xl font-bold">{word.content}</h2>
             <div className="text-muted-foreground flex items-center justify-center gap-3 text-sm">
               {word.phonetic_us && <span>/{word.phonetic_us}/</span>}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePronounce}
-                className="h-8 w-8 p-0"
-                aria-label="发音"
-              >
-                <Volume2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePronounce('uk')}
+                  className="h-8 min-w-8 px-2 text-xs"
+                  aria-label="英式发音"
+                >
+                  英
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePronounce('us')}
+                  className="h-8 min-w-8 px-2 text-xs"
+                  aria-label="美式发音"
+                >
+                  美
+                </Button>
+              </div>
             </div>
             {/* 教育级别标签 */}
             {word.education_levels && word.education_levels.length > 0 && (
