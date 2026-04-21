@@ -76,6 +76,7 @@ const nextConfig: NextConfig = {
     deviceSizes: [
       24, 32, 48, 56, 64, 80, 96, 120, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200,
     ],
+    qualities: [75, 85],
     // 添加imageSizes配置，用于响应式图片
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     // 禁用对 SVG 的优化，因为 dicebear 返回的是 SVG

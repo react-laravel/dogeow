@@ -134,6 +134,7 @@ const MarkdownPreview = ({ content, className }: MarkdownPreviewProps) => {
     extensions: previewExtensions,
     content: '',
     editable: false,
+    immediatelyRender: false,
   })
 
   // 使用 Tiptap 的 Markdown 扩展解析 markdown 字符串
