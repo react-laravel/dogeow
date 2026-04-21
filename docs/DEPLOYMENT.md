@@ -17,7 +17,7 @@
 
 ## 2. 目录约定
 
-服务器上部署根目录（默认 `/example/dogeow`，可通过 `APP_ROOT` 或 `DEPLOY_PATH` 改）结构：
+服务器上部署根目录（默认 `/example/dogeow`，可通过 `DEPLOY_PATH` 或兼容旧配置的 `APP_ROOT` 改）结构：
 
 ```plaintext
 /example/dogeow/
@@ -100,14 +100,15 @@ Deployer 每次发布时会自动把这些文件复制到新 release。
 
 仓库 Settings → Secrets and variables → Actions 配置：
 
-| Secret 名  | 值示例            | 说明             |
-| ---------- | ----------------- | ---------------- |
-| `APP_ROOT` | `/example/dogeow` | 部署根目录       |
-| `PM2_APP`  | `dogeow-nextjs`   | PM2 应用名，可选 |
+| Secret 名     | 值示例            | 说明                   |
+| ------------- | ----------------- | ---------------------- |
+| `DEPLOY_PATH` | `/example/dogeow` | 部署根目录，推荐使用   |
+| `APP_ROOT`    | `/example/dogeow` | 部署根目录，兼容旧配置 |
+| `PM2_APP`     | `dogeow-nextjs`   | PM2 应用名，可选       |
 
 说明：
 
-- 为兼容旧工作流，仍使用 `APP_ROOT`
+- 优先使用 `DEPLOY_PATH`，旧工作流仍可继续使用 `APP_ROOT`
 - 如果不提供 `PM2_APP`，默认使用 `dogeow-nextjs`
 
 ---
