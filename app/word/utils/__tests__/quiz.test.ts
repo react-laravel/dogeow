@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import type { Word } from '../../types'
-import { buildWordQuizQuestions, getQuizEligibleWords, normalizeQuizExplanation } from '../quiz'
+import {
+  buildQuizQuestion,
+  estimateVocabularySize,
+  getEstimateConfidence,
+  getQuizEligibleWords,
+  normalizeQuizExplanation,
+} from '../quiz'
 
 const createWord = (id: number, content: string, explanation?: string): Word => ({
   id,
@@ -31,35 +37,33 @@ describe('quiz utils', () => {
     expect(eligible.map(word => word.content)).toEqual(['apple', 'orange'])
   })
 
-  it('builds multiple choice questions with one correct option', () => {
-    const words = [
+  it('builds one multiple choice question with one correct option', () => {
+    const words = getQuizEligibleWords([
       createWord(1, 'apple', 'n. 苹果'),
       createWord(2, 'banana', 'n. 香蕉'),
       createWord(3, 'orange', 'n. 橙子'),
       createWord(4, 'grape', 'n. 葡萄'),
       createWord(5, 'peach', 'n. 桃子'),
-    ]
+    ])
 
-    const questions = buildWordQuizQuestions(words, 3)
+    const question = buildQuizQuestion(words, [])
 
-    expect(questions).toHaveLength(3)
+    expect(question).not.toBeNull()
+    expect(question?.options).toHaveLength(4)
+    expect(question?.options.filter(option => option.isCorrect)).toHaveLength(1)
 
-    for (const question of questions) {
-      expect(question.options).toHaveLength(4)
-      expect(question.options.filter(option => option.isCorrect)).toHaveLength(1)
-
-      const correctOption = question.options.find(option => option.isCorrect)
-      expect(correctOption?.text).toBe(question.correctExplanation)
-    }
+    const correctOption = question?.options.find(option => option.isCorrect)
+    expect(correctOption?.text).toBe(question?.correctExplanation)
   })
 
-  it('returns an empty list when there are not enough valid options', () => {
-    const words = [
-      createWord(1, 'apple', 'n. 苹果'),
-      createWord(2, 'banana', 'n. 香蕉'),
-      createWord(3, 'orange', 'n. 橙子'),
-    ]
+  it('estimates vocabulary size from running accuracy', () => {
+    expect(estimateVocabularySize(18, 20, 5000)).toBe(4500)
+    expect(estimateVocabularySize(0, 0, 5000)).toBe(0)
+  })
 
-    expect(buildWordQuizQuestions(words, 10)).toEqual([])
+  it('returns confidence buckets from answer count', () => {
+    expect(getEstimateConfidence(5)).toBe('low')
+    expect(getEstimateConfidence(20)).toBe('medium')
+    expect(getEstimateConfidence(50)).toBe('high')
   })
 })

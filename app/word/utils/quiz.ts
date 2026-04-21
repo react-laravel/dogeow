@@ -6,6 +6,10 @@ export interface QuizOption {
   isCorrect: boolean
 }
 
+export interface EligibleQuizWord extends Word {
+  quizExplanation: string
+}
+
 export interface WordQuizQuestion {
   id: string
   wordId: number
@@ -45,10 +49,10 @@ export function normalizeQuizExplanation(explanation?: string): string | null {
   return cleaned || null
 }
 
-export function getQuizEligibleWords(words: Word[]): Array<Word & { quizExplanation: string }> {
+export function getQuizEligibleWords(words: Word[]): EligibleQuizWord[] {
   const seenByContent = new Set<string>()
 
-  return words.reduce<Array<Word & { quizExplanation: string }>>((result, word) => {
+  return words.reduce<EligibleQuizWord[]>((result, word) => {
     const quizExplanation = normalizeQuizExplanation(word.explanation)
     const normalizedContent = word.content.trim().toLowerCase()
 
@@ -62,57 +66,69 @@ export function getQuizEligibleWords(words: Word[]): Array<Word & { quizExplanat
   }, [])
 }
 
-export function buildWordQuizQuestions(
-  words: Word[],
-  questionCount = 10,
+export function buildQuizQuestion(
+  words: EligibleQuizWord[],
+  recentWordIds: number[] = [],
   optionCount = DEFAULT_OPTION_COUNT
-): WordQuizQuestion[] {
-  const eligibleWords = getQuizEligibleWords(words)
+): WordQuizQuestion | null {
   const requiredWrongOptions = Math.max(1, optionCount - 1)
 
-  if (eligibleWords.length < optionCount) {
-    return []
+  if (words.length < optionCount) {
+    return null
   }
 
-  const questions: WordQuizQuestion[] = []
-  const shuffledCandidates = shuffle(eligibleWords)
+  const recentSet = new Set(recentWordIds)
+  const preferredTargets = words.filter(word => !recentSet.has(word.id))
+  const targetPool = preferredTargets.length > 0 ? preferredTargets : words
+  const target = shuffle(targetPool)[0]
 
-  for (const word of shuffledCandidates) {
-    const distractors = shuffle(
-      eligibleWords.filter(
-        candidate => candidate.id !== word.id && candidate.quizExplanation !== word.quizExplanation
-      )
-    ).slice(0, requiredWrongOptions)
+  if (!target) {
+    return null
+  }
 
-    if (distractors.length < requiredWrongOptions) {
-      continue
-    }
+  const distractors = shuffle(
+    words.filter(word => word.id !== target.id && word.quizExplanation !== target.quizExplanation)
+  ).slice(0, requiredWrongOptions)
 
-    const options = shuffle([
+  if (distractors.length < requiredWrongOptions) {
+    return null
+  }
+
+  return {
+    id: `quiz-${target.id}-${Date.now()}`,
+    wordId: target.id,
+    promptWord: target.content,
+    correctExplanation: target.quizExplanation,
+    options: shuffle([
       {
-        id: `${word.id}-correct`,
-        text: word.quizExplanation,
+        id: `${target.id}-correct`,
+        text: target.quizExplanation,
         isCorrect: true,
       },
       ...distractors.map(candidate => ({
-        id: `${word.id}-${candidate.id}`,
+        id: `${target.id}-${candidate.id}`,
         text: candidate.quizExplanation,
         isCorrect: false,
       })),
-    ])
+    ]),
+  }
+}
 
-    questions.push({
-      id: `quiz-${word.id}`,
-      wordId: word.id,
-      promptWord: word.content,
-      correctExplanation: word.quizExplanation,
-      options,
-    })
-
-    if (questions.length >= questionCount) {
-      break
-    }
+export function estimateVocabularySize(
+  correctAnswers: number,
+  answeredQuestions: number,
+  totalEligibleWords: number
+): number {
+  if (answeredQuestions <= 0 || totalEligibleWords <= 0) {
+    return 0
   }
 
-  return questions
+  const rawEstimate = (correctAnswers / answeredQuestions) * totalEligibleWords
+  return Math.max(0, Math.min(totalEligibleWords, Math.round(rawEstimate)))
+}
+
+export function getEstimateConfidence(answeredQuestions: number): 'low' | 'medium' | 'high' {
+  if (answeredQuestions >= 40) return 'high'
+  if (answeredQuestions >= 15) return 'medium'
+  return 'low'
 }

@@ -2,28 +2,23 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookX,
-  Brain,
-  CheckCircle2,
-  CircleHelp,
-  RotateCcw,
-  Trophy,
-} from 'lucide-react'
+import { ArrowLeft, ArrowRight, Brain, CircleHelp, Gauge, RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { get } from '@/lib/api'
+import { get, post } from '@/lib/api'
 
-import { useWordSettings } from '../hooks/useWord'
-import type { Word } from '../types'
-import { buildWordQuizQuestions, getQuizEligibleWords, type WordQuizQuestion } from '../utils/quiz'
+import type { Book, Word } from '../types'
+import {
+  buildQuizQuestion,
+  estimateVocabularySize,
+  getQuizEligibleWords,
+  type EligibleQuizWord,
+  type WordQuizQuestion,
+} from '../utils/quiz'
 
 type BookWordsResponse = {
   data: Word[]
@@ -34,10 +29,50 @@ type BookWordsResponse = {
   }
 }
 
-const QUIZ_QUESTION_COUNT = 10
-const QUIZ_TARGET_POOL_SIZE = 80
-const QUIZ_FETCH_PER_PAGE = 100
-const QUIZ_MAX_PAGES = 10
+type QuizEstimateAnswer = {
+  word_id: number
+  correct: boolean
+}
+
+type QuizEstimateResponse = {
+  estimated_vocabulary_size?: number
+  accuracy?: number
+  confidence?: 'low' | 'medium' | 'high'
+  tested_count?: number
+  correct_count?: number
+}
+
+function parseBooksResponse(response: unknown): Book[] {
+  if (Array.isArray(response)) {
+    return response as Book[]
+  }
+
+  if (response && typeof response === 'object' && 'data' in response) {
+    const data = (response as { data?: unknown }).data
+    if (Array.isArray(data)) {
+      return data as Book[]
+    }
+  }
+
+  return []
+}
+
+function parseBookWordsResponse(response: unknown): BookWordsResponse {
+  if (response && typeof response === 'object' && 'data' in response) {
+    const data = (response as { data?: unknown }).data
+    const meta = (response as { meta?: BookWordsResponse['meta'] }).meta
+
+    if (Array.isArray(data)) {
+      return { data: data as Word[], meta }
+    }
+  }
+
+  return { data: [], meta: undefined }
+}
+
+const QUIZ_FETCH_PER_PAGE = 200
+const QUIZ_RECENT_SIZE = 20
+const UNKNOWN_SUBMISSION_ID = '__unknown__'
 
 function getOptionClasses(submitted: boolean, isSelected: boolean, isCorrect: boolean): string {
   if (!submitted) {
@@ -54,122 +89,167 @@ function getOptionClasses(submitted: boolean, isSelected: boolean, isCorrect: bo
     return 'border-destructive bg-destructive/10 text-destructive'
   }
 
-  return 'border-border opacity-70'
+  return 'border-border opacity-60'
 }
 
-async function fetchQuizWords(bookId: number): Promise<Word[]> {
-  const collectedWords: Word[] = []
-  let currentPage = 1
-  let lastPage = 1
+async function fetchAllSystemQuizWords(): Promise<EligibleQuizWord[]> {
+  const booksResponse = await get<unknown>('/word/books')
+  const books = parseBooksResponse(booksResponse)
 
-  while (currentPage <= lastPage && currentPage <= QUIZ_MAX_PAGES) {
-    const response = await get<BookWordsResponse>(
-      `/word/books/${bookId}/words?page=${currentPage}&per_page=${QUIZ_FETCH_PER_PAGE}&filter=all`
-    )
-
-    const pageWords = response.data ?? []
-    collectedWords.push(...pageWords)
-
-    lastPage = response.meta?.last_page ?? currentPage
-
-    if (getQuizEligibleWords(collectedWords).length >= QUIZ_TARGET_POOL_SIZE) {
-      break
-    }
-
-    currentPage += 1
+  if (!books.length) {
+    return []
   }
 
-  return collectedWords
+  const collectedWords: Word[] = []
+
+  for (const book of books) {
+    let currentPage = 1
+    let lastPage = 1
+
+    while (currentPage <= lastPage) {
+      const response = await get<unknown>(
+        `/word/books/${book.id}/words?page=${currentPage}&per_page=${QUIZ_FETCH_PER_PAGE}&filter=all`
+      )
+      const parsedResponse = parseBookWordsResponse(response)
+
+      collectedWords.push(...parsedResponse.data)
+      lastPage = parsedResponse.meta?.last_page ?? currentPage
+      currentPage += 1
+    }
+  }
+
+  return getQuizEligibleWords(collectedWords)
 }
 
 export default function WordQuizPage() {
-  const router = useRouter()
-  const { data: settings, isLoading: settingsLoading } = useWordSettings()
-
-  const [questions, setQuestions] = useState<WordQuizQuestion[]>([])
+  const [quizWords, setQuizWords] = useState<EligibleQuizWord[]>([])
+  const [currentQuestion, setCurrentQuestion] = useState<WordQuizQuestion | null>(null)
   const [isQuizLoading, setIsQuizLoading] = useState(false)
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const [submittedOptionId, setSubmittedOptionId] = useState<string | null>(null)
+  const [answeredCount, setAnsweredCount] = useState(0)
   const [correctCount, setCorrectCount] = useState(0)
+  const [recentWordIds, setRecentWordIds] = useState<number[]>([])
+  const [submittedAnswers, setSubmittedAnswers] = useState<QuizEstimateAnswer[]>([])
+  const [vocabularyEstimate, setVocabularyEstimate] = useState(0)
 
-  const hasSelectedBook = !!settings?.current_book_id
-  const isLoading = settingsLoading || isQuizLoading
-  const isCompleted = questions.length > 0 && currentIndex >= questions.length
-
-  const currentQuestion = questions[currentIndex]
-  const submittedOption = useMemo(
-    () => currentQuestion?.options.find(option => option.id === submittedOptionId) ?? null,
-    [currentQuestion, submittedOptionId]
-  )
   const accuracy =
-    questions.length > 0 ? Math.round((correctCount / Math.max(1, questions.length)) * 100) : 0
-
-  const resetProgress = useCallback(() => {
-    setCurrentIndex(0)
+    answeredCount > 0 ? Math.round((correctCount / Math.max(1, answeredCount)) * 100) : 0
+  const applyNextQuestion = useCallback((words: EligibleQuizWord[], recentIds: number[] = []) => {
+    const nextQuestion = buildQuizQuestion(words, recentIds)
+    setCurrentQuestion(nextQuestion)
     setSelectedOptionId(null)
     setSubmittedOptionId(null)
-    setCorrectCount(0)
+    return nextQuestion
   }, [])
 
   const loadQuiz = useCallback(async () => {
-    if (!settings?.current_book_id) return
-
     setIsQuizLoading(true)
     setLoadError(null)
-    resetProgress()
+    setAnsweredCount(0)
+    setCorrectCount(0)
+    setRecentWordIds([])
+    setSubmittedAnswers([])
+    setVocabularyEstimate(0)
 
     try {
-      const words = await fetchQuizWords(settings.current_book_id)
-      const nextQuestions = buildWordQuizQuestions(words, QUIZ_QUESTION_COUNT)
+      const words = await fetchAllSystemQuizWords()
+      setQuizWords(words)
 
-      setQuestions(nextQuestions)
-
-      if (nextQuestions.length === 0) {
-        setLoadError('当前单词书可用于出题的单词不足，请先补充更多带释义的单词。')
+      if (words.length < 4) {
+        setCurrentQuestion(null)
+        setLoadError('系统内可用于测验的单词不足，请先补充更多带释义的单词。')
+        return
       }
+
+      const nextQuestion = buildQuizQuestion(words, [])
+
+      if (!nextQuestion) {
+        setCurrentQuestion(null)
+        setLoadError('当前无法生成有效题目，请稍后重试。')
+        return
+      }
+
+      setCurrentQuestion(nextQuestion)
     } catch (error) {
-      setQuestions([])
+      setQuizWords([])
+      setCurrentQuestion(null)
       setLoadError(error instanceof Error ? error.message : '加载测验失败')
     } finally {
       setIsQuizLoading(false)
     }
-  }, [resetProgress, settings?.current_book_id])
+  }, [])
 
   useEffect(() => {
-    if (!settings?.current_book_id) return
     void loadQuiz()
-  }, [loadQuiz, settings?.current_book_id])
+  }, [loadQuiz])
 
-  const handleSubmit = () => {
-    if (!currentQuestion || !selectedOptionId) {
-      toast.error('请先选择一个答案')
+  const submitAnswer = async (selectedAnswerId: string | null) => {
+    if (!currentQuestion || submittedOptionId || isSubmittingAnswer) {
       return
     }
 
-    if (submittedOptionId) {
-      return
-    }
+    const selectedOption = currentQuestion.options.find(option => option.id === selectedAnswerId)
+    const isCorrect = !!selectedOption?.isCorrect
+    const nextAnswers = [
+      ...submittedAnswers,
+      { word_id: currentQuestion.wordId, correct: isCorrect },
+    ]
 
-    setSubmittedOptionId(selectedOptionId)
+    setIsSubmittingAnswer(true)
+    setSubmittedOptionId(selectedAnswerId ?? UNKNOWN_SUBMISSION_ID)
 
-    const selectedOption = currentQuestion.options.find(option => option.id === selectedOptionId)
-    if (selectedOption?.isCorrect) {
-      setCorrectCount(prev => prev + 1)
-      toast.success('回答正确')
-    } else {
-      toast.error('回答错误')
+    try {
+      const estimateResponse = await post<QuizEstimateResponse>('/word/quiz/estimate', {
+        answers: nextAnswers,
+      })
+
+      setSubmittedAnswers(nextAnswers)
+      setAnsweredCount(estimateResponse.tested_count ?? nextAnswers.length)
+      setCorrectCount(
+        estimateResponse.correct_count ?? nextAnswers.filter(answer => answer.correct).length
+      )
+
+      if (typeof estimateResponse.estimated_vocabulary_size === 'number') {
+        setVocabularyEstimate(estimateResponse.estimated_vocabulary_size)
+      } else {
+        setVocabularyEstimate(
+          estimateVocabularySize(
+            estimateResponse.correct_count ?? nextAnswers.filter(answer => answer.correct).length,
+            estimateResponse.tested_count ?? nextAnswers.length,
+            quizWords.length
+          )
+        )
+      }
+    } catch (error) {
+      setSubmittedOptionId(null)
+      toast.error(error instanceof Error ? error.message : '估算词汇量失败')
+    } finally {
+      setIsSubmittingAnswer(false)
     }
+  }
+
+  const handleSubmit = async () => {
+    await submitAnswer(selectedOptionId)
+  }
+
+  const handleUnknown = async () => {
+    await submitAnswer(null)
   }
 
   const handleNext = () => {
-    setCurrentIndex(prev => prev + 1)
-    setSelectedOptionId(null)
-    setSubmittedOptionId(null)
+    if (!currentQuestion || !submittedOptionId) {
+      return
+    }
+
+    const nextRecentWordIds = [...recentWordIds, currentQuestion.wordId].slice(-QUIZ_RECENT_SIZE)
+    setRecentWordIds(nextRecentWordIds)
+    applyNextQuestion(quizWords, nextRecentWordIds)
   }
 
-  if (isLoading) {
+  if (isQuizLoading) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
@@ -177,28 +257,7 @@ export default function WordQuizPage() {
     )
   }
 
-  if (!hasSelectedBook) {
-    return (
-      <PageContainer maxWidth="md">
-        <Card>
-          <CardContent className="space-y-4 p-6 text-center">
-            <BookX className="text-muted-foreground mx-auto h-12 w-12" />
-            <div>
-              <h2 className="mb-1 text-lg font-semibold">请先选择单词书</h2>
-              <p className="text-muted-foreground text-sm">词汇量测验会基于当前单词书随机出题</p>
-            </div>
-            <div className="flex justify-center gap-2">
-              <Link href="/word">
-                <Button>返回首页选书</Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </PageContainer>
-    )
-  }
-
-  if (loadError && questions.length === 0) {
+  if (loadError && !currentQuestion) {
     return (
       <PageContainer maxWidth="md">
         <Card>
@@ -212,37 +271,9 @@ export default function WordQuizPage() {
               <Button onClick={() => void loadQuiz()} variant="outline">
                 重试
               </Button>
-              <Link href="/word/books">
-                <Button>管理单词书</Button>
+              <Link href="/word">
+                <Button>返回首页</Button>
               </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </PageContainer>
-    )
-  }
-
-  if (isCompleted) {
-    return (
-      <PageContainer maxWidth="md">
-        <Card>
-          <CardContent className="space-y-5 p-6 text-center">
-            <Trophy className="text-primary mx-auto h-12 w-12" />
-            <div>
-              <h2 className="mb-1 text-lg font-semibold">测验完成</h2>
-              <p className="text-muted-foreground text-sm">
-                本轮共 {questions.length} 题，答对 {correctCount} 题
-              </p>
-              <p className="mt-2 text-2xl font-bold">{accuracy}%</p>
-            </div>
-            <div className="flex justify-center gap-2">
-              <Button onClick={() => router.push('/word')} variant="outline">
-                返回首页
-              </Button>
-              <Button onClick={() => void loadQuiz()}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                再测一轮
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -258,126 +289,137 @@ export default function WordQuizPage() {
     )
   }
 
-  const progress = Math.round(((currentIndex + 1) / questions.length) * 100)
-  const selectedOption =
-    currentQuestion.options.find(option => option.id === selectedOptionId) ?? null
-  const answeredCorrectly = !!submittedOption?.isCorrect
+  const primaryButtonLabel = submittedOptionId ? '下一题' : selectedOptionId ? '提交答案' : '不知道'
+
+  const handlePrimaryAction = () => {
+    if (submittedOptionId) {
+      handleNext()
+      return
+    }
+
+    if (selectedOptionId) {
+      void handleSubmit()
+      return
+    }
+
+    void handleUnknown()
+  }
 
   return (
-    <PageContainer maxWidth="2xl" className="space-y-6">
+    <PageContainer maxWidth="4xl" className="space-y-3">
       <div className="flex items-center justify-between">
         <Link href="/word">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="返回背单词首页">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div className="text-center">
           <p className="text-sm font-medium">词汇量测验</p>
-          <p className="text-muted-foreground text-xs">
-            {settings?.current_book?.name ?? '当前单词书'}
-          </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => void loadQuiz()} title="重新抽题">
-          <RotateCcw className="h-4 w-4" />
+        <Button variant="ghost" size="icon" onClick={() => void loadQuiz()} title="重新开始测验">
+          <RefreshCcw className="h-4 w-4" />
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="space-y-3 p-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              第 {currentIndex + 1} / {questions.length} 题
-            </span>
-            <span className="text-muted-foreground">已答对 {correctCount} 题</span>
-          </div>
-          <div className="bg-muted h-2 overflow-hidden rounded-full">
-            <div
-              className="bg-primary h-full rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 rounded-full p-2">
-              <Brain className="text-primary h-5 w-5" />
-            </div>
-            <CardTitle className="text-base">这个单词最接近哪个释义？</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="text-center">
-            <div className="text-3xl font-bold tracking-wide">{currentQuestion.promptWord}</div>
-          </div>
-
-          <div className="grid gap-3">
-            {currentQuestion.options.map(option => {
-              const isSelected = selectedOptionId === option.id
-
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  disabled={!!submittedOptionId}
-                  onClick={() => setSelectedOptionId(option.id)}
-                  className={`rounded-xl border p-4 text-left transition-colors ${getOptionClasses(
-                    !!submittedOptionId,
-                    isSelected,
-                    option.isCorrect
-                  )}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
-                        isSelected ? 'border-current' : 'border-muted-foreground/40'
-                      }`}
-                    >
-                      {String.fromCharCode(65 + currentQuestion.options.indexOf(option))}
-                    </div>
-                    <span className="leading-6">{option.text}</span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-
-          {submittedOptionId && (
-            <div
-              className={`rounded-xl border p-4 text-sm ${
-                answeredCorrectly
-                  ? 'border-green-500/40 bg-green-500/10'
-                  : 'border-amber-500/40 bg-amber-500/10'
-              }`}
-            >
-              <div className="mb-2 flex items-center gap-2 font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                {answeredCorrectly ? '答对了' : '正确答案'}
+      <div className="grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <Card className="h-fit">
+          <CardContent className="space-y-3 p-3">
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Gauge className="text-primary h-4 w-4" />
+                估算词汇量
               </div>
-              <p>{currentQuestion.correctExplanation}</p>
-              {!answeredCorrectly && selectedOption && (
-                <p className="text-muted-foreground mt-2">你选择的是：{selectedOption.text}</p>
-              )}
+              <div className="mt-2 text-3xl leading-none font-bold">
+                {vocabularyEstimate.toLocaleString()}
+              </div>
             </div>
-          )}
 
-          <div className="flex justify-end gap-2">
-            <Button
-              onClick={handleSubmit}
-              disabled={!selectedOptionId || !!submittedOptionId}
-              variant="outline"
-            >
-              提交答案
-            </Button>
-            <Button onClick={handleNext} disabled={!submittedOptionId}>
-              {currentIndex === questions.length - 1 ? '查看结果' : '下一题'}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl border px-2 py-3">
+                <div className="text-muted-foreground text-[11px]">已测试</div>
+                <div className="mt-1 text-base font-semibold">{answeredCount}</div>
+              </div>
+              <div className="rounded-xl border px-2 py-3">
+                <div className="text-muted-foreground text-[11px]">答对</div>
+                <div className="mt-1 text-base font-semibold">{correctCount}</div>
+              </div>
+              <div className="rounded-xl border px-2 py-3">
+                <div className="text-muted-foreground text-[11px]">正确率</div>
+                <div className="mt-1 text-base font-semibold">{accuracy}%</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 rounded-full p-2">
+                <Brain className="text-primary h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">这个单词最接近哪个释义？</p>
+                <p className="text-muted-foreground text-xs">第 {answeredCount + 1} 题</p>
+              </div>
+            </div>
+
+            <div className="py-1 text-center">
+              <div className="text-3xl font-bold tracking-wide sm:text-[2rem]">
+                {currentQuestion.promptWord}
+              </div>
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              {currentQuestion.options.map((option, index) => {
+                const isSelected = selectedOptionId === option.id
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={!!submittedOptionId}
+                    onClick={() => setSelectedOptionId(option.id)}
+                    className={`rounded-xl border p-3 text-left transition-colors ${getOptionClasses(
+                      !!submittedOptionId,
+                      isSelected,
+                      option.isCorrect
+                    )}`}
+                    title={option.text}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
+                          isSelected ? 'border-current' : 'border-muted-foreground/40'
+                        }`}
+                      >
+                        {String.fromCharCode(65 + index)}
+                      </div>
+                      <span
+                        className="text-sm leading-5 sm:text-[15px]"
+                        style={{
+                          display: '-webkit-box',
+                          WebkitBoxOrient: 'vertical',
+                          WebkitLineClamp: 3,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {option.text}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-0.5">
+              <Button onClick={handlePrimaryAction} disabled={isSubmittingAnswer} variant="outline">
+                {isSubmittingAnswer ? '计算中...' : primaryButtonLabel}
+                {submittedOptionId && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </PageContainer>
   )
 }
