@@ -11,6 +11,7 @@ import {
   AlertCircle,
   CheckCircle2,
   PenLine,
+  Brain,
   Search,
   ScanLine,
   FileInput,
@@ -96,7 +97,7 @@ export default function WordPage() {
       <ProgressStats />
 
       {/* 学习模式 */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* 开始学习按钮 */}
         <Link href="/word/learn">
           <Card className="h-full transition-shadow hover:shadow-md">
@@ -125,6 +126,24 @@ export default function WordPage() {
                 <div className="flex-1">
                   <h3 className="font-medium">例句填空</h3>
                   <p className="text-muted-foreground text-sm">根据例句拼写单词</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/word/quiz">
+          <Card className="h-full transition-shadow hover:shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="rounded-full bg-emerald-100 p-3 dark:bg-emerald-900">
+                  <Brain className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium">词汇量测验</h3>
+                  <p className="text-muted-foreground text-sm">
+                    随机选择题，快速检查当前词库掌握度
+                  </p>
                 </div>
               </div>
             </CardContent>
