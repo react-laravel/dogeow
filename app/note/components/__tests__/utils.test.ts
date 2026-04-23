@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeTokens, getTokensForCodeBlock, mergeMaps } from '../utils'
+import { normalizeTokens, mergeMaps } from '../utils'
 
 describe('utils', () => {
   describe('normalizeTokens', () => {
@@ -138,20 +138,6 @@ describe('utils', () => {
       const token = { type: 'test' }
       const result = normalizeTokens([token])
       expect(result).toEqual([[]])
-    })
-  })
-
-  describe('getTokensForCodeBlock', () => {
-    it('should return empty array for non-text node', () => {
-      const node = { type: 'element', children: [] }
-      const result = getTokensForCodeBlock(node)
-      expect(result).toEqual([])
-    })
-
-    it('should return empty array for any input (not implemented)', () => {
-      const node = { text: 'some text' }
-      const result = getTokensForCodeBlock(node)
-      expect(result).toEqual([])
     })
   })
 

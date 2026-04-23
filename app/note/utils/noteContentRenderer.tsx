@@ -1,5 +1,6 @@
 import React from 'react'
 import dynamic from 'next/dynamic'
+import { logger } from '@/lib/logger'
 
 const ReadonlyEditor = dynamic(() => import('@/components/novel-editor/readonly'), { ssr: false })
 
@@ -42,7 +43,7 @@ export function renderNoteContent(content: string) {
     try {
       return <ReadonlyEditor content={parsedContent} />
     } catch (renderError) {
-      console.error('ReadonlyEditor render failed:', renderError)
+      logger.error('ReadonlyEditor render failed:', renderError)
       return (
         <div className="prose max-w-none py-8">
           <span className="text-gray-500 italic">(内容渲染失败)</span>
@@ -50,7 +51,7 @@ export function renderNoteContent(content: string) {
       )
     }
   } catch (error) {
-    console.error('Failed to parse note content:', error)
+    logger.error('Failed to parse note content:', error)
     return (
       <div className="prose max-w-none py-8">
         <pre className="whitespace-pre-wrap">{content}</pre>

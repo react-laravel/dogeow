@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import type { Note } from '../types/note'
 import { extractTextFromJSON } from '@/lib/helpers/wordCount'
+import { logger } from '@/lib/logger'
 
 const CONTENT_PREVIEW_MAX_LENGTH = 150
 
@@ -31,7 +32,10 @@ export const getContentPreview = (
 
   const plainText = content
     .replace(/<[^>]*>/g, '')
-    .replace(/[#*`>-]/g, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*(?:[-*_]\s*){3,}$/gm, '')
+    .replace(/[#*`>]/g, '')
     .trim()
 
   return plainText.length > maxLength ? `${plainText.substring(0, maxLength)}...` : plainText
@@ -108,20 +112,14 @@ export const getNotePreviewText = (note: Note, maxLength = CONTENT_PREVIEW_MAX_L
     if (trimmedContent.startsWith('{') || trimmedContent.startsWith('[')) {
       try {
         const parsedContent = JSON.parse(trimmedContent)
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('笔记JSON结构:', parsedContent)
-        }
+        logger.debug('笔记JSON结构:', parsedContent)
 
         let extractedText = extractTextFromJSON(parsedContent)
 
         if (!extractedText || !extractedText.trim()) {
           extractedText = extractTextFromEditorJSON(parsedContent)
         }
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('提取的文本:', extractedText)
-        }
+        logger.debug('提取的文本:', extractedText)
 
         if (extractedText && extractedText.trim()) {
           const cleanedText = extractedText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
@@ -133,7 +131,7 @@ export const getNotePreviewText = (note: Note, maxLength = CONTENT_PREVIEW_MAX_L
 
         return ''
       } catch (error) {
-        console.warn('解析笔记JSON内容失败:', error)
+        logger.warn('解析笔记JSON内容失败:', error)
         return getContentPreview(note.content, maxLength)
       }
     } else {

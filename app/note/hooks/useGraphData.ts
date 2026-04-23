@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { getWikiGraph } from '@/lib/api/wiki'
+import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
 import type { NodeData, LinkData, ForceGraphInstance } from '../types/graph'
 
@@ -22,7 +23,7 @@ export function useGraphData() {
         graph.resumeAnimation()
       }
     } catch (error) {
-      console.warn('恢复图谱动画失败:', error)
+      logger.warn('恢复图谱动画失败:', error)
     }
   }, [])
 
@@ -64,7 +65,7 @@ export function useGraphData() {
         }, 100)
       })
     } catch (error) {
-      console.error('加载图谱数据失败:', error)
+      logger.error('加载图谱数据失败:', error)
       toast.error('加载图谱数据失败')
     } finally {
       setLoading(false)

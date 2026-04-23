@@ -15,6 +15,10 @@ vi.mock('@/lib/api', () => ({
   apiRequest: vi.fn(),
 }))
 
+vi.mock('@/lib/api/wiki', () => ({
+  getWikiGraph: vi.fn().mockResolvedValue({ nodes: [], links: [] }),
+}))
+
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
@@ -67,7 +71,7 @@ describe('NotePage', () => {
     render(<NotePage />)
 
     // Should show loading skeleton
-    expect(screen.getByTestId('card')).toBeInTheDocument()
+    expect(screen.getAllByTestId('card')).toHaveLength(3)
   })
 
   it('should render empty state when no notes', async () => {
@@ -172,11 +176,11 @@ describe('NotePage', () => {
     const { apiRequest } = await import('@/lib/api')
     vi.mocked(apiRequest).mockResolvedValue({ notes: mockNotes })
 
-    render(<NotePage />)
+    const { container } = render(<NotePage />)
 
     await waitFor(() => {
       expect(screen.getByText('Draft Note')).toBeInTheDocument()
-      expect(screen.getByTestId('lock-icon')).toBeInTheDocument()
+      expect(container.querySelector('svg.lucide-lock')).toBeTruthy()
     })
   })
 

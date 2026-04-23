@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { apiRequest } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import { normalizeNote } from '../utils/api'
 import type { Note } from '../types/note'
 import { withTransaction } from '@/lib/utils/transaction'
@@ -35,7 +36,7 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
 
       // Check if this exact request is already in flight
       if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-        console.log('[Idempotency] Save request already in progress, waiting for result')
+        logger.warn('[Idempotency] Save request already in progress, waiting for result')
         try {
           const existingRequest = idempotencyTracker.getPendingRequest<Note | { note: Note }>(
             idempotencyKey
@@ -48,7 +49,7 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
         } catch {
           // If waiting fails, proceed with new request
         }
-        console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
+        logger.warn('[Idempotency] Pending request disappeared, proceeding with new request')
       }
 
       setIsSaving(true)
@@ -88,13 +89,13 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
 
               return { note: normalizedNote }
             } catch (error) {
-              console.error('保存笔记错误:', error)
+              logger.error('保存笔记错误:', error)
               throw error instanceof Error ? error : new Error(String(error))
             }
           },
           {
             onRollback: error => {
-              console.warn('[Transaction] Note save rolled back:', error.message)
+              logger.warn('[Transaction] Note save rolled back:', error.message)
             },
           }
         )
@@ -141,7 +142,7 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
       )
 
       if (idempotencyTracker.isRequestPending(idempotencyKey)) {
-        console.log('[Idempotency] Draft save already in progress')
+        logger.warn('[Idempotency] Draft save already in progress')
         const pendingRequest = idempotencyTracker.getPendingRequest<Note | { note: Note }>(
           idempotencyKey
         )
@@ -149,7 +150,7 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
           toast.info('保存请求已在处理中')
           return
         }
-        console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
+        logger.warn('[Idempotency] Pending request disappeared, proceeding with new request')
       }
 
       setIsSaving(true)
@@ -174,7 +175,7 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
         }
         toast.success('已保存为草稿')
       } catch (error) {
-        console.error('保存草稿失败:', error)
+        logger.error('保存草稿失败:', error)
         toast.error('保存草稿失败')
       } finally {
         setIsSaving(false)

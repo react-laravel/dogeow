@@ -1,7 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { apiRequest } from '@/lib/api'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useSyncExternalStore,
+} from 'react'
+import { createMutation } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
@@ -12,6 +20,12 @@ import { NoteEditorToolbar } from '../../components/NoteEditorToolbar'
 import { NoteLoadingState } from '../../components/NoteLoadingState'
 import { NoteErrorState } from '../../components/NoteErrorState'
 import { PageContainer } from '@/components/layout'
+import {
+  addInFlightNoteMutation,
+  hasInFlightNoteMutation as getHasInFlightNoteMutation,
+  removeInFlightNoteMutation,
+  subscribeToInFlightNoteMutations,
+} from './noteMutationLockStore'
 
 // 使用dynamic import避免服务端渲染问题
 const TailwindAdvancedEditor = dynamic(() => import('@/components/novel-editor'), { ssr: false })
@@ -34,19 +48,69 @@ export default function EditNotePage() {
   const [title, setTitle] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isPrivate, setIsPrivate] = useState(false) // 隐私状态
+  const activeNoteIdRef = useRef(noteId)
+  const previousNoteIdRef = useRef(noteId)
+  const noteSessionRef = useRef(0)
+  const isMountedRef = useRef(true)
+  const mutationInFlightRef = useRef(false)
+  const hasInFlightNoteMutation = useSyncExternalStore(
+    subscribeToInFlightNoteMutations,
+    () => getHasInFlightNoteMutation(noteId),
+    () => false
+  )
+
+  useLayoutEffect(() => {
+    activeNoteIdRef.current = noteId
+
+    if (previousNoteIdRef.current !== noteId) {
+      previousNoteIdRef.current = noteId
+      noteSessionRef.current += 1
+      mutationInFlightRef.current = false
+      setIsSaving(false)
+    }
+  }, [noteId])
 
   useEffect(() => {
     // 标记客户端组件已加载
     setClientReady(true)
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (loading || !note) {
+      setTitle('')
+      setIsPrivate(false)
+      return
+    }
 
     if (note) {
       setTitle(note.title)
       setIsPrivate(note.is_draft) // 设置初始隐私状态
     }
-  }, [note])
+  }, [loading, note])
 
   // 切换隐私状态
   const handleTogglePrivacy = useCallback(async () => {
+    const requestNoteId = noteId
+    const requestSession = noteSessionRef.current
+
+    if (
+      loading ||
+      !note ||
+      mutationInFlightRef.current ||
+      getHasInFlightNoteMutation(requestNoteId)
+    ) {
+      return
+    }
+
+    if (activeNoteIdRef.current !== requestNoteId || noteSessionRef.current !== requestSession) {
+      return
+    }
+
     if (!title.trim()) {
       toast.error('请输入笔记标题')
       return
@@ -56,6 +120,8 @@ export default function EditNotePage() {
     const newPrivacyStatus = !isPrivate
 
     try {
+      mutationInFlightRef.current = true
+      addInFlightNoteMutation(requestNoteId)
       setIsSaving(true)
 
       const data = {
@@ -65,20 +131,60 @@ export default function EditNotePage() {
         is_draft: newPrivacyStatus, // 私密状态对应 is_draft
       }
 
-      await apiRequest<Note>(`/notes/${noteId}`, 'PUT', data)
+      const updateNote = createMutation<Note>(`/notes/${noteId}`, 'PUT')
+      await updateNote(data)
+
+      if (
+        !isMountedRef.current ||
+        activeNoteIdRef.current !== requestNoteId ||
+        noteSessionRef.current !== requestSession
+      ) {
+        return
+      }
 
       setIsPrivate(newPrivacyStatus)
       toast.success(newPrivacyStatus ? '已私密' : '已公开')
     } catch (error) {
-      console.error('切换隐私状态错误:', error)
+      if (
+        !isMountedRef.current ||
+        activeNoteIdRef.current !== requestNoteId ||
+        noteSessionRef.current !== requestSession
+      ) {
+        return
+      }
+
+      logger.error('切换隐私状态错误:', error)
       toast.error('操作失败')
     } finally {
-      setIsSaving(false)
+      removeInFlightNoteMutation(requestNoteId)
+      if (isMountedRef.current && activeNoteIdRef.current === requestNoteId) {
+        if (noteSessionRef.current === requestSession) {
+          mutationInFlightRef.current = false
+        }
+
+        setIsSaving(getHasInFlightNoteMutation(requestNoteId))
+      }
     }
-  }, [title, noteId, isPrivate, getCurrentContent])
+  }, [title, noteId, isPrivate, getCurrentContent, loading, note])
 
   // 保存笔记
   const handleSave = useCallback(async () => {
+    const requestNoteId = noteId
+    const requestSession = noteSessionRef.current
+
+    if (
+      loading ||
+      !note ||
+      mutationInFlightRef.current ||
+      getHasInFlightNoteMutation(requestNoteId)
+    ) {
+      return
+    }
+
+    if (activeNoteIdRef.current !== requestNoteId || noteSessionRef.current !== requestSession) {
+      return
+    }
+
     if (!title.trim()) {
       toast.error('请输入笔记标题')
       return
@@ -87,6 +193,8 @@ export default function EditNotePage() {
     const { content, markdown } = getCurrentContent()
 
     try {
+      mutationInFlightRef.current = true
+      addInFlightNoteMutation(requestNoteId)
       setIsSaving(true)
 
       const data = {
@@ -96,21 +204,45 @@ export default function EditNotePage() {
         is_draft: isPrivate, // 保持当前隐私状态
       }
 
-      await apiRequest<Note>(`/notes/${noteId}`, 'PUT', data)
+      const updateNote = createMutation<Note>(`/notes/${noteId}`, 'PUT')
+      await updateNote(data)
+
+      if (
+        !isMountedRef.current ||
+        activeNoteIdRef.current !== requestNoteId ||
+        noteSessionRef.current !== requestSession
+      ) {
+        return
+      }
 
       toast.success('笔记已更新')
     } catch (error) {
-      console.error('保存笔记错误:', error)
+      if (
+        !isMountedRef.current ||
+        activeNoteIdRef.current !== requestNoteId ||
+        noteSessionRef.current !== requestSession
+      ) {
+        return
+      }
+
+      logger.error('保存笔记错误:', error)
       toast.error('保存失败')
     } finally {
-      setIsSaving(false)
+      removeInFlightNoteMutation(requestNoteId)
+      if (isMountedRef.current && activeNoteIdRef.current === requestNoteId) {
+        if (noteSessionRef.current === requestSession) {
+          mutationInFlightRef.current = false
+        }
+
+        setIsSaving(getHasInFlightNoteMutation(requestNoteId))
+      }
     }
-  }, [title, noteId, isPrivate, getCurrentContent])
+  }, [title, noteId, isPrivate, getCurrentContent, loading, note])
 
   // 添加快捷键支持
   useNoteShortcuts({
     title,
-    isSaving,
+    isSaving: isSaving || loading || !note || hasInFlightNoteMutation,
     onSave: handleSave,
     onTogglePrivacy: handleTogglePrivacy,
   })
@@ -134,7 +266,7 @@ export default function EditNotePage() {
           <NoteEditorToolbar
             title={title}
             isPrivate={isPrivate}
-            isSaving={isSaving}
+            isSaving={isSaving || hasInFlightNoteMutation}
             onTitleChange={setTitle}
             onSave={handleSave}
             onTogglePrivacy={handleTogglePrivacy}

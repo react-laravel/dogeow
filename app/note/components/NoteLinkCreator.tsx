@@ -7,6 +7,7 @@ import { Loader2, X, Plus, MousePointerClick } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { createLink, type WikiNode } from '@/lib/api/wiki'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { logger } from '@/lib/logger'
 
 interface LinkCreatorProps {
   nodes: WikiNode[]
@@ -133,7 +134,7 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
         onSuccess()
         onOpenChange(false)
       } catch (error) {
-        console.error('创建链接错误:', error)
+        logger.error('创建链接错误:', error)
         toast.error('创建失败')
       } finally {
         setIsCreating(false)

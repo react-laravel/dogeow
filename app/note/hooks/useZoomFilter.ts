@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { logger } from '@/lib/logger'
 import type { ForceGraphInstance } from '../types/graph'
 
 export function useZoomFilter(fgRef: React.RefObject<ForceGraphInstance | null>) {
@@ -44,7 +45,7 @@ export function useZoomFilter(fgRef: React.RefObject<ForceGraphInstance | null>)
         try {
           return originalFilterFn(event)
         } catch (error) {
-          console.warn('D3 zoom filter 执行失败，已回退默认允许:', error)
+          logger.warn('D3 zoom filter 执行失败，已回退默认允许:', error)
           return true
         }
       }

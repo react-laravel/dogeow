@@ -5,6 +5,7 @@ import { Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { deleteLink } from '@/lib/api/wiki'
+import { logger } from '@/lib/logger'
 import type { LinkData, ThemeColors, NodeData } from '../types/graph'
 
 interface NoteLinkActionPanelProps {
@@ -74,7 +75,7 @@ export default function NoteLinkActionPanel({
       onLinkDeleted()
       onClose()
     } catch (error) {
-      console.error('删除链接失败:', error)
+      logger.error('删除链接失败:', error)
       toast.error('删除失败')
     } finally {
       setIsDeleting(false)

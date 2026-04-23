@@ -266,6 +266,8 @@ describe('NoteDetail', () => {
     })
 
     it('should handle JSON parsing errors gracefully', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
       mockUseSWR.mockReturnValueOnce({
         data: {
           id: 123,
@@ -277,10 +279,19 @@ describe('NoteDetail', () => {
         error: null,
       })
 
-      render(<NoteDetail />)
-      await waitFor(() => {
-        expect(screen.getByText('invalid json content')).toBeInTheDocument()
-      })
+      try {
+        render(<NoteDetail />)
+        await waitFor(() => {
+          expect(screen.getByText('invalid json content')).toBeInTheDocument()
+        })
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Failed to parse note content:',
+          expect.any(SyntaxError)
+        )
+      } finally {
+        consoleErrorSpy.mockRestore()
+      }
     })
   })
 

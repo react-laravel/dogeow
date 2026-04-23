@@ -34,12 +34,6 @@ export const normalizeTokens = (tokens: unknown[]): { types: string[]; content: 
   return normalizedTokens
 }
 
-// 计算装饰范围（预留接口，目前未实现）
-export const getTokensForCodeBlock = (node: unknown): unknown[] => {
-  if (!node || typeof node !== 'object' || !('text' in node)) return []
-  return []
-}
-
 // 合并多个Map
 export const mergeMaps = <K, V>(...maps: Map<K, V>[]): Map<K, V> => {
   const map = new Map<K, V>()

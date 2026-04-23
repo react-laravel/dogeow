@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { apiRequest } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import { Save, Loader2, Lock, Unlock } from 'lucide-react'
 import { normalizeNote } from '../utils/api'
 import { PageContainer } from '@/components/layout'
@@ -107,7 +108,7 @@ export default function NewNotePage() {
       // 跳转到编辑页面
       router.push(`/note/edit/${normalizedNote.id}`)
     } catch (error) {
-      console.error('保存笔记错误:', error)
+      logger.error('保存笔记错误:', error)
       toast.error('保存失败')
     } finally {
       setIsSaving(false)

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { deleteNode, type WikiNode } from '@/lib/api/wiki'
 import { isAdminSync } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import NoteNodeEditor from './NoteNodeEditor'
 import NoteLinkCreator from './NoteLinkCreator'
 import { toast } from 'sonner'
@@ -94,12 +95,10 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
 
   // 处理节点点击
   const handleNodeClick = useCallback(
-    (node: { [others: string]: any; id?: string | number }, event?: MouseEvent) => {
-      const n = node as NodeData
-
+    (node: NodeData) => {
       // 如果正在从图谱选择目标节点，则选择为目标节点（不需要对话框打开）
       if (selectTargetCallback) {
-        selectTargetCallback(Number(n.id))
+        selectTargetCallback(Number(node.id))
         setSelectTargetCallback(null)
         setIsSelectingFromGraph(false)
         return
@@ -108,13 +107,13 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
       // 点击节点时清除链接选择
       setActiveLink(null)
 
-      if (String(activeNode?.id) === String(n.id)) {
+      if (String(activeNode?.id) === String(node.id)) {
         // 重复点击已选中的节点，取消选中
         setActiveNode(null)
         setShowNeighborsOnly(false)
       } else {
         // 选中新节点（不恢复动画，避免布局偏移）
-        setActiveNode(n)
+        setActiveNode(node)
       }
       // 保持当前缩放级别，防止点击触发默认缩放
       requestAnimationFrame(() => restoreView(fgRef))
@@ -124,74 +123,56 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
 
   // 处理链接点击
   const handleLinkClick = useCallback(
-    (
-      link: { [others: string]: any; source?: unknown; target?: unknown; id?: number },
-      event?: MouseEvent
-    ) => {
-      const l = link as LinkData
-
+    (link: LinkData) => {
       // 点击链接时清除节点选择
       setActiveNode(null)
       setShowNeighborsOnly(false)
 
-      if (activeLink && activeLink.id === l.id) {
+      if (activeLink && activeLink.id === link.id) {
         // 重复点击已选中的链接，取消选中
         setActiveLink(null)
       } else {
         // 选中新链接
-        setActiveLink(l)
+        setActiveLink(link)
       }
     },
     [activeLink]
   )
 
   // 处理节点拖拽
-  const handleNodeDrag = useCallback(
-    (
-      _node: { [others: string]: any; id?: string | number },
-      _translate?: { x: number; y: number }
-    ) => {
-      isDraggingRef.current = true
-      // 拖动时恢复动画以便节点可以移动
-      resumeGraphAnimation()
-    },
-    [resumeGraphAnimation]
-  )
+  const handleNodeDrag = useCallback(() => {
+    isDraggingRef.current = true
+    // 拖动时恢复动画以便节点可以移动
+    resumeGraphAnimation()
+  }, [resumeGraphAnimation])
 
-  const handleNodeDragEnd = useCallback(
-    (
-      _node: { [others: string]: any; id?: string | number },
-      _translate?: { x: number; y: number }
-    ) => {
-      isDraggingRef.current = false
-    },
-    []
-  )
+  const handleNodeDragEnd = useCallback(() => {
+    isDraggingRef.current = false
+  }, [])
 
   // 处理节点右键点击
   const handleNodeRightClick = useCallback(
-    (node: { [others: string]: any; id?: string | number }, event?: MouseEvent) => {
-      const n = node as NodeData
-      setActiveNode(n)
+    (node: NodeData) => {
+      setActiveNode(node)
 
       if (isAdmin) {
         // 管理员：显示编辑菜单
-        const node = nodes.find(node => String(node.id) === String(n.id))
-        if (node) {
+        const matchedNode = nodes.find(currentNode => String(currentNode.id) === String(node.id))
+        if (matchedNode) {
           setEditingNode({
-            id: Number(node.id),
-            title: node.title,
-            slug: node.slug,
-            tags: node.tags,
-            summary: node.summary,
+            id: Number(matchedNode.id),
+            title: matchedNode.title,
+            slug: matchedNode.slug,
+            tags: matchedNode.tags,
+            summary: matchedNode.summary,
           } as WikiNode)
           setEditorOpen(true)
         }
-      } else if (n.slug) {
+      } else if (node.slug) {
         // 非管理员：打开文章
         setDialogOpen(true)
         resetArticle()
-        loadArticle(n.slug)
+        loadArticle(node.slug)
       }
     },
     [isAdmin, nodes, loadArticle, resetArticle]
@@ -266,7 +247,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
       setActiveNode(null)
       loadGraphData()
     } catch (error) {
-      console.error('删除节点失败:', error)
+      logger.error('删除节点失败:', error)
       toast.error('删除失败')
     }
   }, [activeNode, loadGraphData])
@@ -294,12 +275,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
 
   // 节点渲染函数
   const nodeCanvasObject = useCallback(
-    (
-      obj: { [others: string]: any; id?: string | number },
-      ctx: CanvasRenderingContext2D,
-      globalScale: number
-    ) => {
-      const node = obj as NodeData
+    (node: NodeData, ctx: CanvasRenderingContext2D, globalScale: number) => {
       createNodeCanvasRenderer(
         activeNode,
         hoverNode,
@@ -312,17 +288,13 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
 
   // 链接颜色获取函数
   const linkColor = useCallback(
-    (link: unknown) => {
-      return createLinkColorGetter(activeNode, activeLink, graphPalette)(link as LinkData)
-    },
+    (link: LinkData) => createLinkColorGetter(activeNode, activeLink, graphPalette)(link),
     [activeNode, activeLink, graphPalette]
   )
 
   // 链接宽度获取函数
   const linkWidth = useCallback(
-    (link: unknown) => {
-      return createLinkWidthGetter(activeNode, activeLink)(link as LinkData)
-    },
+    (link: LinkData) => createLinkWidthGetter(activeNode, activeLink)(link),
     [activeNode, activeLink]
   )
 
@@ -361,12 +333,12 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           ref={fgRef as React.RefObject<any>}
           graphData={filtered}
           nodeId="id"
-          nodeLabel={n => (n as NodeData).title}
+          nodeLabel={(node: NodeData) => node.title}
           linkDirectionalArrowLength={4}
           linkColor={linkColor}
           linkWidth={linkWidth}
           backgroundColor={graphPalette.background}
-          onNodeHover={n => setHoverNode((n as NodeData) ?? null)}
+          onNodeHover={(node?: NodeData | null) => setHoverNode(node ?? null)}
           onNodeClick={handleNodeClick}
           onNodeDrag={handleNodeDrag}
           onNodeDragEnd={handleNodeDragEnd}
@@ -376,10 +348,9 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           nodeCanvasObject={nodeCanvasObject}
           nodePointerAreaPaint={(node, color, ctx) => {
             // 绘制透明的点击区域，保持点击功能但不可见
-            const n = node as NodeData
             ctx.fillStyle = color
             ctx.beginPath()
-            ctx.arc(n.x ?? 0, n.y ?? 0, 8, 0, 2 * Math.PI, false)
+            ctx.arc(node.x ?? 0, node.y ?? 0, 8, 0, 2 * Math.PI, false)
             ctx.fill()
           }}
           cooldownTime={showNeighborsOnly ? 2000 : 3000}
