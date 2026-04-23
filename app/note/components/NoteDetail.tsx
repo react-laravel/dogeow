@@ -56,13 +56,12 @@ export default function NoteDetail() {
     )
   }
 
-  // 临时修复：移除标题末尾的"0"（如果存在的话）
-  const cleanTitle = note.title?.replace(/0$/, '') || '(无标题)'
+  const displayTitle = note.title || '(无标题)'
 
   return (
     <PageContainer maxWidth="4xl">
       <NoteDetailHeader
-        title={cleanTitle}
+        title={displayTitle}
         isDraft={note.is_draft}
         noteId={id}
         onDelete={handleDelete}

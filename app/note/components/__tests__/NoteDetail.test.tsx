@@ -78,7 +78,7 @@ describe('NoteDetail', () => {
         error: null,
       })
       render(<NoteDetail />)
-      expect(screen.getByText('加载中...')).toBeInTheDocument()
+      expect(screen.getByRole('status', { name: '加载中' })).toBeInTheDocument()
     })
 
     it('should show error state when loading fails', () => {
@@ -88,6 +88,25 @@ describe('NoteDetail', () => {
       })
       render(<NoteDetail />)
       expect(screen.getByText('加载失败')).toBeInTheDocument()
+    })
+
+    it('should preserve titles that legitimately end with 0', async () => {
+      mockUseSWR.mockReturnValueOnce({
+        data: {
+          id: 123,
+          title: '版本 2.0',
+          content: '{"type":"doc","content":[]}',
+          updated_at: '2024-01-01T00:00:00Z',
+          is_draft: false,
+        },
+        error: null,
+      })
+
+      render(<NoteDetail />)
+
+      await waitFor(() => {
+        expect(screen.getByText('版本 2.0')).toBeInTheDocument()
+      })
     })
   })
 
