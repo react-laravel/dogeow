@@ -43,7 +43,7 @@ describe('useZoomFilter', () => {
     const fgRef = {
       current: {
         d3Zoom: () => zoom,
-      } as ForceGraphInstance,
+      } as unknown as ForceGraphInstance,
     } as React.RefObject<ForceGraphInstance | null>
 
     renderHook(() => useZoomFilter(fgRef))

@@ -333,19 +333,21 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           ref={fgRef as React.RefObject<any>}
           graphData={filtered}
           nodeId="id"
-          nodeLabel={(node: NodeData) => node.title}
+          nodeLabel={node => (node as NodeData).title}
           linkDirectionalArrowLength={4}
-          linkColor={linkColor}
-          linkWidth={linkWidth}
+          linkColor={link => linkColor(link as LinkData)}
+          linkWidth={link => linkWidth(link as LinkData)}
           backgroundColor={graphPalette.background}
-          onNodeHover={(node?: NodeData | null) => setHoverNode(node ?? null)}
-          onNodeClick={handleNodeClick}
+          onNodeHover={node => setHoverNode((node as NodeData | null) ?? null)}
+          onNodeClick={node => handleNodeClick(node as NodeData)}
           onNodeDrag={handleNodeDrag}
           onNodeDragEnd={handleNodeDragEnd}
-          onNodeRightClick={handleNodeRightClick}
-          onLinkClick={handleLinkClick}
+          onNodeRightClick={node => handleNodeRightClick(node as NodeData)}
+          onLinkClick={link => handleLinkClick(link as LinkData)}
           nodeCanvasObjectMode={() => 'replace'}
-          nodeCanvasObject={nodeCanvasObject}
+          nodeCanvasObject={(node, ctx, globalScale) =>
+            nodeCanvasObject(node as NodeData, ctx, globalScale)
+          }
           nodePointerAreaPaint={(node, color, ctx) => {
             // 绘制透明的点击区域，保持点击功能但不可见
             ctx.fillStyle = color
