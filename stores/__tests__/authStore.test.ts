@@ -539,6 +539,27 @@ describe('authStore', () => {
     })
   })
 
+  it('should restore session with bearer token first when one exists', async () => {
+    act(() => {
+      useAuthStore.setState({ token: 'test-token', isAuthenticated: true })
+    })
+    const { result } = renderHook(() => useAuthStore())
+    mockApiRequest.mockResolvedValueOnce({ user: mockUser })
+
+    let restoredUser: User | null = null
+    await act(async () => {
+      restoredUser = await result.current.restoreSession()
+    })
+
+    expect(restoredUser).toEqual(mockUser)
+    expect(mockApiRequest).toHaveBeenCalledTimes(1)
+    expect(mockApiRequest).toHaveBeenCalledWith('/user', 'GET', undefined, {
+      handleError: false,
+      suppressUnauthorizedRedirect: true,
+      includeAuthToken: true,
+    })
+  })
+
   it('should clear local auth state when session restoration returns 401', async () => {
     const { result } = renderHook(() => useAuthStore())
     act(() => {

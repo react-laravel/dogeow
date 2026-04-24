@@ -261,15 +261,24 @@ const useAuthStore = create<AuthState>()(
 
         try {
           let currentUser: User | null = null
+          const hasToken = Boolean(get().token)
 
           try {
-            currentUser = await fetchCurrentUser(false)
+            // 优先使用本地 Bearer token 恢复登录态，避免已登录用户刷新页面时先打一次
+            // cookie 鉴权的 /api/user 并产生一个可见的 401 请求。
+            currentUser = await fetchCurrentUser(hasToken)
           } catch (error) {
-            if (!(error instanceof ApiRequestError) || error.status !== 401 || !get().token) {
+            if (!(error instanceof ApiRequestError) || error.status !== 401) {
               throw error
             }
 
-            currentUser = await fetchCurrentUser(true)
+            // Bearer token 失效时再回退到 cookie session；没有 token 时则直接进入外层
+            // 401 处理，清理本地登录态。
+            if (!hasToken) {
+              throw error
+            }
+
+            currentUser = await fetchCurrentUser(false)
           }
 
           if (!currentUser) {
