@@ -14,6 +14,7 @@ CURRENT_LINK="${APP_ROOT}/current"
 RELEASE_ID="$(date +%Y%m%d%H%M%S)"
 NEW_RELEASE="${RELEASES_DIR}/${RELEASE_ID}"
 PENDING_RELEASE="${RELEASES_DIR}/.staging.${RELEASE_ID}-$$"
+NODE_VERSION="${NODE_VERSION:-24}"
 
 log() {
   echo "[first-deploy] $*"
@@ -28,6 +29,56 @@ require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     die "缺少命令：$1"
   fi
+}
+
+load_nvm() {
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$NVM_DIR/nvm.sh"
+  fi
+
+  command -v nvm >/dev/null 2>&1
+}
+
+install_nvm() {
+  log "未检测到 nvm，准备自动安装"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  else
+    die "缺少命令：curl 或 wget，无法自动安装 nvm"
+  fi
+}
+
+setup_node_runtime() {
+  if ! load_nvm; then
+    install_nvm
+    load_nvm || die "nvm 安装后仍无法加载，请检查 $NVM_DIR/nvm.sh"
+  fi
+
+  log "使用 Node.js $NODE_VERSION"
+  nvm install "$NODE_VERSION"
+  nvm use "$NODE_VERSION"
+
+  require_command node
+  require_command npm
+
+  log "当前 Node：$(node -v)"
+  log "当前 npm：$(npm -v)"
+}
+
+ensure_pm2() {
+  if command -v pm2 >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "未检测到 pm2，准备通过 npm 全局安装"
+  npm install -g pm2
+  require_command pm2
 }
 
 cleanup_pending_release() {
@@ -105,8 +156,6 @@ trap 'on_exit' EXIT
 
 require_command git
 require_command tar
-require_command npm
-require_command pm2
 
 if [ "$AUTO_DETECTED_APP_ROOT" -eq 1 ]; then
   log "自动识别 APP_ROOT：$APP_ROOT"
@@ -119,6 +168,9 @@ fi
 if ! git -C "$APP_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   die "APP_ROOT 不是有效的 Git 工作树，请先手动 git clone 仓库到目标目录"
 fi
+
+setup_node_runtime
+ensure_pm2
 
 if [ -e "$CURRENT_LINK" ] || [ -L "$CURRENT_LINK" ]; then
   die "检测到 current 已存在，首次部署似乎已经完成；后续更新请改用 scripts/deploy-zero-downtime.sh"
