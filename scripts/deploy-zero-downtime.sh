@@ -12,22 +12,122 @@
 # PM2 使用 ecosystem.config.js，模式 1 下通过 PM2_CWD 指定 current 为 cwd。
 set -euo pipefail
 
-# 应用根目录，由调用方通过环境变量传入（如 workflow 里用 secrets.APP_ROOT）
+AUTO_DETECTED_APP_ROOT=0
+
+# 应用根目录，可由调用方通过环境变量传入；未传时自动按脚本所在目录识别。
 if [ -z "${APP_ROOT:-}" ]; then
-  echo "错误：请设置环境变量 APP_ROOT（应用在服务器上的根目录），例: APP_ROOT=/path/to/app $0"
-  exit 1
+  APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+  AUTO_DETECTED_APP_ROOT=1
 fi
+
 RELEASES_DIR="${APP_ROOT}/releases"
 CURRENT_LINK="${APP_ROOT}/current"
+NODE_VERSION="${NODE_VERSION:-24}"
 
 RUN_ANALYZE="${ANALYZE:-}"
 
 cd "$APP_ROOT"
 
-if ! git -C "$APP_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "错误：APP_ROOT 不是有效的 Git 工作树：$APP_ROOT"
+log() {
+  echo "[deploy] $*"
+}
+
+die() {
+  echo "错误：$*" >&2
   exit 1
-fi
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    die "缺少命令：$1"
+  fi
+}
+
+load_nvm() {
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$NVM_DIR/nvm.sh"
+  fi
+
+  command -v nvm >/dev/null 2>&1
+}
+
+install_nvm() {
+  log "未检测到 nvm，准备自动安装"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  else
+    die "缺少命令：curl 或 wget，无法自动安装 nvm"
+  fi
+}
+
+setup_node_runtime() {
+  if ! load_nvm; then
+    install_nvm
+    load_nvm || die "nvm 安装后仍无法加载，请检查 $NVM_DIR/nvm.sh"
+  fi
+
+  log "使用 Node.js $NODE_VERSION"
+  nvm install "$NODE_VERSION"
+  nvm use "$NODE_VERSION"
+
+  require_command node
+  require_command npm
+
+  log "当前 Node：$(node -v)"
+  log "当前 npm：$(npm -v)"
+}
+
+ensure_pm2() {
+  if command -v pm2 >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "未检测到 pm2，准备通过 npm 全局安装"
+  npm install -g pm2
+  require_command pm2
+}
+
+has_env_config() {
+  local env_file
+
+  for env_file in \
+    "$APP_ROOT/.env" \
+    "$APP_ROOT/.env.local" \
+    "$APP_ROOT/.env.production" \
+    "$APP_ROOT/.env.production.local"; do
+    if [ -s "$env_file" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+require_env_config() {
+  if has_env_config; then
+    return 0
+  fi
+
+  cat >&2 <<EOF
+错误：缺少服务器环境配置文件。
+
+请先在部署根目录创建并填写环境变量文件，然后重新运行本脚本：
+  $APP_ROOT/.env.local
+
+可参考：
+  cp $APP_ROOT/.env.local.example $APP_ROOT/.env.local
+  nano $APP_ROOT/.env.local
+
+脚本会把部署根目录下的 .env* 文件复制到新 release；未配置前不会继续部署。
+EOF
+  exit 1
+}
 
 copy_deploy_snapshot() {
   local destination="$1"
@@ -46,37 +146,56 @@ sync_pm2_app() {
   local ecosystem_path="${APP_ROOT}/ecosystem.config.js"
 
   if pm2 info "$app_name" >/dev/null 2>&1; then
-    echo "[deploy] 重载 PM2 应用: $app_name"
+    log "重载 PM2 应用: $app_name"
 
     # 优先按 ecosystem 配置执行 reload，保证 cwd / env / instances 与配置同步。
     if PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 reload "$ecosystem_path" --only "$app_name" --update-env; then
       return 0
     fi
 
-    echo "[deploy] PM2 reload 失败，尝试重建应用进程表"
+    log "PM2 reload 失败，尝试重建应用进程表"
     pm2 delete "$app_name" || true
   else
-    echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
+    log "PM2 中未找到应用，准备首次启动: $app_name"
   fi
 
   PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 start "$ecosystem_path" --only "$app_name" --update-env
 }
 
+require_command git
+require_command tar
+
+if [ "$AUTO_DETECTED_APP_ROOT" -eq 1 ]; then
+  log "自动识别 APP_ROOT：$APP_ROOT"
+fi
+
+if [ ! -d "$APP_ROOT" ]; then
+  die "APP_ROOT 不存在：$APP_ROOT"
+fi
+
+if ! git -C "$APP_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  die "APP_ROOT 不是有效的 Git 工作树：$APP_ROOT"
+fi
+
+require_env_config
+setup_node_runtime
+ensure_pm2
+
 # ---------- 模式一：发布目录 + 符号链接（推荐，零停机 + 可回滚）----------
 if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
-  echo "[deploy] 使用发布目录模式（零停机）"
+  log "使用发布目录模式（零停机）"
 
   [ -d "$RELEASES_DIR" ] || mkdir -p "$RELEASES_DIR"
   STAGING="${RELEASES_DIR}/.staging.$$"
 
   # 基于当前工作树生成新的发布快照，避免把旧 release 的陈旧源码带入新构建。
-  echo "[deploy] 构建到临时目录: $STAGING"
+  log "构建到临时目录: $STAGING"
   copy_deploy_snapshot "$STAGING"
 
   cd "$STAGING"
   npm ci
   if [ -n "$RUN_ANALYZE" ]; then
-    echo "[deploy] 构建并执行 bundle 分析"
+    log "构建并执行 bundle 分析"
     npx next build && npm run analyze
   else
     npx next build
@@ -87,7 +206,7 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
   NEW_RELEASE="${RELEASES_DIR}/$(date +%Y%m%d%H%M%S)"
   mv "$STAGING" "$NEW_RELEASE"
   ln -sfn "$NEW_RELEASE" "$CURRENT_LINK"
-  echo "[deploy] 已切换 current -> $NEW_RELEASE"
+  log "已切换 current -> $NEW_RELEASE"
 
   # 只保留最近 5 个发布（仅删除时间戳目录，不删 .staging.*）
   KEEP=5
@@ -96,12 +215,12 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
 
   sync_pm2_app "$CURRENT_LINK"
   pm2 status
-  echo "[deploy] 完成（零停机）"
+  log "完成（零停机）"
   exit 0
 fi
 
 # ---------- 模式二：无 current 时，构建到临时目录再原子替换 .next ----------
-echo "[deploy] 使用临时目录构建 + 原子替换 .next（避免构建期间覆盖线上）"
+log "使用临时目录构建 + 原子替换 .next（避免构建期间覆盖线上）"
 BUILD_STAGING="${APP_ROOT}/.build-staging.$$"
 trap "rm -rf '$BUILD_STAGING'" EXIT
 
@@ -115,7 +234,7 @@ else
 fi
 
 # 原子替换 .next：先放到 .next.new，再重命名
-echo "[deploy] 原子替换 .next"
+log "原子替换 .next"
 rsync -a --delete "$BUILD_STAGING/.next/" "$APP_ROOT/.next.new/"
 cd "$APP_ROOT"
 [ -d ".next.old" ] && rm -rf ".next.old"
@@ -125,4 +244,4 @@ rm -rf .next.old
 
 sync_pm2_app "$APP_ROOT"
 pm2 status
-echo "[deploy] 完成"
+log "完成"

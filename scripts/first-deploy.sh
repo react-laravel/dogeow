@@ -81,6 +81,42 @@ ensure_pm2() {
   require_command pm2
 }
 
+has_env_config() {
+  local env_file
+
+  for env_file in \
+    "$APP_ROOT/.env" \
+    "$APP_ROOT/.env.local" \
+    "$APP_ROOT/.env.production" \
+    "$APP_ROOT/.env.production.local"; do
+    if [ -s "$env_file" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+require_env_config() {
+  if has_env_config; then
+    return 0
+  fi
+
+  cat >&2 <<EOF
+错误：缺少服务器环境配置文件。
+
+请先在部署根目录创建并填写环境变量文件，然后重新运行本脚本：
+  $APP_ROOT/.env.local
+
+可参考：
+  cp $APP_ROOT/.env.local.example $APP_ROOT/.env.local
+  nano $APP_ROOT/.env.local
+
+脚本会把部署根目录下的 .env* 文件复制到首个 release；未配置前不会继续部署。
+EOF
+  exit 1
+}
+
 cleanup_pending_release() {
   if [ -d "$PENDING_RELEASE" ]; then
     rm -rf "$PENDING_RELEASE"
@@ -169,6 +205,7 @@ if ! git -C "$APP_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   die "APP_ROOT 不是有效的 Git 工作树，请先手动 git clone 仓库到目标目录"
 fi
 
+require_env_config
 setup_node_runtime
 ensure_pm2
 
