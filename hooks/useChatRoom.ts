@@ -52,7 +52,7 @@ export interface UseChatRoomOptions {
 
 type ChatRoomsResponse = ChatRoom[] | { rooms?: ChatRoom[] }
 type CreateRoomResponse = ChatRoom | { room?: ChatRoom }
-type RoomUsersResponse = OnlineUser[] | { users?: OnlineUser[] }
+type RoomUsersResponse = OnlineUser[] | { users?: OnlineUser[]; online_users?: OnlineUser[] }
 type ApiErrorResponse = { message?: string }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -78,6 +78,10 @@ const resolveRoomsResponse = (data: ChatRoomsResponse): ChatRoom[] => {
 const resolveUsersResponse = (data: RoomUsersResponse): OnlineUser[] => {
   if (Array.isArray(data)) {
     return data
+  }
+
+  if (Array.isArray(data.online_users)) {
+    return data.online_users
   }
 
   return Array.isArray(data.users) ? data.users : []
@@ -342,16 +346,20 @@ export const useChatRoom = (options: UseChatRoomOptions = {}): UseChatRoomReturn
   )
 
   // Load online users
-  const loadOnlineUsers = useCallback(async () => {
-    if (!currentRoom) return
+  const loadOnlineUsers = useCallback(
+    async (roomId?: string) => {
+      const targetRoomId = roomId ?? currentRoom?.id?.toString()
+      if (!targetRoomId) return
 
-    try {
-      const data = await apiCall<RoomUsersResponse>(`/chat/rooms/${currentRoom.id}/users`)
-      setOnlineUsers(resolveUsersResponse(data))
-    } catch (err) {
-      console.error('Error loading online users:', err)
-    }
-  }, [currentRoom, apiCall])
+      try {
+        const data = await apiCall<RoomUsersResponse>(`/chat/rooms/${targetRoomId}/users`)
+        setOnlineUsers(resolveUsersResponse(data))
+      } catch (err) {
+        console.error('Error loading online users:', err)
+      }
+    },
+    [currentRoom, apiCall]
+  )
 
   // Join a room
   const joinRoom = useCallback(
@@ -405,7 +413,7 @@ export const useChatRoom = (options: UseChatRoomOptions = {}): UseChatRoomReturn
         }
 
         // Load initial data
-        await Promise.all([loadMessages(roomId, 1), loadOnlineUsers()])
+        await Promise.all([loadMessages(roomId, 1), loadOnlineUsers(roomId)])
 
         return true
       } catch (err) {

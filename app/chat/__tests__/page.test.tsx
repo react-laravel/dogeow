@@ -1,212 +1,210 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatPage from '../page'
 
-// Mock dependencies
-vi.mock('@/app/chat/chatStore', () => ({
-  default: () => ({
-    currentRoom: null,
-    rooms: [],
-    messages: [],
-    onlineUsers: [],
-    isLoading: false,
-    isConnected: false,
+const mocks = vi.hoisted(() => {
+  const chatStoreState = {
+    currentRoom: null as { id: number; name: string } | null,
+    rooms: [] as Array<{ id: number; name: string }>,
+    retryLastAction: vi.fn(),
+    clearError: vi.fn(),
     error: null,
-    joinRoom: vi.fn(),
-    leaveRoom: vi.fn(),
-    sendMessage: vi.fn(),
-    loadRooms: vi.fn(),
-    loadMessages: vi.fn(),
-    loadOnlineUsers: vi.fn(),
+    clearAllOnlineUsers: vi.fn(),
+    setConnectionStatus: vi.fn(),
+    addMessage: vi.fn(),
+    updateMuteStatus: vi.fn(),
+    updateRoomOnlineCount: vi.fn(),
+    setTyping: vi.fn(),
+    loadRooms: vi.fn(() => Promise.resolve()),
+    loadOnlineUsers: vi.fn(() => Promise.resolve()),
+    connectionStatus: 'disconnected',
+  }
+
+  const authState = {
+    isAuthenticated: true,
+    loading: false,
+    token: 'mock-token',
+    user: { id: 1 },
+  }
+
+  const webSocketState = {
+    connect: vi.fn(() => Promise.resolve(true)),
+    disconnect: vi.fn(() => Promise.resolve()),
+    joinRoom: vi.fn(() => Promise.resolve()),
+    reconnect: vi.fn(),
+    retryFailedMessages: vi.fn(),
+    clearOfflineQueue: vi.fn(),
+    sendTyping: vi.fn(),
+    sendMessage: vi.fn(() => Promise.resolve({ success: true })),
+    offlineState: {
+      isOffline: false,
+      lastOnline: null,
+      queuedMessages: [],
+      queueSize: 0,
+      maxQueueSize: 100,
+    },
+    connectionInfo: {
+      status: 'disconnected',
+      lastConnected: null,
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5,
+      lastError: null,
+      isRetrying: false,
+    },
+  }
+
+  return {
+    chatStoreState,
+    authState,
+    webSocketState,
+    push: vi.fn(),
+  }
+})
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mocks.push,
   }),
 }))
 
+vi.mock('@/app/chat/chatStore', () => {
+  const store = Object.assign(
+    vi.fn(() => mocks.chatStoreState),
+    {
+      getState: () => mocks.chatStoreState,
+    }
+  )
+  return {
+    __esModule: true,
+    default: store,
+  }
+})
+
+vi.mock('@/stores/authStore', () => {
+  const store = Object.assign(
+    vi.fn(() => mocks.authState),
+    {
+      getState: () => mocks.authState,
+    }
+  )
+  return {
+    __esModule: true,
+    default: store,
+  }
+})
+
 vi.mock('@/hooks/useChatWebSocket', () => ({
-  useChatWebSocket: vi.fn(() => ({
-    isConnected: true,
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-  })),
+  useChatWebSocket: vi.fn(() => mocks.webSocketState),
 }))
 
-vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: React.ComponentProps<'button'>) => (
-    <button {...props}>{children}</button>
+vi.mock('../components', () => ({
+  MessageList: ({ roomId }: { roomId: number }) => <div>message-list-{roomId}</div>,
+  MessageInput: ({ roomId, isConnected }: { roomId: number; isConnected: boolean }) => (
+    <div>{`message-input-${roomId}-${isConnected ? 'connected' : 'disconnected'}`}</div>
   ),
+  ChatHeader: ({ room }: { room: { name: string } }) => <div>{`header-${room.name}`}</div>,
+  ChatSidebar: ({ type, connectionInfo }: { type: string; connectionInfo: { status: string } }) => (
+    <div>{`sidebar-${type}-${connectionInfo.status}`}</div>
+  ),
+  MobileSheets: () => <div>mobile-sheets</div>,
+  ChatErrorHandler: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  ChatWelcome: () => <div>chat-welcome</div>,
+  ChatPageSkeleton: () => <div>chat-page-skeleton</div>,
 }))
 
-vi.mock('@/components/ui/input', () => ({
-  Input: ({ ...props }: React.ComponentProps<'input'>) => <input {...props} />,
-}))
-
-vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children, ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="scroll-area" {...props}>
-      {children}
-    </div>
-  ),
-}))
-
-vi.mock('@/components/ui/avatar', () => ({
-  Avatar: ({ children, ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="avatar" {...props}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({ ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="avatar-image" aria-label="avatar" {...props} />
-  ),
-  AvatarFallback: ({ children, ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="avatar-fallback" {...props}>
-      {children}
-    </div>
-  ),
-}))
-
-vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="card" {...props}>
-      {children}
-    </div>
-  ),
-  CardHeader: ({ children, ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="card-header" {...props}>
-      {children}
-    </div>
-  ),
-  CardTitle: ({ children, ...props }: React.ComponentProps<'h3'>) => (
-    <h3 data-testid="card-title" {...props}>
-      {children}
-    </h3>
-  ),
-  CardContent: ({ children, ...props }: React.ComponentProps<'div'>) => (
-    <div data-testid="card-content" {...props}>
-      {children}
-    </div>
-  ),
+vi.mock('../components/ChatErrorBoundary', () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useChatErrorHandler: () => ({
+    error: null,
+    handleError: vi.fn(),
+    clearError: vi.fn(),
+    retryAction: vi.fn(),
+  }),
 }))
 
 describe('ChatPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.authState.isAuthenticated = true
+    mocks.authState.loading = false
+    mocks.chatStoreState.currentRoom = null
+    mocks.chatStoreState.rooms = []
+    mocks.chatStoreState.connectionStatus = 'disconnected'
+    mocks.webSocketState.connectionInfo = {
+      status: 'disconnected',
+      lastConnected: null,
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5,
+      lastError: null,
+      isRetrying: false,
+    }
   })
 
-  describe('Rendering', () => {
-    it('should render chat page with main layout', () => {
-      render(<ChatPage />)
+  it('renders a skeleton while auth state is loading', () => {
+    mocks.authState.loading = true
 
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-      expect(screen.getByTestId('card-header')).toBeInTheDocument()
-      expect(screen.getByTestId('card-content')).toBeInTheDocument()
-    })
+    render(<ChatPage />)
 
-    it('should render chat title', () => {
-      render(<ChatPage />)
-
-      expect(screen.getByTestId('card-title')).toBeInTheDocument()
-      expect(screen.getByText(/chat/i)).toBeInTheDocument()
-    })
-
-    it('should render chat components', () => {
-      render(<ChatPage />)
-
-      // Should render chat components
-      expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
-    })
+    expect(screen.getByText('chat-page-skeleton')).toBeInTheDocument()
   })
 
-  describe('Chat Functionality', () => {
-    it('should display empty state when no room selected', () => {
-      render(<ChatPage />)
+  it('renders nothing when the user is not authenticated', () => {
+    mocks.authState.isAuthenticated = false
 
-      // Should show empty state or room selection
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
+    const { container } = render(<ChatPage />)
+
+    expect(container).toBeEmptyDOMElement()
   })
 
-  describe('Loading States', () => {
-    it('should show loading state when loading rooms', () => {
-      render(<ChatPage />)
+  it('loads rooms and renders the welcome state when no room is selected', async () => {
+    render(<ChatPage />)
 
-      // Should show loading indicator
-      expect(screen.getByTestId('card')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mocks.chatStoreState.loadRooms).toHaveBeenCalled()
+      expect(mocks.webSocketState.connect).toHaveBeenCalled()
     })
+
+    expect(screen.getByText('chat-welcome')).toBeInTheDocument()
+    expect(screen.getByText('sidebar-rooms-disconnected')).toBeInTheDocument()
+    expect(screen.getByText('sidebar-users-disconnected')).toBeInTheDocument()
   })
 
-  describe('Error Handling', () => {
-    it('should handle connection errors', () => {
-      render(<ChatPage />)
+  it('renders the active room layout and passes connected state to message input', () => {
+    mocks.chatStoreState.currentRoom = { id: 7, name: 'General' }
+    mocks.chatStoreState.rooms = [{ id: 7, name: 'General' }]
+    mocks.webSocketState.connectionInfo = {
+      status: 'connected',
+      lastConnected: null,
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5,
+      lastError: null,
+      isRetrying: false,
+    }
 
-      // Should show connection error or disconnected state
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
+    render(<ChatPage />)
+
+    expect(screen.getAllByText('header-General')).toHaveLength(2)
+    expect(screen.getByText('message-list-7')).toBeInTheDocument()
+    expect(screen.getByText('message-input-7-connected')).toBeInTheDocument()
   })
 
-  describe('Connection Status', () => {
-    it('should show connected status when connected', () => {
-      render(<ChatPage />)
+  it('joins the current room when websocket connection is already established', async () => {
+    mocks.chatStoreState.currentRoom = { id: 9, name: 'Raid' }
+    mocks.chatStoreState.rooms = [{ id: 9, name: 'Raid' }]
+    mocks.webSocketState.connectionInfo = {
+      status: 'connected',
+      lastConnected: null,
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5,
+      lastError: null,
+      isRetrying: false,
+    }
 
-      // Should show connected status
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
+    render(<ChatPage />)
 
-    it('should show disconnected status when not connected', () => {
-      render(<ChatPage />)
-
-      // Should show disconnected status
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-  })
-
-  describe('Room Management', () => {
-    it('should handle room selection', () => {
-      render(<ChatPage />)
-
-      // Room selection would be handled by child components
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-
-    it('should handle room leaving', () => {
-      render(<ChatPage />)
-
-      // Room leaving would be handled by child components
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-  })
-
-  describe('Message Display', () => {
-    it('should display messages when available', () => {
-      render(<ChatPage />)
-
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-  })
-
-  describe('Online Users', () => {
-    it('should display online users when available', () => {
-      render(<ChatPage />)
-
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-  })
-
-  describe('Edge Cases', () => {
-    it('should handle empty room list', () => {
-      render(<ChatPage />)
-
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-
-    it('should handle null current room', () => {
-      render(<ChatPage />)
-
-      expect(screen.getByTestId('card')).toBeInTheDocument()
-    })
-
-    it('should handle undefined error', () => {
-      render(<ChatPage />)
-
-      expect(screen.getByTestId('card')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mocks.webSocketState.joinRoom).toHaveBeenCalledWith('9')
     })
   })
 })

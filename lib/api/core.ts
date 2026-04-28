@@ -6,6 +6,12 @@ import { getEchoInstance } from '@/lib/websocket'
 
 import { API_URL } from './url'
 import {
+  createBrowserRequestHeaders,
+  ensureCsrfCookie,
+  executeBrowserRequestWithCsrf,
+  getXsrfTokenFromCookie,
+} from './browser-request'
+import {
   ApiRequestError,
   type StandardApiResponse,
   unwrapApiPayload,
@@ -14,91 +20,7 @@ import {
 } from './errors'
 import type { ApiError } from '@/app'
 
-const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
-let csrfCookiePromise: Promise<void> | null = null
-
-function getCookieValue(name: string): string | null {
-  if (typeof document === 'undefined') {
-    return null
-  }
-
-  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : null
-}
-
-export async function ensureCsrfCookie(force = false): Promise<void> {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  if (!force && getCookieValue('XSRF-TOKEN')) {
-    return
-  }
-
-  if (!csrfCookiePromise) {
-    csrfCookiePromise = fetch(`${API_URL}/sanctum/csrf-cookie`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('获取 CSRF Cookie 失败')
-        }
-      })
-      .finally(() => {
-        csrfCookiePromise = null
-      })
-  }
-
-  await csrfCookiePromise
-}
-
-/**
- * 创建请求头
- */
-const createHeaders = (
-  method: string,
-  isFormData = false,
-  includeAuthToken: boolean = true
-): Record<string, string> => {
-  const token = includeAuthToken ? useAuthStore.getState().token : null
-
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
-  }
-
-  if (!isFormData) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  if (!SAFE_HTTP_METHODS.has(method)) {
-    const xsrfToken = getCookieValue('XSRF-TOKEN')
-    if (xsrfToken) {
-      headers['X-XSRF-TOKEN'] = xsrfToken
-    }
-  }
-
-  // Laravel Echo 连接存在时附带 socket_id，供服务端 broadcast()->toOthers() 等排除发送者
-  if (typeof window !== 'undefined') {
-    const echo = getEchoInstance()
-    const socketId = typeof echo?.socketId === 'function' ? echo.socketId() : undefined
-    if (socketId) {
-      headers['X-Socket-ID'] = socketId
-    }
-  }
-
-  return headers
-}
+export { ensureCsrfCookie }
 
 /**
  * 处理响应
@@ -203,15 +125,10 @@ export async function apiRequest<T>(
   const url = `${API_URL}/api/${normalizedEndpoint}`
 
   const isFormData = data instanceof FormData
-  if (typeof window !== 'undefined' && !SAFE_HTTP_METHODS.has(normalizedMethod)) {
-    await ensureCsrfCookie()
-  }
-
-  const headers = createHeaders(normalizedMethod, isFormData, includeAuthToken)
+  const token = includeAuthToken ? useAuthStore.getState().token : null
 
   const requestOptions: RequestInit = {
     method: normalizedMethod,
-    headers,
     credentials: 'include',
   }
 
@@ -226,7 +143,17 @@ export async function apiRequest<T>(
 
   const executeRequest = async (): Promise<Response> => {
     const { controller, timeoutId, timeoutDuration } = createTimeoutController(isFormData)
+    const echo = typeof window !== 'undefined' ? getEchoInstance() : null
+    const socketId = typeof echo?.socketId === 'function' ? echo.socketId() : null
+
     requestOptions.signal = controller.signal
+    requestOptions.headers = createBrowserRequestHeaders({
+      method: normalizedMethod,
+      token,
+      isFormData,
+      xsrfToken: getXsrfTokenFromCookie(),
+      socketId,
+    })
 
     // 创建超时Promise
     const timeoutPromise = new Promise<Response>((_, reject) => {
@@ -244,16 +171,7 @@ export async function apiRequest<T>(
   }
 
   try {
-    let response = await executeRequest()
-
-    if (
-      typeof window !== 'undefined' &&
-      !SAFE_HTTP_METHODS.has(normalizedMethod) &&
-      response.status === 419
-    ) {
-      await ensureCsrfCookie(true)
-      response = await executeRequest()
-    }
+    const response = await executeBrowserRequestWithCsrf(normalizedMethod, executeRequest)
 
     if (response.status === 401 && suppressUnauthorizedRedirect) {
       throw new ApiRequestError('登录已过期，请重新登录', 401)

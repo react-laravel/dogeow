@@ -11,12 +11,14 @@ type MockChatState = {
   isLoading: boolean
   loadMessages: (roomId: number, page?: number) => Promise<void>
   messages: Record<string, ChatMessage[]>
+  typingByRoom: Record<string, { userId: number; userName: string } | undefined>
 }
 
 const mockChatState: MockChatState = {
   isLoading: false,
   loadMessages: loadMessagesMock,
   messages: {},
+  typingByRoom: {},
 }
 
 vi.mock('@/app/chat/chatStore', () => ({
@@ -102,6 +104,7 @@ describe('MessageList', () => {
     vi.clearAllMocks()
     mockChatState.isLoading = false
     mockChatState.messages = {}
+    mockChatState.typingByRoom = {}
     loadMessagesMock.mockResolvedValue(undefined)
   })
 

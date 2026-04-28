@@ -26,6 +26,13 @@ describe('useChatRoom', () => {
     vi.clearAllMocks()
     vi.mocked(fetch).mockImplementation(input => {
       const url = typeof input === 'string' ? input : (input as URL).href || (input as Request).url
+      if (url.includes('/sanctum/csrf-cookie')) {
+        return Promise.resolve({
+          ok: true,
+          status: 204,
+          json: () => Promise.resolve({}),
+        } as Response)
+      }
       if (url.includes('/messages')) {
         return Promise.resolve({
           ok: true,
@@ -107,22 +114,35 @@ describe('useChatRoom', () => {
         is_private: false,
       }
 
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            room: {
-              id: 1,
-              name: 'Test Room',
-              description: 'Test Description',
-              is_private: false,
-              created_at: '2024-01-01T00:00:00Z',
-              updated_at: '2024-01-01T00:00:00Z',
-              user_count: 0,
-              last_message_at: null,
-            },
-          }),
-      } as Response)
+      vi.mocked(fetch).mockImplementation(input => {
+        const url =
+          typeof input === 'string' ? input : (input as URL).href || (input as Request).url
+
+        if (url.includes('/sanctum/csrf-cookie')) {
+          return Promise.resolve({
+            ok: true,
+            status: 204,
+            json: () => Promise.resolve({}),
+          } as Response)
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              room: {
+                id: 1,
+                name: 'Test Room',
+                description: 'Test Description',
+                is_private: false,
+                created_at: '2024-01-01T00:00:00Z',
+                updated_at: '2024-01-01T00:00:00Z',
+                user_count: 0,
+                last_message_at: null,
+              },
+            }),
+        } as Response)
+      })
 
       await act(async () => {
         const newRoom = await result.current.createRoom(roomData)
@@ -228,11 +248,83 @@ describe('useChatRoom', () => {
 
       expect(result.current.onlineUsers).toEqual([])
     })
+
+    it('loads standardized online_users when joining a room', async () => {
+      const { result } = renderHook(() => useChatRoom({ autoLoadRooms: false }))
+
+      vi.mocked(fetch).mockImplementation(input => {
+        const url =
+          typeof input === 'string' ? input : (input as URL).href || (input as Request).url
+
+        if (url.includes('/sanctum/csrf-cookie')) {
+          return Promise.resolve({
+            ok: true,
+            status: 204,
+            json: () => Promise.resolve({}),
+          } as Response)
+        }
+
+        if (url.includes('/join')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true, data: {} }),
+          } as Response)
+        }
+
+        if (url.includes('/messages')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({ success: true, data: { current_page: 1, last_page: 1, data: [] } }),
+          } as Response)
+        }
+
+        if (url.includes('/users')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                success: true,
+                data: {
+                  online_users: [{ id: 7, name: 'Alice' }],
+                },
+              }),
+          } as Response)
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: {
+                rooms: [
+                  {
+                    id: 1,
+                    name: 'General',
+                    created_by: 1,
+                    is_active: true,
+                    created_at: '2024-01-01T00:00:00Z',
+                    updated_at: '2024-01-01T00:00:00Z',
+                  },
+                ],
+              },
+            }),
+        } as Response)
+      })
+
+      await act(async () => {
+        const success = await result.current.joinRoom('1')
+        expect(success).toBe(true)
+      })
+
+      expect(result.current.onlineUsers).toEqual([{ id: 7, name: 'Alice' }])
+    })
   })
 
   describe('Error Handling', () => {
     it('should handle API errors gracefully', async () => {
-      const { result } = renderHook(() => useChatRoom())
+      const { result } = renderHook(() => useChatRoom({ autoLoadRooms: false }))
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
@@ -249,7 +341,7 @@ describe('useChatRoom', () => {
     })
 
     it('should handle network errors', async () => {
-      const { result } = renderHook(() => useChatRoom())
+      const { result } = renderHook(() => useChatRoom({ autoLoadRooms: false }))
 
       vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
 
@@ -283,7 +375,7 @@ describe('useChatRoom', () => {
     })
 
     it('should handle missing auth token', async () => {
-      const { result } = renderHook(() => useChatRoom())
+      const { result } = renderHook(() => useChatRoom({ autoLoadRooms: false }))
 
       // Mock missing token
       vi.mocked(fetch).mockRejectedValueOnce(new Error('No authentication token available'))

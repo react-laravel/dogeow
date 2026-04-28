@@ -4,16 +4,31 @@ import userEvent from '@testing-library/user-event'
 import { MessageInput } from '../MessageInput'
 import { MAX_MESSAGE_LENGTH } from '@/app/chat/utils/message-input/constants'
 
+type MockChatStore = {
+  currentRoom: { id: number; name: string }
+  onlineUsers: Record<string, Array<{ id: number; name: string; email: string }>>
+  messages: Record<string, unknown[]>
+  checkMuteStatus: () => boolean
+  muteUntil: string | null
+  muteReason: string | null
+  refreshMuteStatus: () => void
+}
+
+const mockChatStore: MockChatStore = {
+  currentRoom: { id: 1, name: 'Test Room' },
+  onlineUsers: {},
+  messages: {},
+  checkMuteStatus: () => false,
+  muteUntil: null,
+  muteReason: null,
+  refreshMuteStatus: vi.fn(),
+}
+
 vi.mock('@/app/chat/chatStore', () => ({
-  default: () => ({
-    currentRoom: { id: 1, name: 'Test Room' },
-    onlineUsers: {},
-    messages: {},
-    checkMuteStatus: () => false,
-    muteUntil: null,
-    muteReason: null,
-    refreshMuteStatus: vi.fn(),
-  }),
+  __esModule: true,
+  default: vi.fn((selector?: (state: MockChatStore) => unknown) =>
+    selector ? selector(mockChatStore) : mockChatStore
+  ),
 }))
 
 vi.mock('@/hooks/useTranslation', () => ({
@@ -44,6 +59,10 @@ describe('MessageInput', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockChatStore.onlineUsers = {}
+    mockChatStore.messages = {}
+    mockChatStore.muteUntil = null
+    mockChatStore.muteReason = null
   })
 
   it('renders input and action controls', () => {

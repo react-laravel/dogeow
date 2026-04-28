@@ -1,393 +1,272 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { useChatWebSocket } from '../useChatWebSocket'
-import type { ConnectionError } from '@/lib/websocket/error-handler'
 
-// Mock dependencies
-vi.mock('laravel-echo', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    channel: vi.fn().mockReturnValue({
-      listen: vi.fn(),
-      stopListening: vi.fn(),
-      bind: vi.fn(),
+const mocks = vi.hoisted(() => {
+  const createMockChannel = () => ({
+    listen: vi.fn(),
+    stopListening: vi.fn(),
+    bind: vi.fn(),
+    whisper: vi.fn(),
+    listenForWhisper: vi.fn(),
+    stopListeningForWhisper: vi.fn(),
+  })
+
+  let connectionListener: ((info: Record<string, unknown>) => void) | null = null
+
+  const roomListChannel = createMockChannel()
+  const roomChannel = createMockChannel()
+  const roomEventChannel = createMockChannel()
+  const typingChannel = createMockChannel()
+
+  const echo = {
+    channel: vi.fn((channelName: string) => {
+      if (channelName === 'chat-rooms-list') {
+        return roomListChannel
+      }
+      if (channelName.startsWith('chat.room.')) {
+        return roomChannel
+      }
+      if (channelName.startsWith('chat-room-')) {
+        return roomEventChannel
+      }
+      return createMockChannel()
     }),
-    private: vi.fn().mockReturnValue({
-      listen: vi.fn(),
-      stopListening: vi.fn(),
-      bind: vi.fn(),
-    }),
-    disconnect: vi.fn(),
-  })),
-}))
+    private: vi.fn(() => typingChannel),
+    leave: vi.fn(),
+    connector: {
+      pusher: {
+        connection: {
+          state: 'disconnected',
+          bind: vi.fn(),
+        },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+    },
+  }
 
-vi.mock('@/lib/websocket', () => ({
-  createEchoInstance: vi.fn(),
-  destroyEchoInstance: vi.fn(),
-  getConnectionMonitor: vi.fn(() => ({
-    subscribe: vi.fn(() => () => {}),
-    getStatus: vi.fn(() => 'disconnected'),
-  })),
-  getAuthManager: vi.fn(() => ({
-    setRefreshCallback: vi.fn(),
-    getToken: vi.fn(() => 'mock-token'),
-  })),
-}))
+  const createConnectionInfo = (status: string) => ({
+    status,
+    lastConnected: null,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 5,
+    lastError: null,
+    isRetrying: false,
+  })
 
-vi.mock('@/lib/websocket/offline-manager', () => ({
-  default: vi.fn().mockImplementation(() => ({
+  const offlineManager = {
     subscribe: vi.fn(() => () => {}),
     queueMessage: vi.fn(),
     retryFailedMessages: vi.fn(),
     clearQueue: vi.fn(),
-    getState: vi.fn(() => ({
-      isOffline: false,
-      lastOnline: null,
-      queuedMessages: [],
-      queueSize: 0,
-      maxQueueSize: 100,
-    })),
     destroy: vi.fn(),
     processQueuedMessages: vi.fn(),
-  })),
+  }
+
+  const connectionMonitor = {
+    getStatus: vi.fn(() => createConnectionInfo('disconnected')),
+    subscribe: vi.fn((listener: (info: Record<string, unknown>) => void) => {
+      connectionListener = listener
+      return () => {
+        connectionListener = null
+      }
+    }),
+    initializeWithEcho: vi.fn(),
+    forceReconnect: vi.fn(),
+  }
+
+  return {
+    createMockChannel,
+    roomListChannel,
+    roomChannel,
+    roomEventChannel,
+    typingChannel,
+    echo,
+    offlineManager,
+    connectionMonitor,
+    createEchoInstance: vi.fn(() => echo),
+    destroyEchoInstance: vi.fn(),
+    cancelDestroyEchoInstance: vi.fn(),
+    authManager: {
+      setRefreshCallback: vi.fn(),
+      getToken: vi.fn(() => 'mock-token'),
+    },
+    emitConnectionStatus(status: string) {
+      connectionListener?.(createConnectionInfo(status))
+    },
+  }
+})
+
+vi.mock('@/lib/websocket', () => ({
+  createEchoInstance: mocks.createEchoInstance,
+  destroyEchoInstance: mocks.destroyEchoInstance,
+  cancelDestroyEchoInstance: mocks.cancelDestroyEchoInstance,
+  getConnectionMonitor: vi.fn(() => mocks.connectionMonitor),
+  getAuthManager: vi.fn(() => mocks.authManager),
+}))
+
+vi.mock('@/lib/websocket/offline-manager', () => ({
+  default: vi.fn().mockImplementation(function MockOfflineManager() {
+    return mocks.offlineManager
+  }),
 }))
 
 describe('useChatWebSocket', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.echo.channel.mockImplementation((channelName: string) => {
+      if (channelName === 'chat-rooms-list') {
+        return mocks.roomListChannel
+      }
+      if (channelName.startsWith('chat.room.')) {
+        return mocks.roomChannel
+      }
+      if (channelName.startsWith('chat-room-')) {
+        return mocks.roomEventChannel
+      }
+      return mocks.createMockChannel()
+    })
+    mocks.echo.private.mockImplementation(() => mocks.typingChannel)
+    mocks.createEchoInstance.mockReturnValue(mocks.echo)
+    mocks.connectionMonitor.getStatus.mockReturnValue({
+      status: 'disconnected',
+      lastConnected: null,
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5,
+      lastError: null,
+      isRetrying: false,
+    })
   })
 
   afterEach(() => {
     vi.clearAllTimers()
   })
 
-  describe('Initialization', () => {
-    it('should initialize with default values', () => {
-      const { result } = renderHook(() => useChatWebSocket())
+  it('initializes with disconnected defaults', () => {
+    const { result } = renderHook(() => useChatWebSocket())
 
-      expect(result.current.echo).toBeNull()
-      expect(result.current.isConnected).toBe(false)
-      expect(result.current.connectionStatus).toBe('disconnected')
-      expect(result.current.offlineState.isOffline).toBe(false)
-      expect(typeof result.current.connect).toBe('function')
-      expect(typeof result.current.disconnect).toBe('function')
-      expect(typeof result.current.joinRoom).toBe('function')
-      expect(typeof result.current.sendMessage).toBe('function')
-    })
-
-    it('should initialize with custom options', () => {
-      const mockOnConnect = vi.fn()
-      const mockOnError = vi.fn()
-
-      const { result } = renderHook(() =>
-        useChatWebSocket({
-          autoConnect: true,
-          onConnect: mockOnConnect,
-          onError: mockOnError,
-        })
-      )
-
-      expect(result.current.echo).toBeNull()
-      expect(typeof result.current.connect).toBe('function')
-    })
+    expect(result.current.echo).toBeNull()
+    expect(result.current.isConnected).toBe(false)
+    expect(result.current.connectionStatus).toBe('disconnected')
+    expect(result.current.offlineState.isOffline).toBe(false)
   })
 
-  describe('Connection Management', () => {
-    it('should connect successfully', async () => {
-      const mockEcho = {
-        channel: vi.fn().mockReturnValue({
-          listen: vi.fn(),
-          stopListening: vi.fn(),
-        }),
-        private: vi.fn().mockReturnValue({
-          listen: vi.fn(),
-          stopListening: vi.fn(),
-        }),
-        disconnect: vi.fn(),
-      }
+  it('connects successfully and stores the echo instance', async () => {
+    const { result } = renderHook(() => useChatWebSocket())
 
-      const { createEchoInstance } = await import('@/lib/websocket')
-      vi.mocked(createEchoInstance).mockResolvedValue(mockEcho as any)
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      await act(async () => {
-        const success = await result.current.connect('room-1')
-        expect(success).toBe(true)
-      })
-
-      expect(result.current.echo).toBe(mockEcho)
+    await act(async () => {
+      const success = await result.current.connect()
+      expect(success).toBe(true)
     })
 
-    it('should handle connection errors', async () => {
-      const mockError: ConnectionError = {
-        type: 'connection',
-        message: 'Connection failed',
-        code: 500,
-        timestamp: new Date(),
-        retryable: true,
-      }
-
-      const { createEchoInstance } = await import('@/lib/websocket')
-      vi.mocked(createEchoInstance).mockRejectedValue(mockError)
-
-      const mockOnError = vi.fn()
-      const { result } = renderHook(() =>
-        useChatWebSocket({
-          onError: mockOnError,
-        })
-      )
-
-      await act(async () => {
-        const success = await result.current.connect('room-1')
-        expect(success).toBe(false)
-      })
-
-      expect(mockOnError).toHaveBeenCalledWith(mockError)
-    })
-
-    it('should disconnect correctly', () => {
-      const { result } = renderHook(() => useChatWebSocket())
-
-      act(() => {
-        result.current.disconnect()
-      })
-
-      expect(result.current.echo).toBeNull()
-    })
+    expect(mocks.connectionMonitor.initializeWithEcho).toHaveBeenCalledWith(mocks.echo)
+    expect(result.current.echo).toBe(mocks.echo)
+    expect(mocks.echo.channel).toHaveBeenCalledWith('chat-rooms-list')
   })
 
-  describe('Room Management', () => {
-    it('should join room successfully', () => {
-      const mockChannel = {
-        listen: vi.fn(),
-        stopListening: vi.fn(),
-        bind: vi.fn(),
-      }
-
-      const mockEcho = {
-        channel: vi.fn().mockReturnValue(mockChannel),
-        private: vi.fn().mockReturnValue(mockChannel),
-      }
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      act(() => {
-        result.current.joinRoom('room-1', mockEcho as any)
-      })
-
-      expect(mockEcho.channel).toHaveBeenCalledWith('room-1')
+  it('reports connection errors through onError', async () => {
+    mocks.createEchoInstance.mockImplementationOnce(() => {
+      throw new Error('Connection failed')
     })
 
-    it('should handle room join with echo instance', () => {
-      const mockChannel = {
-        listen: vi.fn(),
-        stopListening: vi.fn(),
-        bind: vi.fn(),
-      }
+    const onError = vi.fn()
+    const { result } = renderHook(() => useChatWebSocket({ onError }))
 
-      const mockEcho = {
-        channel: vi.fn().mockReturnValue(mockChannel),
-        private: vi.fn().mockReturnValue(mockChannel),
-      }
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      act(() => {
-        result.current.joinRoom('room-1', mockEcho as any)
-      })
-
-      expect(mockEcho.channel).toHaveBeenCalledWith('room-1')
+    await act(async () => {
+      const success = await result.current.connect()
+      expect(success).toBe(false)
     })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'connection', message: 'Connection failed' })
+    )
   })
 
-  describe('Message Sending', () => {
-    it('should send message successfully when connected', async () => {
-      const mockChannel = {
-        listen: vi.fn(),
-        stopListening: vi.fn(),
-        bind: vi.fn(),
-      }
+  it('disconnects and clears the echo instance', async () => {
+    const { result } = renderHook(() => useChatWebSocket())
 
-      const mockEcho = {
-        channel: vi.fn().mockReturnValue(mockChannel),
-        private: vi.fn().mockReturnValue(mockChannel),
-      }
-
-      const { createEchoInstance } = await import('@/lib/websocket')
-      vi.mocked(createEchoInstance).mockResolvedValue(mockEcho as any)
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      // Connect first
-      await act(async () => {
-        await result.current.connect('room-1')
-      })
-
-      // Send message
-      await act(async () => {
-        const success = await result.current.sendMessage('room-1', 'Hello World')
-        expect(success).toBe(true)
-      })
+    await act(async () => {
+      await result.current.connect()
+      await result.current.disconnect()
     })
 
-    it('should queue message when offline', async () => {
-      const mockOfflineManager = {
-        subscribe: vi.fn(() => () => {}),
-        queueMessage: vi.fn(),
-        retryFailedMessages: vi.fn(),
-        clearQueue: vi.fn(),
-        getState: vi.fn(() => ({
-          isOffline: true,
-          lastOnline: null,
-          queuedMessages: [],
-          queueSize: 0,
-          maxQueueSize: 100,
-        })),
-      }
-
-      const { default: OfflineManager } = await import('@/lib/websocket/offline-manager')
-      vi.mocked(OfflineManager).mockImplementation(() => mockOfflineManager as any)
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      await act(async () => {
-        const success = await result.current.sendMessage('room-1', 'Hello World')
-        expect(success).toBe(false)
-      })
-
-      expect(mockOfflineManager.queueMessage).toHaveBeenCalled()
-    })
+    expect(mocks.destroyEchoInstance).toHaveBeenCalled()
+    expect(result.current.echo).toBeNull()
   })
 
-  describe('Offline Management', () => {
-    it('should retry failed messages', () => {
-      const mockOfflineManager = {
-        subscribe: vi.fn(() => () => {}),
-        queueMessage: vi.fn(),
-        retryFailedMessages: vi.fn(),
-        clearQueue: vi.fn(),
-        getState: vi.fn(() => ({
-          isOffline: false,
-          lastOnline: null,
-          queuedMessages: [],
-          queueSize: 0,
-          maxQueueSize: 100,
-        })),
-      }
+  it('joins a room and subscribes room, room-count, and typing channels', async () => {
+    const { result } = renderHook(() => useChatWebSocket())
 
-      const { result } = renderHook(() => useChatWebSocket())
-
-      act(() => {
-        result.current.retryFailedMessages()
-      })
-
-      expect(mockOfflineManager.retryFailedMessages).toHaveBeenCalled()
+    await act(async () => {
+      await result.current.joinRoom('room-1', mocks.echo as never)
     })
 
-    it('should clear offline queue', () => {
-      const mockOfflineManager = {
-        subscribe: vi.fn(() => () => {}),
-        queueMessage: vi.fn(),
-        retryFailedMessages: vi.fn(),
-        clearQueue: vi.fn(),
-        getState: vi.fn(() => ({
-          isOffline: false,
-          lastOnline: null,
-          queuedMessages: [],
-          queueSize: 0,
-          maxQueueSize: 100,
-        })),
-      }
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      act(() => {
-        result.current.clearOfflineQueue()
-      })
-
-      expect(mockOfflineManager.clearQueue).toHaveBeenCalled()
-    })
+    expect(mocks.echo.channel).toHaveBeenCalledWith('chat-rooms-list')
+    expect(mocks.echo.channel).toHaveBeenCalledWith('chat.room.room-1')
+    expect(mocks.echo.channel).toHaveBeenCalledWith('chat-room-room-1')
+    expect(mocks.echo.private).toHaveBeenCalledWith('chat.room.room-1.typing')
   })
 
-  describe('Reconnection', () => {
-    it('should reconnect successfully', async () => {
-      const mockEcho = {
-        channel: vi.fn().mockReturnValue({
-          listen: vi.fn(),
-          stopListening: vi.fn(),
-        }),
-        private: vi.fn().mockReturnValue({
-          listen: vi.fn(),
-          stopListening: vi.fn(),
-        }),
-        disconnect: vi.fn(),
-      }
+  it('cleans up room and room-list subscriptions on unmount', async () => {
+    const { result, unmount } = renderHook(() => useChatWebSocket())
 
-      const { createEchoInstance } = await import('@/lib/websocket')
-      vi.mocked(createEchoInstance).mockResolvedValue(mockEcho as any)
-
-      const { result } = renderHook(() => useChatWebSocket())
-
-      await act(async () => {
-        await result.current.reconnect()
-      })
-
-      expect(result.current.echo).toBe(mockEcho)
+    await act(async () => {
+      await result.current.joinRoom('room-1', mocks.echo as never)
     })
+
+    unmount()
+
+    expect(mocks.roomChannel.stopListening).toHaveBeenCalled()
+    expect(mocks.typingChannel.stopListeningForWhisper).toHaveBeenCalledWith('typing')
+    expect(mocks.echo.leave).toHaveBeenCalledWith('chat-rooms-list')
+    expect(mocks.echo.leave).toHaveBeenCalledWith('chat.room.room-1.typing')
+    expect(mocks.destroyEchoInstance).toHaveBeenCalledWith(false)
   })
 
-  describe('Event Callbacks', () => {
-    it('should call onConnect callback when connected', async () => {
-      const mockOnConnect = vi.fn()
-      const mockEcho = {
-        channel: vi.fn().mockReturnValue({
-          listen: vi.fn(),
-          stopListening: vi.fn(),
-        }),
-        private: vi.fn().mockReturnValue({
-          listen: vi.fn(),
-          stopListening: vi.fn(),
-        }),
-        disconnect: vi.fn(),
-      }
+  it('queues messages while disconnected', async () => {
+    const { result } = renderHook(() => useChatWebSocket())
 
-      const { createEchoInstance } = await import('@/lib/websocket')
-      vi.mocked(createEchoInstance).mockResolvedValue(mockEcho as any)
-
-      const { result } = renderHook(() =>
-        useChatWebSocket({
-          onConnect: mockOnConnect,
-        })
-      )
-
-      await act(async () => {
-        await result.current.connect('room-1')
-      })
-
-      expect(mockOnConnect).toHaveBeenCalled()
+    await act(async () => {
+      const response = await result.current.sendMessage('room-1', 'Hello World')
+      expect(response).toEqual({ success: true })
     })
 
-    it('should call onMessage callback when message received', () => {
-      const mockOnMessage = vi.fn()
+    expect(mocks.offlineManager.queueMessage).toHaveBeenCalledWith('room-1', 'Hello World')
+  })
 
-      const { result } = renderHook(() =>
-        useChatWebSocket({
-          onMessage: mockOnMessage,
-        })
-      )
+  it('retries and clears offline queue through the offline manager', () => {
+    const { result } = renderHook(() => useChatWebSocket())
 
-      // Simulate message received
-      act(() => {
-        // This would be called by the WebSocket event handler
-        // For testing, we'll simulate it directly
-        if (result.current.connectionInfo) {
-          // Trigger message callback
-        }
-      })
+    act(() => {
+      result.current.retryFailedMessages()
+      result.current.clearOfflineQueue()
+    })
 
-      // Note: In a real implementation, this would be triggered by WebSocket events
-      // For now, we're just testing the callback registration
-      expect(typeof mockOnMessage).toBe('function')
+    expect(mocks.offlineManager.retryFailedMessages).toHaveBeenCalled()
+    expect(mocks.offlineManager.clearQueue).toHaveBeenCalled()
+  })
+
+  it('delegates reconnect to the connection monitor', () => {
+    const { result } = renderHook(() => useChatWebSocket())
+
+    act(() => {
+      result.current.reconnect()
+    })
+
+    expect(mocks.connectionMonitor.forceReconnect).toHaveBeenCalled()
+  })
+
+  it('calls onConnect when the connection monitor emits connected', async () => {
+    const onConnect = vi.fn()
+    renderHook(() => useChatWebSocket({ onConnect }))
+
+    act(() => {
+      mocks.emitConnectionStatus('connected')
+    })
+
+    await waitFor(() => {
+      expect(onConnect).toHaveBeenCalled()
     })
   })
 })

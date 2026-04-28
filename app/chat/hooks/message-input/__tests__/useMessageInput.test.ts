@@ -88,7 +88,7 @@ describe('useMessageInput typing callbacks', () => {
     vi.useRealTimers()
   })
 
-  it('calls typing start once and typing stop after timeout', () => {
+  it('calls typing start on each input change and typing stop after timeout', () => {
     const sendMessage = vi.fn(async () => ({ success: true as const }))
     const onTypingStart = vi.fn()
     const onTypingStop = vi.fn()
@@ -110,7 +110,7 @@ describe('useMessageInput typing callbacks', () => {
       result.current.handleInputChange('hello again')
     })
 
-    expect(onTypingStart).toHaveBeenCalledTimes(1)
+    expect(onTypingStart).toHaveBeenCalledTimes(2)
 
     act(() => {
       vi.advanceTimersByTime(TYPING_TIMEOUT)
@@ -166,8 +166,8 @@ describe('useMessageInput idempotency', () => {
     vi.useRealTimers()
   })
 
-  it('should detect and block duplicate message sends within the idempotency window', async () => {
-    const sendMessage = vi.fn(async () => ({ success: true as const }))
+  it('should block duplicate unacknowledged sends within the idempotency window', async () => {
+    const sendMessage = vi.fn(async () => ({ success: false as const, errorMessage: 'failed' }))
 
     const { result } = renderHook(() =>
       useMessageInput({
@@ -192,7 +192,7 @@ describe('useMessageInput idempotency', () => {
     // Should have called sendMessage once
     expect(sendMessage).toHaveBeenCalledTimes(1)
 
-    // Try to send the same message again (within idempotency window)
+    // Try to send the same message again while the previous attempt is still unacknowledged
     await act(async () => {
       await result.current.handleSendMessage()
     })
@@ -249,5 +249,39 @@ describe('useMessageInput idempotency', () => {
 
     // Should allow second message
     expect(sendMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it('should allow re-sending the same message after a successful acknowledgement', async () => {
+    const sendMessage = vi.fn(async () => ({ success: true as const }))
+
+    const { result } = renderHook(() =>
+      useMessageInput({
+        roomId: 1,
+        sendMessage,
+        isConnected: true,
+        replyingTo: undefined,
+        onCancelReply: undefined,
+      })
+    )
+
+    act(() => {
+      result.current.handleInputChange('Repeatable message')
+    })
+
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    act(() => {
+      result.current.handleInputChange('Repeatable message')
+    })
+
+    await act(async () => {
+      await result.current.handleSendMessage()
+    })
+
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+    expect(sendMessage).toHaveBeenNthCalledWith(1, '1', 'Repeatable message')
+    expect(sendMessage).toHaveBeenNthCalledWith(2, '1', 'Repeatable message')
   })
 })

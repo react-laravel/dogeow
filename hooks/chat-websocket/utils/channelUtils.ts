@@ -6,6 +6,12 @@ export type TypingChannelWrapper = {
   whisper: (payload: { id: number; name: string }) => void
 }
 
+export type RoomListChannelWrapper = {
+  listen: (event: string, callback: (data: unknown) => void) => void
+  stopListening: () => void
+  channel: ReturnType<Echo<'reverb'>['channel']>
+}
+
 /**
  * 创建「输入中」私有频道，用于监听和发送 typing whisper
  */
@@ -53,9 +59,8 @@ export const createChannelWrapper = (
   bind: (event: string, callback: (data?: unknown) => void) => void
   stopListening: (event?: string, callback?: () => void) => void
   channel: ReturnType<Echo<'reverb'>['channel']>
-  presenceChannel: ReturnType<Echo<'reverb'>['channel']>
+  roomEventChannel: ReturnType<Echo<'reverb'>['channel']>
 } => {
-  // 创建普通频道用于消息
   const channel = echoInstance.channel(`chat.room.${roomId}`)
   console.log('WebSocket: Created channel for room', roomId, 'channel:', channel)
 
@@ -63,29 +68,31 @@ export const createChannelWrapper = (
     throw new Error(`Failed to create channel for room ${roomId}`)
   }
 
-  // 使用普通频道代替presence频道
-  const presenceChannel = echoInstance.channel(`chat.room.${roomId}.users`)
-  console.log('WebSocket: ✅ 用户状态频道创建成功（使用普通频道）')
+  const roomEventChannel = echoInstance.channel(`chat-room-${roomId}`)
+  console.log('WebSocket: ✅ 房间人数频道创建成功')
 
   return {
     listen: (event: string, callback: (data: unknown) => void) => {
       try {
-        // 消息事件通过普通频道监听
+        if (event === '.user.joined.room' || event === '.user.left.room') {
+          roomEventChannel.listen(event, callback)
+          return
+        }
+
         if (event.includes('message') || event.includes('MessageSent') || event === '.') {
           channel.listen(event, callback)
-        } else {
-          // 用户事件通过presence频道监听
-          presenceChannel.listen(event, callback)
+          return
         }
+
+        channel.listen(event, callback)
       } catch (error) {
         console.error('WebSocket: Error listening to event', event, ':', error)
       }
     },
     bind: (event: string, callback: (data?: unknown) => void) => {
       try {
-        // Laravel Echo没有bind方法，使用listen代替
         channel.listen(event, callback)
-        presenceChannel.listen(event, callback)
+        roomEventChannel.listen(event, callback)
       } catch (error) {
         console.error('WebSocket: Error binding to event', event, ':', error)
       }
@@ -94,14 +101,13 @@ export const createChannelWrapper = (
       try {
         if (event && callback) {
           channel.stopListening(event, callback)
-          presenceChannel.stopListening(event, callback)
+          roomEventChannel.stopListening(event, callback)
         } else if (event) {
           console.log('WebSocket: Cannot stop listening without callback, event:', event)
         } else {
-          // 停止所有监听
           try {
             channel.stopListening('*', () => {})
-            presenceChannel.stopListening('*', () => {})
+            roomEventChannel.stopListening('*', () => {})
           } catch {
             console.warn('WebSocket: Using alternative cleanup method')
           }
@@ -111,7 +117,29 @@ export const createChannelWrapper = (
       }
     },
     channel,
-    presenceChannel,
+    roomEventChannel,
+  }
+}
+
+export const createRoomListChannel = (echoInstance: Echo<'reverb'>): RoomListChannelWrapper => {
+  const channel = echoInstance.channel('chat-rooms-list')
+
+  return {
+    listen: (event: string, callback: (data: unknown) => void) => {
+      try {
+        channel.listen(event, callback)
+      } catch (error) {
+        console.error('WebSocket: Error listening to room list event', event, ':', error)
+      }
+    },
+    stopListening: () => {
+      try {
+        echoInstance.leave('chat-rooms-list')
+      } catch (error) {
+        console.error('WebSocket: Error leaving room list channel:', error)
+      }
+    },
+    channel,
   }
 }
 
@@ -139,8 +167,8 @@ export const setupRoomEventListeners = (
     if (typedData?.message) safeOnMessage({ message: typedData.message }, 'message')
   })
 
-  channelWrapper.listen('user.joined', (data: unknown) => safeOnMessage(data, 'user_joined'))
-  channelWrapper.listen('user.left', (data: unknown) => safeOnMessage(data, 'user_left'))
+  channelWrapper.listen('.user.joined', (data: unknown) => safeOnMessage(data, 'user_joined'))
+  channelWrapper.listen('.user.left', (data: unknown) => safeOnMessage(data, 'user_left'))
 
   channelWrapper.listen('Chat\\MessageSent', (data: unknown) => {
     const typedData = data as { message?: unknown }
@@ -163,4 +191,26 @@ export const setupRoomEventListeners = (
       console.error('WebSocket: Subscription error for room', roomId)
     })
   }
+}
+
+export const setupRoomListEventListeners = (
+  channelWrapper: RoomListChannelWrapper,
+  onMessage?: (data: unknown) => void
+): void => {
+  if (!onMessage) {
+    return
+  }
+
+  const safeOnMessage = (data: unknown, type: 'user.joined.room' | 'user.left.room') => {
+    if (data) {
+      onMessage({ type, ...data })
+    }
+  }
+
+  channelWrapper.listen('.user.joined.room', (data: unknown) => {
+    safeOnMessage(data, 'user.joined.room')
+  })
+  channelWrapper.listen('.user.left.room', (data: unknown) => {
+    safeOnMessage(data, 'user.left.room')
+  })
 }

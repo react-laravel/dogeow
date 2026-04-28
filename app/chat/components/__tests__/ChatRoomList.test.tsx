@@ -93,10 +93,14 @@ describe('ChatRoomList', () => {
     await user.click(view.getByRole('button', { name: /general/i }))
 
     await waitFor(() => {
-      expect(setCurrentRoomMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
       expect(joinRoomMock).toHaveBeenCalledWith(1)
+      expect(setCurrentRoomMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
       expect(onRoomSelect).toHaveBeenCalledTimes(1)
     })
+
+    expect(joinRoomMock.mock.invocationCallOrder[0]).toBeLessThan(
+      setCurrentRoomMock.mock.invocationCallOrder[0]
+    )
   })
 
   it('does not re-join when selecting the current room', async () => {
@@ -109,6 +113,25 @@ describe('ChatRoomList', () => {
 
     expect(joinRoomMock).not.toHaveBeenCalled()
     expect(onRoomSelect).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not update current room when join fails', async () => {
+    const user = userEvent.setup()
+    const onRoomSelect = vi.fn()
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    joinRoomMock.mockRejectedValueOnce(new Error('join failed'))
+
+    const view = render(<ChatRoomList onRoomSelect={onRoomSelect} />)
+
+    await user.click(view.getByRole('button', { name: /general/i }))
+
+    await waitFor(() => {
+      expect(joinRoomMock).toHaveBeenCalledWith(1)
+      expect(onRoomSelect).toHaveBeenCalledTimes(1)
+    })
+
+    expect(setCurrentRoomMock).not.toHaveBeenCalled()
+    consoleErrorSpy.mockRestore()
   })
 
   it('renders error state and retries loading', async () => {

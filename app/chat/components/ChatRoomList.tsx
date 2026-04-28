@@ -58,12 +58,11 @@ export function ChatRoomList({ onRoomSelect, showHeader = true }: ChatRoomListPr
       try {
         console.log('ChatRoomList: Selecting room:', room)
 
-        setCurrentRoom(room)
         await joinRoom(room.id)
+        setCurrentRoom(room)
         addRecentRoom(room.id)
       } catch (error) {
         console.error('Failed to join room:', error)
-        setCurrentRoom(null)
       } finally {
         onRoomSelect?.()
       }

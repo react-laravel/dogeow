@@ -17,7 +17,9 @@ import {
 import { sendMessageToServer, leaveRoomViaAPI } from './chat-websocket/utils/messageUtils'
 import {
   createChannelWrapper,
+  createRoomListChannel,
   createTypingChannel,
+  setupRoomListEventListeners,
   setupRoomEventListeners,
 } from './chat-websocket/utils/channelUtils'
 import useAuthStore from '@/stores/authStore'
@@ -53,6 +55,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
 
   const currentRoomRef = useRef<string | null>(null)
   const channelRef = useRef<ReturnType<typeof createChannelWrapper> | null>(null)
+  const roomListChannelRef = useRef<ReturnType<typeof createRoomListChannel> | null>(null)
   const typingChannelRef = useRef<ReturnType<typeof createTypingChannel> | null>(null)
   const lastTypingSentRef = useRef(0)
   const TYPING_THROTTLE_MS = 1500
@@ -136,16 +139,32 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
   }, [onConnect, onDisconnect, onError, echo])
 
   // 自动连接
+  const ensureRoomListSubscription = useCallback(
+    (echoInstance: Echo<'reverb'>) => {
+      if (roomListChannelRef.current) {
+        return
+      }
+
+      const roomListChannel = createRoomListChannel(echoInstance)
+      roomListChannelRef.current = roomListChannel
+      setupRoomListEventListeners(roomListChannel, onMessage)
+    },
+    [onMessage]
+  )
+
   useEffect(() => {
     if (autoConnect) {
       const authManager = getAuthManager()
       const token = authManager.getToken()
       if (token) {
         const echoInstance = createEchoInstance()
+        if (echoInstance) {
+          ensureRoomListSubscription(echoInstance)
+        }
         setEcho(echoInstance)
       }
     }
-  }, [autoConnect])
+  }, [autoConnect, ensureRoomListSubscription])
 
   // 组件挂载和卸载管理
   useEffect(() => {
@@ -161,12 +180,14 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
         if (channelRef.current && typeof channelRef.current.stopListening === 'function') {
           channelRef.current.stopListening()
         }
+        roomListChannelRef.current?.stopListening()
         typingChannelRef.current?.stopListening()
         typingChannelRef.current = null
       } catch (error) {
         console.error('WebSocket: Error during channel cleanup:', error)
       }
       channelRef.current = null
+      roomListChannelRef.current = null
       currentRoomRef.current = null
 
       setEcho(null)
@@ -205,6 +226,8 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
       monitor.initializeWithEcho(echoInstance)
       console.log('WebSocket: Connection monitor initialized')
 
+      ensureRoomListSubscription(echoInstance)
+
       setEcho(echoInstance)
       console.log('WebSocket: Echo instance set in state')
 
@@ -219,7 +242,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
       )
       return false
     }
-  }, [authTokenRefreshCallback, onError, echo])
+  }, [authTokenRefreshCallback, ensureRoomListSubscription, onError, echo])
 
   const disconnect = useCallback(async () => {
     if (!isComponentMountedRef.current) {
@@ -236,12 +259,14 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
         console.log('WebSocket: Disconnecting and stopping listening')
         channelRef.current.stopListening()
       }
+      roomListChannelRef.current?.stopListening()
       typingChannelRef.current?.stopListening()
       typingChannelRef.current = null
     } catch (error) {
       console.error('WebSocket: Error during disconnect:', error)
     }
     channelRef.current = null
+    roomListChannelRef.current = null
     currentRoomRef.current = null
     setEcho(null)
     destroyEchoInstance()
@@ -284,6 +309,8 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
       if (!echoToUse) return
 
       try {
+        ensureRoomListSubscription(echoToUse)
+
         const channelWrapper = createChannelWrapper(echoToUse, roomId)
         channelRef.current = channelWrapper
         setupRoomEventListeners(channelWrapper, roomId, onMessage)
@@ -296,7 +323,7 @@ export const useChatWebSocket = (options: UseChatWebSocketOptions = {}): UseChat
         console.error('WebSocket: Error creating channel for room', roomId, ':', error)
       }
     },
-    [echo, onMessage, onTyping]
+    [echo, ensureRoomListSubscription, onMessage, onTyping]
   )
 
   const sendTyping = useCallback((roomId: string) => {
