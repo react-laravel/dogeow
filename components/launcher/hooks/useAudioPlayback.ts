@@ -67,6 +67,9 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
       audioRef.current.volume = isMuted ? 0 : volume
       audioRef.current.muted = isMuted
+      if (gainNodeRef.current) {
+        gainNodeRef.current.gain.value = isMuted ? 0 : 1
+      }
       audioRef.current.load()
 
       setAudioError(null)
@@ -86,6 +89,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     isMuted,
     volume,
     audioRef,
+    gainNodeRef,
   ])
 
   // Listen for currentTrack changes
@@ -289,7 +293,11 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       audioRef.current.volume = targetVolume
       audioRef.current.muted = isMuted
     }
-  }, [volume, isMuted, audioRef])
+
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = isMuted ? 0 : 1
+    }
+  }, [volume, isMuted, audioRef, gainNodeRef])
 
   // Listen for audio ended
   useEffect(() => {
@@ -379,7 +387,10 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
     audioRef.current.volume = nextMuted ? 0 : volume
     audioRef.current.muted = nextMuted
-  }, [isMuted, volume, setIsMuted, audioRef])
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = nextMuted ? 0 : 1
+    }
+  }, [isMuted, volume, setIsMuted, audioRef, gainNodeRef])
 
   // Reset current time
   const resetCurrentTime = useCallback(() => {

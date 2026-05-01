@@ -5,6 +5,8 @@
 
 import type { MusicTrack } from '@/stores/musicStore'
 
+export type AudioVisualizerSourceNode = MediaStreamAudioSourceNode | MediaElementAudioSourceNode
+
 // ============================================
 // Playback State Value Object
 // ============================================
@@ -52,7 +54,7 @@ export interface AudioRefs {
   audioRef: React.RefObject<HTMLAudioElement | null>
   audioContextRef: React.MutableRefObject<AudioContext | null>
   analyserRef: React.MutableRefObject<AnalyserNode | null>
-  sourceRef: React.MutableRefObject<MediaStreamAudioSourceNode | null>
+  sourceRef: React.MutableRefObject<AudioVisualizerSourceNode | null>
   gainNodeRef: React.MutableRefObject<GainNode | null>
 }
 
