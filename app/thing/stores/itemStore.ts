@@ -1,126 +1,24 @@
 import { create } from 'zustand'
-import { format } from 'date-fns'
 import { apiRequest } from '@/lib/api'
 import { Item, Category, Tag, ItemFormData, ApiSubmitItemData } from '@/app/thing/types'
 import { distributedLock } from '@/lib/utils/distributed-lock'
 import { idempotencyTracker } from '@/lib/utils/idempotency'
-
-// 前端专用过滤器，不发送到后端
-const FRONTEND_ONLY_FILTERS = [
-  'include_null_purchase_date',
-  'include_null_expiry_date',
-  'exclude_null_purchase_date',
-  'exclude_null_expiry_date',
-] as const
-
-// 需要特殊处理的字段
-const SPECIAL_FIELDS = ['images', 'image_paths', 'image_ids', 'tags'] as const
+import {
+  assertCategory,
+  assertItem,
+  assertPaginatedItemsResponse,
+  buildThingItemQueryString,
+  type ItemFilters,
+  type PaginatedItemsResponse,
+  type PaginationMeta,
+  prepareThingItemFormData,
+} from '@/app/thing/contracts'
 
 // 统一错误处理
 const handleError = (error: unknown, defaultMessage = '未知错误'): string => {
   const message = error instanceof Error ? error.message : defaultMessage
   console.error('ItemStore 错误:', error)
   return message
-}
-
-// 处理表单数据的辅助函数
-const prepareFormData = (data: Record<string, unknown> | ApiSubmitItemData) => {
-  const formData = new FormData()
-
-  // 处理基本字段
-  Object.entries(data).forEach(([key, value]) => {
-    if (!SPECIAL_FIELDS.includes(key as (typeof SPECIAL_FIELDS)[number]) && value != null) {
-      formData.append(key, key === 'is_public' ? (value ? '1' : '0') : String(value))
-    }
-  })
-
-  // 处理数组字段
-  const dataAsRecord = data as Record<string, unknown>
-  const arrayFields = {
-    images: dataAsRecord.images,
-    image_paths: dataAsRecord.image_paths,
-    image_ids: dataAsRecord.image_ids,
-    tags: dataAsRecord.tags,
-  }
-
-  Object.entries(arrayFields).forEach(([fieldName, fieldValue]) => {
-    if (Array.isArray(fieldValue)) {
-      fieldValue.forEach((item, index) => {
-        const value = fieldName === 'image_ids' || fieldName === 'tags' ? String(item) : item
-        formData.append(`${fieldName}[${index}]`, value)
-      })
-    }
-  })
-
-  return formData
-}
-
-// 构建查询参数
-const buildQueryParams = (params: ItemFilters) => {
-  const queryParams = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value != null && value !== '') {
-      let paramValue: string
-
-      if (value instanceof Date) {
-        paramValue = format(value, 'yyyy-MM-dd')
-      } else if (Array.isArray(value)) {
-        paramValue = value.join(',')
-      } else {
-        paramValue = String(value)
-      }
-
-      // 特殊处理 search 参数
-      const paramKey = key === 'search' ? 'filter[name]' : `filter[${key}]`
-      queryParams.append(paramKey, paramValue)
-    }
-  })
-
-  return queryParams
-}
-
-// 过滤前端专用参数
-const filterBackendParams = (params: ItemFilters) => {
-  const filtered = { ...params }
-
-  // 移除前端专用参数
-  ;['itemsOnly', ...FRONTEND_ONLY_FILTERS].forEach(key => {
-    delete filtered[key]
-  })
-
-  return filtered
-}
-
-// 分页元数据类型
-interface PaginationMeta {
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
-  from?: number
-  to?: number
-}
-
-// 过滤器类型
-interface ItemFilters {
-  search?: string
-  category_id?: number | string
-  tag_id?: number
-  area_id?: number
-  room_id?: number
-  spot_id?: number
-  is_public?: boolean
-  purchase_date?: Date
-  expiry_date?: Date
-  page?: number
-  itemsOnly?: boolean
-  include_null_purchase_date?: boolean
-  include_null_expiry_date?: boolean
-  exclude_null_purchase_date?: boolean
-  exclude_null_expiry_date?: boolean
-  tags?: string[] | number[] | string
-  [key: string]: unknown
 }
 
 interface ItemState {
@@ -186,19 +84,8 @@ export const useItemStore = create<ItemState>((set, get) => ({
         }
       }
 
-      const backendParams = filterBackendParams(finalParams)
-      const queryParams = buildQueryParams(backendParams)
-
-      // 处理分页参数
-      if (finalParams.page) {
-        queryParams.delete('filter[page]')
-        queryParams.append('page', String(finalParams.page))
-      }
-
-      const queryString = queryParams.toString()
-      const url = `/things/items${queryString ? `?${queryString}` : ''}`
-
-      const data = await apiRequest<{ data: Item[]; meta: PaginationMeta }>(url)
+      const url = `/things/items${buildThingItemQueryString(finalParams)}`
+      const data = assertPaginatedItemsResponse(await apiRequest<PaginatedItemsResponse>(url))
 
       set({
         items: data.data ?? [],
@@ -237,35 +124,14 @@ export const useItemStore = create<ItemState>((set, get) => ({
 
   createCategory: async data => {
     try {
-      const response = await apiRequest<unknown>('/things/categories', 'POST', data)
+      const category = assertCategory(
+        await apiRequest<Category>('/things/categories', 'POST', data)
+      )
 
       // 刷新分类列表
       await get().fetchCategories()
 
-      // 根据实际API响应结构返回分类数据
-      // 如果响应直接是分类对象
-      if (response && (response as { id?: number }).id) {
-        return response as Category
-      }
-      // 如果响应包含分类对象在某个字段中
-      if (response && (response as { category?: { id?: number } }).category?.id) {
-        return (response as { category: Category }).category
-      }
-      // 如果响应包含分类对象在data字段中
-      if (response && (response as { data?: { id?: number } }).data?.id) {
-        return (response as { data: Category }).data
-      }
-
-      // 如果无法从响应中获取分类ID，从刷新后的分类列表中找到新创建的分类
-      const categories = get().categories
-      const newCategory = categories.find(
-        cat => cat.name === data.name && cat.parent_id === data.parent_id
-      )
-      if (newCategory) {
-        return newCategory
-      }
-
-      throw new Error('无法获取新创建的分类信息')
+      return category
     } catch (error) {
       const errorMessage = handleError(error, '创建分类失败')
       throw new Error(errorMessage)
@@ -276,7 +142,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
-      const item = await apiRequest<Item>(`/things/items/${id}`)
+      const item = assertItem(await apiRequest<Item>(`/things/items/${id}`))
       set({ loading: false })
       return item
     } catch (error) {
@@ -302,9 +168,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
         // Check if request already in flight - wait for it to complete
         if (idempotencyTracker.isRequestPending(idempotencyKey)) {
           console.log('[Idempotency] Create item request already in progress, waiting for result')
-          const pendingRequest = idempotencyTracker.getPendingRequest<{ item: Item }>(
-            idempotencyKey
-          )
+          const pendingRequest = idempotencyTracker.getPendingRequest<Item>(idempotencyKey)
           if (pendingRequest) {
             return pendingRequest
           }
@@ -312,10 +176,10 @@ export const useItemStore = create<ItemState>((set, get) => ({
           console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
         }
 
-        const formData = prepareFormData(data)
+        const formData = prepareThingItemFormData(data)
         return idempotencyTracker.trackRequest(
           idempotencyKey,
-          apiRequest<{ item: Item }>('/things/items', 'POST', formData)
+          apiRequest<Item>('/things/items', 'POST', formData)
         )
       },
       { ttl: 10000, maxRetries: 3 }
@@ -335,12 +199,12 @@ export const useItemStore = create<ItemState>((set, get) => ({
     }
 
     try {
-      const result = (await lockResult.result) as { item: Item }
+      const item = assertItem(await lockResult.result)
       set({ loading: false })
       // 刷新列表
       await get().fetchItems()
 
-      return result.item
+      return item
     } catch (error) {
       const errorMessage = handleError(error, '创建物品失败')
       set({ loading: false, error: errorMessage })
@@ -363,9 +227,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
         // Check if request already in flight - wait for it to complete
         if (idempotencyTracker.isRequestPending(idempotencyKey)) {
           console.log('[Idempotency] Update item request already in progress, waiting for result')
-          const pendingRequest = idempotencyTracker.getPendingRequest<{ item: Item }>(
-            idempotencyKey
-          )
+          const pendingRequest = idempotencyTracker.getPendingRequest<Item>(idempotencyKey)
           if (pendingRequest) {
             return pendingRequest
           }
@@ -373,11 +235,11 @@ export const useItemStore = create<ItemState>((set, get) => ({
           console.warn('[Idempotency] Pending request disappeared, proceeding with new request')
         }
 
-        const formData = prepareFormData(data)
+        const formData = prepareThingItemFormData(data)
         formData.append('_method', 'PUT')
         return idempotencyTracker.trackRequest(
           idempotencyKey,
-          apiRequest<{ item: Item }>(`/things/items/${id}`, 'POST', formData)
+          apiRequest<Item>(`/things/items/${id}`, 'POST', formData)
         )
       },
       { ttl: 10000, maxRetries: 3 }
@@ -397,12 +259,12 @@ export const useItemStore = create<ItemState>((set, get) => ({
     }
 
     try {
-      const result = (await lockResult.result) as { item: Item }
+      const item = assertItem(await lockResult.result)
       set({ loading: false })
       // 刷新列表
       await get().fetchItems()
 
-      return result.item
+      return item
     } catch (error) {
       const errorMessage = handleError(error, '更新物品失败')
       set({ loading: false, error: errorMessage })

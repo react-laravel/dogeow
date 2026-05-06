@@ -28,24 +28,7 @@ describe('ItemStore', () => {
       expect(state.items).toEqual([])
       expect(state.loading).toBe(false)
       expect(state.error).toBeNull()
-      expect(state.filters).toEqual({
-        search: '',
-        category_id: undefined,
-        tag_id: undefined,
-        area_id: undefined,
-        room_id: undefined,
-        spot_id: undefined,
-        is_public: undefined,
-        purchase_date: undefined,
-        expiry_date: undefined,
-        page: undefined,
-        itemsOnly: undefined,
-        include_null_purchase_date: undefined,
-        include_null_expiry_date: undefined,
-        exclude_null_purchase_date: undefined,
-        exclude_null_expiry_date: undefined,
-        tags: undefined,
-      })
+      expect(state.filters).toEqual({})
     })
   })
 
@@ -153,13 +136,21 @@ describe('ItemStore', () => {
 
     it('should delete item correctly', async () => {
       const { apiRequest } = await import('@/lib/api')
-      vi.mocked(apiRequest).mockResolvedValue(undefined)
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({
+          data: [],
+          meta: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 10,
+            total: 0,
+          },
+        })
 
       await useItemStore.getState().deleteItem(1)
 
-      expect(apiRequest).toHaveBeenCalledWith('/items/1', {
-        method: 'DELETE',
-      })
+      expect(apiRequest).toHaveBeenCalledWith('/things/items/1', 'DELETE')
     })
 
     it('should get item by id correctly', async () => {
