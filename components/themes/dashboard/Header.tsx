@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic'
 import { useUITheme } from '@/components/themes/UIThemeProvider'
 import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
 import { Search, Menu } from 'lucide-react'
-import { usePathname } from 'next/navigation'
 import { NotificationDropdown } from '@/components/app/NotificationDropdown'
 import useAuthStore from '@/stores/authStore'
 
@@ -37,7 +36,6 @@ export default function DashboardHeader() {
   const theme = useUITheme()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
-  const pathname = usePathname()
 
   if (!theme) return null
 
@@ -80,7 +78,7 @@ export default function DashboardHeader() {
 
         {theme.layout.header.showUserMenu && (
           <div className="flex items-center gap-2">
-            <RouteAwareAiLauncher key={pathname} />
+            <RouteAwareAiLauncher />
           </div>
         )}
       </div>

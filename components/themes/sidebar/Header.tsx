@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic'
 import { useUITheme } from '@/components/themes/UIThemeProvider'
 import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
 import { Menu } from 'lucide-react'
-import { usePathname } from 'next/navigation'
 
 const AiDialog = dynamic(
   () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
@@ -34,7 +33,6 @@ function RouteAwareAiLauncher() {
 export default function SidebarHeader() {
   const theme = useUITheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const pathname = usePathname()
 
   if (!theme) return null
 
@@ -72,7 +70,7 @@ export default function SidebarHeader() {
       <div className="flex items-center gap-2">
         {theme.layout.header.showUserMenu && (
           <div className="flex items-center gap-2">
-            <RouteAwareAiLauncher key={pathname} />
+            <RouteAwareAiLauncher />
           </div>
         )}
       </div>

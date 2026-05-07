@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { usePathname } from 'next/navigation'
 import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
 
 const AiDialog = dynamic(
@@ -30,8 +29,6 @@ function RouteAwareAiLauncher() {
  * 星星按钮 → 通用 AI（含视觉理解）
  */
 export default function MinimalHeader() {
-  const pathname = usePathname()
-
   return (
     <div className="flex h-full w-full items-center justify-between bg-transparent px-6">
       <div className="flex items-center gap-2">
@@ -39,7 +36,7 @@ export default function MinimalHeader() {
       </div>
 
       <div className="flex items-center gap-2">
-        <RouteAwareAiLauncher key={pathname} />
+        <RouteAwareAiLauncher />
       </div>
     </div>
   )
