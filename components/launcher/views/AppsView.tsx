@@ -46,13 +46,22 @@ export function AppsView({
 }: AppsViewProps) {
   const { clearFilters } = useFilterPersistenceStore()
 
+  const navigateHome = () => {
+    if (typeof window !== 'undefined') {
+      window.location.assign('/')
+      return
+    }
+
+    router.push('/')
+  }
+
   const handleLogoClick = () => {
     if (isAiOpen && onCloseAi) {
       onCloseAi()
       return
     }
     clearFilters()
-    router.push('/')
+    navigateHome()
   }
 
   return (

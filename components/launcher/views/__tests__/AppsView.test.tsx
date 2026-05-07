@@ -1,0 +1,105 @@
+import { render } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import React from 'react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { AppsView } from '../AppsView'
+import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
+
+vi.mock('next/image', () => ({
+  default: ({ alt, onClick, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    <img alt={alt} onClick={onClick} {...props} />
+  ),
+}))
+
+vi.mock('../AppGrid', () => ({
+  AppGrid: () => <div>AppGrid</div>,
+}))
+
+vi.mock('../SearchBar', () => ({
+  SearchBar: () => <div>SearchBar</div>,
+}))
+
+vi.mock('./UserButton', () => ({
+  UserButton: () => <button type="button">用户菜单</button>,
+}))
+
+vi.mock('@/components/app/NotificationDropdown', () => ({
+  NotificationDropdown: () => <div>通知</div>,
+}))
+
+vi.mock('@/app/thing/stores/filterPersistenceStore', () => ({
+  useFilterPersistenceStore: vi.fn(),
+}))
+
+describe('AppsView', () => {
+  const clearFilters = vi.fn()
+  const routerPush = vi.fn()
+  const toggleDisplayMode = vi.fn()
+  const defaultSearchManager = {
+    isSearchVisible: false,
+    searchTerm: '',
+    setSearchTerm: vi.fn(),
+    handleSearch: vi.fn(),
+    toggleSearch: vi.fn(),
+    currentApp: 'files',
+    isHomePage: false,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useFilterPersistenceStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      clearFilters,
+    })
+  })
+
+  it('uses a hard navigation when clicking the logo', async () => {
+    const assign = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { assign },
+      configurable: true,
+    })
+
+    const user = userEvent.setup()
+    const { getByAltText } = render(
+      <AppsView
+        router={{ push: routerPush }}
+        searchManager={defaultSearchManager}
+        isAuthenticated
+        toggleDisplayMode={toggleDisplayMode}
+      />
+    )
+
+    await user.click(getByAltText('apps'))
+
+    expect(clearFilters).toHaveBeenCalledTimes(1)
+    expect(assign).toHaveBeenCalledWith('/')
+    expect(routerPush).not.toHaveBeenCalled()
+  })
+
+  it('closes ai before navigating home', async () => {
+    const assign = vi.fn()
+    const onCloseAi = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { assign },
+      configurable: true,
+    })
+
+    const user = userEvent.setup()
+    const { getByAltText } = render(
+      <AppsView
+        router={{ push: routerPush }}
+        searchManager={defaultSearchManager}
+        isAuthenticated
+        toggleDisplayMode={toggleDisplayMode}
+        isAiOpen
+        onCloseAi={onCloseAi}
+      />
+    )
+
+    await user.click(getByAltText('apps'))
+
+    expect(onCloseAi).toHaveBeenCalledTimes(1)
+    expect(assign).not.toHaveBeenCalled()
+    expect(clearFilters).not.toHaveBeenCalled()
+  })
+})
