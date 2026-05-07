@@ -90,18 +90,6 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // 页面导航始终优先请求网络，离线时才回退到离线页。
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match('/offline').then(response => {
-          return response || new Response('Offline', { status: 503 })
-        })
-      })
-    )
-    return
-  }
-
   // 对于favicon.ico等静态资源，使用缓存优先策略
   if (
     request.destination === 'image' ||
