@@ -5,8 +5,8 @@ module.exports = {
       script: 'npm',
       args: 'run start',
       cwd: process.env.PM2_CWD || process.env.APP_ROOT,
-      instances: 'max', // 自动检测CPU核心数
-      exec_mode: 'cluster', // 集群模式，充分利用多核CPU
+      instances: 1, // Next.js standalone server 用单实例 fork，避免多进程重复监听端口导致 PM2 反复重启
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
