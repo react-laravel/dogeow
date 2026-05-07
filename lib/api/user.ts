@@ -3,7 +3,7 @@
 import useSWR from 'swr'
 
 import type { User } from '@/app'
-import { get } from './core'
+import { get, put } from './core'
 import { baseSWRConfig, apiFetcher } from './swr'
 
 // 用户相关API
@@ -18,3 +18,20 @@ export const useUser = () =>
     async url => resolveUserPayload(await apiFetcher<User | { user?: User }>(url)),
     baseSWRConfig
   )
+
+export interface ChangePasswordPayload {
+  currentPassword: string
+  password: string
+  passwordConfirmation?: string
+}
+
+export const changePassword = ({
+  currentPassword,
+  password,
+  passwordConfirmation,
+}: ChangePasswordPayload) =>
+  put('/profile/password', {
+    current_password: currentPassword,
+    password,
+    password_confirmation: passwordConfirmation ?? password,
+  })
