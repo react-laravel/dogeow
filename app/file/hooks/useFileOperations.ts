@@ -25,11 +25,7 @@ export function useCreateFolder() {
     {
       onSuccess: () => {
         // 刷新文件列表
-        mutate(
-          key =>
-            typeof key === 'string' &&
-            key.startsWith(`/cloud/files?parent_id=${currentFolderId || ''}`)
-        )
+        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
         toast.success('文件夹创建成功')
         resetForm()
         setIsDialogOpen(false)
@@ -153,11 +149,7 @@ export function useFileUpload() {
         const failed = results.length - successful
 
         // 刷新文件列表
-        mutate(
-          key =>
-            typeof key === 'string' &&
-            key.startsWith(`/cloud/files?parent_id=${currentFolderId || ''}`)
-        )
+        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
 
         if (successful > 0) {
           toast.success(
@@ -219,11 +211,7 @@ export function useDeleteFiles() {
       const failed = results.length - successful
 
       // 刷新文件列表
-      mutate(
-        key =>
-          typeof key === 'string' &&
-          key.startsWith(`/cloud/files?parent_id=${currentFolderId || ''}`)
-      )
+      mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
 
       if (successful > 0) {
         toast.success(
@@ -252,11 +240,7 @@ export function useDeleteFiles() {
       try {
         await del(`/cloud/files/${fileId}`)
         // 刷新文件列表
-        mutate(
-          key =>
-            typeof key === 'string' &&
-            key.startsWith(`/cloud/files?parent_id=${currentFolderId || ''}`)
-        )
+        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
         toast.success('删除成功')
       } catch (error) {
         handleApiError(error)
@@ -290,11 +274,7 @@ export function useRenameFile() {
         await post(`/cloud/files/${fileId}/rename`, { name: newName.trim() })
 
         // 刷新文件列表
-        mutate(
-          key =>
-            typeof key === 'string' &&
-            key.startsWith(`/cloud/files?parent_id=${currentFolderId || ''}`)
-        )
+        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
         toast.success('重命名成功')
         return true
       } catch (error) {
@@ -331,12 +311,7 @@ export function useMoveFiles() {
         })
 
         // 刷新当前和目标文件夹的文件列表
-        mutate(
-          key =>
-            typeof key === 'string' &&
-            (key.startsWith(`/cloud/files?parent_id=${currentFolderId || ''}`) ||
-              key.startsWith(`/cloud/files?parent_id=${targetFolderId || ''}`))
-        )
+        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
 
         toast.success(fileIds.length > 1 ? `已移动 ${fileIds.length} 个项目` : '移动成功')
         return true
