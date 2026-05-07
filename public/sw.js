@@ -1,6 +1,6 @@
 // Service Worker for DogeOW PWA
 // Bump the cache namespace so previously cached app shells are discarded.
-const CACHE_NAME = 'dogeow-v1.0.2'
+const CACHE_NAME = 'dogeow-v0.0.3'
 const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
