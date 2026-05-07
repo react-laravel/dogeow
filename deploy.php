@@ -95,6 +95,19 @@ task('deploy:build', function () {
     run('cd {{release_path}} && npm run build');
 });
 
+desc('把 Next.js 静态构建资源累积到 shared，兼容 CDN 缓存的旧 HTML');
+task('deploy:publish_static', function () {
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+mkdir -p "{{deploy_path}}/shared/next-static"
+if [ -d "{{release_path}}/.next/static" ]; then
+  rsync -a --ignore-existing "{{release_path}}/.next/static/" "{{deploy_path}}/shared/next-static/"
+fi
+'
+BASH);
+});
+
 desc('重载 PM2 应用');
 task('pm2:reload', function () {
     run(<<<'BASH'
@@ -138,6 +151,7 @@ task('deploy', [
     'deploy:writable',
     'deploy:vendors',
     'deploy:build',
+    'deploy:publish_static',
     'deploy:symlink',
     'pm2:reload',
     'deploy:unlock',
