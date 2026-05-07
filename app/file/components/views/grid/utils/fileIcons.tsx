@@ -43,6 +43,7 @@ export const FileIcon = ({ file }: FileIconProps) => {
           src={storageUrl}
           alt={file.name}
           fill
+          unoptimized
           className="object-cover"
           loading="lazy"
           sizes="64px"

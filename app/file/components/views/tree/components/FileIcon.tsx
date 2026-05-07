@@ -51,6 +51,7 @@ export const FileIcon = memo<FileIconProps>(({ file, className }) => {
           alt={file.name}
           width={TREE_CONSTANTS.PREVIEW_SIZE.width}
           height={TREE_CONSTANTS.PREVIEW_SIZE.height}
+          unoptimized
           className="h-full w-full object-cover"
           onError={() => setImageError(true)}
           loading="lazy"
