@@ -1,6 +1,7 @@
 // Service Worker for DogeOW PWA
-// Bump the cache namespace so previously cached app shells are discarded.
-const CACHE_NAME = 'dogeow-v0.0.3'
+// Bump the cache namespace so previously cached app shells (and any HTML
+// pointing to deleted /_next chunks) are discarded on activation.
+const CACHE_NAME = 'dogeow-v0.0.4'
 const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
@@ -90,6 +91,20 @@ self.addEventListener('fetch', event => {
     return
   }
 
+  // 页面导航：始终走网络，不缓存 HTML（HTML 内引用了带 hash 的 chunk，
+  // 部署后旧 HTML 会指向已被删除的 chunk，导致 ChunkLoadError 与整页刷新）。
+  // 仅在网络失败时回退到 /offline。
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return caches.match('/offline').then(response => {
+          return response || new Response('Offline', { status: 503 })
+        })
+      })
+    )
+    return
+  }
+
   // 对于favicon.ico等静态资源，使用缓存优先策略
   if (
     request.destination === 'image' ||
@@ -138,11 +153,14 @@ self.addEventListener('fetch', event => {
   }
 
   // 对于其他请求，使用网络优先策略
+  // 注意：HTML / document 响应不写入缓存（避免缓存了引用旧 chunk 的 HTML）。
   event.respondWith(
     fetch(request)
       .then(response => {
-        // 如果网络请求成功，尝试缓存响应
-        if (response.status === 200 && response.type === 'basic') {
+        const contentType = response.headers.get('content-type') || ''
+        const isHtml = request.destination === 'document' || contentType.includes('text/html')
+
+        if (response.status === 200 && response.type === 'basic' && !isHtml) {
           const responseClone = response.clone()
           caches
             .open(CACHE_NAME)
@@ -154,14 +172,10 @@ self.addEventListener('fetch', event => {
         return response
       })
       .catch(() => {
-        // 网络失败时，从缓存获取
+        // 网络失败时，从缓存获取（HTML 不会命中，因为我们不再缓存它）
         return caches.match(request).then(response => {
           if (response) {
             return response
-          }
-          // 如果缓存中也没有，返回离线页面
-          if (request.mode === 'navigate') {
-            return caches.match('/offline')
           }
           return new Response('Network error', { status: 503 })
         })
