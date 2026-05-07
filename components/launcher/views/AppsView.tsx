@@ -47,8 +47,9 @@ export function AppsView({
   const { clearFilters } = useFilterPersistenceStore()
 
   const navigateHome = () => {
-    if (typeof window !== 'undefined') {
-      window.location.assign('/')
+    // 不要用 window.location.assign('/')，否则会触发浏览器级整页刷新，
+    // 正在播放的音乐会被打断。已经在首页时也不重复 push，避免无意义重渲染。
+    if (searchManager.isHomePage) {
       return
     }
 
