@@ -2,7 +2,7 @@
 
 import React, { memo, useMemo, useState } from 'react'
 import { Maximize2, Pause, Play, Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { BackButton } from '@/components/ui/back-button'
 import type { MusicPlayerProps } from './types'
 import { PlayerControlButton } from './music/PlayerControlButton'
@@ -43,6 +43,7 @@ export const MusicPlayer = memo(
     onOpenFullscreen,
   }: MusicPlayerProps) => {
     const router = useRouter()
+    const pathname = usePathname()
     const { clearFilters } = useFilterPersistenceStore()
     const handleBackToApps = () => toggleDisplayMode('apps')
     const [showRemainingTime, setShowRemainingTime] = useState(false)
@@ -54,7 +55,13 @@ export const MusicPlayer = memo(
 
     const handleLogoClick = () => {
       clearFilters()
-      router.push('/')
+      // 从音乐栏点 logo 时应先恢复启动台工具栏；如果当前不在首页，再用
+      // Next router 做 SPA 跳转，避免用硬刷新重置状态。
+      toggleDisplayMode('apps')
+
+      if (pathname !== '/') {
+        router.push('/')
+      }
     }
 
     const timeLabel = useMemo(() => {
