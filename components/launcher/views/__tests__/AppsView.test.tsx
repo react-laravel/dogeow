@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppsView } from '../AppsView'
 import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
 
@@ -32,6 +32,7 @@ vi.mock('@/app/thing/stores/filterPersistenceStore', () => ({
 }))
 
 describe('AppsView', () => {
+  const originalLocation = Object.getOwnPropertyDescriptor(window, 'location')
   const clearFilters = vi.fn()
   const routerPush = vi.fn()
   const toggleDisplayMode = vi.fn()
@@ -52,7 +53,13 @@ describe('AppsView', () => {
     })
   })
 
-  it('uses a hard navigation when clicking the logo', async () => {
+  afterEach(() => {
+    if (originalLocation) {
+      Object.defineProperty(window, 'location', originalLocation)
+    }
+  })
+
+  it('uses Next router when clicking the logo away from home', async () => {
     const assign = vi.fn()
     Object.defineProperty(window, 'location', {
       value: { assign },
@@ -72,7 +79,24 @@ describe('AppsView', () => {
     await user.click(getByAltText('apps'))
 
     expect(clearFilters).toHaveBeenCalledTimes(1)
-    expect(assign).toHaveBeenCalledWith('/')
+    expect(routerPush).toHaveBeenCalledWith('/')
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate when clicking the logo on home', async () => {
+    const user = userEvent.setup()
+    const { getByAltText } = render(
+      <AppsView
+        router={{ push: routerPush }}
+        searchManager={{ ...defaultSearchManager, isHomePage: true }}
+        isAuthenticated
+        toggleDisplayMode={toggleDisplayMode}
+      />
+    )
+
+    await user.click(getByAltText('apps'))
+
+    expect(clearFilters).toHaveBeenCalledTimes(1)
     expect(routerPush).not.toHaveBeenCalled()
   })
 

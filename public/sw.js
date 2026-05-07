@@ -1,6 +1,6 @@
 // Service Worker for DogeOW PWA
-const CACHE_NAME = 'dogeow-v1.0.1' // 增加版本号强制更新
-const urlsToCache = ['/', '/offline', '/480.png', '/80.png', '/favicon.ico']
+const CACHE_NAME = 'dogeow-v1.0.2'
+const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
 self.addEventListener('install', event => {
@@ -79,7 +79,26 @@ self.addEventListener('fetch', event => {
   }
 
   // 跳过非GET请求
-  if (request.mode !== 'navigate' && request.method !== 'GET') {
+  if (request.method !== 'GET') {
+    return
+  }
+
+  const url = new URL(request.url)
+
+  // Next.js 构建产物带 hash，由浏览器/CDN 管理缓存；SW 不接管，避免部署后旧 chunk 残留。
+  if (url.pathname.startsWith('/_next/')) {
+    return
+  }
+
+  // 页面导航必须网络优先且不写入缓存，避免旧 HTML/旧 JS 让站内 router 行为退化成整页加载。
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return caches.match('/offline').then(response => {
+          return response || new Response('Offline', { status: 503 })
+        })
+      })
+    )
     return
   }
 
@@ -130,36 +149,7 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // 对于其他请求，使用网络优先策略
-  event.respondWith(
-    fetch(request)
-      .then(response => {
-        // 如果网络请求成功，尝试缓存响应
-        if (response.status === 200 && response.type === 'basic') {
-          const responseClone = response.clone()
-          caches
-            .open(CACHE_NAME)
-            .then(cache => {
-              cache.put(request, responseClone).catch(() => {})
-            })
-            .catch(() => {})
-        }
-        return response
-      })
-      .catch(() => {
-        // 网络失败时，从缓存获取
-        return caches.match(request).then(response => {
-          if (response) {
-            return response
-          }
-          // 如果缓存中也没有，返回离线页面
-          if (request.mode === 'navigate') {
-            return caches.match('/offline')
-          }
-          return new Response('Network error', { status: 503 })
-        })
-      })
-  )
+  // 其他请求交给浏览器默认处理，避免缓存 API 响应、RSC payload 或页面数据。
 })
 
 // 监听来自页面的消息
