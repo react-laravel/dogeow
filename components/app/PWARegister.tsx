@@ -18,6 +18,10 @@ export function PWARegister() {
         .then(registration => {
           console.log('Service Worker 注册成功:', registration)
 
+          void registration.update().catch(error => {
+            console.warn('Service Worker 主动检查更新失败:', error)
+          })
+
           // 检查是否有等待中的更新
           if (registration.waiting) {
             console.log('检测到等待中的更新')
@@ -78,35 +82,38 @@ export function PWARegister() {
     try {
       setIsChecking(true)
 
-      if (navigator.serviceWorker.controller) {
-        console.log('发送跳过等待请求...')
+      const registration = await navigator.serviceWorker.getRegistration()
 
-        // 发送消息给Service Worker，请求跳过等待
-        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' })
+      if (!registration) {
+        console.log('没有可用的 Service Worker 注册')
+        setHasUpdate(false)
+        setIsChecking(false)
+        return
+      }
 
-        // 等待一小段时间让Service Worker处理
-        await new Promise(resolve => setTimeout(resolve, 100))
+      if (registration.waiting) {
+        console.log('向等待中的 Service Worker 发送跳过等待请求...')
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
 
-        // 检查Service Worker状态
-        const registration = await navigator.serviceWorker.getRegistration()
-        if (registration && registration.waiting) {
-          console.log('Service Worker 仍在等待，尝试强制激活')
-          // 如果还在等待，尝试强制激活
-          await registration.update()
-        }
-
-        // 清除更新状态
         setHasUpdate(false)
 
-        // 延迟刷新页面
         setTimeout(() => {
           console.log('刷新页面以应用更新')
           window.location.reload()
         }, 200)
-      } else {
-        console.log('没有活跃的Service Worker控制器')
-        setIsChecking(false)
+
+        return
       }
+
+      console.log('当前没有等待中的 Service Worker，主动拉取最新脚本')
+      await registration.update()
+
+      if (!navigator.serviceWorker.controller) {
+        console.log('没有活跃的 Service Worker 控制器')
+      }
+
+      setHasUpdate(false)
+      setIsChecking(false)
     } catch (error) {
       console.error('更新处理失败:', error)
       // 即使失败也要清除更新状态

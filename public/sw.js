@@ -1,6 +1,7 @@
 // Service Worker for DogeOW PWA
-const CACHE_NAME = 'dogeow-v1.0.1' // 增加版本号强制更新
-const urlsToCache = ['/', '/offline', '/480.png', '/80.png', '/favicon.ico']
+// Bump the cache namespace so previously cached app shells are discarded.
+const CACHE_NAME = 'dogeow-v1.0.2'
+const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
 self.addEventListener('install', event => {
@@ -62,6 +63,7 @@ self.addEventListener('activate', event => {
 // 获取事件 - 网络优先，缓存备用
 self.addEventListener('fetch', event => {
   const request = event.request
+  const requestUrl = new URL(request.url)
 
   // 跳过不支持的请求方案
   if (
@@ -80,6 +82,23 @@ self.addEventListener('fetch', event => {
 
   // 跳过非GET请求
   if (request.mode !== 'navigate' && request.method !== 'GET') {
+    return
+  }
+
+  // 让浏览器自己处理 Next 的构建产物，避免 SW 保留旧 chunk。
+  if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/_next/')) {
+    return
+  }
+
+  // 页面导航始终优先请求网络，离线时才回退到离线页。
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return caches.match('/offline').then(response => {
+          return response || new Response('Offline', { status: 503 })
+        })
+      })
+    )
     return
   }
 
