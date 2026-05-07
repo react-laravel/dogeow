@@ -91,17 +91,9 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // 页面导航：始终走网络，不缓存 HTML（HTML 内引用了带 hash 的 chunk，
-  // 部署后旧 HTML 会指向已被删除的 chunk，导致 ChunkLoadError 与整页刷新）。
-  // 仅在网络失败时回退到 /offline。
+  // 页面导航交给浏览器 / Next.js 自己处理，避免 Service Worker 把站内
+  // 路由切换变成 document fetch，表现得像硬刷新。
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match('/offline').then(response => {
-          return response || new Response('Offline', { status: 503 })
-        })
-      })
-    )
     return
   }
 
