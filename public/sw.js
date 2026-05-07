@@ -1,8 +1,6 @@
 // Service Worker for DogeOW PWA
-// Bump the cache namespace so previously cached app shells (and any HTML
-// pointing to deleted /_next chunks) are discarded on activation.
-const CACHE_NAME = 'dogeow-v0.0.4'
-const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
+const CACHE_NAME = 'dogeow-v1.0.1' // 增加版本号强制更新
+const urlsToCache = ['/', '/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
 self.addEventListener('install', event => {
@@ -64,7 +62,6 @@ self.addEventListener('activate', event => {
 // 获取事件 - 网络优先，缓存备用
 self.addEventListener('fetch', event => {
   const request = event.request
-  const requestUrl = new URL(request.url)
 
   // 跳过不支持的请求方案
   if (
@@ -83,17 +80,6 @@ self.addEventListener('fetch', event => {
 
   // 跳过非GET请求
   if (request.mode !== 'navigate' && request.method !== 'GET') {
-    return
-  }
-
-  // 让浏览器自己处理 Next 的构建产物，避免 SW 保留旧 chunk。
-  if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/_next/')) {
-    return
-  }
-
-  // 页面导航交给浏览器 / Next.js 自己处理，避免 Service Worker 把站内
-  // 路由切换变成 document fetch，表现得像硬刷新。
-  if (request.mode === 'navigate') {
     return
   }
 
@@ -145,14 +131,11 @@ self.addEventListener('fetch', event => {
   }
 
   // 对于其他请求，使用网络优先策略
-  // 注意：HTML / document 响应不写入缓存（避免缓存了引用旧 chunk 的 HTML）。
   event.respondWith(
     fetch(request)
       .then(response => {
-        const contentType = response.headers.get('content-type') || ''
-        const isHtml = request.destination === 'document' || contentType.includes('text/html')
-
-        if (response.status === 200 && response.type === 'basic' && !isHtml) {
+        // 如果网络请求成功，尝试缓存响应
+        if (response.status === 200 && response.type === 'basic') {
           const responseClone = response.clone()
           caches
             .open(CACHE_NAME)
@@ -164,10 +147,14 @@ self.addEventListener('fetch', event => {
         return response
       })
       .catch(() => {
-        // 网络失败时，从缓存获取（HTML 不会命中，因为我们不再缓存它）
+        // 网络失败时，从缓存获取
         return caches.match(request).then(response => {
           if (response) {
             return response
+          }
+          // 如果缓存中也没有，返回离线页面
+          if (request.mode === 'navigate') {
+            return caches.match('/offline')
           }
           return new Response('Network error', { status: 503 })
         })
