@@ -162,10 +162,22 @@ sync_static_assets_into_shared() {
   rsync -a "$static_dir/" "$SHARED_NEXT_STATIC_DIR/"
 }
 
+sync_release_history_static_assets() {
+  local release_dir
+
+  [ -d "$RELEASES_DIR" ] || return 0
+
+  while IFS= read -r release_dir; do
+    [ -n "$release_dir" ] || continue
+    sync_static_assets_into_shared "$release_dir/.next/static"
+  done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -name '[0-9]*' | sort)
+}
+
 prepare_release_static_assets() {
   local release_root="$1"
   local release_static="$release_root/.next/static"
 
+  sync_release_history_static_assets
   sync_static_assets_into_shared "$CURRENT_LINK/.next/static"
   sync_static_assets_into_shared "$APP_ROOT/.next/static"
   sync_static_assets_into_shared "$release_static"

@@ -106,6 +106,7 @@ set -euo pipefail
 shared_static="{{deploy_path}}/shared/.next-static"
 current_static="{{current_path}}/.next/static"
 release_static="{{release_path}}/.next/static"
+releases_root="{{deploy_path}}/releases"
 
 sync_static_dir() {
   local static_dir="$1"
@@ -124,6 +125,13 @@ sync_static_dir() {
 
   rsync -a "$static_dir/" "$shared_static/"
 }
+
+if [ -d "$releases_root" ]; then
+  while IFS= read -r release_dir; do
+    [ -n "$release_dir" ] || continue
+    sync_static_dir "$release_dir/.next/static"
+  done < <(find "$releases_root" -mindepth 1 -maxdepth 1 -type d -name '[0-9]*' | sort)
+fi
 
 sync_static_dir "$current_static"
 sync_static_dir "$release_static"
