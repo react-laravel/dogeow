@@ -142,6 +142,68 @@ ln -sfn "$shared_static" "$release_static"
 BASH);
 });
 
+desc('移除构建清单中不存在的 Next 静态资源引用');
+task('deploy:prune_missing_next_static_refs', function () {
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+
+release_root="{{release_path}}"
+static_root="$release_root/.next/static"
+server_root="$release_root/.next/server"
+
+[ -d "$server_root" ] || exit 0
+
+python3 - "$server_root" "$static_root" <<"PY"
+import json
+import pathlib
+import sys
+
+server_root = pathlib.Path(sys.argv[1])
+static_root = pathlib.Path(sys.argv[2])
+changed = 0
+removed = set()
+
+for manifest in server_root.glob("**/react-loadable-manifest.json"):
+    try:
+        data = json.loads(manifest.read_text())
+    except Exception:
+        continue
+
+    dirty = False
+    for entry in data.values():
+        if not isinstance(entry, dict):
+            continue
+        files = entry.get("files")
+        if not isinstance(files, list):
+            continue
+
+        kept = []
+        for file_name in files:
+            if (
+                isinstance(file_name, str)
+                and file_name.startswith("static/")
+                and not (static_root / file_name.removeprefix("static/")).exists()
+            ):
+                removed.add(file_name)
+                dirty = True
+                continue
+            kept.append(file_name)
+        entry["files"] = kept
+
+    if dirty:
+        manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+        changed += 1
+
+if removed:
+    print(f"[deploy] pruned {len(removed)} missing static refs from {changed} react-loadable manifests")
+    for file_name in sorted(removed):
+        print(f"[deploy] missing static ref: {file_name}")
+PY
+'
+BASH);
+});
+
 desc('重启 PM2 应用');
 task('pm2:restart', function () {
     run(<<<'BASH'
@@ -207,6 +269,7 @@ task('deploy', [
     'deploy:vendors',
     'deploy:build',
     'deploy:preserve_next_static',
+    'deploy:prune_missing_next_static_refs',
     'deploy:symlink',
     'pm2:restart',
     'deploy:healthcheck',
