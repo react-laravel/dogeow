@@ -30,6 +30,8 @@ set('workspace_root', __DIR__);
 set('writable_mode', 'chmod');
 set('writable_recursive', true);
 set('writable_chmod_mode', '0775');
+set('verify_base_url', getenv('VERIFY_BASE_URL') ?: 'https://next.dogeow.com');
+set('local_healthcheck_base_url', 'http://127.0.0.1:' . (getenv('PORT') ?: '3000'));
 
 // 跨版本共享目录（升级不会丢）
 add('shared_dirs', ['logs']);
@@ -95,8 +97,45 @@ task('deploy:build', function () {
     run('cd {{release_path}} && npm run build');
 });
 
-desc('重载 PM2 应用');
-task('pm2:reload', function () {
+desc('保留跨发布的 Next 静态资源');
+task('deploy:preserve_next_static', function () {
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+
+shared_static="{{deploy_path}}/shared/.next-static"
+current_static="{{current_path}}/.next/static"
+release_static="{{release_path}}/.next/static"
+
+sync_static_dir() {
+  local static_dir="$1"
+  local static_real
+  local shared_real
+
+  [ -d "$static_dir" ] || return 0
+  mkdir -p "$shared_static"
+
+  static_real="$(cd "$static_dir" && pwd -P)"
+  shared_real="$(cd "$shared_static" && pwd -P)"
+
+  if [ "$static_real" = "$shared_real" ]; then
+    return 0
+  fi
+
+  rsync -a "$static_dir/" "$shared_static/"
+}
+
+sync_static_dir "$current_static"
+sync_static_dir "$release_static"
+
+rm -rf "$release_static"
+ln -sfn "$shared_static" "$release_static"
+'
+BASH);
+});
+
+desc('重启 PM2 应用');
+task('pm2:restart', function () {
     run(<<<'BASH'
 bash -lc '
 app_name="{{pm2_app}}"
@@ -104,21 +143,42 @@ runtime_cwd="{{current_path}}"
 ecosystem_path="{{current_path}}/ecosystem.config.js"
 
 if pm2 info "$app_name" >/dev/null 2>&1; then
-  echo "[deploy] 重载 PM2 应用: $app_name"
+  echo "[deploy] 重启 PM2 应用: $app_name"
 
-  if PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 reload "$ecosystem_path" --only "$app_name" --update-env; then
+  if PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
     pm2 status
     exit 0
   fi
 
-  echo "[deploy] PM2 reload 失败，为避免中断线上服务，终止本次部署"
-  exit 1
-else
+  echo "[deploy] PM2 restart 失败，尝试重建应用进程表"
+  pm2 delete "$app_name" || true
+fi
+
+if ! pm2 info "$app_name" >/dev/null 2>&1; then
   echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
 fi
 
 PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 start "$ecosystem_path" --only "$app_name" --update-env
 pm2 status
+'
+BASH);
+});
+
+desc('校验页面引用的 Next 静态资源可访问');
+task('deploy:healthcheck', function () {
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+
+verify_script="{{current_path}}/scripts/verify-next-assets.sh"
+local_base_url="{{local_healthcheck_base_url}}"
+public_base_url="{{verify_base_url}}"
+
+bash "$verify_script" "$local_base_url" /about
+
+if [ -n "$public_base_url" ]; then
+  bash "$verify_script" "$public_base_url" /about
+fi
 '
 BASH);
 });
@@ -138,8 +198,10 @@ task('deploy', [
     'deploy:writable',
     'deploy:vendors',
     'deploy:build',
+    'deploy:preserve_next_static',
     'deploy:symlink',
-    'pm2:reload',
+    'pm2:restart',
+    'deploy:healthcheck',
     'deploy:unlock',
     'deploy:cleanup',
     'deploy:success',
@@ -149,4 +211,4 @@ task('deploy', [
 // Hooks
 // =====================
 after('deploy:failed', 'deploy:unlock');
-after('rollback', 'pm2:reload');
+after('rollback', 'pm2:restart');

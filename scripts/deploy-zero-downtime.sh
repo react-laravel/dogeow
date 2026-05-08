@@ -22,7 +22,11 @@ fi
 
 RELEASES_DIR="${APP_ROOT}/releases"
 CURRENT_LINK="${APP_ROOT}/current"
+SHARED_NEXT_STATIC_DIR="${APP_ROOT}/shared/.next-static"
 NODE_VERSION="${NODE_VERSION:-24}"
+APP_PORT="${PORT:-3000}"
+
+STATIC_HEALTHCHECK_ROUTES=(/about)
 
 RUN_ANALYZE="${ANALYZE:-}"
 
@@ -140,20 +144,73 @@ copy_deploy_snapshot() {
   done < <(find "$APP_ROOT" -maxdepth 1 -type f \( -name '.env*' -o -name '.npmrc' \) -print0)
 }
 
+sync_static_assets_into_shared() {
+  local static_dir="$1"
+  local static_real
+  local shared_real
+
+  [ -d "$static_dir" ] || return 0
+
+  mkdir -p "$SHARED_NEXT_STATIC_DIR"
+  static_real="$(cd "$static_dir" && pwd -P)"
+  shared_real="$(cd "$SHARED_NEXT_STATIC_DIR" && pwd -P)"
+
+  if [ "$static_real" = "$shared_real" ]; then
+    return 0
+  fi
+
+  rsync -a "$static_dir/" "$SHARED_NEXT_STATIC_DIR/"
+}
+
+prepare_release_static_assets() {
+  local release_root="$1"
+  local release_static="$release_root/.next/static"
+
+  sync_static_assets_into_shared "$CURRENT_LINK/.next/static"
+  sync_static_assets_into_shared "$APP_ROOT/.next/static"
+  sync_static_assets_into_shared "$release_static"
+
+  rm -rf "$release_static"
+  ln -sfn "$SHARED_NEXT_STATIC_DIR" "$release_static"
+}
+
+run_static_asset_health_checks() {
+  local runtime_cwd="$1"
+  local verify_script="$runtime_cwd/scripts/verify-next-assets.sh"
+  local local_base_url="http://127.0.0.1:${APP_PORT}"
+
+  if ! command -v curl >/dev/null 2>&1; then
+    log "跳过静态资源健康检查：缺少 curl"
+    return 0
+  fi
+
+  if [ ! -f "$verify_script" ]; then
+    die "缺少静态资源校验脚本：$verify_script"
+  fi
+
+  log "校验本机 Next 服务静态资源引用：$local_base_url"
+  bash "$verify_script" "$local_base_url" "${STATIC_HEALTHCHECK_ROUTES[@]}"
+
+  if [ -n "${VERIFY_BASE_URL:-}" ]; then
+    log "校验对外站点静态资源引用：$VERIFY_BASE_URL"
+    bash "$verify_script" "$VERIFY_BASE_URL" "${STATIC_HEALTHCHECK_ROUTES[@]}"
+  fi
+}
+
 sync_pm2_app() {
   local runtime_cwd="$1"
   local app_name="dogeow-nextjs"
   local ecosystem_path="${APP_ROOT}/ecosystem.config.js"
 
   if pm2 info "$app_name" >/dev/null 2>&1; then
-    log "重载 PM2 应用: $app_name"
+    log "重启 PM2 应用: $app_name"
 
-    # 优先按 ecosystem 配置执行 reload，保证 cwd / env / instances 与配置同步。
-    if PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 reload "$ecosystem_path" --only "$app_name" --update-env; then
+    # 单实例 fork 模式下使用硬重启，避免旧进程继续持有上一版构建清单。
+    if PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
       return 0
     fi
 
-    log "PM2 reload 失败，尝试重建应用进程表"
+    log "PM2 restart 失败，尝试重建应用进程表"
     pm2 delete "$app_name" || true
   else
     log "PM2 中未找到应用，准备首次启动: $app_name"
@@ -164,6 +221,7 @@ sync_pm2_app() {
 
 require_command git
 require_command tar
+require_command rsync
 
 if [ "$AUTO_DETECTED_APP_ROOT" -eq 1 ]; then
   log "自动识别 APP_ROOT：$APP_ROOT"
@@ -187,6 +245,11 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
 
   [ -d "$RELEASES_DIR" ] || mkdir -p "$RELEASES_DIR"
   STAGING="${RELEASES_DIR}/.staging.$$"
+  PREVIOUS_RELEASE=""
+
+  if [ -L "$CURRENT_LINK" ]; then
+    PREVIOUS_RELEASE="$(readlink "$CURRENT_LINK")"
+  fi
 
   # 基于当前工作树生成新的发布快照，避免把旧 release 的陈旧源码带入新构建。
   log "构建到临时目录: $STAGING"
@@ -201,6 +264,8 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
     npx next build
   fi
 
+  prepare_release_static_assets "$STAGING"
+
   # 构建完成后再生成时间戳并重命名，原子切换 current
   cd "$APP_ROOT"
   NEW_RELEASE="${RELEASES_DIR}/$(date +%Y%m%d%H%M%S)"
@@ -214,6 +279,17 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
   rm -rf "${RELEASES_DIR}"/.staging.* 2>/dev/null || true
 
   sync_pm2_app "$CURRENT_LINK"
+
+  if ! run_static_asset_health_checks "$CURRENT_LINK"; then
+    if [ -n "$PREVIOUS_RELEASE" ] && [ -d "$PREVIOUS_RELEASE" ]; then
+      log "健康检查失败，回滚 current -> $PREVIOUS_RELEASE"
+      ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"
+      sync_pm2_app "$CURRENT_LINK"
+    fi
+
+    die "部署后静态资源健康检查失败"
+  fi
+
   pm2 status
   log "完成（零停机）"
   exit 0
@@ -233,6 +309,8 @@ else
   npx next build
 fi
 
+prepare_release_static_assets "$BUILD_STAGING"
+
 # 原子替换 .next：先放到 .next.new，再重命名
 log "原子替换 .next"
 rsync -a --delete "$BUILD_STAGING/.next/" "$APP_ROOT/.next.new/"
@@ -240,8 +318,23 @@ cd "$APP_ROOT"
 [ -d ".next.old" ] && rm -rf ".next.old"
 [ -d ".next" ] && mv .next .next.old
 mv .next.new .next
-rm -rf .next.old
 
 sync_pm2_app "$APP_ROOT"
+
+if ! run_static_asset_health_checks "$APP_ROOT"; then
+  if [ -d ".next.old" ]; then
+    log "健康检查失败，回滚 .next.old"
+    rm -rf .next.failed 2>/dev/null || true
+    mv .next .next.failed
+    mv .next.old .next
+    sync_pm2_app "$APP_ROOT"
+    rm -rf .next.failed
+  fi
+
+  die "部署后静态资源健康检查失败"
+fi
+
+rm -rf .next.old
+
 pm2 status
 log "完成"
