@@ -2,6 +2,45 @@
 
 import { useEffect, useState } from 'react'
 
+function isLocalhostHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+}
+
+function shouldDisableServiceWorker() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    return true
+  }
+
+  return process.env.NODE_ENV !== 'test' && isLocalhostHost(window.location.hostname)
+}
+
+async function clearDogeowCaches() {
+  if (typeof window === 'undefined' || !('caches' in window)) {
+    return
+  }
+
+  const cacheKeys = await caches.keys()
+  await Promise.all(
+    cacheKeys.filter(key => key.startsWith('dogeow-')).map(key => caches.delete(key))
+  )
+}
+
+async function unregisterServiceWorkers() {
+  if (
+    !('serviceWorker' in navigator) ||
+    typeof navigator.serviceWorker.getRegistrations !== 'function'
+  ) {
+    return
+  }
+
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  await Promise.all(registrations.map(registration => registration.unregister()))
+}
+
 export function PWARegister() {
   const [hasUpdate, setHasUpdate] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
@@ -9,6 +48,17 @@ export function PWARegister() {
   useEffect(() => {
     // 检查浏览器是否支持 Service Worker
     if ('serviceWorker' in navigator) {
+      if (shouldDisableServiceWorker()) {
+        console.log('开发环境/本地环境禁用 Service Worker，正在清理现有注册与缓存')
+        void unregisterServiceWorkers().catch(error => {
+          console.warn('清理 Service Worker 注册失败:', error)
+        })
+        void clearDogeowCaches().catch(error => {
+          console.warn('清理 DogeOW 缓存失败:', error)
+        })
+        return
+      }
+
       // 注册 Service Worker
       navigator.serviceWorker
         .register('/sw.js', {
