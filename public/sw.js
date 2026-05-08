@@ -1,5 +1,7 @@
 // Service Worker for DogeOW PWA
-const CACHE_NAME = 'dogeow-v1.0.2'
+// Bump this whenever SW fetch behavior changes. PWARegister also appends this
+// version as a query string to bypass stale CDN copies of /sw.js.
+const CACHE_NAME = 'dogeow-v1.0.3'
 const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
@@ -62,6 +64,7 @@ self.addEventListener('activate', event => {
 // 获取事件 - 网络优先，缓存备用
 self.addEventListener('fetch', event => {
   const request = event.request
+  const requestUrl = new URL(request.url)
 
   // 跳过不支持的请求方案
   if (
@@ -79,26 +82,18 @@ self.addEventListener('fetch', event => {
   }
 
   // 跳过非GET请求
-  if (request.method !== 'GET') {
+  if (request.mode !== 'navigate' && request.method !== 'GET') {
     return
   }
 
-  const url = new URL(request.url)
-
-  // Next.js 构建产物带 hash，由浏览器/CDN 管理缓存；SW 不接管，避免部署后旧 chunk 残留。
-  if (url.pathname.startsWith('/_next/')) {
+  // 让浏览器自己处理 Next 的构建产物，避免 SW 保留旧 chunk。
+  if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/_next/')) {
     return
   }
 
-  // 页面导航必须网络优先且不写入缓存，避免旧 HTML/旧 JS 让站内 router 行为退化成整页加载。
+  // 页面导航交给浏览器 / Next.js 自己处理，避免 Service Worker 把站内
+  // 路由切换变成 document fetch，表现得像硬刷新。
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match('/offline').then(response => {
-          return response || new Response('Offline', { status: 503 })
-        })
-      })
-    )
     return
   }
 

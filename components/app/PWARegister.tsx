@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
+const SERVICE_WORKER_URL = '/sw.js?v=dogeow-v1.0.3'
+
 function isLocalhostHost(hostname: string) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
 }
@@ -61,7 +63,7 @@ export function PWARegister() {
 
       // 注册 Service Worker
       navigator.serviceWorker
-        .register('/sw.js', {
+        .register(SERVICE_WORKER_URL, {
           scope: '/',
           updateViaCache: 'none',
         })
