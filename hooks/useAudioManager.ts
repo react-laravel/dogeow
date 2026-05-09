@@ -11,6 +11,7 @@ export const useAudioManager = () => {
     volume: musicVolume,
     isPlaying: storeIsPlaying,
     playMode,
+    audioPlaybackMode,
     setCurrentTrack,
     setAvailableTracks,
     setIsPlaying: setStoreIsPlaying,
@@ -46,7 +47,7 @@ export const useAudioManager = () => {
   )
 
   // Audio visualizer hook
-  const visualizer = useAudioVisualizer({ volume, isMuted })
+  const visualizer = useAudioVisualizer({ volume, isMuted, playbackMode: audioPlaybackMode })
 
   // Initialize AudioContext from visualizer
   const initAudioContext = useCallback(

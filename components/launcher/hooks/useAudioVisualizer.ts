@@ -4,11 +4,13 @@
  */
 
 import { useRef, useCallback, useState } from 'react'
+import type { AudioPlaybackMode } from '@/stores/musicStore'
 import type { AudioVisualizerSourceNode } from './types'
 
 interface UseAudioVisualizerOptions {
   volume: number
   isMuted: boolean
+  playbackMode: AudioPlaybackMode
 }
 
 interface UseAudioVisualizerReturn {
@@ -25,6 +27,37 @@ interface AudioSourceSetup {
   shouldRouteToDestination: boolean
 }
 
+function supportsCaptureStream(audioElement: HTMLAudioElement): boolean {
+  const elementWithCaptureStream = audioElement as HTMLMediaElement & {
+    captureStream?: () => MediaStream
+  }
+
+  return typeof elementWithCaptureStream.captureStream === 'function'
+}
+
+function isIOSLikeBrowser(): boolean {
+  const platform = navigator.platform ?? ''
+  const userAgent = navigator.userAgent ?? ''
+  const maxTouchPoints = navigator.maxTouchPoints ?? 0
+
+  return /iPad|iPhone|iPod/i.test(userAgent) || (platform === 'MacIntel' && maxTouchPoints > 1)
+}
+
+function shouldBypassWebAudio(
+  audioElement: HTMLAudioElement,
+  playbackMode: AudioPlaybackMode
+): boolean {
+  if (playbackMode === 'native') {
+    return true
+  }
+
+  if (playbackMode === 'visualizer') {
+    return false
+  }
+
+  return isIOSLikeBrowser() && !supportsCaptureStream(audioElement)
+}
+
 function getAudioContextClass(): typeof AudioContext | undefined {
   const win = window as typeof window & { webkitAudioContext?: typeof AudioContext }
   return win.AudioContext ?? win.webkitAudioContext
@@ -37,10 +70,11 @@ function createVisualizerSource(
   const elementWithCaptureStream = audioElement as HTMLMediaElement & {
     captureStream?: () => MediaStream
   }
+  const captureStream = elementWithCaptureStream.captureStream
 
-  if (typeof elementWithCaptureStream.captureStream === 'function') {
+  if (typeof captureStream === 'function') {
     try {
-      const stream = elementWithCaptureStream.captureStream()
+      const stream = captureStream.call(elementWithCaptureStream)
 
       return {
         source: audioContext.createMediaStreamSource(stream),
@@ -58,7 +92,7 @@ function createVisualizerSource(
 }
 
 export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudioVisualizerReturn {
-  const { isMuted } = options
+  const { isMuted, playbackMode } = options
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const shouldUseWebAudioRef = useRef<boolean | null>(null)
@@ -87,6 +121,9 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   const initAudioContext = useCallback(
     (audioElement: HTMLAudioElement | null) => {
       if (!audioElement || audioContextRef.current) return
+      if (shouldBypassWebAudio(audioElement, playbackMode)) {
+        return
+      }
       if (!shouldUseWebAudio()) return
 
       try {
@@ -121,7 +158,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
         gainNodeRef.current = gainNode
         setAnalyserNode(analyser)
 
-        if (audioContext.state === 'suspended') {
+        if (audioContext.state !== 'running') {
           audioContext.resume().catch(err => {
             console.warn('AudioContext resume 失败:', err)
           })
@@ -130,7 +167,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
         console.warn('Web Audio API 初始化失败:', error)
       }
     },
-    [isMuted, shouldUseWebAudio]
+    [isMuted, playbackMode, shouldUseWebAudio]
   )
 
   return {

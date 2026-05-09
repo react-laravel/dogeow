@@ -11,12 +11,20 @@ import {
   Smartphone,
   Bell,
   BookOpen,
+  Play,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SettingsDivider } from './SettingsDivider'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useTranslation } from '@/hooks/useTranslation'
 import { PROJECT_COVER_MODE_OPTIONS, type ProjectCoverMode } from '@/stores/projectCoverStore'
+import { useMusicStore, type AudioPlaybackMode } from '@/stores/musicStore'
+
+const AUDIO_PLAYBACK_MODE_OPTIONS: Array<{ value: AudioPlaybackMode; label: string }> = [
+  { value: 'auto', label: '自动' },
+  { value: 'visualizer', label: '可视化' },
+  { value: 'native', label: '兼容' },
+]
 
 interface MainViewProps {
   onNavigateToBackground: () => void
@@ -39,6 +47,7 @@ export function MainView({
 }: MainViewProps) {
   const { t } = useTranslation()
   const { siteLayout, setSiteLayout } = useLayoutStore()
+  const { audioPlaybackMode, setAudioPlaybackMode } = useMusicStore()
 
   return (
     <>
@@ -161,6 +170,29 @@ export function MainView({
           ))}
         </div>
       </div>
+
+      <div className="flex min-h-9 shrink-0 items-center gap-2 px-3">
+        <Play className="h-4 w-4" aria-hidden />
+        <span className="text-sm font-medium">播放</span>
+        <div className="flex flex-1 gap-1">
+          {AUDIO_PLAYBACK_MODE_OPTIONS.map(option => (
+            <Button
+              key={option.value}
+              type="button"
+              variant={audioPlaybackMode === option.value ? 'default' : 'ghost'}
+              size="sm"
+              className="h-8 flex-1 px-2 text-xs"
+              onClick={() => setAudioPlaybackMode(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <p className="px-3 text-xs text-muted-foreground">
+        自动：推荐；可视化：尽量保留频谱效果；兼容：关闭可视化，优先保证锁屏和后台播放稳定。
+      </p>
     </>
   )
 }

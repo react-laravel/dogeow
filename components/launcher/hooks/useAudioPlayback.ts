@@ -17,6 +17,12 @@ import type {
 
 // Re-export for backwards compatibility
 
+function shouldResumeAudioContext(audioContext: AudioContext | null): audioContext is AudioContext {
+  return Boolean(
+    audioContext && audioContext.state !== 'running' && audioContext.state !== 'closed'
+  )
+}
+
 export function useAudioPlayback(options: AudioControllerOptions): AudioControllerResult {
   const {
     playback,
@@ -125,7 +131,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
           await new Promise(resolve => setTimeout(resolve, 50))
 
           const ctx = audioContextRef.current as AudioContext | null
-          if (ctx && ctx.state === 'suspended') {
+          if (shouldResumeAudioContext(ctx)) {
             await ctx.resume()
           }
 
@@ -145,7 +151,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       }
 
       if (audioContextRef.current) {
-        if (audioContextRef.current.state === 'suspended') {
+        if (shouldResumeAudioContext(audioContextRef.current)) {
           try {
             await audioContextRef.current.resume()
           } catch (err) {
@@ -299,19 +305,6 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     }
   }, [volume, isMuted, audioRef, gainNodeRef])
 
-  // Listen for audio ended
-  useEffect(() => {
-    const audio = audioRef.current
-
-    const handleAudioEnded = () => {
-      setCurrentTime(0)
-      switchTrack('next')
-    }
-
-    audio?.addEventListener('ended', handleAudioEnded)
-    return () => audio?.removeEventListener('ended', handleAudioEnded)
-  }, [setCurrentTime, switchTrack, audioRef])
-
   // Sync real playback state
   useEffect(() => {
     const audio = audioRef.current
@@ -359,7 +352,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       if (wasPlayingBeforeHiddenRef.current && isPlaying) {
         wasPlayingBeforeHiddenRef.current = false
         try {
-          if (audioContextRef.current?.state === 'suspended') {
+          if (shouldResumeAudioContext(audioContextRef.current)) {
             await audioContextRef.current.resume()
           }
           // 只有在音频实际暂停状态时才尝试播放
