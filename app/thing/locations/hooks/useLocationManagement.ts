@@ -10,29 +10,14 @@ import {
   deleteSpot,
 } from '../../services/api'
 import { post } from '@/lib/api'
-import { LocationTreeResponse } from '@/app/thing/types'
+import type { Area, LocationTreeResponse, Room, Spot } from '@/app/thing/types'
 import { getLocationTypeText } from '../constants'
+import { normalizeLocationTreeResponse } from '../utils/normalizeLocationTreeResponse'
 import { useTranslation } from '@/hooks/useTranslation'
 
 // 定义类型
 export type LocationType = 'area' | 'room' | 'spot'
-export type Area = { id: number; name: string; is_default?: boolean }
-export type Room = {
-  id: number
-  name: string
-  area_id: number
-  area?: { id: number; name: string }
-}
-export type Spot = {
-  id: number
-  name: string
-  room_id: number
-  room?: {
-    id: number
-    name: string
-    area?: { id: number; name: string }
-  }
-}
+export type { Area, Room, Spot }
 
 export const useLocationManagement = () => {
   const { t } = useTranslation()
@@ -40,9 +25,9 @@ export const useLocationManagement = () => {
   const { data: locationData, mutate: refreshLocations } = useLocations()
 
   // 从统一接口中提取各类位置数据
-  const areas = (locationData as LocationTreeResponse)?.areas ?? []
-  const rooms = (locationData as LocationTreeResponse)?.rooms ?? []
-  const spots = (locationData as LocationTreeResponse)?.spots ?? []
+  const { areas, rooms, spots } = normalizeLocationTreeResponse(
+    (locationData as LocationTreeResponse | undefined) ?? undefined
+  )
 
   // 统一的刷新函数
   const refreshAreas = refreshLocations

@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { MusicTrack } from '@/stores/musicStore'
+
+const PAUSED_PLAYBACK_STATE_DELAY_MS = 1500
 
 interface UseMediaSessionProps {
   currentTrack: string
@@ -18,13 +20,65 @@ export function useMediaSession({
   switchToPrevTrack,
   switchToNextTrack,
 }: UseMediaSessionProps) {
-  // 使用 ref 跟踪上次播放状态，避免不必要的更新
-  const prevIsPlayingRef = useRef(isPlaying)
   const isPlayingRef = useRef(isPlaying)
+  const pausePlaybackStateTimeoutRef = useRef<number | null>(null)
+  const backgroundTransitionAtRef = useRef<number | null>(null)
+
+  const clearPendingPausePlaybackState = useCallback(() => {
+    if (pausePlaybackStateTimeoutRef.current !== null) {
+      window.clearTimeout(pausePlaybackStateTimeoutRef.current)
+      pausePlaybackStateTimeoutRef.current = null
+    }
+  }, [])
+
+  const markBackgroundTransition = useCallback(() => {
+    backgroundTransitionAtRef.current = Date.now()
+  }, [])
+
+  const isDuringBackgroundTransition = useCallback(() => {
+    const startedAt = backgroundTransitionAtRef.current
+
+    return startedAt !== null && Date.now() - startedAt < PAUSED_PLAYBACK_STATE_DELAY_MS
+  }, [])
+
+  const syncPlaybackState = useCallback((playbackState: MediaSessionPlaybackState) => {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession) return
+
+    if (navigator.mediaSession.playbackState !== playbackState) {
+      navigator.mediaSession.playbackState = playbackState
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        markBackgroundTransition()
+      }
+    }
+
+    const handleWindowBlur = () => {
+      markBackgroundTransition()
+    }
+
+    const handlePageHide = () => {
+      markBackgroundTransition()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('pagehide', handlePageHide)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('pagehide', handlePageHide)
+      clearPendingPausePlaybackState()
+    }
+  }, [clearPendingPausePlaybackState, markBackgroundTransition])
 
   // Media Session API 支持
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return
+    if (!('mediaSession' in navigator) || !navigator.mediaSession) return
 
     isPlayingRef.current = isPlaying
 
@@ -43,67 +97,76 @@ export function useMediaSession({
       }
     }
 
-    // 首次和变更时都同步 playbackState
-    if (prevIsPlayingRef.current !== isPlaying) {
-      prevIsPlayingRef.current = isPlaying
+    clearPendingPausePlaybackState()
+
+    if (isPlaying) {
+      syncPlaybackState('playing')
+      return
     }
-    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
-  }, [currentTrack, availableTracks, isPlaying])
+
+    const shouldDelayPausePlaybackState =
+      (typeof document !== 'undefined' && document.hidden) || isDuringBackgroundTransition()
+
+    if (shouldDelayPausePlaybackState) {
+      pausePlaybackStateTimeoutRef.current = window.setTimeout(() => {
+        pausePlaybackStateTimeoutRef.current = null
+
+        if (!isPlayingRef.current) {
+          syncPlaybackState('paused')
+        }
+      }, PAUSED_PLAYBACK_STATE_DELAY_MS)
+
+      return
+    }
+
+    syncPlaybackState('paused')
+  }, [
+    availableTracks,
+    clearPendingPausePlaybackState,
+    currentTrack,
+    isDuringBackgroundTransition,
+    isPlaying,
+    syncPlaybackState,
+  ])
 
   // 设置动作处理程序（只在挂载时设置一次）
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return
+    if (!('mediaSession' in navigator) || !navigator.mediaSession) return
 
-    navigator.mediaSession.setActionHandler('play', () => {
+    const mediaSession = navigator.mediaSession
+
+    mediaSession.setActionHandler('play', () => {
       if (!isPlayingRef.current) {
         togglePlay()
       }
     })
 
-    navigator.mediaSession.setActionHandler('pause', () => {
+    mediaSession.setActionHandler('pause', () => {
       if (isPlayingRef.current) {
         togglePlay()
       }
     })
 
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
+    mediaSession.setActionHandler('previoustrack', () => {
       switchToPrevTrack()
     })
 
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
+    mediaSession.setActionHandler('nexttrack', () => {
       switchToNextTrack()
     })
 
     // 清理函数
     return () => {
-      navigator.mediaSession.setActionHandler('play', null)
-      navigator.mediaSession.setActionHandler('pause', null)
-      navigator.mediaSession.setActionHandler('previoustrack', null)
-      navigator.mediaSession.setActionHandler('nexttrack', null)
+      mediaSession.setActionHandler('play', null)
+      mediaSession.setActionHandler('pause', null)
+      mediaSession.setActionHandler('previoustrack', null)
+      mediaSession.setActionHandler('nexttrack', null)
     }
   }, [togglePlay, switchToPrevTrack, switchToNextTrack])
 
   // 监听系统媒体控制事件
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return
-
-    const handleAction = (action: string) => {
-      switch (action) {
-        case 'play':
-        case 'pause':
-          togglePlay()
-          break
-        case 'previoustrack':
-          switchToPrevTrack()
-          break
-        case 'nexttrack':
-          switchToNextTrack()
-          break
-      }
-    }
-
-    // 这些已经通过 setActionHandler 处理了
-    // 但可以添加额外的事件监听
+    if (!('mediaSession' in navigator) || !navigator.mediaSession) return
 
     return () => {}
   }, [togglePlay, switchToPrevTrack, switchToNextTrack])
