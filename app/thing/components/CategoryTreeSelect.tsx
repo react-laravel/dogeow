@@ -116,6 +116,9 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
           parent.children?.map(child => ({
             value: `child:${child.id}`,
             label: `${parent.name} / ${child.name}`,
+            displayLabel: child.name,
+            searchKeywords: [parent.name, child.name, `${parent.name} / ${child.name}`],
+            indentLevel: 1,
             type: 'child' as const,
             id: child.id,
             parentId: parent.id,

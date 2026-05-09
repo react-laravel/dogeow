@@ -21,23 +21,6 @@ vi.mock('../filters/DateRangePicker', () => ({
   ),
 }))
 
-vi.mock('@/components/ui/select', () => ({
-  Select: ({ value, onValueChange, children }: any) => (
-    <div data-testid={`select-${String(value)}`}>
-      <button
-        type="button"
-        aria-label={`pick-${String(value)}-1`}
-        onClick={() => onValueChange?.('1')}
-      />
-      {children}
-    </div>
-  ),
-  SelectTrigger: ({ children }: any) => <div>{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div>{children}</div>,
-  SelectItem: ({ children }: any) => <div>{children}</div>,
-}))
-
 describe('DetailedFiltersTab', () => {
   it('should handle date/price/select callbacks and filter room/spot options', async () => {
     const user = userEvent.setup()
@@ -101,12 +84,12 @@ describe('DetailedFiltersTab', () => {
     expect(onPriceFromChange).toHaveBeenCalled()
     expect(onPriceToChange).toHaveBeenCalled()
 
-    await user.click(screen.getByLabelText('pick-1-1'))
-    await user.click(screen.getByLabelText('pick-11-1'))
-    await user.click(screen.getByLabelText('pick-111-1'))
-    expect(onAreaIdChange).toHaveBeenCalledWith('1')
-    expect(onRoomIdChange).toHaveBeenCalledWith('1')
-    expect(onSpotIdChange).toHaveBeenCalledWith('1')
+    await user.selectOptions(screen.getByRole('combobox', { name: '区域' }), '2')
+    await user.selectOptions(screen.getByRole('combobox', { name: '房间' }), 'all')
+    await user.selectOptions(screen.getByRole('combobox', { name: '位置' }), 'all')
+    expect(onAreaIdChange).toHaveBeenCalledWith('2')
+    expect(onRoomIdChange).toHaveBeenCalledWith('all')
+    expect(onSpotIdChange).toHaveBeenCalledWith('all')
 
     expect(screen.getByText('客厅房间')).toBeInTheDocument()
     expect(screen.queryByText('卧室房间')).not.toBeInTheDocument()
@@ -171,9 +154,9 @@ describe('DetailedFiltersTab', () => {
       />
     )
 
-    expect(screen.getByTestId('select-1')).toBeInTheDocument()
-    expect(screen.getByTestId('select-11')).toBeInTheDocument()
-    expect(screen.getByTestId('select-111')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '区域' })).toHaveValue('1')
+    expect(screen.getByRole('combobox', { name: '房间' })).toHaveValue('11')
+    expect(screen.getByRole('combobox', { name: '位置' })).toHaveValue('111')
   })
 
   it('handles nullable filter ids with optional area/room ids in options', () => {

@@ -43,11 +43,11 @@ describe('mathUtils', () => {
       expect(ensureEven(Number.MAX_SAFE_INTEGER - 1)).toBe(Number.MAX_SAFE_INTEGER - 1) // Even
     })
 
-    it('should handle decimal numbers (treating them as integers)', () => {
-      // Note: The function uses modulo operator which works with decimals
-      expect(ensureEven(2.5)).toBe(1.5) // 2.5 % 2 = 0.5, so it's treated as odd
-      expect(ensureEven(4.0)).toBe(4.0) // 4.0 % 2 = 0, so it's treated as even
-      expect(ensureEven(3.7)).toBe(2.7) // 3.7 % 2 = 1.7, so it's treated as odd
+    it('should floor decimal numbers and keep them even', () => {
+      expect(ensureEven(2.5)).toBe(2)
+      expect(ensureEven(4.0)).toBe(4)
+      expect(ensureEven(3.7)).toBe(2)
+      expect(ensureEven(110.66666666666666)).toBe(110)
     })
 
     it('should handle edge case of zero', () => {

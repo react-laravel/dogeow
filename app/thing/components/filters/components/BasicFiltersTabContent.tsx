@@ -1,21 +1,16 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { TagSelector, Tag } from '@/components/ui/tag-selector'
-import CategoryTreeSelect, { CategorySelection } from '../../CategoryTreeSelect'
+import type { CategorySelection } from '../../CategoryTreeSelect'
 import type { FilterState } from '../types'
+import type { Category } from '@/app/thing/types'
 
 interface BasicFiltersTabContentProps {
   filters: FilterState
   selectedCategory: CategorySelection | undefined
+  categories: Category[]
   tags: Tag[]
   onNameChange: (value: string) => void
   onDescriptionChange: (value: string) => void
@@ -29,6 +24,7 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
   ({
     filters,
     selectedCategory,
+    categories,
     tags,
     onNameChange,
     onDescriptionChange,
@@ -37,6 +33,56 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
     onTagsChange,
     onCategorySelect,
   }) => {
+    const categoryOptions = useMemo(() => {
+      const parentCategories = categories.filter(category => !category.parent_id)
+      const childCategories = categories.filter(category => category.parent_id)
+
+      return [
+        { value: 'none', label: '全部分类', type: 'parent' as const, id: null },
+        ...parentCategories.flatMap(parent => {
+          const children = childCategories
+            .filter(child => child.parent_id === parent.id)
+            .map(child => ({
+              value: `child:${child.id}`,
+              label: `${parent.name} / ${child.name}`,
+              optionLabel: `└ ${child.name}`,
+              type: 'child' as const,
+              id: child.id,
+            }))
+
+          return [
+            {
+              value: `parent:${parent.id}`,
+              label: parent.name,
+              type: 'parent' as const,
+              id: parent.id,
+            },
+            ...children,
+          ]
+        }),
+      ]
+    }, [categories])
+
+    const selectedCategoryValue = selectedCategory
+      ? `${selectedCategory.type}:${selectedCategory.id}`
+      : 'none'
+    const categoryValue = categoryOptions.some(option => option.value === selectedCategoryValue)
+      ? selectedCategoryValue
+      : 'none'
+
+    const selectClassName =
+      'bg-background border-input text-foreground h-11 w-full rounded-md border px-3 text-sm focus:border-primary focus:ring-primary'
+
+    const handleCategoryChange = (value: string) => {
+      if (value === 'none') {
+        onCategorySelect('parent', null)
+        return
+      }
+
+      const [type, id] = value.split(':')
+      onCategorySelect(type as 'parent' | 'child', Number(id))
+    }
+
     return (
       <div className="space-y-6">
         <div className="space-y-3">
@@ -60,12 +106,18 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
         {/* 分类筛选：父子级联，可清空 */}
         <div className="space-y-3">
           <Label className="text-base font-medium">分类</Label>
-          <CategoryTreeSelect
-            onSelect={onCategorySelect}
-            selectedCategory={selectedCategory}
-            placeholder="全部分类"
-            noneOptionLabel="全部分类"
-          />
+          <select
+            value={categoryValue}
+            onChange={event => handleCategoryChange(event.target.value)}
+            className={selectClassName}
+            aria-label="分类"
+          >
+            {categoryOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {'optionLabel' in option ? option.optionLabel : option.label}
+              </option>
+            ))}
+          </select>
           <Button
             type="button"
             variant="ghost"
@@ -81,37 +133,36 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
         <div className="space-y-3">
           <Label className="text-base font-medium">状态</Label>
           <div className="bg-muted border-border rounded-lg border px-2 py-1">
-            <Select value={filters.status} onValueChange={onStatusChange}>
-              <SelectTrigger className="bg-background text-foreground h-11 border-none">
-                <SelectValue placeholder="选择状态" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground border">
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="active">使用中</SelectItem>
-                <SelectItem value="archived">已归档</SelectItem>
-                <SelectItem value="expired">已过期</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              value={filters.status || 'all'}
+              onChange={event => onStatusChange(event.target.value)}
+              className={`${selectClassName} border-none`}
+              aria-label="状态"
+            >
+              <option value="all">全部状态</option>
+              <option value="active">使用中</option>
+              <option value="archived">已归档</option>
+              <option value="expired">已过期</option>
+            </select>
           </div>
         </div>
 
         <div className="space-y-3">
           <Label className="text-base font-medium">公开状态</Label>
-          <Select
+          <select
             value={
               filters.is_public === null ? 'null' : filters.is_public === true ? 'true' : 'false'
             }
-            onValueChange={value => onIsPublicChange(value === 'null' ? null : value === 'true')}
+            onChange={event =>
+              onIsPublicChange(event.target.value === 'null' ? null : event.target.value === 'true')
+            }
+            className={selectClassName}
+            aria-label="公开状态"
           >
-            <SelectTrigger className="bg-background border-input text-foreground h-11 border">
-              <SelectValue placeholder="所有物品" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border text-popover-foreground border">
-              <SelectItem value="null">所有物品</SelectItem>
-              <SelectItem value="true">公开</SelectItem>
-              <SelectItem value="false">私有</SelectItem>
-            </SelectContent>
-          </Select>
+            <option value="null">所有物品</option>
+            <option value="true">公开</option>
+            <option value="false">私有</option>
+          </select>
         </div>
 
         <div className="space-y-3">

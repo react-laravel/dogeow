@@ -102,7 +102,7 @@ export default function Thing() {
   const handleClearFilters = useCallback(() => {
     setSearchTerm('')
     clearFilters()
-    fetchItems()
+    fetchItems({ page: 1 })
   }, [setSearchTerm, clearFilters, fetchItems])
 
   // 导航处理 - 改为弹窗
@@ -138,6 +138,7 @@ export default function Thing() {
           hasActiveFilters={hasActiveFilters()}
           viewMode={viewMode}
           onApplyFilters={handleApplyFilters}
+          onClearFilters={handleClearFilters}
           onViewModeChange={setViewMode}
         />
 

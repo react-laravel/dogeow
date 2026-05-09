@@ -4,19 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { BasicFiltersTabContent } from '../filters/components/BasicFiltersTabContent'
 import { initialFilters } from '../filters/types'
 
-vi.mock('../CategoryTreeSelect', () => ({
-  default: ({ onSelect, selectedCategory }: any) => (
-    <div>
-      <div data-testid="selected-category">
-        {selectedCategory ? `${selectedCategory.type}:${selectedCategory.id}` : 'none'}
-      </div>
-      <button type="button" onClick={() => onSelect('child', 2)}>
-        pick-category
-      </button>
-    </div>
-  ),
-}))
-
 vi.mock('@/components/ui/tag-selector', () => ({
   TagSelector: ({ selectedTags, onChange }: any) => (
     <div>
@@ -29,32 +16,10 @@ vi.mock('@/components/ui/tag-selector', () => ({
   Tag: {} as any,
 }))
 
-vi.mock('@/components/ui/select', () => ({
-  Select: ({ value, onValueChange, children }: any) => (
-    <div data-testid={`select-${String(value)}`}>
-      <button
-        type="button"
-        aria-label={`pick-${String(value)}-active`}
-        onClick={() => onValueChange?.('active')}
-      />
-      <button
-        type="button"
-        aria-label={`pick-${String(value)}-true`}
-        onClick={() => onValueChange?.('true')}
-      />
-      <button
-        type="button"
-        aria-label={`pick-${String(value)}-null`}
-        onClick={() => onValueChange?.('null')}
-      />
-      {children}
-    </div>
-  ),
-  SelectTrigger: ({ children }: any) => <div>{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div>{children}</div>,
-  SelectItem: ({ children }: any) => <div>{children}</div>,
-}))
+const mockCategories = [
+  { id: 1, name: '娱乐', parent_id: null },
+  { id: 2, name: '游戏', parent_id: 1 },
+]
 
 describe('BasicFiltersTabContent', () => {
   it('should handle input/select/category/tag callbacks', async () => {
@@ -70,6 +35,7 @@ describe('BasicFiltersTabContent', () => {
       <BasicFiltersTabContent
         filters={{ ...initialFilters, tags: '1,2' }}
         selectedCategory={{ type: 'parent', id: 1 }}
+        categories={mockCategories}
         tags={[]}
         onNameChange={onNameChange}
         onDescriptionChange={onDescriptionChange}
@@ -86,17 +52,20 @@ describe('BasicFiltersTabContent', () => {
     expect(onNameChange).toHaveBeenCalledWith('A')
     expect(onDescriptionChange).toHaveBeenCalledWith('B')
 
-    await user.click(screen.getByRole('button', { name: 'pick-category' }))
+    expect(screen.getByRole('option', { name: '娱乐' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '└ 游戏' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByRole('combobox', { name: '分类' }), 'child:2')
     expect(onCategorySelect).toHaveBeenCalledWith('child', 2)
 
     await user.click(screen.getByRole('button', { name: '清空分类筛选' }))
     expect(onCategorySelect).toHaveBeenCalledWith('parent', null)
 
-    await user.click(screen.getByLabelText('pick-all-active'))
+    await user.selectOptions(screen.getByRole('combobox', { name: '状态' }), 'active')
     expect(onStatusChange).toHaveBeenCalledWith('active')
 
-    await user.click(screen.getByLabelText('pick-null-true'))
-    await user.click(screen.getByLabelText('pick-null-null'))
+    await user.selectOptions(screen.getByRole('combobox', { name: '公开状态' }), 'true')
+    await user.selectOptions(screen.getByRole('combobox', { name: '公开状态' }), 'null')
     expect(onIsPublicChange).toHaveBeenCalledWith(true)
     expect(onIsPublicChange).toHaveBeenCalledWith(null)
 
@@ -110,6 +79,7 @@ describe('BasicFiltersTabContent', () => {
       <BasicFiltersTabContent
         filters={{ ...initialFilters, tags: [3, 4] }}
         selectedCategory={undefined}
+        categories={mockCategories}
         tags={[]}
         onNameChange={vi.fn()}
         onDescriptionChange={vi.fn()}
@@ -132,6 +102,7 @@ describe('BasicFiltersTabContent', () => {
       <BasicFiltersTabContent
         filters={{ ...initialFilters, is_public: true, tags: null as any }}
         selectedCategory={undefined}
+        categories={mockCategories}
         tags={[]}
         onNameChange={vi.fn()}
         onDescriptionChange={vi.fn()}
@@ -142,16 +113,17 @@ describe('BasicFiltersTabContent', () => {
       />
     )
 
-    expect(screen.getByTestId('select-true')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '公开状态' })).toHaveValue('true')
     expect(screen.getByTestId('selected-tags')).toHaveTextContent('')
 
-    await user.click(screen.getByLabelText('pick-true-null'))
+    await user.selectOptions(screen.getByRole('combobox', { name: '公开状态' }), 'null')
     expect(onIsPublicChange).toHaveBeenCalledWith(null)
 
     rerender(
       <BasicFiltersTabContent
         filters={{ ...initialFilters, is_public: false, tags: '' }}
         selectedCategory={undefined}
+        categories={mockCategories}
         tags={[]}
         onNameChange={vi.fn()}
         onDescriptionChange={vi.fn()}
@@ -162,6 +134,6 @@ describe('BasicFiltersTabContent', () => {
       />
     )
 
-    expect(screen.getByTestId('select-false')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '公开状态' })).toHaveValue('false')
   })
 })

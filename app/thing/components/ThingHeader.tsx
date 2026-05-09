@@ -1,8 +1,7 @@
-import { memo, useState, useCallback, useEffect, useMemo } from 'react'
+import { memo, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SlidersHorizontal, LayoutList, Grid, X, ChevronDownIcon } from 'lucide-react'
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import ItemFilters from './ItemFilters'
 import { Category, Tag, Area, Room, Spot, ViewMode, FilterParams } from '@/app/thing/types'
@@ -19,6 +18,7 @@ interface ThingHeaderProps {
   hasActiveFilters: boolean
   viewMode: ViewMode
   onApplyFilters: (filters: Record<string, unknown>) => void
+  onClearFilters?: () => void
   onViewModeChange: (viewMode: ViewMode) => void
 }
 
@@ -32,6 +32,7 @@ function ThingHeader({
   hasActiveFilters,
   viewMode,
   onApplyFilters,
+  onClearFilters,
   onViewModeChange,
 }: ThingHeaderProps) {
   // 从 filters 派生分类选择状态
@@ -63,6 +64,8 @@ function ThingHeader({
   const [selectedTags, setSelectedTags] = useState<string[]>(derivedTags)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [tagMenuOpen, setTagMenuOpen] = useState(false)
+  const filterButtonRef = useRef<HTMLButtonElement>(null)
+  const filterPanelRef = useRef<HTMLDivElement>(null)
 
   // 当派生值变化时更新状态
   useEffect(() => {
@@ -86,6 +89,33 @@ function ThingHeader({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [tagMenuOpen])
+
+  useEffect(() => {
+    if (!filtersOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setFiltersOpen(false)
+      }
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (filterPanelRef.current?.contains(target) || filterButtonRef.current?.contains(target)) {
+        return
+      }
+
+      setFiltersOpen(false)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('pointerdown', handlePointerDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [filtersOpen])
 
   // 分类筛选变化时，更新 filters 并立即应用
   const handleCategorySelect = useCallback(
@@ -249,34 +279,66 @@ function ThingHeader({
 
   // 渲染筛选侧边栏
   const renderFilterSidebar = () => (
-    <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mr-1"
-          data-state={filtersOpen ? 'open' : 'closed'}
-        >
-          <SlidersHorizontal className={`mr-2 h-4 w-4 ${hasActiveFilters ? 'text-primary' : ''}`} />
-        </Button>
-      </SheetTrigger>
-      <SheetContent
-        className="bg-background text-foreground border-border h-full max-w-[200px] overflow-y-auto border-l p-4 shadow-xl sm:max-w-md"
-        side="right"
-        onEscapeKeyDown={() => setFiltersOpen(false)}
-        onPointerDownOutside={() => setFiltersOpen(false)}
+    <>
+      <Button
+        ref={filterButtonRef}
+        variant="outline"
+        size="sm"
+        className="mr-1"
+        aria-label="打开筛选"
+        aria-expanded={filtersOpen}
+        onClick={() => setFiltersOpen(true)}
       >
-        <SheetTitle className="mb-3 flex justify-between">筛选</SheetTitle>
-        <ItemFilters
-          onApply={onApplyFilters}
-          categories={categories}
-          tags={tags}
-          areas={areas}
-          rooms={rooms}
-          spots={spots}
-        />
-      </SheetContent>
-    </Sheet>
+        <SlidersHorizontal className={`mr-2 h-4 w-4 ${hasActiveFilters ? 'text-primary' : ''}`} />
+      </Button>
+
+      {filtersOpen ? (
+        <>
+          <div
+            data-slot="sheet-overlay"
+            className="fixed inset-x-0 bottom-0 z-[135] bg-black/80"
+            style={{ top: 'var(--app-header-height, 50px)' }}
+            aria-hidden="true"
+            onClick={() => setFiltersOpen(false)}
+          />
+
+          <div
+            ref={filterPanelRef}
+            data-slot="sheet-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="thing-filter-title"
+            className="bg-background text-foreground border-border fixed right-0 bottom-0 z-[140] flex w-[calc(100vw-4.5rem)] max-w-[17rem] flex-col overflow-hidden border-l p-4 shadow-xl sm:w-[17rem]"
+            style={{ top: 'var(--app-header-height, 50px)' }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="thing-filter-title" className="text-foreground font-semibold">
+                筛选
+              </h2>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="关闭筛选"
+                onClick={() => setFiltersOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <ItemFilters
+              onApply={onApplyFilters}
+              onReset={onClearFilters}
+              categories={categories}
+              tags={tags}
+              areas={areas}
+              rooms={rooms}
+              spots={spots}
+            />
+          </div>
+        </>
+      ) : null}
+    </>
   )
 
   return (

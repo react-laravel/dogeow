@@ -580,7 +580,7 @@ export function ItemDetailModal({
         open={open}
         onOpenChange={onOpenChange}
         title={`物品详情${item.name ? ` - ${item.name}` : ''}`}
-        contentClassName="flex h-[85vh] w-[calc(100vw-2rem)] max-w-4xl flex-col p-0"
+        contentClassName="flex h-[85vh] w-[calc(100vw-2rem)] max-w-4xl flex-col p-0 sm:h-[85vh]"
       >
         <div className="bg-background sticky top-0 z-10 flex flex-shrink-0 flex-col gap-3 border-b px-6 py-4">
           <div className="flex items-center justify-between gap-3">
@@ -685,7 +685,7 @@ export function ItemDetailModal({
         </div>
 
         {/* 内容区域 - 可滚动区域 */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-[calc(6rem+env(safe-area-inset-bottom,0))] sm:pb-6">
           {isInlineEditMode ? (
             <Card className="mt-6 overflow-hidden">
               <CardContent className="space-y-6 pt-6">

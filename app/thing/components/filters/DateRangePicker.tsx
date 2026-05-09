@@ -1,11 +1,7 @@
 /**
  * 日期范围选择器组件
  */
-import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/helpers'
@@ -29,61 +25,52 @@ export function DateRangePicker({
   onToDateChange,
   onIncludeNullChange,
 }: DateRangePickerProps) {
+  const formatDateValue = (date: Date | null) => (date ? format(date, 'yyyy-MM-dd') : '')
+  const parseDateValue = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
+
   return (
     <div className="space-y-3">
       <Label className="text-base font-medium">{label}</Label>
       <div className="space-y-3">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                'h-11 w-full justify-start text-left font-normal',
-                !fromDate && 'text-muted-foreground'
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {fromDate ? format(fromDate, 'yyyy-MM-dd') : <span>开始日期</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={fromDate || undefined}
-              onSelect={onFromDateChange}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+        <label
+          className={cn(
+            'border-input bg-background flex h-11 w-full items-center gap-2 rounded-md border px-3 text-sm',
+            !fromDate && 'text-muted-foreground'
+          )}
+        >
+          <CalendarIcon className="h-4 w-4" />
+          <span className="shrink-0">开始日期</span>
+          <input
+            type="date"
+            value={formatDateValue(fromDate)}
+            onChange={event => onFromDateChange(parseDateValue(event.target.value))}
+            className="text-foreground min-w-0 flex-1 bg-transparent outline-none"
+          />
+        </label>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                'h-11 w-full justify-start text-left font-normal',
-                !toDate && 'text-muted-foreground'
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {toDate ? format(toDate, 'yyyy-MM-dd') : <span>结束日期</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={toDate || undefined}
-              onSelect={onToDateChange}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+        <label
+          className={cn(
+            'border-input bg-background flex h-11 w-full items-center gap-2 rounded-md border px-3 text-sm',
+            !toDate && 'text-muted-foreground'
+          )}
+        >
+          <CalendarIcon className="h-4 w-4" />
+          <span className="shrink-0">结束日期</span>
+          <input
+            type="date"
+            value={formatDateValue(toDate)}
+            onChange={event => onToDateChange(parseDateValue(event.target.value))}
+            className="text-foreground min-w-0 flex-1 bg-transparent outline-none"
+          />
+        </label>
 
         <div className="mt-1 flex w-full items-center space-x-2">
-          <Switch
+          <input
             id={`include-null-${label}`}
+            type="checkbox"
             checked={includeNull}
-            onCheckedChange={onIncludeNullChange}
+            onChange={event => onIncludeNullChange(event.target.checked)}
+            className="border-input text-primary focus:ring-primary h-4 w-4 rounded border accent-current"
           />
           <Label htmlFor={`include-null-${label}`} className="cursor-pointer text-xs">
             包含空日期的物品

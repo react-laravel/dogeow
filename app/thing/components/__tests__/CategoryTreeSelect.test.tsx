@@ -25,8 +25,13 @@ vi.mock('@/components/ui/combobox', () => ({
         onChange={e => onChange?.(e.target.value)}
       >
         {options.map((opt: any) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
+          <option
+            key={opt.value}
+            value={opt.value}
+            data-full-label={opt.label}
+            data-indent={String(opt.indentLevel ?? 0)}
+          >
+            {opt.displayLabel ?? opt.label}
           </option>
         ))}
       </select>
@@ -237,7 +242,10 @@ describe('CategoryTreeSelect', () => {
 
     render(<CategoryTreeSelect onSelect={mockOnSelect} />)
 
-    expect(screen.getByRole('option', { name: '电子产品 / 手机' })).toBeInTheDocument()
+    const childOption = screen.getByRole('option', { name: '手机' })
+    expect(childOption).toBeInTheDocument()
+    expect(childOption).toHaveAttribute('data-full-label', '电子产品 / 手机')
+    expect(childOption).toHaveAttribute('data-indent', '1')
   })
 
   it('应该在分类不存在时回退为未分类', () => {

@@ -129,8 +129,7 @@ describe('ThingHeader', () => {
         />
       )
 
-      // 筛选图标应该存在
-      const filterButton = screen.getByRole('button', { name: '' })
+      const filterButton = screen.getByRole('button', { name: '打开筛选' })
       expect(filterButton).toBeInTheDocument()
     })
 
@@ -538,9 +537,7 @@ describe('ThingHeader', () => {
         />
       )
 
-      const filterButton = document.querySelector(
-        'button[data-state="closed"]'
-      ) as HTMLButtonElement
+      const filterButton = screen.getByRole('button', { name: '打开筛选' })
       await user.click(filterButton)
 
       await waitFor(() => {
@@ -572,9 +569,7 @@ describe('ThingHeader', () => {
         />
       )
 
-      const filterButton = document.querySelector(
-        'button[data-state="closed"]'
-      ) as HTMLButtonElement
+      const filterButton = screen.getByRole('button', { name: '打开筛选' })
       await user.click(filterButton)
 
       await waitFor(() => {

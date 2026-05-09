@@ -1,13 +1,6 @@
 import React, { memo } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { DateRangePicker } from '../DateRangePicker'
 import type { FilterState } from '../types'
 import type { Area, Room, Spot } from '@/app/thing/types'
@@ -49,7 +42,9 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
     onSpotIdChange,
   }) => {
     const toSelectValue = (value: string | number | null | undefined) =>
-      value === null || value === undefined ? '' : value.toString()
+      value === null || value === undefined || value === '' ? 'all' : value.toString()
+    const selectClassName =
+      'bg-background border-input text-foreground h-11 w-full rounded-md border px-3 text-sm disabled:opacity-60'
 
     return (
       <div className="space-y-6">
@@ -97,69 +92,63 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
         <div className="space-y-3">
           <Label className="text-base font-medium">位置</Label>
           <div className="space-y-3">
-            <Select value={toSelectValue(filters.area_id)} onValueChange={onAreaIdChange}>
-              <SelectTrigger className="bg-background border-input text-foreground h-11 border">
-                <SelectValue placeholder="选择区域" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground border">
-                <SelectItem value="all">全部区域</SelectItem>
-                {areas.map((area: Area) => (
-                  <SelectItem key={area.id} value={area.id.toString()}>
-                    {area.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
+            <select
+              value={toSelectValue(filters.area_id)}
+              onChange={event => onAreaIdChange(event.target.value)}
+              className={selectClassName}
+              aria-label="区域"
+            >
+              <option value="all">全部区域</option>
+              {areas.map((area: Area) => (
+                <option key={area.id} value={area.id.toString()}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+            <select
               value={toSelectValue(filters.room_id)}
-              onValueChange={onRoomIdChange}
+              onChange={event => onRoomIdChange(event.target.value)}
               disabled={
                 filters.area_id === 'all' || filters.area_id === null || filters.area_id === ''
               }
+              className={selectClassName}
+              aria-label="房间"
             >
-              <SelectTrigger className="bg-background border-input text-foreground h-11 border disabled:opacity-60">
-                <SelectValue placeholder="选择房间" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground border">
-                <SelectItem value="all">全部房间</SelectItem>
-                {rooms
-                  .filter(
-                    room =>
-                      filters.area_id === 'all' ||
-                      room.area_id?.toString() === filters.area_id?.toString()
-                  )
-                  .map((room: Room) => (
-                    <SelectItem key={room.id} value={room.id.toString()}>
-                      {room.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <Select
+              <option value="all">全部房间</option>
+              {rooms
+                .filter(
+                  room =>
+                    filters.area_id === 'all' ||
+                    room.area_id?.toString() === filters.area_id?.toString()
+                )
+                .map((room: Room) => (
+                  <option key={room.id} value={room.id.toString()}>
+                    {room.name}
+                  </option>
+                ))}
+            </select>
+            <select
               value={toSelectValue(filters.spot_id)}
-              onValueChange={onSpotIdChange}
+              onChange={event => onSpotIdChange(event.target.value)}
               disabled={
                 filters.room_id === 'all' || filters.room_id === null || filters.room_id === ''
               }
+              className={selectClassName}
+              aria-label="位置"
             >
-              <SelectTrigger className="bg-background border-input text-foreground h-11 border disabled:opacity-60">
-                <SelectValue placeholder="选择位置" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground border">
-                <SelectItem value="all">全部位置</SelectItem>
-                {spots
-                  .filter(
-                    spot =>
-                      filters.room_id === 'all' ||
-                      spot.room_id?.toString() === filters.room_id?.toString()
-                  )
-                  .map((spot: Spot) => (
-                    <SelectItem key={spot.id} value={spot.id.toString()}>
-                      {spot.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+              <option value="all">全部位置</option>
+              {spots
+                .filter(
+                  spot =>
+                    filters.room_id === 'all' ||
+                    spot.room_id?.toString() === filters.room_id?.toString()
+                )
+                .map((spot: Spot) => (
+                  <option key={spot.id} value={spot.id.toString()}>
+                    {spot.name}
+                  </option>
+                ))}
+            </select>
           </div>
         </div>
       </div>

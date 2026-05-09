@@ -35,6 +35,7 @@ vi.mock('@/components/ui/tag-selector', () => ({
 
 describe('ItemFilters', () => {
   const mockOnApply = vi.fn()
+  const mockOnReset = vi.fn()
 
   const mockAreas: Area[] = [
     { id: 1, name: '客厅' },
@@ -65,6 +66,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -81,6 +83,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -96,6 +99,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -111,6 +115,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -119,13 +124,16 @@ describe('ItemFilters', () => {
         />
       )
 
-      expect(screen.getByTestId('category-tree-select')).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: '分类' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '电子产品' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: '└ 手机' })).toBeInTheDocument()
     })
 
     it('应该渲染状态选择器', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -141,6 +149,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -156,6 +165,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -171,6 +181,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -190,6 +201,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -211,6 +223,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -321,6 +334,7 @@ describe('ItemFilters', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}
@@ -340,12 +354,14 @@ describe('ItemFilters', () => {
       await waitFor(() => {
         expect(nameInputs[0]).toHaveValue('')
       })
+      expect(mockOnReset).toHaveBeenCalledTimes(1)
     })
 
     it('应该在没有活跃筛选条件时禁用重置按钮', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
+          onReset={mockOnReset}
           areas={mockAreas}
           rooms={mockRooms}
           spots={mockSpots}

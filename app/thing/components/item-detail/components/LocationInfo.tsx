@@ -19,7 +19,7 @@ export const LocationInfo = memo<LocationInfoProps>(({ item }) => {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {item.spot?.room?.area?.name && <InfoCard label="区域" value={item.spot.room.area.name} />}
         {item.spot?.room?.name && <InfoCard label="房间" value={item.spot.room.name} />}
         {item.spot?.name && <InfoCard label="位置" value={item.spot.name} />}

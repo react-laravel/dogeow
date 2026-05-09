@@ -1,41 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
 import { DateRangePicker } from '../DateRangePicker'
-
-vi.mock('@/components/ui/popover', () => ({
-  Popover: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  PopoverTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  PopoverContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}))
-
-vi.mock('@/components/ui/calendar', () => ({
-  Calendar: ({ onSelect }: { onSelect: (date: Date | undefined) => void }) => (
-    <button type="button" onClick={() => onSelect(new Date(2026, 2, 5))}>
-      pick-date
-    </button>
-  ),
-}))
-
-vi.mock('@/components/ui/switch', () => ({
-  Switch: ({
-    checked,
-    onCheckedChange,
-    id,
-  }: {
-    checked: boolean
-    onCheckedChange: (checked: boolean) => void
-    id: string
-  }) => (
-    <input
-      id={id}
-      type="checkbox"
-      checked={checked}
-      onChange={e => onCheckedChange(e.target.checked)}
-    />
-  ),
-}))
 
 describe('DateRangePicker', () => {
   it('renders placeholders when dates are empty and triggers callbacks', async () => {
@@ -60,11 +26,13 @@ describe('DateRangePicker', () => {
     expect(screen.getByText('结束日期')).toBeInTheDocument()
     expect(screen.getByText('包含空日期的物品')).toBeInTheDocument()
 
-    const calendarButtons = screen.getAllByRole('button', { name: 'pick-date' })
-    await user.click(calendarButtons[0])
-    await user.click(calendarButtons[1])
+    fireEvent.change(screen.getByLabelText('开始日期'), { target: { value: '2026-03-05' } })
+    fireEvent.change(screen.getByLabelText('结束日期'), { target: { value: '2026-03-06' } })
+
     expect(onFromDateChange).toHaveBeenCalledTimes(1)
     expect(onToDateChange).toHaveBeenCalledTimes(1)
+    expect(onFromDateChange).toHaveBeenCalledWith(new Date('2026-03-05T00:00:00'))
+    expect(onToDateChange).toHaveBeenCalledWith(new Date('2026-03-06T00:00:00'))
 
     const checkbox = screen.getByRole('checkbox')
     await user.click(checkbox)
@@ -84,8 +52,8 @@ describe('DateRangePicker', () => {
       />
     )
 
-    expect(screen.getByText('2026-01-02')).toBeInTheDocument()
-    expect(screen.getByText('2026-01-31')).toBeInTheDocument()
+    expect(screen.getByLabelText('开始日期')).toHaveValue('2026-01-02')
+    expect(screen.getByLabelText('结束日期')).toHaveValue('2026-01-31')
     expect(screen.getByRole('checkbox')).toBeChecked()
   })
 })

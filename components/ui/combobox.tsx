@@ -12,6 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 export interface ComboboxOption {
   value: string
   label: string
+  displayLabel?: string
+  searchKeywords?: string[]
+  indentLevel?: number
   disabled?: boolean
 }
 
@@ -45,7 +48,18 @@ export function Combobox({
   // 过滤选项
   const filteredOptions = React.useMemo(() => {
     if (!searchQuery) return options
-    return options.filter(option => option.label.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    const normalizedQuery = searchQuery.toLowerCase()
+
+    return options.filter(option => {
+      const searchableTexts = [
+        option.label,
+        option.displayLabel,
+        ...(option.searchKeywords ?? []),
+      ].filter(Boolean)
+
+      return searchableTexts.some(text => text?.toLowerCase().includes(normalizedQuery))
+    })
   }, [options, searchQuery])
 
   const handleCreateOption = React.useCallback(() => {
@@ -154,6 +168,7 @@ export function Combobox({
                     key={option.value}
                     className={cn(
                       'hover:bg-accent hover:text-accent-foreground flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-base',
+                      option.indentLevel === 1 && 'pl-8',
                       option.disabled && 'cursor-not-allowed opacity-50'
                     )}
                     onClick={() => {
@@ -169,7 +184,7 @@ export function Combobox({
                         value === option.value ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    {option.label}
+                    {option.displayLabel ?? option.label}
                   </div>
                 ))
               )}

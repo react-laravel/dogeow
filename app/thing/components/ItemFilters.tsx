@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, startTransition } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useItemStore } from '@/app/thing/stores/itemStore'
 import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
 import { useDebounce } from '@/hooks/useDebounce'
+import { cn } from '@/lib/helpers'
 import { initialFilters, type FilterState } from './filters/types'
 import { applyFilters, hasActiveFilters, getInitialFilterState } from './filters/utils/filterUtils'
 import { BasicFiltersTabContent } from './filters/components/BasicFiltersTabContent'
@@ -16,6 +16,7 @@ import { Tag } from '@/components/ui/tag-selector'
 
 interface ItemFiltersProps {
   onApply: (filters: FilterState) => void
+  onReset?: () => void
   categories: unknown[] // As per current useSWR<any[]>
   areas: Area[]
   rooms: Room[]
@@ -25,6 +26,7 @@ interface ItemFiltersProps {
 
 export default function ItemFilters({
   onApply,
+  onReset,
   areas = [],
   rooms = [],
   spots = [],
@@ -32,7 +34,7 @@ export default function ItemFilters({
 }: ItemFiltersProps) {
   const { categories } = useItemStore()
   const { savedFilters } = useFilterPersistenceStore()
-  const [activeTab, setActiveTab] = useState('basic')
+  const [activeTab, setActiveTab] = useState<'basic' | 'detailed'>('basic')
 
   // 从保存的筛选条件初始化
   const getInitialState = useCallback(() => {
@@ -82,19 +84,16 @@ export default function ItemFilters({
   // 处理标签选择 - 标签选择保持即时应用
   const handleTagsChange = useCallback(
     (selectedTags: string[]) => {
-      setFilters(prev => {
-        const updated = {
-          ...prev,
-          tags: selectedTags.join(','),
-        }
+      const updated = {
+        ...filters,
+        tags: selectedTags.join(','),
+      }
 
-        skipNextDebouncedApplyRef.current = true
-        handleApplyFilters(updated)
-
-        return updated
-      })
+      skipNextDebouncedApplyRef.current = true
+      setFilters(updated)
+      handleApplyFilters(updated)
     },
-    [handleApplyFilters]
+    [filters, handleApplyFilters]
   )
 
   // 分类选择状态
@@ -104,19 +103,16 @@ export default function ItemFilters({
   const handleCategorySelect = useCallback(
     (type: 'parent' | 'child', id: number | null) => {
       setSelectedCategory(id === null ? undefined : { type, id })
-      setFilters(prev => {
-        const updated = {
-          ...prev,
-          category_id: id === null ? 'all' : id.toString(),
-        }
+      const updated = {
+        ...filters,
+        category_id: id === null ? 'all' : id.toString(),
+      }
 
-        skipNextDebouncedApplyRef.current = true
-        handleApplyFilters(updated)
-
-        return updated
-      })
+      skipNextDebouncedApplyRef.current = true
+      setFilters(updated)
+      handleApplyFilters(updated)
     },
-    [handleApplyFilters]
+    [filters, handleApplyFilters]
   )
 
   // 初始化分类选择状态
@@ -138,67 +134,99 @@ export default function ItemFilters({
   const handleClearAll = useCallback(() => {
     skipNextDebouncedApplyRef.current = true
     setSelectedCategory(undefined)
-    setFilters(initialFilters)
+    setActiveTab('basic')
+    setFilters({ ...initialFilters })
+
+    if (onReset) {
+      onReset()
+      return
+    }
+
     handleApplyFilters(initialFilters)
-  }, [handleApplyFilters])
+  }, [handleApplyFilters, onReset])
 
   return (
-    <div className="text-foreground space-y-4 px-1">
-      <div>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-muted border-border mb-4 grid w-full grid-cols-2 rounded-lg border">
-            <TabsTrigger
-              value="basic"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm"
+    <div className="text-foreground flex h-full min-h-0 flex-col px-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-4 pb-6">
+          <div className="w-full">
+            <div
+              role="tablist"
+              aria-label="筛选类型"
+              className="bg-muted border-border mb-4 grid w-full grid-cols-2 rounded-lg border p-[3px]"
             >
-              基础
-            </TabsTrigger>
-            <TabsTrigger
-              value="detailed"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm"
-            >
-              详细
-            </TabsTrigger>
-          </TabsList>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'basic'}
+                className={cn(
+                  'text-foreground inline-flex h-8 items-center justify-center rounded-md px-2 text-sm font-medium transition-colors',
+                  activeTab === 'basic' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                )}
+                onClick={() => setActiveTab('basic')}
+              >
+                基础
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'detailed'}
+                className={cn(
+                  'text-foreground inline-flex h-8 items-center justify-center rounded-md px-2 text-sm font-medium transition-colors',
+                  activeTab === 'detailed'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent'
+                )}
+                onClick={() => setActiveTab('detailed')}
+              >
+                详细
+              </button>
+            </div>
 
-          <TabsContent value="basic" className="space-y-6">
-            <BasicFiltersTabContent
-              filters={filters}
-              selectedCategory={selectedCategory}
-              tags={tags}
-              onNameChange={value => handleChange('name', value)}
-              onDescriptionChange={value => handleChange('description', value)}
-              onStatusChange={value => handleChange('status', value)}
-              onIsPublicChange={value => handleChange('is_public', value)}
-              onTagsChange={handleTagsChange}
-              onCategorySelect={handleCategorySelect}
-            />
-          </TabsContent>
-
-          <TabsContent value="detailed" className="space-y-6">
-            <DetailedFiltersTab
-              filters={filters}
-              areas={areas}
-              rooms={rooms}
-              spots={spots}
-              onPurchaseDateFromChange={date => handleChange('purchase_date_from', date || null)}
-              onPurchaseDateToChange={date => handleChange('purchase_date_to', date || null)}
-              onIncludeNullPurchaseDateChange={checked =>
-                handleChange('include_null_purchase_date', checked)
-              }
-              onExpiryDateFromChange={date => handleChange('expiry_date_from', date || null)}
-              onExpiryDateToChange={date => handleChange('expiry_date_to', date || null)}
-              onIncludeNullExpiryDateChange={checked =>
-                handleChange('include_null_expiry_date', checked)
-              }
-              onPriceFromChange={value => handleChange('price_from', value)}
-              onPriceToChange={value => handleChange('price_to', value)}
-              onAreaIdChange={value => handleChange('area_id', value)}
-              onRoomIdChange={value => handleChange('room_id', value)}
-              onSpotIdChange={value => handleChange('spot_id', value)}
-            />
-          </TabsContent>
-        </Tabs>
+            {activeTab === 'basic' ? (
+              <div role="tabpanel" className="space-y-6">
+                <BasicFiltersTabContent
+                  filters={filters}
+                  selectedCategory={selectedCategory}
+                  categories={categories}
+                  tags={tags}
+                  onNameChange={value => handleChange('name', value)}
+                  onDescriptionChange={value => handleChange('description', value)}
+                  onStatusChange={value => handleChange('status', value)}
+                  onIsPublicChange={value => handleChange('is_public', value)}
+                  onTagsChange={handleTagsChange}
+                  onCategorySelect={handleCategorySelect}
+                />
+              </div>
+            ) : (
+              <div role="tabpanel" className="space-y-6">
+                <DetailedFiltersTab
+                  filters={filters}
+                  areas={areas}
+                  rooms={rooms}
+                  spots={spots}
+                  onPurchaseDateFromChange={date =>
+                    handleChange('purchase_date_from', date || null)
+                  }
+                  onPurchaseDateToChange={date => handleChange('purchase_date_to', date || null)}
+                  onIncludeNullPurchaseDateChange={checked =>
+                    handleChange('include_null_purchase_date', checked)
+                  }
+                  onExpiryDateFromChange={date => handleChange('expiry_date_from', date || null)}
+                  onExpiryDateToChange={date => handleChange('expiry_date_to', date || null)}
+                  onIncludeNullExpiryDateChange={checked =>
+                    handleChange('include_null_expiry_date', checked)
+                  }
+                  onPriceFromChange={value => handleChange('price_from', value)}
+                  onPriceToChange={value => handleChange('price_to', value)}
+                  onAreaIdChange={value => handleChange('area_id', value)}
+                  onRoomIdChange={value => handleChange('room_id', value)}
+                  onSpotIdChange={value => handleChange('spot_id', value)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <FilterActions hasActiveFilters={hasActiveFilters(filters)} onClearAll={handleClearAll} />
