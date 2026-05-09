@@ -32,6 +32,7 @@ interface AppsViewProps {
   /** 若 AI 已打开，点击 logo 时先关闭 AI */
   isAiOpen?: boolean
   onCloseAi?: () => void
+  showLogo?: boolean
 }
 
 export function AppsView({
@@ -43,6 +44,7 @@ export function AppsView({
   analyserNode,
   isAiOpen,
   onCloseAi,
+  showLogo = true,
 }: AppsViewProps) {
   const { clearFilters } = useFilterPersistenceStore()
 
@@ -66,11 +68,13 @@ export function AppsView({
   }
 
   return (
-    <div className="flex h-full items-center justify-between">
+    <div className={`flex h-full items-center justify-between ${showLogo ? '' : 'pl-14'}`}>
       {/* 左侧：应用切换按钮 */}
-      <div className="mr-3 flex shrink-0 items-center">
-        <LogoButton onClick={handleLogoClick} />
-      </div>
+      {showLogo && (
+        <div className="mr-3 flex shrink-0 items-center">
+          <LogoButton onClick={handleLogoClick} />
+        </div>
+      )}
 
       {/* 中间：应用图标 */}
       {!searchManager.isSearchVisible && (

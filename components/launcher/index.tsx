@@ -15,12 +15,14 @@ import { AppsView } from './views/AppsView'
 import { SearchResultView } from './views/SearchResultView'
 import { ViewWrapper } from './views/ViewWrapper'
 import { useMusicStore, type PlayMode } from '@/stores/musicStore'
+import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
 import { useMediaKeys } from './hooks/useMediaKeys'
 import { useMediaSession } from './hooks/useMediaSession'
 import { AudioVisualizer } from './music/visualizer'
 import { FullscreenVisualizer } from './music/FullscreenVisualizer'
 import { SettingsDialog } from './settings/SettingsDialog'
 import { useTrackLyrics } from './music/useTrackLyrics'
+import { LogoButton } from './common/LogoButton'
 
 const AiDialog = dynamic(
   () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
@@ -48,8 +50,22 @@ export function AppLauncher({
 }: AppLauncherProps = {}) {
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false)
   const isAiOpen = isAiOpenFromParent ?? isAiDialogOpen
-  const closeAi = onCloseAi ?? (() => setIsAiDialogOpen(false))
-  const toggleAi = onOpenAi ?? (() => setIsAiDialogOpen(prev => !prev))
+  const closeAi = useCallback(() => {
+    if (onCloseAi) {
+      onCloseAi()
+      return
+    }
+
+    setIsAiDialogOpen(false)
+  }, [onCloseAi])
+  const toggleAi = useCallback(() => {
+    if (onOpenAi) {
+      onOpenAi()
+      return
+    }
+
+    setIsAiDialogOpen(prev => !prev)
+  }, [onOpenAi])
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false)
   const router = useRouter()
@@ -61,6 +77,7 @@ export function AppLauncher({
   const [customBackgrounds, setCustomBackgrounds] = useState<CustomBackground[]>([])
   const [isFullscreenViz, setIsFullscreenViz] = useState(false)
   const [fullscreenPanel, setFullscreenPanel] = useState<'lyrics' | 'playlist'>('lyrics')
+  const { clearFilters } = useFilterPersistenceStore()
   // 使用音乐存储中的播放模式状态
   const { playMode, setPlayMode } = useMusicStore()
   const lastAppliedShareTrackRef = useRef<string | null>(null)
@@ -212,6 +229,38 @@ export function AppLauncher({
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
   }, [pathname, router, searchParams])
 
+  const navigateHome = useCallback(() => {
+    if (searchManager.isHomePage) {
+      return
+    }
+
+    router.push('/')
+  }, [router, searchManager.isHomePage])
+
+  const handlePersistentLogoClick = useCallback(() => {
+    if (displayMode === 'apps') {
+      if (isAiOpen) {
+        closeAi()
+        return
+      }
+
+      clearFilters()
+      navigateHome()
+      return
+    }
+
+    if (displayMode === 'music') {
+      clearFilters()
+      setDisplayMode('apps')
+
+      if (pathname !== '/') {
+        router.push('/')
+      }
+    }
+  }, [clearFilters, closeAi, displayMode, isAiOpen, navigateHome, pathname, router])
+
+  const shouldShowPersistentLogo = displayMode === 'apps' || displayMode === 'music'
+
   useEffect(() => {
     const sharedTrackValue = searchParams.get('m')
     if (lastAppliedShareTrackRef.current === sharedTrackValue) return
@@ -284,6 +333,7 @@ export function AppLauncher({
           lyricsStatus,
           formatTime,
           toggleDisplayMode,
+          showLogo: false,
           onTrackSelect: (trackPath: string) => setCurrentTrack?.(trackPath),
           onSetPlayMode: (mode: PlayMode) => setPlayMode(mode),
           onOpenFullscreen: () => setIsFullscreenViz(true),
@@ -310,7 +360,6 @@ export function AppLauncher({
       isMuted,
       availableTracks,
       currentTrack,
-      currentTrackInfo,
       playMode,
       readyToPlay,
       toggleMute,
@@ -358,6 +407,7 @@ export function AppLauncher({
             analyserNode={audioManager.analyserNode}
             isAiOpen={isAiOpen}
             onCloseAi={closeAi}
+            showLogo={false}
           />
         )
 
@@ -437,6 +487,14 @@ export function AppLauncher({
         id="app-launcher-bar"
         className="bg-background/80 relative z-50 flex h-full w-full flex-col backdrop-blur-md"
       >
+        {shouldShowPersistentLogo && (
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex items-center pl-3">
+            <div className="pointer-events-auto">
+              <LogoButton onClick={handlePersistentLogoClick} />
+            </div>
+          </div>
+        )}
+
         {/* 音频可视化 - 作为背景层，覆盖整个 app-launcher-bar，包括 padding */}
         {displayMode === 'music' && audioManager.analyserNode && (
           <div className="pointer-events-none absolute inset-y-0 left-1/2 z-0 w-screen -translate-x-1/2 overflow-hidden">

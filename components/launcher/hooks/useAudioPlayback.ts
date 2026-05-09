@@ -23,6 +23,8 @@ function shouldResumeAudioContext(audioContext: AudioContext | null): audioConte
   )
 }
 
+const BACKGROUND_TRANSITION_GRACE_PERIOD_MS = 1500
+
 export function useAudioPlayback(options: AudioControllerOptions): AudioControllerResult {
   const {
     playback,
@@ -50,7 +52,21 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
   const { audioRef, gainNodeRef, audioContextRef } = refs
   const wasPlayingBeforeHiddenRef = useRef(false)
+  const backgroundTransitionAtRef = useRef<number | null>(null)
   const { setCurrentTrack } = useMusicStore()
+
+  const markBackgroundTransition = useCallback(() => {
+    backgroundTransitionAtRef.current = Date.now()
+  }, [])
+
+  const clearBackgroundTransition = useCallback(() => {
+    backgroundTransitionAtRef.current = null
+  }, [])
+
+  const isDuringBackgroundTransition = useCallback(() => {
+    const startedAt = backgroundTransitionAtRef.current
+    return startedAt !== null && Date.now() - startedAt < BACKGROUND_TRANSITION_GRACE_PERIOD_MS
+  }, [])
 
   // Setup audio source
   const setupMediaSource = useCallback(() => {
@@ -310,7 +326,10 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     const audio = audioRef.current
     if (!audio) return
 
-    const handlePlay = () => setIsPlaying(true)
+    const handlePlay = () => {
+      clearBackgroundTransition()
+      setIsPlaying(true)
+    }
     const handlePause = () => {
       // 延迟检查 document.hidden，避免与 visibilitychange 的竞态条件
       // 切换 app / 锁屏时，pause 事件可能在 visibilitychange 之前触发，
@@ -321,6 +340,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
           shouldUpdatePlayingStateOnPause({
             isEnded: audio.ended,
             isDocumentHidden,
+            isDuringBackgroundTransition: isDuringBackgroundTransition(),
           })
         ) {
           setIsPlaying(false)
@@ -335,7 +355,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [setIsPlaying, audioRef])
+  }, [audioRef, clearBackgroundTransition, isDuringBackgroundTransition, setIsPlaying])
 
   // Handle page visibility changes
   useEffect(() => {
@@ -344,6 +364,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
       // 页面隐藏时：记录当前播放状态
       if (document.hidden) {
+        markBackgroundTransition()
         wasPlayingBeforeHiddenRef.current = isPlaying && !audioRef.current.paused
         return
       }
@@ -365,11 +386,23 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       }
     }
 
+    const handleWindowBlur = () => {
+      markBackgroundTransition()
+    }
+
+    const handlePageHide = () => {
+      markBackgroundTransition()
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('pagehide', handlePageHide)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('pagehide', handlePageHide)
     }
-  }, [isPlaying, audioContextRef, audioRef])
+  }, [audioContextRef, audioRef, isPlaying, markBackgroundTransition])
 
   // Toggle mute
   const toggleMute = useCallback(() => {

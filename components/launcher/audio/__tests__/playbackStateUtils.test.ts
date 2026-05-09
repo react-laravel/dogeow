@@ -28,4 +28,14 @@ describe('shouldUpdatePlayingStateOnPause', () => {
       })
     ).toBe(false)
   })
+
+  it('returns false during a background transition grace period', () => {
+    expect(
+      shouldUpdatePlayingStateOnPause({
+        isEnded: false,
+        isDocumentHidden: false,
+        isDuringBackgroundTransition: true,
+      })
+    ).toBe(false)
+  })
 })

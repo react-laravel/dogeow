@@ -44,6 +44,7 @@ export interface MusicPlayerProps {
   onTrackSelect: (trackPath: string) => void
   onSetPlayMode: (mode: PlayMode) => void
   onOpenFullscreen?: () => void
+  showLogo?: boolean
 }
 
 export interface SearchBarProps {

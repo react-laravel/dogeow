@@ -16,7 +16,7 @@ const ICON_SIZE = 'h-4 w-4'
 
 // 加载状态指示器组件 - 保持与播放按钮相同尺寸
 const LoadingIndicator = memo(() => (
-  <div className="flex h-7 w-7 items-center justify-center">
+  <div data-testid="music-player-loading" className="flex h-7 w-7 items-center justify-center">
     <Loader2 className={`${ICON_SIZE} animate-spin text-foreground/60`} />
   </div>
 ))
@@ -41,6 +41,7 @@ export const MusicPlayer = memo(
     togglePlay,
     toggleDisplayMode,
     onOpenFullscreen,
+    showLogo = true,
   }: MusicPlayerProps) => {
     const router = useRouter()
     const pathname = usePathname()
@@ -50,8 +51,11 @@ export const MusicPlayer = memo(
 
     // 是否有有效内容：有当前歌曲且播放列表已加载完成
     const hasContent = Boolean(currentTrack) && availableTracks.length > 0
-    // 是否正在加载：列表加载中或音频还没准备好
-    const isLoading = isLoadingTracks || (hasContent && readyToPlay === false)
+    // 已有当前歌曲且音频已就绪时，后台刷新列表不应打断播放按钮状态
+    const isReadyForPlayback = hasContent && readyToPlay !== false
+    // 是否正在加载：仅在没有可用内容时加载列表，或当前音频确实还没准备好时展示
+    const isLoading =
+      (!isReadyForPlayback && isLoadingTracks) || (hasContent && readyToPlay === false)
 
     const handleLogoClick = () => {
       clearFilters()
@@ -73,10 +77,12 @@ export const MusicPlayer = memo(
     }, [currentTime, duration, formatTime, showRemainingTime])
 
     return (
-      <div className="relative flex h-full w-full min-w-0 flex-col justify-center">
+      <div
+        className={`relative flex h-full w-full min-w-0 flex-col justify-center ${showLogo ? '' : 'pl-14'}`}
+      >
         <div className="relative flex w-full min-w-0 items-center gap-2 overflow-hidden">
           <div className="relative z-10 flex shrink-0 items-center gap-3">
-            <LogoButton onClick={handleLogoClick} className="h-10 w-10" />
+            {showLogo && <LogoButton onClick={handleLogoClick} className="h-10 w-10" />}
             <BackButton onClick={handleBackToApps} title="返回启动台" className="h-7 w-7" />
             {(hasContent || isLoading) && (
               <div className="flex items-center justify-center">
