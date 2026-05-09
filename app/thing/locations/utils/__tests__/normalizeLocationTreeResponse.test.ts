@@ -117,4 +117,40 @@ describe('normalizeLocationTreeResponse', () => {
       })
     )
   })
+
+  it('coerces numeric string ids so rooms and spots keep their parents', () => {
+    const result = normalizeLocationTreeResponse({
+      areas: [
+        {
+          id: '1',
+          name: '老家',
+          user_id: '1',
+        } as never,
+      ],
+      rooms: [
+        {
+          id: '3',
+          name: '书房',
+          area_id: '1',
+          user_id: '1',
+        } as never,
+      ],
+      spots: [
+        {
+          id: '1',
+          name: '文件柜',
+          room_id: '3',
+          user_id: '1',
+        } as never,
+      ],
+    })
+
+    expect(result.areas[0].id).toBe(1)
+    expect(result.rooms[0].id).toBe(3)
+    expect(result.rooms[0].area_id).toBe(1)
+    expect(result.rooms[0].area?.id).toBe(1)
+    expect(result.spots[0].room_id).toBe(3)
+    expect(result.spots[0].room?.id).toBe(3)
+    expect(result.spots[0].room?.area?.id).toBe(1)
+  })
 })

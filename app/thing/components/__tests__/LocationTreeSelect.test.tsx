@@ -81,6 +81,21 @@ describe('LocationTreeSelect', () => {
       expect(screen.getByText('书桌')).toBeInTheDocument()
     })
 
+    it('应该兼容接口返回字符串 id 时显示房间和位置', () => {
+      vi.mocked(useLocations).mockReturnValue({
+        data: {
+          areas: [{ id: '1', name: '老家', user_id: '1' }],
+          rooms: [{ id: '3', name: '书房', area_id: '1', user_id: '1' }],
+          spots: [{ id: '1', name: '文件柜', room_id: '3', user_id: '1' }],
+        },
+      } as never)
+
+      render(<LocationTreeSelect onSelect={mockOnSelect} isExpanded={true} />)
+
+      expect(screen.getByText('书房')).toBeInTheDocument()
+      expect(screen.getByText('文件柜')).toBeInTheDocument()
+    })
+
     it('应该在提供 onToggleExpand 时渲染展开/折叠按钮并触发回调', async () => {
       const user = userEvent.setup()
       const onToggleExpand = vi.fn()

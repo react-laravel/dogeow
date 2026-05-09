@@ -11,6 +11,7 @@ import { useExpandedState } from './location-tree/hooks/useExpandedState'
 import { filterSearchResults } from './location-tree/utils/searchUtils'
 import { buildLocationPathById } from '@/lib/utils/location-path'
 import { TREE_HEIGHT } from './location-tree/constants'
+import { normalizeLocationTreeResponse } from '../locations/utils/normalizeLocationTreeResponse'
 
 interface LocationTreeSelectProps {
   onSelect: (type: 'area' | 'room' | 'spot', id: number, fullPath?: string) => void
@@ -37,14 +38,7 @@ const LocationTreeSelect: React.FC<LocationTreeSelectProps> = ({
 
   // 优化数据提取，避免不必要的解构
   const locationInfo = useMemo(() => {
-    const data = locationData as LocationTreeResponse
-    if (!data) return { areas: [], rooms: [], spots: [] }
-
-    return {
-      areas: data.areas ?? [],
-      rooms: data.rooms ?? [],
-      spots: data.spots ?? [],
-    }
+    return normalizeLocationTreeResponse((locationData as LocationTreeResponse | undefined) ?? null)
   }, [locationData])
 
   const { areas, rooms, spots } = locationInfo
