@@ -23,6 +23,7 @@ interface TagSelectorProps {
   variant?: 'default' | 'outline' | 'secondary' | 'destructive' | 'ghost' | 'link'
   showTabs?: boolean
   tabNames?: { basic: string; detail: string }
+  dropdownDirection?: 'up' | 'down'
 }
 
 export function TagSelector({
@@ -35,6 +36,7 @@ export function TagSelector({
   variant = 'outline',
   showTabs = false,
   tabNames = { basic: '基础', detail: '详细' },
+  dropdownDirection = 'down',
 }: TagSelectorProps) {
   const [open, setOpen] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState('basic')
@@ -100,7 +102,12 @@ export function TagSelector({
       </Button>
 
       {open && (
-        <div className="bg-popover text-popover-foreground absolute left-0 z-[60] mt-1 w-full overflow-hidden rounded-md border shadow-lg">
+        <div
+          className={cn(
+            'bg-popover text-popover-foreground absolute left-0 z-[60] w-full overflow-hidden rounded-md border shadow-lg',
+            dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+          )}
+        >
           <div className="flex flex-col">
             {/* 搜索框 */}
             <div className="border-border border-b p-2">

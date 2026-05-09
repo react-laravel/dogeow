@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Combobox } from '@/components/ui/combobox'
 import { cn } from '@/lib/helpers'
 import { useItemStore } from '../stores/itemStore'
+import { normalizeCategories } from '../contracts'
 import { toast } from 'sonner'
 
 export type CategorySelection =
@@ -57,18 +58,19 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   noneOptionLabel = '未分类',
 }) => {
   const { categories, createCategory, fetchCategories } = useItemStore()
+  const normalizedCategories = useMemo(() => normalizeCategories(categories), [categories])
 
   useEffect(() => {
-    if (categories.length === 0) {
+    if (normalizedCategories.length === 0) {
       fetchCategories()
     }
-  }, [categories.length, fetchCategories])
+  }, [fetchCategories, normalizedCategories.length])
 
   const categoryTree = useMemo(() => {
     const parentCategories: CategoryWithChildren[] = []
     const childCategories: CategoryWithChildren[] = []
 
-    categories.forEach(category => {
+    normalizedCategories.forEach(category => {
       if (category.parent_id) {
         childCategories.push(category)
       } else {
@@ -87,7 +89,7 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
     })
 
     return parentCategories
-  }, [categories])
+  }, [normalizedCategories])
 
   const noneOption = useMemo<FlatCategoryOption>(
     () => ({

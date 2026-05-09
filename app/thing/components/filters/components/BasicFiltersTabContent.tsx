@@ -128,6 +128,7 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
               }
               onChange={onTagsChange}
               placeholder="选择标签"
+              dropdownDirection="up"
             />
           </div>
         </div>

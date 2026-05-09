@@ -51,7 +51,7 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
     <nav
       aria-label={ariaLabel}
       className={cn(
-        'bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t shadow-[0_-1px_0_0_rgba(0,0,0,0.04)] backdrop-blur',
+        'bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-20 border-t shadow-[0_-1px_0_0_rgba(0,0,0,0.04)] backdrop-blur',
         'pb-[env(safe-area-inset-bottom,0)]',
         className
       )}

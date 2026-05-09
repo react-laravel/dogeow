@@ -10,7 +10,7 @@ import { applyFilters, hasActiveFilters, getInitialFilterState } from './filters
 import { BasicFiltersTabContent } from './filters/components/BasicFiltersTabContent'
 import { DetailedFiltersTab } from './filters/components/DetailedFiltersTab'
 import { FilterActions } from './filters/components/FilterActions'
-import CategoryTreeSelect, { CategorySelection } from './CategoryTreeSelect'
+import type { CategorySelection } from './CategoryTreeSelect'
 import type { Area, Room, Spot } from '@/app/thing/types'
 import { Tag } from '@/components/ui/tag-selector'
 
@@ -33,7 +33,6 @@ export default function ItemFilters({
   const { categories } = useItemStore()
   const { savedFilters } = useFilterPersistenceStore()
   const [activeTab, setActiveTab] = useState('basic')
-  const [preventAutoApply, setPreventAutoApply] = useState(true) // 添加状态防止自动应用
 
   // 从保存的筛选条件初始化
   const getInitialState = useCallback(() => {
@@ -47,6 +46,7 @@ export default function ItemFilters({
 
   // 添加一个标志位，用于跟踪是否是首次渲染
   const isInitialRenderRef = useRef(true)
+  const skipNextDebouncedApplyRef = useRef(false)
 
   // 提取应用筛选逻辑为单独函数
   const handleApplyFilters = useCallback(
@@ -56,19 +56,20 @@ export default function ItemFilters({
     [onApply]
   )
 
-  // 在筛选条件防抖后触发应用，但跳过初始渲染
+  // 在筛选条件防抖后触发应用，但跳过初始渲染和已即时应用的变更
   useEffect(() => {
-    // 跳过初始渲染
     if (isInitialRenderRef.current) {
       isInitialRenderRef.current = false
       return
     }
 
-    // 只有当不阻止自动应用时，才自动应用筛选条件
-    if (!preventAutoApply) {
-      handleApplyFilters(debouncedFilters)
+    if (skipNextDebouncedApplyRef.current) {
+      skipNextDebouncedApplyRef.current = false
+      return
     }
-  }, [debouncedFilters, handleApplyFilters, preventAutoApply])
+
+    handleApplyFilters(debouncedFilters)
+  }, [debouncedFilters, handleApplyFilters])
 
   // 处理字段变更的函数
   const handleChange = useCallback((field: keyof FilterState, value: unknown) => {
@@ -87,7 +88,7 @@ export default function ItemFilters({
           tags: selectedTags.join(','),
         }
 
-        // 标签选择立即应用筛选
+        skipNextDebouncedApplyRef.current = true
         handleApplyFilters(updated)
 
         return updated
@@ -102,20 +103,20 @@ export default function ItemFilters({
   // 分类筛选变化时，更新 filters 并立即应用
   const handleCategorySelect = useCallback(
     (type: 'parent' | 'child', id: number | null) => {
-      if (id === null) {
-        // 未分类
-        setSelectedCategory(undefined)
-        const updatedFilters = { ...filters, category_id: 'all' }
-        setFilters(updatedFilters)
-        handleApplyFilters(updatedFilters)
-      } else {
-        setSelectedCategory({ type, id })
-        const updatedFilters = { ...filters, category_id: id.toString() }
-        setFilters(updatedFilters)
-        handleApplyFilters(updatedFilters)
-      }
+      setSelectedCategory(id === null ? undefined : { type, id })
+      setFilters(prev => {
+        const updated = {
+          ...prev,
+          category_id: id === null ? 'all' : id.toString(),
+        }
+
+        skipNextDebouncedApplyRef.current = true
+        handleApplyFilters(updated)
+
+        return updated
+      })
     },
-    [filters, handleApplyFilters]
+    [handleApplyFilters]
   )
 
   // 初始化分类选择状态
@@ -135,11 +136,10 @@ export default function ItemFilters({
 
   // 快速清除所有筛选条件
   const handleClearAll = useCallback(() => {
+    skipNextDebouncedApplyRef.current = true
+    setSelectedCategory(undefined)
     setFilters(initialFilters)
-    setPreventAutoApply(false)
-    setTimeout(() => {
-      handleApplyFilters(initialFilters)
-    }, 100)
+    handleApplyFilters(initialFilters)
   }, [handleApplyFilters])
 
   return (
@@ -201,11 +201,7 @@ export default function ItemFilters({
         </Tabs>
       </div>
 
-      <FilterActions
-        hasActiveFilters={hasActiveFilters(filters)}
-        onClearAll={handleClearAll}
-        onApply={() => handleApplyFilters(filters)}
-      />
+      <FilterActions hasActiveFilters={hasActiveFilters(filters)} onClearAll={handleClearAll} />
     </div>
   )
 }

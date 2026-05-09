@@ -8,6 +8,7 @@ import {
   assertItem,
   assertPaginatedItemsResponse,
   buildThingItemQueryString,
+  normalizeCategories,
   type ItemFilters,
   type PaginatedItemsResponse,
   type PaginationMeta,
@@ -102,7 +103,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
 
   fetchCategories: async () => {
     try {
-      const data = await apiRequest<Category[]>('/things/categories')
+      const data = normalizeCategories(await apiRequest<Category[]>('/things/categories'))
       set({ categories: data })
       return data
     } catch (error) {

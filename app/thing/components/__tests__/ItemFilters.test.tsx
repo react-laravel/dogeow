@@ -167,7 +167,7 @@ describe('ItemFilters', () => {
       expect(screen.getByTestId('tag-selector')).toBeInTheDocument()
     })
 
-    it('应该渲染重置和应用按钮', () => {
+    it('应该只渲染重置按钮', () => {
       render(
         <ItemFilters
           onApply={mockOnApply}
@@ -180,7 +180,7 @@ describe('ItemFilters', () => {
       )
 
       expect(screen.getByText('重置')).toBeInTheDocument()
-      expect(screen.getByText('应用筛选')).toBeInTheDocument()
+      expect(screen.queryByText('应用筛选')).not.toBeInTheDocument()
     })
   })
 
@@ -291,7 +291,7 @@ describe('ItemFilters', () => {
       })
     })
 
-    it('应该在点击应用按钮时应用筛选', async () => {
+    it('应该在输入后自动应用筛选', async () => {
       const user = userEvent.setup()
       render(
         <ItemFilters
@@ -308,13 +308,12 @@ describe('ItemFilters', () => {
       const nameInputs = screen.getAllByRole('textbox')
       await user.type(nameInputs[0], '测试')
 
-      // 点击应用按钮
-      const applyButton = screen.getByText('应用筛选')
-      await user.click(applyButton)
-
-      await waitFor(() => {
-        expect(mockOnApply).toHaveBeenCalled()
-      })
+      await waitFor(
+        () => {
+          expect(mockOnApply).toHaveBeenCalled()
+        },
+        { timeout: 1200 }
+      )
     })
 
     it('应该在点击重置按钮时清除筛选', async () => {
@@ -341,22 +340,6 @@ describe('ItemFilters', () => {
       await waitFor(() => {
         expect(nameInputs[0]).toHaveValue('')
       })
-    })
-
-    it('应该在没有活跃筛选条件时禁用应用按钮', () => {
-      render(
-        <ItemFilters
-          onApply={mockOnApply}
-          areas={mockAreas}
-          rooms={mockRooms}
-          spots={mockSpots}
-          tags={mockTags}
-          categories={[]}
-        />
-      )
-
-      const applyButton = screen.getByText('应用筛选')
-      expect(applyButton).toBeDisabled()
     })
 
     it('应该在没有活跃筛选条件时禁用重置按钮', () => {

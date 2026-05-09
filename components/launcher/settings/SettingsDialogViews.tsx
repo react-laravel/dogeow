@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpen, Columns, Play } from 'lucide-react'
+import { BookOpen, Columns } from 'lucide-react'
 import { BottomHourPicker } from '@/components/ui/bottom-hour-picker'
 import { Switch } from '@/components/ui/switch'
 import { type AudioPlaybackMode } from '@/stores/musicStore'
@@ -161,27 +161,22 @@ interface PlaybackViewProps {
 export function PlaybackView({ audioPlaybackMode, setAudioPlaybackMode }: PlaybackViewProps) {
   return (
     <div className="flex flex-col space-y-3">
-      <div className="flex w-full items-start gap-3 rounded-lg p-2">
-        <Play className="mt-1 h-4 w-4 shrink-0" />
-        <div className="flex flex-1 flex-col gap-2">
-          {AUDIO_PLAYBACK_MODE_OPTIONS.map(option => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setAudioPlaybackMode(option.value)}
-              className={`rounded-xl border px-3 py-3 text-left transition-colors ${
-                audioPlaybackMode === option.value
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border hover:bg-muted'
-              }`}
-            >
-              <div className="text-sm font-medium">{option.label}</div>
-              <div className="text-muted-foreground mt-1 text-xs leading-5">
-                {option.description}
-              </div>
-            </button>
-          ))}
-        </div>
+      <div className="flex w-full flex-col gap-2 rounded-lg p-2">
+        {AUDIO_PLAYBACK_MODE_OPTIONS.map(option => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setAudioPlaybackMode(option.value)}
+            className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+              audioPlaybackMode === option.value
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:bg-muted'
+            }`}
+          >
+            <div className="text-sm font-medium">{option.label}</div>
+            <div className="text-muted-foreground mt-1 text-xs leading-5">{option.description}</div>
+          </button>
+        ))}
       </div>
 
       <p className="text-muted-foreground px-2 text-xs leading-5">

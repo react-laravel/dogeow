@@ -126,6 +126,44 @@ export function assertItem(value: Item): Item {
   return value
 }
 
-export function assertCategory(value: Category): Category {
-  return value
+type RawCategory = Omit<Category, 'id' | 'parent_id' | 'user_id' | 'items_count'> & {
+  id: number | string
+  parent_id?: number | string | null
+  user_id?: number | string
+  items_count?: number | string
+}
+
+const normalizeRequiredNumber = (value: number | string): number =>
+  typeof value === 'number' ? value : Number.parseInt(value, 10)
+
+const normalizeOptionalNumber = (
+  value: number | string | null | undefined
+): number | null | undefined => {
+  if (value == null) {
+    return value
+  }
+
+  return normalizeRequiredNumber(value)
+}
+
+export function normalizeCategory(value: Category | RawCategory): Category {
+  const parentId = normalizeOptionalNumber(value.parent_id)
+  const userId = normalizeOptionalNumber(value.user_id)
+  const itemsCount = normalizeOptionalNumber(value.items_count)
+
+  return {
+    ...value,
+    id: normalizeRequiredNumber(value.id),
+    parent_id: parentId ?? null,
+    user_id: userId ?? undefined,
+    items_count: itemsCount ?? undefined,
+  }
+}
+
+export function normalizeCategories(values: Array<Category | RawCategory>): Category[] {
+  return values.map(normalizeCategory)
+}
+
+export function assertCategory(value: Category | RawCategory): Category {
+  return normalizeCategory(value)
 }

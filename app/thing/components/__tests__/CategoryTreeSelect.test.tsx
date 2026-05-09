@@ -225,6 +225,21 @@ describe('CategoryTreeSelect', () => {
     expect(screen.getByRole('combobox', { name: '选择或创建分类' })).toHaveValue('child:2')
   })
 
+  it('应该兼容接口返回字符串 id 时渲染二级分类', () => {
+    vi.mocked(useItemStore).mockReturnValue({
+      categories: [
+        { id: '1', name: '电子产品', parent_id: null },
+        { id: '2', name: '手机', parent_id: '1' },
+      ],
+      createCategory: mockCreateCategory,
+      fetchCategories: mockFetchCategories,
+    } as ReturnType<typeof useItemStore>)
+
+    render(<CategoryTreeSelect onSelect={mockOnSelect} />)
+
+    expect(screen.getByRole('option', { name: '电子产品 / 手机' })).toBeInTheDocument()
+  })
+
   it('应该在分类不存在时回退为未分类', () => {
     render(
       <CategoryTreeSelect onSelect={mockOnSelect} selectedCategory={{ type: 'child', id: 99999 }} />
