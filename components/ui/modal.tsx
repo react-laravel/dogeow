@@ -55,7 +55,9 @@ export function Modal({
           </DialogHeader>
         ) : null}
 
-        <div className={cn('flex-1 flex flex-col', className)}>{children}</div>
+        <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden', className)}>
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   )

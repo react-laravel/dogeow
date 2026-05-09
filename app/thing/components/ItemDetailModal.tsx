@@ -580,9 +580,9 @@ export function ItemDetailModal({
         open={open}
         onOpenChange={onOpenChange}
         title={`物品详情${item.name ? ` - ${item.name}` : ''}`}
-        contentClassName="flex h-[85vh] w-[calc(100vw-2rem)] max-w-4xl flex-col p-0 sm:h-[85vh]"
+        contentClassName="top-[calc(var(--app-header-height,50px)+0.5rem)] flex h-[calc(100dvh-var(--app-header-height,50px)-1rem)] w-[calc(100vw-1rem)] max-h-[calc(100dvh-var(--app-header-height,50px)-1rem)] max-w-4xl translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:h-[85vh] sm:w-[calc(100vw-2rem)] sm:max-h-[85vh] sm:translate-y-[-50%]"
       >
-        <div className="bg-background sticky top-0 z-10 flex flex-shrink-0 flex-col gap-3 border-b px-6 py-4">
+        <div className="bg-background sticky top-0 z-10 flex flex-shrink-0 flex-col gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             {isInlineEditMode ? (
               <div className="max-w-full shrink-0">
@@ -685,7 +685,7 @@ export function ItemDetailModal({
         </div>
 
         {/* 内容区域 - 可滚动区域 */}
-        <div className="flex-1 overflow-y-auto px-6 pb-[calc(6rem+env(safe-area-inset-bottom,0))] sm:pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-[calc(6rem+env(safe-area-inset-bottom,0))] sm:px-6 sm:pb-6">
           {isInlineEditMode ? (
             <Card className="mt-6 overflow-hidden">
               <CardContent className="space-y-6 pt-6">
