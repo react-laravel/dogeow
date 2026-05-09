@@ -46,8 +46,8 @@ describe('NoteNavigation', () => {
 
     it('should render all navigation buttons', () => {
       render(<NoteNavigation />)
-      const buttons = screen.getAllByRole('button')
-      expect(buttons).toHaveLength(3)
+      const links = screen.getAllByRole('link')
+      expect(links).toHaveLength(3)
     })
 
     it('should render with correct icons', () => {

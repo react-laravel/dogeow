@@ -15,13 +15,12 @@ import {
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import useFileStore from '../store/useFileStore'
-import type { FileView } from '../types'
 import { useCreateFolder, useFileUpload, useDeleteFiles } from '../hooks/useFileOperations'
 import { useSearchDebounce } from '@/hooks/useDebounce'
-import { VIEW_CONFIG, SEARCH_CONFIG } from '../constants'
+import { SEARCH_CONFIG } from '../constants'
 
 export default function FileHeader() {
-  const { currentView, setCurrentView, searchQuery, setSearchQuery, selectedFiles } = useFileStore()
+  const { searchQuery, setSearchQuery, selectedFiles } = useFileStore()
 
   const createFolderHook = useCreateFolder()
   const fileUploadHook = useFileUpload()
@@ -32,32 +31,6 @@ export default function FileHeader() {
     searchQuery,
     SEARCH_CONFIG.debounceDelay,
     SEARCH_CONFIG.minQueryLength
-  )
-
-  // 渲染视图切换按钮
-  const renderViewToggle = () => (
-    <div className="flex overflow-hidden rounded-md border">
-      {(Object.entries(VIEW_CONFIG) as [FileView, (typeof VIEW_CONFIG)[FileView]][]).map(
-        ([view, config], index) => {
-          const Icon = config.icon
-          const isFirst = index === 0
-          const isLast = index === Object.keys(VIEW_CONFIG).length - 1
-
-          return (
-            <Button
-              key={view}
-              variant={currentView === view ? 'default' : 'ghost'}
-              size="icon"
-              className={`h-8 w-8 rounded-none ${isFirst ? 'rounded-l-md' : ''} ${isLast ? 'rounded-r-md' : ''}`}
-              onClick={() => setCurrentView(view)}
-              title={config.label}
-            >
-              <Icon className="h-4 w-4" />
-            </Button>
-          )
-        }
-      )}
-    </div>
   )
 
   // 渲染新建文件夹对话框
@@ -133,9 +106,6 @@ export default function FileHeader() {
 
       {/* 操作按钮组 */}
       <div className="flex items-center space-x-2">
-        {/* 视图切换 */}
-        {renderViewToggle()}
-
         {/* 新建文件夹 */}
         {renderCreateFolderDialog()}
 

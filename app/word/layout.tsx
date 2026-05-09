@@ -1,8 +1,39 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { BookOpen, Brain, Library, Settings } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import { BottomNav, BOTTOM_NAV_CONTENT_PADDING, type BottomNavItem } from '@/components/layout'
+
+const items: BottomNavItem[] = [
+  {
+    href: '/word',
+    label: '首页',
+    icon: <BookOpen className="h-5 w-5" />,
+    exact: true,
+  },
+  {
+    href: '/word/books',
+    label: '单词书',
+    icon: <Library className="h-5 w-5" />,
+  },
+  {
+    href: '/word/learn',
+    label: '学习',
+    icon: <Brain className="h-5 w-5" />,
+  },
+  {
+    href: '/word/settings',
+    label: '设置',
+    icon: <Settings className="h-5 w-5" />,
+  },
+]
 
 export default function WordLayout({ children }: { children: ReactNode }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>
+  return (
+    <ProtectedRoute>
+      <div className={BOTTOM_NAV_CONTENT_PADDING}>{children}</div>
+      <BottomNav items={items} ariaLabel="单词模块导航" />
+    </ProtectedRoute>
+  )
 }

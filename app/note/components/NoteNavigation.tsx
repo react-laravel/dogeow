@@ -1,12 +1,12 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { FileText, Tag, FolderTree } from 'lucide-react'
 import { useState } from 'react'
 import { useEditorStore } from '../store/editorStore'
 import { useTranslation } from '@/hooks/useTranslation'
 import { SaveOptionsDialog } from '@/components/ui/save-options-dialog'
+import { BottomNav, type BottomNavItem } from '@/components/layout'
 
 export default function NoteNavigation() {
   const router = useRouter()
@@ -61,24 +61,31 @@ export default function NoteNavigation() {
     }
   }
 
+  const items: BottomNavItem[] = [
+    {
+      href: '/note',
+      label: t('nav.my_notes', '我的笔记'),
+      icon: <FileText className="h-5 w-5" />,
+      exact: true,
+      onClick: () => handleNavigate('/note'),
+    },
+    {
+      href: '/note/categories',
+      label: t('nav.categories', '分类'),
+      icon: <FolderTree className="h-5 w-5" />,
+      onClick: () => handleNavigate('/note/categories'),
+    },
+    {
+      href: '/note/tags',
+      label: t('nav.tags', '标签'),
+      icon: <Tag className="h-5 w-5" />,
+      onClick: () => handleNavigate('/note/tags'),
+    },
+  ]
+
   return (
-    <div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 relative border-b shadow-sm backdrop-blur">
-      <nav className="flex items-center overflow-x-auto px-3 py-2 sm:px-4">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => handleNavigate('/note')}>
-            <FileText className="mr-2 h-4 w-4" />
-            {t('nav.my_notes', '我的笔记')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleNavigate('/note/categories')}>
-            <FolderTree className="mr-2 h-4 w-4" />
-            {t('nav.categories', '分类')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleNavigate('/note/tags')}>
-            <Tag className="mr-2 h-4 w-4" />
-            {t('nav.tags', '标签')}
-          </Button>
-        </div>
-      </nav>
+    <>
+      <BottomNav items={items} ariaLabel="笔记模块导航" />
       <SaveOptionsDialog
         open={showConfirm}
         onOpenChange={setShowConfirm}
@@ -91,6 +98,6 @@ export default function NoteNavigation() {
         saveText={t('confirm.save', '保存')}
         discardText={t('confirm.discard', '放弃保存')}
       />
-    </div>
+    </>
   )
 }

@@ -15,6 +15,7 @@ import {
   ChatPageSkeleton,
 } from './components'
 import ChatErrorBoundary, { useChatErrorHandler } from './components/ChatErrorBoundary'
+import { useChatUIStore } from './stores/uiStore'
 import useChatStore from '@/app/chat/chatStore'
 import useAuthStore from '@/stores/authStore'
 import { useChatWebSocket } from '@/hooks/useChatWebSocket'
@@ -100,8 +101,7 @@ function ChatPageContent() {
   const loadThrottleTimersRef = useRef<Record<string, number>>({})
 
   // 移动端状态
-  const [isRoomListOpen, setIsRoomListOpen] = useState(false)
-  const [isUsersListOpen, setIsUsersListOpen] = useState(false)
+  const { isRoomListOpen, isUsersListOpen, setRoomListOpen, setUsersListOpen } = useChatUIStore()
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
 
   // 错误处理
@@ -212,12 +212,12 @@ function ChatPageContent() {
   // 移动端处理函数 - 使用 useMemo 优化
   const mobileHandlers = useMemo(
     () => ({
-      handleOpenRoomList: () => setIsRoomListOpen(true),
-      handleOpenUsersList: () => setIsUsersListOpen(true),
+      handleOpenRoomList: () => setRoomListOpen(true),
+      handleOpenUsersList: () => setUsersListOpen(true),
       handleReply: (message: ChatMessage) => setReplyingTo(message),
       cancelReply: () => setReplyingTo(null),
     }),
-    []
+    [setRoomListOpen, setUsersListOpen]
   )
 
   // 消息发送成功处理
@@ -380,7 +380,7 @@ function ChatPageContent() {
       clearComponentError={clearComponentError}
       retryAction={retryAction}
     >
-      <div className="chat-page-shell bg-background safe-area-top safe-area-bottom flex min-h-0 flex-col overflow-hidden">
+      <div className="chat-page-shell bg-background safe-area-top flex min-h-0 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom,0))]">
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Room List Sidebar - Desktop */}
           <ChatSidebar
@@ -400,8 +400,8 @@ function ChatPageContent() {
               isRoomListOpen={isRoomListOpen}
               isUsersListOpen={isUsersListOpen}
               currentRoom={currentRoom}
-              onRoomListOpenChange={setIsRoomListOpen}
-              onUsersListOpenChange={setIsUsersListOpen}
+              onRoomListOpenChange={setRoomListOpen}
+              onUsersListOpenChange={setUsersListOpen}
               onMentionUser={noop}
               onDirectMessage={noop}
               onBlockUser={noop}
