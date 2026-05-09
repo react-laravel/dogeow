@@ -41,38 +41,42 @@ export function AddThemeDialog({ onAddTheme }: AddThemeDialogProps) {
       <DialogTrigger asChild>
         <button
           type="button"
+          aria-label="添加主题"
           className={cn(
-            'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl transition-all',
-            'border-2 border-dashed border-primary/30 bg-primary/10 hover:bg-primary/20 hover:opacity-90'
+            'flex w-full items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/10 px-3 py-3 text-left transition-colors',
+            'hover:bg-primary/20 hover:opacity-90'
           )}
           title="添加主题"
         >
-          <Plus className="text-primary/70 h-5 w-5" />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dashed border-primary/30 bg-primary/5">
+            <Plus className="text-primary/70 h-5 w-5" />
+          </span>
+          <span className="text-sm font-medium">添加主题</span>
         </button>
       </DialogTrigger>
 
       <DialogContent className="max-w-[80%]">
         <DialogHeader>
-          <DialogTitle>Add Theme</DialogTitle>
+          <DialogTitle>添加主题</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-4">
           <div className="flex items-center gap-4">
             <Label htmlFor="theme-name" className="w-1/4 text-right">
-              Name
+              名称
             </Label>
             <Input
               id="theme-name"
               value={themeName}
               onChange={e => setThemeName(e.target.value)}
               className="w-3/4"
-              placeholder="e.g. My Theme"
+              placeholder="例如：我的主题"
             />
           </div>
 
           <div className="flex items-center gap-4">
             <Label htmlFor="theme-color" className="w-1/4 text-right">
-              Color
+              颜色
             </Label>
             <div className="w-3/4">
               <Input
@@ -87,7 +91,7 @@ export function AddThemeDialog({ onAddTheme }: AddThemeDialogProps) {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleAddTheme}>Add</Button>
+          <Button onClick={handleAddTheme}>添加</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -1,8 +1,9 @@
 'use client'
 
-import { BookOpen, Columns } from 'lucide-react'
+import { BookOpen, Columns, Play } from 'lucide-react'
 import { BottomHourPicker } from '@/components/ui/bottom-hour-picker'
 import { Switch } from '@/components/ui/switch'
+import { type AudioPlaybackMode } from '@/stores/musicStore'
 import { PROJECT_COVER_MODE_OPTIONS, type ProjectCoverMode } from '@/stores/projectCoverStore'
 import type { SiteLayout } from '@/stores/layoutStore'
 import type { ThemeMode, RestPeriod } from '@/stores/themeStore'
@@ -19,6 +20,28 @@ const SITE_LAYOUT_OPTIONS = [
   { value: 'grid' as const, label: '网格' },
   { value: 'magazine' as const, label: '杂志' },
 ] as { value: SiteLayout; label: string }[]
+
+const AUDIO_PLAYBACK_MODE_OPTIONS: Array<{
+  value: AudioPlaybackMode
+  label: string
+  description: string
+}> = [
+  {
+    value: 'auto',
+    label: '自动',
+    description: '优先兼顾可视化和锁屏/后台播放稳定性。',
+  },
+  {
+    value: 'visualizer',
+    label: '可视化优先',
+    description: '尽量保留频谱效果，部分移动端锁屏时可能不够稳定。',
+  },
+  {
+    value: 'native',
+    label: '兼容优先',
+    description: '关闭可视化，优先保证锁屏和切后台后的继续播放。',
+  },
+]
 
 interface ColorModeViewProps {
   themeMode: ThemeMode
@@ -130,6 +153,45 @@ export function FullscreenView({ fullscreenOn, onToggle }: FullscreenViewProps) 
   )
 }
 
+interface PlaybackViewProps {
+  audioPlaybackMode: AudioPlaybackMode
+  setAudioPlaybackMode: (mode: AudioPlaybackMode) => void
+}
+
+export function PlaybackView({ audioPlaybackMode, setAudioPlaybackMode }: PlaybackViewProps) {
+  return (
+    <div className="flex flex-col space-y-3">
+      <div className="flex w-full items-start gap-3 rounded-lg p-2">
+        <Play className="mt-1 h-4 w-4 shrink-0" />
+        <div className="flex flex-1 flex-col gap-2">
+          {AUDIO_PLAYBACK_MODE_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setAudioPlaybackMode(option.value)}
+              className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                audioPlaybackMode === option.value
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:bg-muted'
+              }`}
+            >
+              <div className="text-sm font-medium">{option.label}</div>
+              <div className="text-muted-foreground mt-1 text-xs leading-5">
+                {option.description}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-muted-foreground px-2 text-xs leading-5">
+        支持 captureStream 的浏览器通常可以同时保留可视化和锁屏播放；iOS Safari
+        一类环境目前很难稳定兼顾，所以这里保留自动和兼容模式可切换。
+      </p>
+    </div>
+  )
+}
+
 interface AppsListViewProps {
   siteLayout: SiteLayout
   setSiteLayout: (layout: SiteLayout) => void
@@ -144,7 +206,7 @@ export function AppsListView({
   setProjectCoverMode,
 }: AppsListViewProps) {
   return (
-    <div className="flex flex-col space-y-2">
+    <div className="flex flex-col space-y-3">
       <div className="flex w-full items-center gap-2 rounded-lg p-2">
         <Columns className="h-4 w-4 shrink-0" />
         <div className="flex flex-1 gap-1">

@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import type { CustomTheme } from '@/app/types'
 import { Dialog, DialogContent, DialogOverlay, DialogTitle } from '@/components/ui/dialog'
 import { useTheme } from 'next-themes'
+import { useMusicStore } from '@/stores/musicStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { useProjectCoverStore } from '@/stores/projectCoverStore'
 import { useLayoutStore } from '@/stores/layoutStore'
@@ -13,7 +14,7 @@ import { ThemeView } from './ThemeView'
 import { LanguageView } from './LanguageView'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
-import { AppsListView, ColorModeView, FullscreenView } from './SettingsDialogViews'
+import { AppsListView, ColorModeView, FullscreenView, PlaybackView } from './SettingsDialogViews'
 import {
   getSettingsSectionTitle,
   SettingsDialogSidebar,
@@ -86,6 +87,7 @@ export function SettingsDialog({
     themeTransitionEnabled,
     setThemeTransitionEnabled,
   } = useThemeStore()
+  const { audioPlaybackMode, setAudioPlaybackMode } = useMusicStore()
   const { projectCoverMode, setProjectCoverMode } = useProjectCoverStore()
   const { siteLayout, setSiteLayout } = useLayoutStore()
 
@@ -199,6 +201,13 @@ export function SettingsDialog({
         )
       case 'language':
         return <LanguageView onBack={() => setActiveSection('color')} showBackButton={false} />
+      case 'playback':
+        return (
+          <PlaybackView
+            audioPlaybackMode={audioPlaybackMode}
+            setAudioPlaybackMode={setAudioPlaybackMode}
+          />
+        )
       case 'apps':
         return (
           <AppsListView
