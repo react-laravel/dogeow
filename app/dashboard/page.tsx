@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { FileText, MapPin, CreditCard, Menu, House } from 'lucide-react'
+import { FileText, MapPin, CreditCard, Menu, House, Bot } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { PageContainer, PageTitle } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import {
   LocationPanel,
   LogPanel,
   MiniMaxPanel,
+  OllamaPanel,
   MiniMaxRefreshButton,
 } from './components'
 import { isAdminSync } from '@/lib/auth'
@@ -29,6 +30,7 @@ const NAV_ITEMS: Array<{
   { key: 'location', icon: MapPin, label: '我的位置' },
   { key: 'logs', icon: FileText, label: 'Laravel 日志' },
   { key: 'minimax', icon: CreditCard, label: 'MiniMax 订阅' },
+  { key: 'ollama', icon: Bot, label: 'Ollama' },
 ]
 
 export default function Dashboard() {
@@ -70,6 +72,8 @@ export default function Dashboard() {
         return <LogPanel />
       case 'minimax':
         return <MiniMaxPanel />
+      case 'ollama':
+        return <OllamaPanel />
     }
   })()
 

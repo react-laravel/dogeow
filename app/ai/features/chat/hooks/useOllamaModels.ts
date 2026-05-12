@@ -1,13 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { OllamaModelListItem } from '@/lib/utils/ollama-models'
+import { fetchBrowserLocalOllamaModels } from './browserOllama'
+import { useOllamaAccessMode } from './ollamaAccessMode'
 
-export interface OllamaModelListItem {
-  name: string
-  size?: number
-  parameterSize?: string
-  supportsVision?: boolean
-}
+export type { OllamaModelListItem } from '@/lib/utils/ollama-models'
 
 interface UseOllamaModelsOptions {
   enabled?: boolean
@@ -19,8 +17,19 @@ interface UseOllamaModelsReturn {
   refetch: () => void
 }
 
+async function fetchServerOllamaModels(): Promise<OllamaModelListItem[]> {
+  const response = await fetch('/api/ollama/models')
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`)
+  }
+
+  const data = (await response.json()) as { models?: OllamaModelListItem[] }
+  return Array.isArray(data.models) ? data.models : []
+}
+
 export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllamaModelsReturn {
   const { enabled = true } = options
+  const { effectiveOllamaAccessMode } = useOllamaAccessMode()
 
   const [ollamaModels, setOllamaModels] = useState<OllamaModelListItem[]>([])
   const [isLoadingOllamaModels, setIsLoadingOllamaModels] = useState(false)
@@ -39,14 +48,22 @@ export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllama
     setIsLoadingOllamaModels(true)
 
     try {
-      const response = await fetch('/api/ollama/models')
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+      let models: OllamaModelListItem[]
+
+      if (effectiveOllamaAccessMode === 'browser') {
+        models = await fetchBrowserLocalOllamaModels()
+      } else if (effectiveOllamaAccessMode === 'server') {
+        models = await fetchServerOllamaModels()
+      } else {
+        try {
+          models = await fetchBrowserLocalOllamaModels()
+        } catch {
+          models = await fetchServerOllamaModels()
+        }
       }
 
-      const data = (await response.json()) as { models?: OllamaModelListItem[] }
       if (!cancelled) {
-        setOllamaModels(Array.isArray(data.models) ? data.models : [])
+        setOllamaModels(models)
         hasLoadedOllamaModelsRef.current = true
       }
     } catch (error) {
@@ -62,20 +79,21 @@ export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllama
         setIsLoadingOllamaModels(false)
       }
     }
-  }, [])
+  }, [effectiveOllamaAccessMode])
 
   useEffect(() => {
     if (!enabled) {
       return
     }
 
+    hasLoadedOllamaModelsRef.current = false
     void loadOllamaModels()
 
     return () => {
       // Note: This doesn't properly cancel the in-flight request,
       // but it prevents state updates after unmount
     }
-  }, [enabled, loadOllamaModels])
+  }, [enabled, effectiveOllamaAccessMode, loadOllamaModels])
 
   const refetch = useCallback(() => {
     hasLoadedOllamaModelsRef.current = false

@@ -23,7 +23,7 @@ export interface LogFile {
   modified: number
 }
 
-export const DASHBOARD_SECTIONS = ['home', 'location', 'logs', 'minimax'] as const
+export const DASHBOARD_SECTIONS = ['home', 'location', 'logs', 'minimax', 'ollama'] as const
 
 export type DashboardSection = (typeof DASHBOARD_SECTIONS)[number]
 

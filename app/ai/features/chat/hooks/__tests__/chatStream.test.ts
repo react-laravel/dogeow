@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { readAiChatStream } from '../chatStream'
+import { readAiChatStream, readOllamaChatStream } from '../chatStream'
 
 function createStreamingResponse(chunks: string[]): Response {
   const encoder = new TextEncoder()
@@ -53,6 +53,42 @@ describe('readAiChatStream', () => {
 
     expect(result).toBe('ok')
     expect(warnSpy).toHaveBeenCalledWith('Failed to parse content chunk:', '0:not-json')
+
+    warnSpy.mockRestore()
+  })
+})
+
+describe('readOllamaChatStream', () => {
+  it('accumulates content from Ollama chat chunks and stops on done', async () => {
+    const progress: string[] = []
+
+    const response = createStreamingResponse([
+      '{"message":{"content":"你好"},"done":false}\n',
+      '{"message":{"content":"，世界"},"done":false}\n',
+      '{"done":true}\n',
+    ])
+
+    const result = await readOllamaChatStream(response, content => {
+      progress.push(content)
+    })
+
+    expect(result).toBe('你好，世界')
+    expect(progress).toEqual(['你好', '你好，世界'])
+  })
+
+  it('warns and continues when Ollama chunk parsing fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const response = createStreamingResponse([
+      'not-json\n',
+      '{"response":"ok","done":false}\n',
+      '{"done":true}\n',
+    ])
+
+    const result = await readOllamaChatStream(response, () => {})
+
+    expect(result).toBe('ok')
+    expect(warnSpy).toHaveBeenCalledWith('Failed to parse Ollama chunk:', 'not-json')
 
     warnSpy.mockRestore()
   })

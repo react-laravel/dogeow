@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { GET } from '../route'
 
@@ -30,11 +30,15 @@ describe('Ollama Models API Route', () => {
     } as unknown as NextRequest
   }
 
+  const mockRequireAuthResult = async (result: NextResponse | null) => {
+    const { requireAuth } = await import('../../../_lib/auth-guard')
+    vi.mocked(requireAuth).mockResolvedValueOnce(result)
+  }
+
   describe('Authentication', () => {
     it('returns 401 when no Authorization header is present', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(
-        (await import('next/server')).NextResponse.json(
+      await mockRequireAuthResult(
+        NextResponse.json(
           { error: '未授权', message: '请先登录或提供有效的认证令牌' },
           { status: 401 }
         )
@@ -46,8 +50,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('allows request when valid Bearer token is present', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -62,8 +65,7 @@ describe('Ollama Models API Route', () => {
 
   describe('Model listing', () => {
     it('returns empty models list when Ollama has no models', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -77,8 +79,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('returns models with correct structure', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -113,8 +114,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('filters out embedding models by name pattern', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -134,9 +134,29 @@ describe('Ollama Models API Route', () => {
       expect(data.models[0].name).toBe('qwen3:0.6b')
     })
 
+    it('filters out cloud-tagged models', async () => {
+      await mockRequireAuthResult(null)
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            models: [
+              { name: 'glm-5:cloud', size: 1234567 },
+              { name: 'gemma4:e4b', size: 2234567 },
+            ],
+          }),
+      } as unknown as Response)
+
+      const request = createMockRequest('Bearer valid-token')
+      const response = await GET(request)
+      const data = await response.json()
+      expect(data.models).toHaveLength(1)
+      expect(data.models[0].name).toBe('gemma4:e4b')
+    })
+
     it('filters out embedding models by family pattern', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -166,8 +186,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('detects vision-capable models by name pattern', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -198,8 +217,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('detects vision-capable models by capabilities', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -222,8 +240,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('handles model with missing details gracefully', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -248,8 +265,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('handles fetch error for individual model show endpoint', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -276,8 +292,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('returns models sorted alphabetically', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
@@ -313,8 +328,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('returns available: false when Ollama is unavailable', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch).mockRejectedValue(new Error('Ollama API error: 500'))
 
@@ -328,8 +342,7 @@ describe('Ollama Models API Route', () => {
     })
 
     it('filters out models with only embedding capability', async () => {
-      const { requireAuth } = await import('../../../_lib/auth-guard')
-      vi.mocked(requireAuth).mockReturnValueOnce(null)
+      await mockRequireAuthResult(null)
 
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({

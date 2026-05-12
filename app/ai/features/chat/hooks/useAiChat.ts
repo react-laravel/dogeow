@@ -3,12 +3,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { AI_SYSTEM_PROMPT, type ChatMessage } from '../types'
 import { getRequestModel, type AIProvider } from '../request-model'
-import { readAiChatStream } from './chatStream'
+import { readAiChatStream, readOllamaChatStream } from './chatStream'
 import { useAiChatImages, type ImageItem } from './useAiChatImages'
 import { useOllamaModels, type OllamaModelListItem } from './useOllamaModels'
 import { useMediaGenerators } from './useMediaGenerators'
 import { uploadImageToServer } from './uploadImage'
 import { generateTtsForMessage } from './ttsHandlers'
+import { callBrowserLocalOllamaChatAPI } from './browserOllama'
+import { useOllamaAccessMode } from './ollamaAccessMode'
 import {
   getStoredProvider,
   getStoredOllamaModel,
@@ -81,8 +83,38 @@ function supportsImagesForSelection(
   return false
 }
 
+async function callServerAiChatAPI({
+  messages,
+  model,
+  provider,
+  images,
+  signal,
+}: {
+  messages: Array<Pick<ChatMessage, 'role' | 'content'>>
+  model: string
+  provider: AIProvider
+  images: string[]
+  signal?: AbortSignal
+}): Promise<Response> {
+  return fetch('/api/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      useChat: true,
+      messages,
+      model,
+      provider,
+      images,
+    }),
+    signal,
+  })
+}
+
 export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const { open } = options
+  const { effectiveOllamaAccessMode } = useOllamaAccessMode()
 
   const [prompt, setPrompt] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -207,28 +239,62 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
           ]
 
       const requestMessages = chatMessages.map(({ role, content }) => ({ role, content }))
+      const requestModel = getRequestModel(provider, model)
 
-      // Call API
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          useChat: true,
+      let response: Response
+      let isBrowserLocalOllamaResponse = false
+
+      if (provider === 'ollama') {
+        if (effectiveOllamaAccessMode === 'browser') {
+          response = await callBrowserLocalOllamaChatAPI(
+            requestMessages,
+            requestModel,
+            abortController.signal
+          )
+          isBrowserLocalOllamaResponse = true
+        } else if (effectiveOllamaAccessMode === 'server') {
+          response = await callServerAiChatAPI({
+            messages: requestMessages,
+            model: requestModel,
+            provider,
+            images: imageUrls,
+            signal: abortController.signal,
+          })
+        } else {
+          try {
+            response = await callBrowserLocalOllamaChatAPI(
+              requestMessages,
+              requestModel,
+              abortController.signal
+            )
+            isBrowserLocalOllamaResponse = true
+          } catch {
+            response = await callServerAiChatAPI({
+              messages: requestMessages,
+              model: requestModel,
+              provider,
+              images: imageUrls,
+              signal: abortController.signal,
+            })
+          }
+        }
+      } else {
+        response = await callServerAiChatAPI({
           messages: requestMessages,
-          model: getRequestModel(provider, model),
+          model: requestModel,
           provider,
           images: imageUrls,
-        }),
-        signal: abortController.signal,
-      })
+          signal: abortController.signal,
+        })
+      }
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
 
-      const accumulatedContent = await readAiChatStream(response, setCompletion)
+      const accumulatedContent = isBrowserLocalOllamaResponse
+        ? await readOllamaChatStream(response, setCompletion)
+        : await readAiChatStream(response, setCompletion)
 
       // Stream ended, add assistant message
       if (accumulatedContent) {
@@ -280,6 +346,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     isLoading,
     model,
     provider,
+    effectiveOllamaAccessMode,
     clearImages,
     ttsEnabled,
   ])
