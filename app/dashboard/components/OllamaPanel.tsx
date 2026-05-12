@@ -1,7 +1,10 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Bot, Monitor, RotateCcw, Server } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/helpers'
 import {
   OLLAMA_ACCESS_MODE_OPTIONS,
@@ -9,6 +12,11 @@ import {
   type OllamaAccessModeSelection,
   useOllamaAccessMode,
 } from '@/app/ai/features/chat/hooks/ollamaAccessMode'
+import {
+  DEFAULT_BROWSER_OLLAMA_ADDRESS,
+  normalizeBrowserOllamaAddress,
+  useBrowserOllamaAddress,
+} from '@/app/ai/features/chat/hooks/browserOllama'
 import { DashboardCard } from './DashboardCard'
 
 const MODE_DESCRIPTIONS: Record<OllamaAccessModeSelection, string> = {
@@ -28,12 +36,27 @@ const MODE_ICONS: Record<OllamaAccessModeSelection, LucideIcon> = {
 const MODE_SELECTIONS: OllamaAccessModeSelection[] = ['default', ...OLLAMA_ACCESS_MODE_OPTIONS]
 
 export function OllamaPanel() {
+  const { ollamaAccessModeSelection, effectiveOllamaAccessMode, setOllamaAccessModeSelection } =
+    useOllamaAccessMode()
   const {
-    ollamaAccessModeSelection,
-    effectiveOllamaAccessMode,
-    defaultOllamaAccessMode,
-    setOllamaAccessModeSelection,
-  } = useOllamaAccessMode()
+    browserOllamaAddress,
+    browserOllamaBaseUrl,
+    setBrowserOllamaAddress,
+    resetBrowserOllamaAddress,
+  } = useBrowserOllamaAddress()
+  const [draftBrowserOllamaAddress, setDraftBrowserOllamaAddress] = useState(browserOllamaAddress)
+
+  useEffect(() => {
+    setDraftBrowserOllamaAddress(browserOllamaAddress)
+  }, [browserOllamaAddress])
+
+  const normalizedDraftBrowserOllamaAddress =
+    normalizeBrowserOllamaAddress(draftBrowserOllamaAddress)
+  const hasBrowserOllamaAddressChanges =
+    normalizedDraftBrowserOllamaAddress !== browserOllamaAddress
+  const isUsingDefaultBrowserOllamaAddress =
+    browserOllamaAddress === DEFAULT_BROWSER_OLLAMA_ADDRESS &&
+    normalizedDraftBrowserOllamaAddress === DEFAULT_BROWSER_OLLAMA_ADDRESS
 
   return (
     <DashboardCard
@@ -44,13 +67,41 @@ export function OllamaPanel() {
       <div className="space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
-            <div className="text-muted-foreground text-xs font-medium">站点默认</div>
-            <div className="text-sm font-medium">
-              {getOllamaAccessModeLabel(defaultOllamaAccessMode)}
+            <div className="text-muted-foreground text-xs font-medium">浏览器直连地址</div>
+            <div className="space-y-3">
+              <Input
+                value={draftBrowserOllamaAddress}
+                onChange={event => setDraftBrowserOllamaAddress(event.target.value)}
+                placeholder={DEFAULT_BROWSER_OLLAMA_ADDRESS}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+              <p className="text-muted-foreground text-xs leading-5">
+                默认使用 {DEFAULT_BROWSER_OLLAMA_ADDRESS}。可以改成 Tailscale macOS 地址，或
+                Tailscale Serve 的 HTTPS 地址。
+              </p>
+              <p className="text-muted-foreground break-all text-xs leading-5">
+                当前请求地址：{browserOllamaBaseUrl}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => setBrowserOllamaAddress(draftBrowserOllamaAddress)}
+                  disabled={!hasBrowserOllamaAddressChanges}
+                >
+                  保存地址
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetBrowserOllamaAddress}
+                  disabled={isUsingDefaultBrowserOllamaAddress}
+                >
+                  恢复默认
+                </Button>
+              </div>
             </div>
-            <p className="text-muted-foreground text-xs leading-5">
-              由环境变量 NEXT_PUBLIC_OLLAMA_ACCESS_MODE 控制，未设置时默认使用自动模式。
-            </p>
           </div>
 
           <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
@@ -104,11 +155,11 @@ export function OllamaPanel() {
         </div>
 
         <div className="space-y-2 rounded-xl border bg-muted/30 p-3 text-xs leading-5">
-          <p>自动：先尝试 NEXT_PUBLIC_BROWSER_OLLAMA_BASE_URL，未设置时使用 localhost:11434。</p>
+          <p>自动：先尝试上面保存的浏览器直连地址，失败后回退到服务器。</p>
           <p>仅服务器：要求服务器已配置 OLLAMA_BASE_URL，适合统一走线上部署的 Ollama。</p>
           <p>浏览器直连：要求目标 Ollama 通过 OLLAMA_ORIGINS 允许站点域名访问。</p>
           <p>
-            这里的选择只保存在当前浏览器。若要让所有用户统一默认值，请设置
+            这里的地址和访问模式都只保存在当前浏览器。若要让所有用户统一默认访问模式， 请设置
             NEXT_PUBLIC_OLLAMA_ACCESS_MODE 并重新部署。
           </p>
         </div>

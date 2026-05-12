@@ -39,6 +39,7 @@ describe('useAiChat model loading', () => {
     vi.clearAllMocks()
     localStorage.removeItem('ai_provider')
     localStorage.removeItem('ollama_access_mode_override')
+    localStorage.removeItem('browser_ollama_address')
     localStorage.removeItem('ollama_model')
     localStorage.removeItem('zhipuai_model')
   })
@@ -78,6 +79,28 @@ describe('useAiChat model loading', () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags')
+    })
+  })
+
+  it('requests Ollama models using the configured browser address', async () => {
+    localStorage.setItem('browser_ollama_address', '100.88.77.66:11434')
+
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === 'http://100.88.77.66:11434/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ models: [{ name: 'qwen3:0.6b' }] }),
+        })
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useAiChat({ open: true }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('http://100.88.77.66:11434/api/tags')
     })
   })
 
