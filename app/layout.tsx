@@ -16,6 +16,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: '#000000',
+  colorScheme: 'dark light',
 }
 
 export const metadata: Metadata = {
@@ -68,12 +70,37 @@ export const metadata: Metadata = {
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'default',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
     'apple-mobile-web-app-title': 'DogeOW',
     'msapplication-TileColor': '#000000',
     'theme-color': '#000000',
   },
 }
+
+const themeBootstrapScript = `
+(() => {
+  try {
+    const raw = localStorage.getItem('theme-storage')
+    const state = raw ? JSON.parse(raw).state : null
+    const mode = state?.themeMode ?? 'light'
+    const followSystem = state?.followSystem === true
+    const restPeriod = state?.restPeriod ?? { startHour: 23, endHour: 6 }
+    const hour = new Date().getHours()
+    const inRest = restPeriod.startHour > restPeriod.endHour
+      ? hour >= restPeriod.startHour || hour < restPeriod.endHour
+      : hour >= restPeriod.startHour && hour < restPeriod.endHour
+    const dark = mode === 'dark' || (mode === 'system' && followSystem && matchMedia('(prefers-color-scheme: dark)').matches) || (mode === 'rest' && inRest)
+    const backgroundColor = dark ? '#000000' : '#ffffff'
+    document.documentElement.classList.toggle('dark', dark)
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+    document.documentElement.style.backgroundColor = backgroundColor
+    const themeColor = document.querySelector('meta[name="theme-color"]')
+    if (themeColor) themeColor.setAttribute('content', backgroundColor)
+    const tileColor = document.querySelector('meta[name="msapplication-TileColor"]')
+    if (tileColor) tileColor.setAttribute('content', backgroundColor)
+  } catch {}
+})()
+`
 
 export default function RootLayout({
   children,
@@ -82,6 +109,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
       <body className="flex h-screen flex-col overflow-hidden antialiased">
         <SWRProvider>
           <ThemeProvider>

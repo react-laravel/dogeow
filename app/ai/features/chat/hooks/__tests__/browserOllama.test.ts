@@ -38,4 +38,17 @@ describe('browserOllama debug info', () => {
       { name: 'deepseek-r1:cloud', reason: 'cloud 标签模型' },
     ])
   })
+
+  it('adds diagnostics for network failures', async () => {
+    localStorage.setItem('browser_ollama_address', '100.104.64.84:11434')
+
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Load failed'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchBrowserLocalOllamaDebugInfo()).rejects.toThrow(
+      /请求 Ollama 失败：Load failed/
+    )
+    await expect(fetchBrowserLocalOllamaDebugInfo()).rejects.toThrow(/页面来源：/)
+    await expect(fetchBrowserLocalOllamaDebugInfo()).rejects.toThrow(/OLLAMA_ORIGINS/)
+  })
 })

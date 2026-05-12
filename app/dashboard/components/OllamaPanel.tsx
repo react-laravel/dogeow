@@ -103,7 +103,7 @@ export function OllamaPanel() {
               />
               <p className="text-muted-foreground text-xs leading-5">
                 默认使用 {DEFAULT_BROWSER_OLLAMA_ADDRESS}。可以改成 Tailscale macOS 地址，或
-                Tailscale Serve 的 HTTPS 地址。
+                Tailscale Serve 的 HTTPS 地址。HTTPS 页面里直接请求 HTTP 地址会被 iOS/Safari 拦截。
               </p>
               <p className="text-muted-foreground break-all text-xs leading-5">
                 当前请求地址：{browserOllamaBaseUrl}
@@ -146,7 +146,8 @@ export function OllamaPanel() {
           <div className="space-y-1">
             <div className="text-muted-foreground text-xs font-medium">地址调试</div>
             <p className="text-muted-foreground break-all">
-              直接请求当前地址的 /api/tags，并按前端实际规则过滤 embed/cloud 模型。
+              直接请求当前地址的 /api/tags，并按前端实际规则过滤 embed/cloud
+              模型。若这里显示混合内容或 CORS 提示，请优先改用 Tailscale Serve 的 HTTPS 地址。
             </p>
           </div>
 
@@ -176,6 +177,11 @@ export function OllamaPanel() {
               <div className="space-y-1 rounded-xl border bg-background/60 p-3">
                 <div className="text-muted-foreground">调试请求地址</div>
                 <div className="break-all text-sm font-medium">{debugInfo.tagsUrl}</div>
+                {debugInfo.pageOrigin ? (
+                  <div className="text-muted-foreground break-all">
+                    页面来源：{debugInfo.pageOrigin}
+                  </div>
+                ) : null}
               </div>
 
               <div className="grid gap-3 lg:grid-cols-2">

@@ -16,6 +16,7 @@ const BROWSER_OLLAMA_ADDRESS_CHANGE_EVENT = 'browser-ollama-address-change'
 export interface BrowserOllamaDebugInfo {
   baseUrl: string
   tagsUrl: string
+  pageOrigin?: string
   rawModels: OllamaTagModel[]
   chatModels: OllamaModelListItem[]
   excludedModels: Array<{
@@ -126,24 +127,65 @@ function getBrowserOllamaChatUrl(): string {
   return `${getBrowserOllamaBaseUrl()}/api/chat`
 }
 
+function getPageOrigin(): string | undefined {
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+
+  return window.location.origin
+}
+
+function createBrowserOllamaNetworkError(tagsUrl: string, error: unknown): Error {
+  const detail = error instanceof Error ? error.message : String(error)
+  const hints: string[] = []
+
+  if (typeof window !== 'undefined') {
+    const pageOrigin = window.location.origin
+    const pageProtocol = window.location.protocol
+    const targetProtocol = new URL(tagsUrl).protocol
+
+    hints.push(`页面来源：${pageOrigin}`)
+    hints.push(`请求地址：${tagsUrl}`)
+
+    if (pageProtocol === 'https:' && targetProtocol === 'http:') {
+      hints.push(
+        '当前页面是 HTTPS，但 Ollama 地址是 HTTP。iOS/Safari/PWA 会拦截混合内容；直接在地址栏打开 HTTP 地址能看到 “Ollama is running” 不代表页面 fetch 可以访问。请改用 Tailscale Serve 的 HTTPS 地址，或改走服务器代理。'
+      )
+    }
+
+    hints.push(`请确认 OLLAMA_ORIGINS 包含 ${pageOrigin}，否则浏览器会因为 CORS 拦截 /api/tags。`)
+  } else {
+    hints.push(`请求地址：${tagsUrl}`)
+  }
+
+  return new Error(`请求 Ollama 失败：${detail}\n${hints.join('\n')}`)
+}
+
 async function fetchBrowserOllamaTags(): Promise<{
   baseUrl: string
   tagsUrl: string
+  pageOrigin?: string
   data: OllamaTagsResponse
 }> {
   const baseUrl = getBrowserOllamaBaseUrl()
   const tagsUrl = `${baseUrl}/api/tags`
-  const response = await fetch(tagsUrl, { cache: 'no-store' })
+  let response: Response
+
+  try {
+    response = await fetch(tagsUrl, { cache: 'no-store' })
+  } catch (error) {
+    throw createBrowserOllamaNetworkError(tagsUrl, error)
+  }
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
     throw new Error(
-      `Browser Ollama API error: ${response.status}${detail ? ` ${detail.slice(0, 300)}` : ''}`
+      `请求 Ollama 失败：HTTP ${response.status}${detail ? ` ${detail.slice(0, 300)}` : ''}\n请求地址：${tagsUrl}`
     )
   }
 
   const data = (await response.json()) as OllamaTagsResponse
-  return { baseUrl, tagsUrl, data }
+  return { baseUrl, tagsUrl, pageOrigin: getPageOrigin(), data }
 }
 
 export async function fetchBrowserLocalOllamaModels(): Promise<OllamaModelListItem[]> {
@@ -152,12 +194,13 @@ export async function fetchBrowserLocalOllamaModels(): Promise<OllamaModelListIt
 }
 
 export async function fetchBrowserLocalOllamaDebugInfo(): Promise<BrowserOllamaDebugInfo> {
-  const { baseUrl, tagsUrl, data } = await fetchBrowserOllamaTags()
+  const { baseUrl, tagsUrl, pageOrigin, data } = await fetchBrowserOllamaTags()
   const rawModels = data.models ?? []
 
   return {
     baseUrl,
     tagsUrl,
+    pageOrigin,
     rawModels,
     chatModels: buildOllamaModelList(rawModels.map(model => ({ model }))),
     excludedModels: rawModels
