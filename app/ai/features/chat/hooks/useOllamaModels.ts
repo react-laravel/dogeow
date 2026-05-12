@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { OllamaModelListItem } from '@/lib/utils/ollama-models'
-import { fetchBrowserLocalOllamaModels } from './browserOllama'
+import { fetchBrowserLocalOllamaModels, useBrowserOllamaAddress } from './browserOllama'
 import { useOllamaAccessMode } from './ollamaAccessMode'
 
 export type { OllamaModelListItem } from '@/lib/utils/ollama-models'
@@ -30,6 +30,7 @@ async function fetchServerOllamaModels(): Promise<OllamaModelListItem[]> {
 export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllamaModelsReturn {
   const { enabled = true } = options
   const { effectiveOllamaAccessMode } = useOllamaAccessMode()
+  const { browserOllamaAddress } = useBrowserOllamaAddress()
 
   const [ollamaModels, setOllamaModels] = useState<OllamaModelListItem[]>([])
   const [isLoadingOllamaModels, setIsLoadingOllamaModels] = useState(false)
@@ -93,7 +94,7 @@ export function useOllamaModels(options: UseOllamaModelsOptions = {}): UseOllama
       // Note: This doesn't properly cancel the in-flight request,
       // but it prevents state updates after unmount
     }
-  }, [enabled, effectiveOllamaAccessMode, loadOllamaModels])
+  }, [browserOllamaAddress, enabled, effectiveOllamaAccessMode, loadOllamaModels])
 
   const refetch = useCallback(() => {
     hasLoadedOllamaModelsRef.current = false

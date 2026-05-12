@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAiChat } from '../useAiChat'
+import { setStoredBrowserOllamaAddress } from '../browserOllama'
 
 function createStreamingResponse(chunks: string[]): Response {
   const encoder = new TextEncoder()
@@ -102,6 +103,50 @@ describe('useAiChat model loading', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('http://100.88.77.66:11434/api/tags')
     })
+  })
+
+  it('refetches Ollama models after the browser address changes', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === 'http://localhost:11434/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ models: [{ name: 'qwen3:0.6b' }] }),
+        })
+      }
+
+      if (input === 'http://100.104.64.84:11434/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            models: [
+              { name: 'gemma3:4b' },
+              { name: 'qwen3-embedding:0.6b' },
+              { name: 'deepseek-r1:cloud' },
+            ],
+          }),
+        })
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useAiChat({ open: true }))
+
+    await waitFor(() => {
+      expect(result.current.ollamaModels).toEqual([{ name: 'qwen3:0.6b', supportsVision: false }])
+    })
+
+    act(() => {
+      setStoredBrowserOllamaAddress('100.104.64.84:11434')
+    })
+
+    await waitFor(() => {
+      expect(result.current.ollamaModels).toEqual([{ name: 'gemma3:4b', supportsVision: false }])
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags')
+    expect(fetchMock).toHaveBeenCalledWith('http://100.104.64.84:11434/api/tags')
   })
 
   it('falls back to the server model endpoint when browser-local Ollama is unavailable', async () => {

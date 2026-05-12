@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ThemeProvider } from '../ThemeProvider'
 
@@ -49,6 +49,8 @@ describe('ThemeProvider', () => {
 
     mockUseThemeStore.mockReturnValue({
       followSystem: false,
+      themeMode: 'light',
+      restPeriod: { startHour: 23, endHour: 6 },
       currentTheme: 'default',
       customThemes: [],
     })
@@ -88,6 +90,8 @@ describe('ThemeProvider', () => {
   it('should follow system theme when followSystem is true', () => {
     mockUseThemeStore.mockReturnValue({
       followSystem: true,
+      themeMode: 'system',
+      restPeriod: { startHour: 23, endHour: 6 },
       currentTheme: 'default',
       customThemes: [],
     })
@@ -110,6 +114,8 @@ describe('ThemeProvider', () => {
   it('should set light theme when system theme is light and followSystem is true', () => {
     mockUseThemeStore.mockReturnValue({
       followSystem: true,
+      themeMode: 'system',
+      restPeriod: { startHour: 23, endHour: 6 },
       currentTheme: 'default',
       customThemes: [],
     })
@@ -129,9 +135,11 @@ describe('ThemeProvider', () => {
     expect(mockSetTheme).toHaveBeenCalledWith('light')
   })
 
-  it('should not set theme when followSystem is false', () => {
+  it('should set the explicit theme when followSystem is false', () => {
     mockUseThemeStore.mockReturnValue({
       followSystem: false,
+      themeMode: 'light',
+      restPeriod: { startHour: 23, endHour: 6 },
       currentTheme: 'default',
       customThemes: [],
     })
@@ -142,13 +150,41 @@ describe('ThemeProvider', () => {
       </ThemeProvider>
     )
 
-    expect(mockSetTheme).not.toHaveBeenCalled()
+    expect(mockSetTheme).toHaveBeenCalledWith('light')
   })
 
   it('should apply theme colors to CSS variables', () => {
     // 跳过这个测试，因为它依赖于DOM环境
     // 在实际应用中，这个功能会在浏览器环境中正常工作
     expect(true).toBe(true)
+  })
+
+  it('should sync theme chrome metadata for dark mode on mount', async () => {
+    mockUseThemeStore.mockReturnValue({
+      followSystem: false,
+      themeMode: 'dark',
+      restPeriod: { startHour: 23, endHour: 6 },
+      currentTheme: 'default',
+      customThemes: [],
+    })
+
+    render(
+      <ThemeProvider>
+        <div>Test content</div>
+      </ThemeProvider>
+    )
+
+    await waitFor(() => {
+      expect(document.documentElement.style.colorScheme).toBe('dark')
+      expect(document.documentElement.style.backgroundColor).toBe('rgb(0, 0, 0)')
+      expect(
+        document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+      ).toHaveAttribute('content', 'black-translucent')
+      expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+        'content',
+        '#000000'
+      )
+    })
   })
 
   it('should handle multiple children', () => {
