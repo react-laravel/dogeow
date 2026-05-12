@@ -15,11 +15,57 @@ const nextPolyfillModuleRequests = [
 const nextPolyfillModuleAliasesForTurbopack = Object.fromEntries(
   nextPolyfillModuleRequests.map(request => [request, modernNextPolyfillModuleForTurbopack])
 )
+const APP_BUILD_VERSION =
+  process.env.NEXT_PUBLIC_APP_BUILD_VERSION?.trim() ||
+  process.env.GITHUB_SHA?.slice(0, 12) ||
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
+  Date.now().toString(36)
+const NO_STORE_HEADERS = [
+  {
+    key: 'Cache-Control',
+    value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0',
+  },
+  {
+    key: 'Pragma',
+    value: 'no-cache',
+  },
+  {
+    key: 'Expires',
+    value: '0',
+  },
+]
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   allowedDevOrigins: ['127.0.0.1'],
+  env: {
+    NEXT_PUBLIC_APP_BUILD_VERSION: APP_BUILD_VERSION,
+  },
+  generateBuildId: async () => APP_BUILD_VERSION,
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [...NO_STORE_HEADERS, { key: 'Service-Worker-Allowed', value: '/' }],
+      },
+      {
+        source: '/manifest.webmanifest',
+        headers: NO_STORE_HEADERS,
+      },
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'header',
+            key: 'accept',
+            value: '.*text/html.*',
+          },
+        ],
+        headers: NO_STORE_HEADERS,
+      },
+    ]
+  },
   // 将 Next 默认的 module polyfills 缩减到仅保留当前目标浏览器仍缺失的 URL.canParse。
   turbopack: {
     resolveAlias: nextPolyfillModuleAliasesForTurbopack,

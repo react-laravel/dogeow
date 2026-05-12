@@ -79,7 +79,9 @@ describe('useAiChat model loading', () => {
     renderHook(() => useAiChat({ open: true }))
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags')
+      expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags', {
+        cache: 'no-store',
+      })
     })
   })
 
@@ -101,7 +103,9 @@ describe('useAiChat model loading', () => {
     renderHook(() => useAiChat({ open: true }))
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('http://100.88.77.66:11434/api/tags')
+      expect(fetchMock).toHaveBeenCalledWith('http://100.88.77.66:11434/api/tags', {
+        cache: 'no-store',
+      })
     })
   })
 
@@ -145,8 +149,12 @@ describe('useAiChat model loading', () => {
       expect(result.current.ollamaModels).toEqual([{ name: 'gemma3:4b', supportsVision: false }])
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags')
-    expect(fetchMock).toHaveBeenCalledWith('http://100.104.64.84:11434/api/tags')
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags', {
+      cache: 'no-store',
+    })
+    expect(fetchMock).toHaveBeenCalledWith('http://100.104.64.84:11434/api/tags', {
+      cache: 'no-store',
+    })
   })
 
   it('falls back to the server model endpoint when browser-local Ollama is unavailable', async () => {
@@ -172,7 +180,9 @@ describe('useAiChat model loading', () => {
       expect(result.current.ollamaModels).toEqual([{ name: 'gemma4:e4b', supportsVision: false }])
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags')
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags', {
+      cache: 'no-store',
+    })
     expect(fetchMock).toHaveBeenCalledWith('/api/ollama/models')
   })
 

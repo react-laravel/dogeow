@@ -101,6 +101,26 @@ export function isChatCapableModel(model: OllamaTagModel, show?: OllamaShowRespo
   return !isEmbeddingByHeuristic(model, show)
 }
 
+export function getOllamaModelExclusionReason(
+  model: OllamaTagModel,
+  show?: OllamaShowResponse
+): string | null {
+  if (isCloudModel(model)) {
+    return 'cloud 标签模型'
+  }
+
+  const capabilities = show?.capabilities ?? []
+  if (capabilities.includes('embedding')) {
+    return 'embedding 能力模型'
+  }
+
+  if (isEmbeddingByHeuristic(model, show)) {
+    return 'embedding 特征模型'
+  }
+
+  return null
+}
+
 export function supportsVision(model: OllamaTagModel, show?: OllamaShowResponse): boolean {
   const capabilities = show?.capabilities ?? []
   if (capabilities.length > 0) {

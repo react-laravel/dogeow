@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { ChatMessage } from '../types'
 import {
   buildOllamaModelList,
+  getOllamaModelExclusionReason,
+  type OllamaTagModel,
   type OllamaModelListItem,
   type OllamaTagsResponse,
 } from '@/lib/utils/ollama-models'
@@ -10,6 +12,17 @@ export const DEFAULT_BROWSER_OLLAMA_ADDRESS = 'localhost:11434'
 
 const BROWSER_OLLAMA_ADDRESS_STORAGE_KEY = 'browser_ollama_address'
 const BROWSER_OLLAMA_ADDRESS_CHANGE_EVENT = 'browser-ollama-address-change'
+
+export interface BrowserOllamaDebugInfo {
+  baseUrl: string
+  tagsUrl: string
+  rawModels: OllamaTagModel[]
+  chatModels: OllamaModelListItem[]
+  excludedModels: Array<{
+    name: string
+    reason: string
+  }>
+}
 
 export function normalizeBrowserOllamaAddress(value: string | null | undefined): string {
   const normalized = value?.trim().replace(/\/+$/, '')
@@ -113,14 +126,47 @@ function getBrowserOllamaChatUrl(): string {
   return `${getBrowserOllamaBaseUrl()}/api/chat`
 }
 
-export async function fetchBrowserLocalOllamaModels(): Promise<OllamaModelListItem[]> {
-  const response = await fetch(getBrowserOllamaTagsUrl())
+async function fetchBrowserOllamaTags(): Promise<{
+  baseUrl: string
+  tagsUrl: string
+  data: OllamaTagsResponse
+}> {
+  const baseUrl = getBrowserOllamaBaseUrl()
+  const tagsUrl = `${baseUrl}/api/tags`
+  const response = await fetch(tagsUrl, { cache: 'no-store' })
+
   if (!response.ok) {
-    throw new Error(`Browser Ollama API error: ${response.status}`)
+    const detail = await response.text().catch(() => '')
+    throw new Error(
+      `Browser Ollama API error: ${response.status}${detail ? ` ${detail.slice(0, 300)}` : ''}`
+    )
   }
 
   const data = (await response.json()) as OllamaTagsResponse
+  return { baseUrl, tagsUrl, data }
+}
+
+export async function fetchBrowserLocalOllamaModels(): Promise<OllamaModelListItem[]> {
+  const { data } = await fetchBrowserOllamaTags()
   return buildOllamaModelList((data.models ?? []).map(model => ({ model })))
+}
+
+export async function fetchBrowserLocalOllamaDebugInfo(): Promise<BrowserOllamaDebugInfo> {
+  const { baseUrl, tagsUrl, data } = await fetchBrowserOllamaTags()
+  const rawModels = data.models ?? []
+
+  return {
+    baseUrl,
+    tagsUrl,
+    rawModels,
+    chatModels: buildOllamaModelList(rawModels.map(model => ({ model }))),
+    excludedModels: rawModels
+      .map(model => ({
+        name: model.name,
+        reason: getOllamaModelExclusionReason(model) ?? '',
+      }))
+      .filter(model => model.reason),
+  }
 }
 
 export async function callBrowserLocalOllamaChatAPI(

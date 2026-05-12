@@ -28,6 +28,7 @@ describe('PWARegister', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.unstubAllEnvs()
+    vi.stubEnv('NEXT_PUBLIC_APP_BUILD_VERSION', 'test-build-20260512')
 
     registrationUpdate = vi.fn().mockResolvedValue(undefined)
     waitingPostMessage = vi.fn()
@@ -86,7 +87,7 @@ describe('PWARegister', () => {
     render(<PWARegister />)
 
     await waitFor(() => {
-      expect(mockServiceWorker.register).toHaveBeenCalledWith('/sw.js', {
+      expect(mockServiceWorker.register).toHaveBeenCalledWith('/sw.js?v=test-build-20260512', {
         scope: '/',
         updateViaCache: 'none',
       })
