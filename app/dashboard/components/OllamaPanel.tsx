@@ -13,9 +13,9 @@ import { DashboardCard } from './DashboardCard'
 
 const MODE_DESCRIPTIONS: Record<OllamaAccessModeSelection, string> = {
   default: '使用站点默认设置。适合统一跟随部署环境。',
-  auto: '优先连接当前设备的本机 Ollama，失败后回退到服务器。',
-  browser: '只连接当前设备的本机 Ollama，不再回退到服务器。',
-  server: '只连接服务器侧配置的 Ollama，不再尝试当前设备的本机服务。',
+  auto: '优先连接浏览器直连的 Ollama 地址，失败后回退到服务器。',
+  browser: '只连接浏览器直连的 Ollama 地址，不再回退到服务器。',
+  server: '只连接服务器侧配置的 Ollama，不再尝试浏览器直连。',
 }
 
 const MODE_ICONS: Record<OllamaAccessModeSelection, LucideIcon> = {
@@ -104,9 +104,9 @@ export function OllamaPanel() {
         </div>
 
         <div className="space-y-2 rounded-xl border bg-muted/30 p-3 text-xs leading-5">
-          <p>自动：先尝试当前设备的 localhost:11434，失败后回退到服务器。</p>
+          <p>自动：先尝试 NEXT_PUBLIC_BROWSER_OLLAMA_BASE_URL，未设置时使用 localhost:11434。</p>
           <p>仅服务器：要求服务器已配置 OLLAMA_BASE_URL，适合统一走线上部署的 Ollama。</p>
-          <p>仅本机：要求当前设备正在运行 Ollama，并通过 OLLAMA_ORIGINS 允许线上域名访问。</p>
+          <p>浏览器直连：要求目标 Ollama 通过 OLLAMA_ORIGINS 允许站点域名访问。</p>
           <p>
             这里的选择只保存在当前浏览器。若要让所有用户统一默认值，请设置
             NEXT_PUBLIC_OLLAMA_ACCESS_MODE 并重新部署。

@@ -5,7 +5,16 @@ import {
   type OllamaTagsResponse,
 } from '@/lib/utils/ollama-models'
 
-export const BROWSER_LOCAL_OLLAMA_BASE_URL = 'http://localhost:11434'
+const DEFAULT_BROWSER_LOCAL_OLLAMA_BASE_URL = 'http://localhost:11434'
+
+function normalizeBrowserOllamaBaseUrl(value: string | undefined): string {
+  const normalized = value?.trim().replace(/\/+$/, '')
+  return normalized || DEFAULT_BROWSER_LOCAL_OLLAMA_BASE_URL
+}
+
+export const BROWSER_LOCAL_OLLAMA_BASE_URL = normalizeBrowserOllamaBaseUrl(
+  process.env.NEXT_PUBLIC_BROWSER_OLLAMA_BASE_URL
+)
 export const BROWSER_LOCAL_OLLAMA_TAGS_URL = `${BROWSER_LOCAL_OLLAMA_BASE_URL}/api/tags`
 export const BROWSER_LOCAL_OLLAMA_CHAT_URL = `${BROWSER_LOCAL_OLLAMA_BASE_URL}/api/chat`
 

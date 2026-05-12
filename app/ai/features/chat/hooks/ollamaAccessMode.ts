@@ -72,7 +72,7 @@ export function getOllamaAccessModeLabel(mode: OllamaAccessModeSelection): strin
     case 'auto':
       return '自动'
     case 'browser':
-      return '仅本机'
+      return '浏览器直连'
     case 'server':
       return '仅服务器'
   }
