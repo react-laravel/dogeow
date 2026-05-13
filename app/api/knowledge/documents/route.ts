@@ -9,13 +9,16 @@ export async function GET() {
   try {
     const documents = await loadAllDocuments()
 
-    return NextResponse.json({
-      success: true,
-      documents: documents.map(doc => ({
-        title: doc.title,
-        slug: doc.slug,
-      })),
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        documents: documents.map(doc => ({
+          title: doc.title,
+          slug: doc.slug,
+        })),
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
   } catch (error: unknown) {
     console.error('获取文档列表失败:', error)
     const errorMessage = error instanceof Error ? error.message : '未知错误'
