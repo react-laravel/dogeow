@@ -214,21 +214,21 @@ sync_pm2_app() {
   local app_name="dogeow-nextjs"
   local ecosystem_path="${APP_ROOT}/ecosystem.config.js"
 
-  if pm2 info "$app_name" >/dev/null 2>&1; then
+  if env -u RUNNER_TRACKING_ID pm2 info "$app_name" >/dev/null 2>&1; then
     log "重启 PM2 应用: $app_name"
 
     # 单实例 fork 模式下使用硬重启，避免旧进程继续持有上一版构建清单。
-    if PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
+    if env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
       return 0
     fi
 
     log "PM2 restart 失败，尝试重建应用进程表"
-    pm2 delete "$app_name" || true
+    env -u RUNNER_TRACKING_ID pm2 delete "$app_name" || true
   else
     log "PM2 中未找到应用，准备首次启动: $app_name"
   fi
 
-  PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 start "$ecosystem_path" --only "$app_name" --update-env
+  env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="$APP_ROOT" pm2 start "$ecosystem_path" --only "$app_name" --update-env
 }
 
 require_command git

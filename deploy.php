@@ -212,24 +212,31 @@ app_name="{{pm2_app}}"
 runtime_cwd="{{current_path}}"
 ecosystem_path="{{current_path}}/ecosystem.config.js"
 
-if pm2 info "$app_name" >/dev/null 2>&1; then
+pm2_untracked() {
+  # GitHub Actions kills job child processes carrying RUNNER_TRACKING_ID after
+  # the deploy step finishes. Strip it so the PM2 daemon and Next.js app remain
+  # alive after the self-hosted runner reports success.
+  env -u RUNNER_TRACKING_ID pm2 "$@"
+}
+
+if pm2_untracked info "$app_name" >/dev/null 2>&1; then
   echo "[deploy] 重启 PM2 应用: $app_name"
 
-  if PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
-    pm2 status
+  if env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
+    pm2_untracked status
     exit 0
   fi
 
   echo "[deploy] PM2 restart 失败，尝试重建应用进程表"
-  pm2 delete "$app_name" || true
+  pm2_untracked delete "$app_name" || true
 fi
 
-if ! pm2 info "$app_name" >/dev/null 2>&1; then
+if ! pm2_untracked info "$app_name" >/dev/null 2>&1; then
   echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
 fi
 
-PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 start "$ecosystem_path" --only "$app_name" --update-env
-pm2 status
+env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 start "$ecosystem_path" --only "$app_name" --update-env
+pm2_untracked status
 '
 BASH);
 });
