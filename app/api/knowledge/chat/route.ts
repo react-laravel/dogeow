@@ -20,6 +20,7 @@ interface KnowledgeChatRequestBody {
   searchMethod?: KnowledgeSearchMethod // 搜索方法：'simple' 或 'rag'
   model?: string // Ollama 模型名称
   provider?: AIProvider // AI 提供商：'ollama' 或 'minimax'
+  prepareOnly?: boolean
 }
 
 // Ollama配置
@@ -279,6 +280,7 @@ export async function POST(request: NextRequest) {
     searchMethod,
     model,
     provider = 'ollama',
+    prepareOnly = false,
   }: KnowledgeChatRequestBody = await request.json()
 
   try {
@@ -326,6 +328,10 @@ export async function POST(request: NextRequest) {
     const systemPart = chatMessages.filter(m => m.role === 'system')
     const conversationPart = chatMessages.filter(m => m.role !== 'system')
     chatMessages = [...systemPart, ...conversationPart.slice(-maxHistory)]
+
+    if (prepareOnly) {
+      return NextResponse.json({ messages: chatMessages })
+    }
 
     // 根据 provider 选择调用不同的 AI
     if (provider === 'minimax') {

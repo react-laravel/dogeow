@@ -14,6 +14,7 @@ import { useOllamaAccessMode } from './ollamaAccessMode'
 import {
   getStoredProvider,
   getStoredOllamaModel,
+  resolveOllamaModelSelection,
   getStoredZhipuaiModel,
   setStoredProvider,
   setStoredOllamaModel,
@@ -149,6 +150,17 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const hasMessages = displayMessages.length > 0
   const supportsImages = supportsImagesForSelection(provider, model, ollamaModels)
 
+  useEffect(() => {
+    if (provider !== 'ollama' || isLoadingOllamaModels) {
+      return
+    }
+
+    const nextModel = resolveOllamaModelSelection(model, ollamaModels)
+    if (nextModel !== model) {
+      setModel(nextModel)
+    }
+  }, [isLoadingOllamaModels, model, ollamaModels, provider])
+
   // Auto-scroll to bottom
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -198,6 +210,11 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   // Send message
   const handleSend = useCallback(async () => {
     if (isLoading) return
+
+    if (provider === 'ollama' && !model) {
+      toast.warning('当前 Ollama 地址下没有可用模型，请先在设置中检查 Ollama 列表')
+      return
+    }
 
     const imageUrls = images.map(item => item.url).filter((url): url is string => !!url)
     const hasReadyImages = imageUrls.length > 0

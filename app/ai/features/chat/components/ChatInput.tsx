@@ -27,13 +27,8 @@ import { cn } from '@/lib/helpers'
 import { ChatInputImagePreview } from './ChatInputImagePreview'
 import { GenerationModal } from './GenerationModal'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
-import {
-  type AIProvider,
-  type OllamaModelListItem,
-  ProviderSelector,
-  OllamaModelSelector,
-  ZhipuaiModelSelector,
-} from './ChatInputModelSelector'
+import { type AIProvider, type OllamaModelListItem } from './ChatInputModelSelector'
+import { ChatInputModelRow } from './ChatInputModelRow'
 
 interface ChatInputProps {
   prompt: string
@@ -65,80 +60,6 @@ interface ChatInputProps {
   generationError?: string
   onOpenImageHistory?: () => void
 }
-
-const ModelSelectorRow = React.memo<{
-  chatMode: 'ai' | 'knowledge'
-  provider?: AIProvider
-  onProviderChange?: (value: AIProvider) => void
-  model?: string
-  onModelChange?: (value: string) => void
-  ollamaModels: OllamaModelListItem[]
-  isLoading: boolean
-  isLoadingOllamaModels: boolean
-}>(
-  ({
-    chatMode,
-    provider,
-    onProviderChange,
-    model,
-    onModelChange,
-    ollamaModels,
-    isLoading,
-    isLoadingOllamaModels,
-  }) => {
-    if (chatMode === 'ai' && provider && onProviderChange) {
-      return (
-        <div className="mb-2 flex items-center gap-1.5 text-sm">
-          <ProviderSelector
-            provider={provider}
-            onProviderChange={onProviderChange}
-            isLoading={isLoading}
-          />
-          {model && onModelChange && (provider === 'ollama' || provider === 'zhipuai') && (
-            <>
-              <span className="text-muted-foreground">·</span>
-              {provider === 'ollama' && (
-                <OllamaModelSelector
-                  model={model}
-                  onModelChange={onModelChange}
-                  ollamaModels={ollamaModels}
-                  isLoading={isLoading}
-                  isLoadingOllamaModels={isLoadingOllamaModels}
-                />
-              )}
-              {provider === 'zhipuai' && (
-                <ZhipuaiModelSelector
-                  model={model}
-                  onModelChange={onModelChange}
-                  isLoading={isLoading}
-                />
-              )}
-            </>
-          )}
-        </div>
-      )
-    }
-
-    if (chatMode === 'knowledge' && model && onModelChange) {
-      return (
-        <div className="mb-2 flex items-center gap-1.5 text-sm">
-          <span className="px-0 py-1 text-muted-foreground">Ollama</span>
-          <span className="text-muted-foreground">·</span>
-          <OllamaModelSelector
-            model={model}
-            onModelChange={onModelChange}
-            ollamaModels={ollamaModels}
-            isLoading={isLoading}
-            isLoadingOllamaModels={isLoadingOllamaModels}
-          />
-        </div>
-      )
-    }
-
-    return null
-  }
-)
-ModelSelectorRow.displayName = 'ModelSelectorRow'
 
 export const ChatInput = React.memo<ChatInputProps>(
   ({
@@ -346,7 +267,7 @@ export const ChatInput = React.memo<ChatInputProps>(
     )
 
     const modelSelector = chatMode && (
-      <ModelSelectorRow
+      <ChatInputModelRow
         chatMode={chatMode}
         provider={provider}
         onProviderChange={onProviderChange}

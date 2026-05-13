@@ -42,13 +42,6 @@ const PROVIDER_DESCRIPTIONS: Record<AIProvider, string> = {
   zhipuai: 'GLM 系列',
 }
 
-export const FALLBACK_OLLAMA_MODELS: OllamaModelListItem[] = [
-  { name: 'qwen2.5:0.5b', parameterSize: '0.5B', supportsVision: false },
-  { name: 'qwen3:0.6b', parameterSize: '0.6B', supportsVision: false },
-  { name: 'qwen3:8b', parameterSize: '8B', supportsVision: false },
-  { name: 'qwen3:14b', parameterSize: '14B', supportsVision: false },
-]
-
 const ZHIPUAI_MODELS = [
   { value: 'glm-4.7', label: 'GLM-4.7', desc: '最新旗舰' },
   { value: 'glm-4.6v-flash', label: 'GLM-4.6V Flash', desc: '视觉理解' },
@@ -144,9 +137,13 @@ interface OllamaModelSelectorProps {
 export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
   ({ model, onModelChange, ollamaModels, isLoading, isLoadingOllamaModels }) => {
     const [open, setOpen] = React.useState(false)
-    const availableModels = ollamaModels.length > 0 ? ollamaModels : FALLBACK_OLLAMA_MODELS
+    const availableModels = ollamaModels
     const textOnly = availableModels.filter(item => !item.supportsVision)
     const vision = availableModels.filter(item => item.supportsVision)
+    const triggerLabel =
+      model ||
+      (isLoadingOllamaModels ? '读取中...' : availableModels.length > 0 ? '选择模型' : '未发现模型')
+    const isTriggerDisabled = isLoading || (!isLoadingOllamaModels && availableModels.length === 0)
 
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -154,10 +151,10 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
           <Button
             variant="ghost"
             size="sm"
-            disabled={isLoading}
+            disabled={isTriggerDisabled}
             className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
           >
-            {model}
+            {triggerLabel}
             {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           </Button>
         </DropdownMenuTrigger>
@@ -219,6 +216,11 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
               </>
             )}
           </DropdownMenuRadioGroup>
+          {!isLoadingOllamaModels && availableModels.length === 0 && (
+            <div className="text-muted-foreground px-2 py-1 text-xs">
+              当前地址下未发现可用 Ollama 模型
+            </div>
+          )}
           {isLoadingOllamaModels && (
             <div className="text-muted-foreground px-2 py-1 text-xs">
               正在读取本地 Ollama 模型...

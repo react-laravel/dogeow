@@ -77,6 +77,11 @@ function syncThemeChrome(themeMode: ResolvedThemeMode) {
   upsertMeta('color-scheme', 'light dark')
 }
 
+function applyTheme(themeMode: ResolvedThemeMode, setTheme: (theme: string) => void) {
+  setTheme(themeMode)
+  syncThemeChrome(themeMode)
+}
+
 // 内部组件用于处理系统主题变化与颜色变量应用
 function ThemeHandler() {
   const { followSystem, themeMode, restPeriod, currentTheme, customThemes } = useThemeStore()
@@ -85,8 +90,37 @@ function ThemeHandler() {
 
   // 根据 themeMode 设置外观：浅色、深色、跟随系统、休息时段
   useEffect(() => {
-    setTheme(resolvedThemeMode)
-    syncThemeChrome(resolvedThemeMode)
+    applyTheme(resolvedThemeMode, setTheme)
+  }, [resolvedThemeMode, setTheme])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const reapplyTheme = () => {
+      applyTheme(resolvedThemeMode, setTheme)
+
+      window.requestAnimationFrame(() => {
+        applyTheme(resolvedThemeMode, setTheme)
+      })
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        reapplyTheme()
+      }
+    }
+
+    window.addEventListener('pageshow', reapplyTheme)
+    window.addEventListener('focus', reapplyTheme)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pageshow', reapplyTheme)
+      window.removeEventListener('focus', reapplyTheme)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [resolvedThemeMode, setTheme])
 
   // 休息时段模式：每分钟检查一次，到点自动切换
@@ -94,8 +128,7 @@ function ThemeHandler() {
     if (themeMode !== 'rest') return
     const tick = () => {
       const nextThemeMode = isRestPeriodNow(restPeriod) ? 'dark' : 'light'
-      setTheme(nextThemeMode)
-      syncThemeChrome(nextThemeMode)
+      applyTheme(nextThemeMode, setTheme)
     }
     const id = setInterval(tick, 60 * 1000)
     return () => clearInterval(id)

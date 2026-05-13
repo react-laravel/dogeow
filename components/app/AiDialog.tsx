@@ -129,6 +129,9 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     generationError,
     handleGenerateMusic,
   } = aiChat
+  const currentOllamaModels = chatMode === 'knowledge' ? knowledgeChat.ollamaModels : ollamaModels
+  const currentIsLoadingOllamaModels =
+    chatMode === 'knowledge' ? knowledgeChat.isLoadingOllamaModels : isLoadingOllamaModels
 
   const handleGenerateImage = useCallback(
     (prompt: string) => {
@@ -173,8 +176,8 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           onSend={handleSend}
           onStop={stop}
           isLoading={isLoading}
-          ollamaModels={ollamaModels}
-          isLoadingOllamaModels={isLoadingOllamaModels}
+          ollamaModels={currentOllamaModels}
+          isLoadingOllamaModels={currentIsLoadingOllamaModels}
           supportsImages={chatMode === 'ai' ? supportsImages : false}
           model={model}
           onModelChange={setModel}

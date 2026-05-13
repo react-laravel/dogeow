@@ -3,7 +3,7 @@ import type { AIProvider } from '../request-model'
 const AI_PROVIDER_STORAGE_KEY = 'ai_provider'
 const OLLAMA_MODEL_STORAGE_KEY = 'ollama_model'
 const ZHIPUAI_MODEL_STORAGE_KEY = 'zhipuai_model'
-const DEFAULT_OLLAMA_MODEL = 'qwen3:0.6b'
+const DEFAULT_OLLAMA_MODEL = ''
 const DEFAULT_ZHIPUAI_MODEL = 'glm-4.7'
 
 export const getStoredProvider = (): AIProvider => {
@@ -35,7 +35,12 @@ export const setStoredProvider = (provider: AIProvider) => {
 
 export const setStoredOllamaModel = (model: string) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(OLLAMA_MODEL_STORAGE_KEY, model)
+    if (model) {
+      localStorage.setItem(OLLAMA_MODEL_STORAGE_KEY, model)
+      return
+    }
+
+    localStorage.removeItem(OLLAMA_MODEL_STORAGE_KEY)
   }
 }
 
@@ -49,3 +54,18 @@ export const AI_PROVIDER_DEFAULTS = {
   DEFAULT_OLLAMA_MODEL,
   DEFAULT_ZHIPUAI_MODEL,
 } as const
+
+export function resolveOllamaModelSelection(
+  currentModel: string,
+  availableModels: Array<{ name: string }>
+): string {
+  if (availableModels.length === 0) {
+    return ''
+  }
+
+  if (availableModels.some(model => model.name === currentModel)) {
+    return currentModel
+  }
+
+  return availableModels[0].name
+}

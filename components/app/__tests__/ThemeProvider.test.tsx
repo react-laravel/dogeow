@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ThemeProvider } from '../ThemeProvider'
 
@@ -59,6 +59,11 @@ describe('ThemeProvider', () => {
     Object.defineProperty(document.documentElement.style, 'setProperty', {
       value: vi.fn(),
       writable: true,
+    })
+
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
     })
   })
 
@@ -184,6 +189,45 @@ describe('ThemeProvider', () => {
         'content',
         '#000000'
       )
+    })
+  })
+
+  it('should reapply theme chrome when the app returns to the foreground', async () => {
+    mockUseThemeStore.mockReturnValue({
+      followSystem: false,
+      themeMode: 'dark',
+      restPeriod: { startHour: 23, endHour: 6 },
+      currentTheme: 'default',
+      customThemes: [],
+    })
+
+    render(
+      <ThemeProvider>
+        <div>Test content</div>
+      </ThemeProvider>
+    )
+
+    await waitFor(() => {
+      expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+        'content',
+        '#000000'
+      )
+    })
+
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff')
+    document.documentElement.style.backgroundColor = '#ffffff'
+
+    act(() => {
+      window.dispatchEvent(new Event('pageshow'))
+    })
+
+    await waitFor(() => {
+      expect(mockSetTheme).toHaveBeenCalledWith('dark')
+      expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+        'content',
+        '#000000'
+      )
+      expect(document.documentElement.style.backgroundColor).toBe('rgb(0, 0, 0)')
     })
   })
 

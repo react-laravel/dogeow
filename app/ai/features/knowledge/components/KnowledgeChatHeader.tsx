@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
+import type { OllamaModelListItem } from '@/lib/utils/ollama-models'
 
 type SearchMethod = 'simple' | 'rag'
 
@@ -27,6 +28,8 @@ interface KnowledgeChatHeaderProps {
   onSearchMethodChange: (value: SearchMethod) => void
   model?: string
   onModelChange?: (value: string) => void
+  ollamaModels?: OllamaModelListItem[]
+  isLoadingOllamaModels?: boolean
   provider?: 'ollama' | 'minimax'
   onProviderChange?: (value: 'ollama' | 'minimax') => void
   onClear: () => void
@@ -52,6 +55,8 @@ export function KnowledgeChatHeader({
   onSearchMethodChange,
   model,
   onModelChange,
+  ollamaModels = [],
+  isLoadingOllamaModels = false,
   provider,
   onProviderChange,
   onClear,
@@ -64,6 +69,9 @@ export function KnowledgeChatHeader({
   hideTitle = false,
   hideClear = false,
 }: KnowledgeChatHeaderProps) {
+  const hasOllamaModels = ollamaModels.length > 0
+  const modelPlaceholder = isLoadingOllamaModels ? '读取中...' : '未发现模型'
+
   return (
     <header className="bg-background flex items-center justify-between px-4 py-3">
       {!hideTitle && (
@@ -103,24 +111,30 @@ export function KnowledgeChatHeader({
             </Link>
           </Button>
         )}
-        {!hideModel && model && onModelChange && (
+        {!hideModel && onModelChange && (
           <div className="flex items-center gap-2">
             <Label htmlFor="model" className="text-sm">
               模型:
             </Label>
-            <Select value={model} onValueChange={onModelChange} disabled={isLoading}>
+            <Select
+              value={model || undefined}
+              onValueChange={onModelChange}
+              disabled={isLoading || (!isLoadingOllamaModels && !hasOllamaModels)}
+            >
               <SelectTrigger id="model" className="h-8 w-36 text-xs">
-                <SelectValue />
+                <SelectValue placeholder={modelPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="qwen2.5:0.5b">Qwen2.5 0.5B (快速)</SelectItem>
-                <SelectItem value="qwen2.5:1.5b">Qwen2.5 1.5B</SelectItem>
-                <SelectItem value="qwen2.5:3b">Qwen2.5 3B</SelectItem>
-                <SelectItem value="qwen3:0.6b">Qwen3 0.6B</SelectItem>
-                <SelectItem value="qwen3:1.8b">Qwen3 1.8B</SelectItem>
-                <SelectItem value="phi3:mini">Phi-3 Mini (推荐)</SelectItem>
-                <SelectItem value="tinyllama:1.1b">TinyLlama 1.1B</SelectItem>
-                <SelectItem value="gemma:2b">Gemma 2B</SelectItem>
+                {ollamaModels.map(item => (
+                  <SelectItem key={item.name} value={item.name}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+                {!isLoadingOllamaModels && !hasOllamaModels && (
+                  <div className="text-muted-foreground px-2 py-1 text-xs">
+                    当前地址下未发现可用 Ollama 模型
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>

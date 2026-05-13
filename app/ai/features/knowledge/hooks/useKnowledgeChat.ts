@@ -2,6 +2,15 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { ChatMessage } from '../../chat/types'
+import { callBrowserLocalOllamaChatAPI } from '../../chat/hooks/browserOllama'
+import { readAiChatStream, readOllamaChatStream } from '../../chat/hooks/chatStream'
+import {
+  getStoredOllamaModel,
+  resolveOllamaModelSelection,
+  setStoredOllamaModel,
+} from '../../chat/hooks/modelStorage'
+import { useOllamaAccessMode } from '../../chat/hooks/ollamaAccessMode'
+import { useOllamaModels, type OllamaModelListItem } from '../../chat/hooks/useOllamaModels'
 
 interface UseKnowledgeChatOptions {
   open?: boolean
@@ -13,6 +22,14 @@ type SearchMethod = 'simple' | 'rag'
 const EMBEDDING_MODEL_PREFIXES = ['qwen3-embedding', 'embeddinggemma', 'nomic-embed-text']
 const isEmbeddingModel = (m: string) => EMBEDDING_MODEL_PREFIXES.some(p => m.startsWith(p))
 
+interface KnowledgeChatRequestPayload {
+  messages: ChatMessage[]
+  useContext: boolean
+  searchMethod: SearchMethod
+  model: string
+  provider: 'ollama' | 'minimax'
+}
+
 interface UseKnowledgeChatReturn {
   prompt: string
   setPrompt: (value: string) => void
@@ -21,6 +38,8 @@ interface UseKnowledgeChatReturn {
   hasMessages: boolean
   completion: string | undefined
   isLoading: boolean
+  ollamaModels: OllamaModelListItem[]
+  isLoadingOllamaModels: boolean
   useContext: boolean
   setUseContext: (value: boolean) => void
   searchMethod: SearchMethod
@@ -35,8 +54,47 @@ interface UseKnowledgeChatReturn {
   messagesEndRef: React.RefObject<HTMLDivElement | null>
 }
 
+async function callKnowledgeChatAPI(
+  payload: KnowledgeChatRequestPayload,
+  signal?: AbortSignal
+): Promise<Response> {
+  return fetch('/api/knowledge/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    signal,
+  })
+}
+
+async function prepareKnowledgeChatMessages(
+  payload: KnowledgeChatRequestPayload,
+  signal?: AbortSignal
+): Promise<ChatMessage[]> {
+  const response = await fetch('/api/knowledge/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...payload,
+      prepareOnly: true,
+    }),
+    signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`)
+  }
+
+  const data = (await response.json()) as { messages?: ChatMessage[] }
+  return Array.isArray(data.messages) ? data.messages : []
+}
+
 export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnowledgeChatReturn {
   const { open, initialMessages = [] } = options
+  const { effectiveOllamaAccessMode } = useOllamaAccessMode()
 
   const [prompt, setPrompt] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
@@ -52,23 +110,29 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     }
     return 'ollama'
   })
-  const [model, setModel] = useState<string>(() => {
-    // 从 localStorage 读取，默认使用 qwen3:0.6b；选 embedding 时 API 会用默认对话模型
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('ollama_model')
-      return saved || 'qwen3:0.6b'
-    }
-    return 'qwen3:0.6b'
-  })
+  const [model, setModel] = useState<string>(() => getStoredOllamaModel())
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const hasAppliedInitialMessagesRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const accumulatedContentRef = useRef<string>('')
+  const { ollamaModels, isLoadingOllamaModels } = useOllamaModels({
+    enabled: Boolean(open) && provider === 'ollama',
+  })
 
   // 过滤掉 system 消息用于显示
   const displayMessages = messages.filter(m => m.role !== 'system')
   const hasMessages = displayMessages.length > 0
+
+  useEffect(() => {
+    if (provider !== 'ollama' || isLoadingOllamaModels) {
+      return
+    }
+
+    const nextModel = resolveOllamaModelSelection(model, ollamaModels)
+    if (nextModel !== model) {
+      setModel(nextModel)
+    }
+  }, [isLoadingOllamaModels, model, ollamaModels, provider])
 
   useEffect(() => {
     if (hasAppliedInitialMessagesRef.current || initialMessages.length === 0) {
@@ -111,6 +175,18 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
   const handleSend = useCallback(async () => {
     if (!prompt.trim() || isLoading) return
 
+    if (provider === 'ollama' && !model) {
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            '错误: 当前 Ollama 地址下没有可用模型，请先在 /dashboard?section=ollama 检查地址和 ollama list。',
+        },
+      ])
+      return
+    }
+
     const userMessage: ChatMessage = {
       role: 'user',
       content: prompt.trim(),
@@ -122,7 +198,6 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     setPrompt('')
     setIsLoading(true)
     setCompletion('')
-    accumulatedContentRef.current = ''
 
     // 创建 abort controller
     const abortController = new AbortController()
@@ -132,104 +207,60 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
       // 检索/embedding 模型只发当前一条用户消息，减少请求体
       const messagesToSend =
         provider === 'minimax' ? newMessages : isEmbeddingModel(model) ? [userMessage] : newMessages
-      const response = await fetch('/api/knowledge/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: messagesToSend,
-          useContext,
-          searchMethod,
-          model,
-          provider,
-        }),
-        signal: abortController.signal,
-      })
+
+      const payload: KnowledgeChatRequestPayload = {
+        messages: messagesToSend,
+        useContext,
+        searchMethod,
+        model,
+        provider,
+      }
+
+      let response: Response
+      let isBrowserLocalOllamaResponse = false
+
+      if (provider === 'ollama') {
+        if (effectiveOllamaAccessMode === 'browser') {
+          const preparedMessages = await prepareKnowledgeChatMessages(
+            payload,
+            abortController.signal
+          )
+          response = await callBrowserLocalOllamaChatAPI(
+            preparedMessages,
+            model,
+            abortController.signal
+          )
+          isBrowserLocalOllamaResponse = true
+        } else if (effectiveOllamaAccessMode === 'server') {
+          response = await callKnowledgeChatAPI(payload, abortController.signal)
+        } else {
+          try {
+            const preparedMessages = await prepareKnowledgeChatMessages(
+              payload,
+              abortController.signal
+            )
+            response = await callBrowserLocalOllamaChatAPI(
+              preparedMessages,
+              model,
+              abortController.signal
+            )
+            isBrowserLocalOllamaResponse = true
+          } catch {
+            response = await callKnowledgeChatAPI(payload, abortController.signal)
+          }
+        }
+      } else {
+        response = await callKnowledgeChatAPI(payload, abortController.signal)
+      }
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
 
-      if (!response.body) {
-        throw new Error('Response body is null')
-      }
+      const finalContent = isBrowserLocalOllamaResponse
+        ? await readOllamaChatStream(response, setCompletion)
+        : await readAiChatStream(response, setCompletion)
 
-      // 读取流式响应
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.trim()) continue
-
-          // 处理内容块: 0:"content"
-          if (line.startsWith('0:')) {
-            try {
-              const content = JSON.parse(line.slice(2))
-              if (content && typeof content === 'string') {
-                // 累积内容到 ref
-                accumulatedContentRef.current += content
-                // 立即更新 UI，确保流式显示
-                setCompletion(accumulatedContentRef.current)
-              }
-            } catch (e) {
-              console.warn('Failed to parse content chunk:', line, e)
-            }
-          }
-
-          // 处理完成标记: d:{metadata}
-          if (line.startsWith('d:')) {
-            try {
-              const metadata = JSON.parse(line.slice(2))
-              // 流完成，将累积内容添加到消息中
-              const finalContent = accumulatedContentRef.current
-              if (finalContent) {
-                setMessages(prev => [
-                  ...prev,
-                  {
-                    role: 'assistant',
-                    content: finalContent,
-                  },
-                ])
-              }
-              setCompletion('')
-              accumulatedContentRef.current = ''
-              setIsLoading(false)
-              return
-            } catch (e) {
-              console.warn('Failed to parse metadata:', line)
-            }
-          }
-        }
-      }
-
-      // 处理剩余缓冲区
-      if (buffer.trim()) {
-        if (buffer.startsWith('0:')) {
-          try {
-            const content = JSON.parse(buffer.slice(2))
-            if (content && typeof content === 'string') {
-              accumulatedContentRef.current += content
-              setCompletion(accumulatedContentRef.current)
-            }
-          } catch (e) {
-            console.warn('Failed to parse remaining buffer:', buffer, e)
-          }
-        }
-      }
-
-      // 流结束，添加 assistant 消息
-      const finalContent = accumulatedContentRef.current
       if (finalContent) {
         setMessages(prev => [
           ...prev,
@@ -240,7 +271,6 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
         ])
       }
       setCompletion('')
-      accumulatedContentRef.current = ''
       setIsLoading(false)
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -269,13 +299,20 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     } finally {
       abortControllerRef.current = null
     }
-  }, [prompt, messages, isLoading, useContext, searchMethod, model])
+  }, [
+    prompt,
+    messages,
+    isLoading,
+    useContext,
+    searchMethod,
+    model,
+    provider,
+    effectiveOllamaAccessMode,
+  ])
 
   // 当 model 改变时保存到 localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ollama_model', model)
-    }
+    setStoredOllamaModel(model)
   }, [model])
 
   // 保存 provider 到 localStorage
@@ -293,6 +330,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     hasMessages,
     completion: completion || undefined,
     isLoading,
+    ollamaModels,
+    isLoadingOllamaModels,
     useContext,
     setUseContext,
     searchMethod,

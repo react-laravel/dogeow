@@ -85,6 +85,34 @@ describe('useAiChat model loading', () => {
     })
   })
 
+  it('selects the first actual Ollama model when the stored model is unavailable', async () => {
+    localStorage.setItem('ollama_model', 'qwen2.5:0.5b')
+
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === 'http://localhost:11434/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ models: [{ name: 'gemma3:4b' }, { name: 'llama3.2:3b' }] }),
+        })
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useAiChat({ open: true }))
+
+    await waitFor(() => {
+      expect(result.current.ollamaModels).toEqual([
+        { name: 'gemma3:4b', supportsVision: false },
+        { name: 'llama3.2:3b', supportsVision: false },
+      ])
+      expect(result.current.model).toBe('gemma3:4b')
+    })
+
+    expect(localStorage.getItem('ollama_model')).toBe('gemma3:4b')
+  })
+
   it('requests Ollama models using the configured browser address', async () => {
     localStorage.setItem('browser_ollama_address', '100.88.77.66:11434')
 
@@ -287,6 +315,13 @@ describe('useAiChat model loading', () => {
 
   it('sends Ollama chat requests directly to browser-local Ollama when available', async () => {
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === 'http://localhost:11434/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ models: [{ name: 'gemma3:4b' }] }),
+        })
+      }
+
       if (input === 'http://localhost:11434/api/chat') {
         return Promise.resolve(
           createStreamingResponse([
@@ -301,7 +336,11 @@ describe('useAiChat model loading', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const { result } = renderHook(() => useAiChat({ open: false }))
+    const { result } = renderHook(() => useAiChat({ open: true }))
+
+    await waitFor(() => {
+      expect(result.current.model).toBe('gemma3:4b')
+    })
 
     act(() => {
       result.current.setPrompt('你好')
@@ -330,6 +369,13 @@ describe('useAiChat model loading', () => {
     localStorage.setItem('ollama_access_mode_override', 'server')
 
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === '/api/ollama/models') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ models: [{ name: 'gemma3:4b', supportsVision: false }] }),
+        })
+      }
+
       if (input === '/api/generate') {
         return Promise.resolve(
           createStreamingResponse([
@@ -344,7 +390,11 @@ describe('useAiChat model loading', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const { result } = renderHook(() => useAiChat({ open: false }))
+    const { result } = renderHook(() => useAiChat({ open: true }))
+
+    await waitFor(() => {
+      expect(result.current.model).toBe('gemma3:4b')
+    })
 
     act(() => {
       result.current.setPrompt('你好')
