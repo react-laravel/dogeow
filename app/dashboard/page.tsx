@@ -3,13 +3,14 @@
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { FileText, MapPin, CreditCard, Menu, House, Bot } from 'lucide-react'
+import { FileText, MapPin, CreditCard, Menu, House, Bot, Database } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { PageContainer, PageTitle } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import {
   DashboardNavItem,
+  CachePanel,
   HomePanel,
   LocationPanel,
   LogPanel,
@@ -29,6 +30,7 @@ const NAV_ITEMS: Array<{
   { key: 'home', icon: House, label: '首页' },
   { key: 'location', icon: MapPin, label: '我的位置' },
   { key: 'logs', icon: FileText, label: 'Laravel 日志' },
+  { key: 'cache', icon: Database, label: '缓存管理' },
   { key: 'minimax', icon: CreditCard, label: 'MiniMax 订阅' },
   { key: 'ollama', icon: Bot, label: 'Ollama' },
 ]
@@ -70,6 +72,8 @@ export default function Dashboard() {
         return <LocationPanel />
       case 'logs':
         return <LogPanel />
+      case 'cache':
+        return <CachePanel />
       case 'minimax':
         return <MiniMaxPanel />
       case 'ollama':

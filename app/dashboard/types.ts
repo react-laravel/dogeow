@@ -23,7 +23,14 @@ export interface LogFile {
   modified: number
 }
 
-export const DASHBOARD_SECTIONS = ['home', 'location', 'logs', 'minimax', 'ollama'] as const
+export const DASHBOARD_SECTIONS = [
+  'home',
+  'location',
+  'logs',
+  'cache',
+  'minimax',
+  'ollama',
+] as const
 
 export type DashboardSection = (typeof DASHBOARD_SECTIONS)[number]
 
@@ -71,4 +78,22 @@ export interface MiniMaxBillingResponse {
   charge_records?: MiniMaxBillingRecord[]
   total_cnt?: number
   [key: string]: unknown
+}
+
+export interface DashboardCacheItem {
+  id: string
+  name: string
+  description: string
+  cache_key: string
+  ttl_seconds: number
+  ttl_human: string
+  has_value: boolean
+}
+
+export interface DashboardCacheClearResponse {
+  id: string
+  cache_key: string
+  message: string
+  had_value: boolean
+  forgotten: boolean
 }
