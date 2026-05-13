@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useKnowledgeChat } from '../useKnowledgeChat'
+import useAuthStore from '@/stores/authStore'
 
 function createStreamingResponse(chunks: string[]): Response {
   const encoder = new TextEncoder()
@@ -22,6 +23,7 @@ describe('useKnowledgeChat', () => {
     localStorage.removeItem('browser_ollama_address')
     localStorage.removeItem('ollama_model')
     localStorage.removeItem('knowledge_provider')
+    useAuthStore.setState({ token: null, isAuthenticated: false })
   })
 
   afterEach(() => {
@@ -30,6 +32,7 @@ describe('useKnowledgeChat', () => {
 
   it('uses browser-local Ollama after preparing knowledge context on the server', async () => {
     localStorage.setItem('ollama_access_mode_override', 'browser')
+    useAuthStore.setState({ token: 'auth-test-token', isAuthenticated: true })
 
     const fetchMock = vi
       .fn()
@@ -49,6 +52,7 @@ describe('useKnowledgeChat', () => {
 
           expect(body.prepareOnly).toBe(true)
           expect(body.messages).toEqual([{ role: 'user', content: '你好' }])
+          expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer auth-test-token')
 
           return Promise.resolve({
             ok: true,

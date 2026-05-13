@@ -11,6 +11,7 @@ import {
 } from '../../chat/hooks/modelStorage'
 import { useOllamaAccessMode } from '../../chat/hooks/ollamaAccessMode'
 import { useOllamaModels, type OllamaModelListItem } from '../../chat/hooks/useOllamaModels'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 
 interface UseKnowledgeChatOptions {
   open?: boolean
@@ -58,7 +59,7 @@ async function callKnowledgeChatAPI(
   payload: KnowledgeChatRequestPayload,
   signal?: AbortSignal
 ): Promise<Response> {
-  return fetch('/api/knowledge/chat', {
+  return authenticatedInternalFetch('/api/knowledge/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -72,7 +73,7 @@ async function prepareKnowledgeChatMessages(
   payload: KnowledgeChatRequestPayload,
   signal?: AbortSignal
 ): Promise<ChatMessage[]> {
-  const response = await fetch('/api/knowledge/chat', {
+  const response = await authenticatedInternalFetch('/api/knowledge/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

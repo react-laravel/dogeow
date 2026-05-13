@@ -241,11 +241,7 @@ export async function POST(request: NextRequest) {
  * 获取索引状态
  * GET /api/knowledge/build-index
  */
-export async function GET(request: NextRequest) {
-  // Auth guard: require valid Bearer token
-  const authError = await requireAuth(request)
-  if (authError) return authError
-
+export async function GET() {
   try {
     const index = loadVectorIndex()
     if (!index) {

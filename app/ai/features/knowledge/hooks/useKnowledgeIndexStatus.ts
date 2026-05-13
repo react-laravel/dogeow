@@ -3,9 +3,10 @@
 import { useEffect } from 'react'
 import useSWR from 'swr'
 import { getEchoInstance, createEchoInstance } from '@/lib/websocket'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
+  const res = await authenticatedInternalFetch(url)
   const data = await res.json()
   return data.exists && data.updatedAt ? (data.updatedAt as string) : null
 }

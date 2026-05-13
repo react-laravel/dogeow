@@ -18,6 +18,7 @@ import {
   ImageHistoryModal,
 } from '@/app/ai/features/chat/components'
 import type { ChatMessage } from '@/app/ai/features/chat/types'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 
 interface AiDialogProps {
   open: boolean
@@ -32,7 +33,7 @@ interface KnowledgeDocumentsResponse {
 }
 
 const docsFetcher = async (url: string): Promise<KnowledgeDocumentsResponse> => {
-  const res = await fetch(url)
+  const res = await authenticatedInternalFetch(url)
   const data = (await res.json()) as KnowledgeDocumentsResponse
 
   if (!res.ok || !data.success) {
