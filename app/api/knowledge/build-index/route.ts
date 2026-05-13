@@ -245,19 +245,25 @@ export async function GET() {
   try {
     const index = loadVectorIndex()
     if (!index) {
-      return NextResponse.json({
-        exists: false,
-        message: '向量索引不存在',
-      })
+      return NextResponse.json(
+        {
+          exists: false,
+          message: '向量索引不存在',
+        },
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
     }
 
-    return NextResponse.json({
-      exists: true,
-      indexSize: index.documents.length,
-      createdAt: index.createdAt,
-      updatedAt: index.updatedAt,
-      version: index.version,
-    })
+    return NextResponse.json(
+      {
+        exists: true,
+        indexSize: index.documents.length,
+        createdAt: index.createdAt,
+        updatedAt: index.updatedAt,
+        version: index.version,
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
   } catch (error: unknown) {
     console.error('获取索引状态失败:', error)
     return NextResponse.json(
