@@ -25,7 +25,6 @@ import { LocationSection } from './forms/components/LocationSection'
 import { QuantityDialog } from './forms/components/QuantityDialog'
 import { Tag, ItemFormData, UploadedImage, LocationSelection, Room, Spot } from '@/app/thing/types'
 import { useAuth } from '@/hooks/useAuth'
-import LoadingState from './item-detail/LoadingState'
 import AutoSaveStatus from './item-detail/AutoSaveStatus'
 import CreateTagDialog from './item-detail/CreateTagDialog'
 import {
@@ -38,6 +37,17 @@ import { INITIAL_FORM_DATA, AUTO_SAVE_DELAY } from '../constants'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useAreas, useRooms, useSpots } from '../services/api'
 import { apiRequest } from '@/lib/api'
+
+const DETAIL_MODAL_CONTENT_CLASS =
+  'top-[calc(var(--app-header-height,50px)+0.5rem)] flex h-[calc(100dvh-var(--app-header-height,50px)-1rem)] w-[calc(100vw-1rem)] max-h-[calc(100dvh-var(--app-header-height,50px)-1rem)] max-w-4xl translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:h-[85vh] sm:w-[calc(100vw-2rem)] sm:max-h-[85vh] sm:translate-y-[-50%]'
+
+function ModalLoadingState() {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-12">
+      <p className="text-muted-foreground text-sm">加载中...</p>
+    </div>
+  )
+}
 
 interface ItemDetailModalProps {
   itemId: number | null
@@ -512,18 +522,18 @@ export function ItemDetailModal({
     setQuantityDialogOpen(false)
   }, [tempQuantity])
 
+  if (!itemId) return null
+
   // 编辑模式初始化期间显示加载态
-  if (mode === 'edit' && itemId && (editLoading || !item || loading)) {
+  if (mode === 'edit' && (editLoading || !item || loading)) {
     return (
       <Modal
         open={open}
         onOpenChange={onOpenChange}
         title="编辑物品"
-        contentClassName="flex h-[85vh] w-[calc(100vw-1rem)] max-w-4xl flex-col sm:w-[calc(100vw-2rem)]"
+        contentClassName={DETAIL_MODAL_CONTENT_CLASS}
       >
-        <div className="flex-1 overflow-y-auto">
-          <LoadingState onBack={handleClose} />
-        </div>
+        <ModalLoadingState />
       </Modal>
     )
   }
@@ -535,11 +545,9 @@ export function ItemDetailModal({
         open={open}
         onOpenChange={onOpenChange}
         title="加载物品详情"
-        contentClassName="flex h-[85vh] w-[calc(100vw-2rem)] max-w-4xl flex-col"
+        contentClassName={DETAIL_MODAL_CONTENT_CLASS}
       >
-        <div className="flex flex-1 items-center justify-center overflow-y-auto">
-          <LoadingState onBack={handleClose} />
-        </div>
+        <ModalLoadingState />
       </Modal>
     )
   }
@@ -580,7 +588,7 @@ export function ItemDetailModal({
         open={open}
         onOpenChange={onOpenChange}
         title={`物品详情${item.name ? ` - ${item.name}` : ''}`}
-        contentClassName="top-[calc(var(--app-header-height,50px)+0.5rem)] flex h-[calc(100dvh-var(--app-header-height,50px)-1rem)] w-[calc(100vw-1rem)] max-h-[calc(100dvh-var(--app-header-height,50px)-1rem)] max-w-4xl translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:h-[85vh] sm:w-[calc(100vw-2rem)] sm:max-h-[85vh] sm:translate-y-[-50%]"
+        contentClassName={DETAIL_MODAL_CONTENT_CLASS}
       >
         <div className="bg-background sticky top-0 z-10 flex flex-shrink-0 flex-col gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between gap-3">
