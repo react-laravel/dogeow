@@ -2,20 +2,39 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Item } from '@/app/thing/types'
-import { ImageSizeControl } from './ImageSizeControl'
+import type { SizePreset } from './ImageSizeControl'
 import { GalleryItem } from './GalleryItem'
 import { useTranslation } from '@/hooks/useTranslation'
+import { ensureEven } from '@/lib/helpers/mathUtils'
 
 interface ItemGalleryProps {
   items: Item[]
+  imageSizePreset?: SizePreset
   onItemView?: (id: number) => void
 }
 
-export default function ItemGallery({ items, onItemView }: ItemGalleryProps) {
+export default function ItemGallery({ items, imageSizePreset, onItemView }: ItemGalleryProps) {
   const { t } = useTranslation()
   const [imageSize, setImageSize] = useState(120)
   const [galleryContainerWidth, setGalleryContainerWidth] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const activeImageSizePreset = imageSizePreset ?? 'md'
+
+  const getCalculatedSize = useCallback((preset: SizePreset, containerWidth: number): number => {
+    const columnsByPreset: Record<SizePreset, number> = {
+      xs: 6,
+      sm: 4,
+      md: 3,
+      lg: 2,
+      xl: 1,
+    }
+    const columns = columnsByPreset[preset]
+    const gap = 8
+    const maxSize = containerWidth > 0 ? Math.min(520, containerWidth - 20) : 300
+    const newSize = ensureEven((containerWidth - (columns - 1) * gap) / columns)
+
+    return Math.max(60, Math.min(newSize, maxSize))
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -39,27 +58,18 @@ export default function ItemGallery({ items, onItemView }: ItemGalleryProps) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  useEffect(() => {
+    setImageSize(getCalculatedSize(activeImageSizePreset, galleryContainerWidth))
+  }, [activeImageSizePreset, galleryContainerWidth, getCalculatedSize])
+
   const handleItemClick = (item: Item) => {
     if (onItemView) {
       onItemView(item.id)
     }
   }
 
-  const handleImageSizeChange = useCallback((newSize: number) => {
-    setImageSize(newSize)
-  }, [])
-
-  const maxImageSizeForControl =
-    galleryContainerWidth > 0 ? Math.min(520, galleryContainerWidth - 20) : 300
-
   return (
     <div ref={containerRef} id="item-gallery-container" className="w-full">
-      <ImageSizeControl
-        initialSize={120}
-        maxSize={maxImageSizeForControl}
-        onSizeChange={handleImageSizeChange}
-      />
-
       {items.length === 0 ? (
         <div className="text-muted-foreground py-10 text-center">
           {t('thing.no_items', '暂无可显示的物品。')}

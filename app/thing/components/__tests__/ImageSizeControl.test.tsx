@@ -28,11 +28,8 @@ describe('ImageSizeControl', () => {
     it('should render size control with preset buttons', () => {
       render(<ImageSizeControl initialSize={100} maxSize={500} onSizeChange={mockOnSizeChange} />)
 
-      expect(screen.getByText('XS')).toBeInTheDocument()
-      expect(screen.getByText('S')).toBeInTheDocument()
       expect(screen.getByText('M')).toBeInTheDocument()
-      expect(screen.getByText('L')).toBeInTheDocument()
-      expect(screen.getByText('XL')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '选择图片大小' })).toBeInTheDocument()
     })
 
     it('should display current image size', async () => {
@@ -53,12 +50,32 @@ describe('ImageSizeControl', () => {
         expect(mockOnSizeChange).toHaveBeenCalled()
       })
 
-      const smButton = screen.getByTitle(/Set image size to S/)
-      await user.click(smButton)
+      await user.click(screen.getByRole('button', { name: '选择图片大小' }))
+      await user.click(await screen.findByTitle(/Set image size to S/))
 
       await waitFor(() => {
         expect(mockOnSizeChange).toHaveBeenCalledTimes(2)
       })
+    })
+
+    it('should call onPresetChange when preset is selected', async () => {
+      const user = userEvent.setup()
+      const mockOnPresetChange = vi.fn()
+
+      render(
+        <ImageSizeControl
+          initialSize={100}
+          maxSize={500}
+          currentSizePreset="md"
+          onPresetChange={mockOnPresetChange}
+          onSizeChange={mockOnSizeChange}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: '选择图片大小' }))
+      await user.click(await screen.findByTitle(/Set image size to L/))
+
+      expect(mockOnPresetChange).toHaveBeenCalledWith('lg')
     })
 
     it('should calculate size for XS, L and XL presets', async () => {
@@ -69,9 +86,12 @@ describe('ImageSizeControl', () => {
         expect(mockOnSizeChange).toHaveBeenCalled()
       })
 
-      await user.click(screen.getByTitle(/Set image size to XS/))
-      await user.click(screen.getByTitle(/Set image size to L/))
-      await user.click(screen.getByTitle(/Set image size to XL/))
+      await user.click(screen.getByRole('button', { name: '选择图片大小' }))
+      await user.click(await screen.findByTitle(/Set image size to XS/))
+      await user.click(screen.getByRole('button', { name: '选择图片大小' }))
+      await user.click(await screen.findByTitle(/Set image size to L/))
+      await user.click(screen.getByRole('button', { name: '选择图片大小' }))
+      await user.click(await screen.findByTitle(/Set image size to XL/))
 
       await waitFor(() => {
         const calledSizes = mockOnSizeChange.mock.calls.map(call => call[0])
@@ -116,10 +136,12 @@ describe('ImageSizeControl', () => {
       })
     })
 
-    it('should use initialSize when provided', () => {
+    it('should use initialSize when provided', async () => {
       render(<ImageSizeControl initialSize={150} maxSize={500} onSizeChange={mockOnSizeChange} />)
 
-      expect(mockOnSizeChange).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(mockOnSizeChange).toHaveBeenCalled()
+      })
     })
   })
 })

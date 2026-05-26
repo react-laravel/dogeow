@@ -42,6 +42,11 @@ export default function ItemFilters({
   }, [savedFilters])
 
   const [filters, setFilters] = useState<FilterState>(getInitialState())
+  const onApplyRef = useRef(onApply)
+
+  useEffect(() => {
+    onApplyRef.current = onApply
+  }, [onApply])
 
   // 使用防抖后的筛选条件
   const debouncedFilters = useDebounce(filters, 500)
@@ -51,12 +56,9 @@ export default function ItemFilters({
   const skipNextDebouncedApplyRef = useRef(false)
 
   // 提取应用筛选逻辑为单独函数
-  const handleApplyFilters = useCallback(
-    (currentFilters: FilterState) => {
-      applyFilters(currentFilters, onApply)
-    },
-    [onApply]
-  )
+  const handleApplyFilters = useCallback((currentFilters: FilterState) => {
+    applyFilters(currentFilters, onApplyRef.current)
+  }, [])
 
   // 在筛选条件防抖后触发应用，但跳过初始渲染和已即时应用的变更
   useEffect(() => {

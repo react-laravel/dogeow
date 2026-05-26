@@ -1,32 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ThingHeader from '../ThingHeader'
 import { Category, Tag, Area, Room, Spot, FilterParams } from '../../types'
 
-// Mock child components
 vi.mock('../ItemFilters', () => ({
   default: () => <div data-testid="item-filters">Item Filters</div>,
-}))
-
-vi.mock('../CategoryTreeSelect', () => ({
-  default: ({ onSelect, selectedCategory, placeholder }: any) => (
-    <div data-testid="category-tree-select">
-      <span>
-        {selectedCategory?.id === 1
-          ? '电子产品'
-          : selectedCategory?.id === 2
-            ? '手机'
-            : (placeholder ?? '全部分类')}
-      </span>
-      <button onClick={() => onSelect('parent', 1, '电子产品', true)}>选择分类</button>
-    </div>
-  ),
 }))
 
 describe('ThingHeader', () => {
   const mockOnApplyFilters = vi.fn()
   const mockOnViewModeChange = vi.fn()
+  const mockOnImageSizePresetChange = vi.fn()
 
   const mockCategories: Category[] = [
     { id: 1, name: '电子产品', parent_id: null },
@@ -54,7 +39,7 @@ describe('ThingHeader', () => {
   })
 
   describe('渲染', () => {
-    it('应该渲染分类下拉菜单', () => {
+    it('应该渲染分类图标按钮', () => {
       render(
         <ThingHeader
           categories={mockCategories}
@@ -70,10 +55,10 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('全部分类')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开分类筛选' })).toBeInTheDocument()
     })
 
-    it('应该渲染标签下拉菜单', () => {
+    it('应该渲染标签图标按钮', () => {
       render(
         <ThingHeader
           categories={mockCategories}
@@ -89,7 +74,7 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('标签')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开标签筛选' })).toBeInTheDocument()
     })
 
     it('应该渲染视图切换按钮', () => {
@@ -133,7 +118,7 @@ describe('ThingHeader', () => {
       expect(filterButton).toBeInTheDocument()
     })
 
-    it('应该在选中分类时显示分类名称', () => {
+    it('应该在选中分类时保持分类图标按钮', () => {
       const filtersWithCategory = { ...mockFilters, category_id: 1 }
       render(
         <ThingHeader
@@ -150,10 +135,10 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('电子产品')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开分类筛选' })).toBeInTheDocument()
     })
 
-    it('应该在分类 id 无效时回退显示全部分类', () => {
+    it('应该在分类 id 无效时仍显示分类图标按钮', () => {
       const filtersWithInvalidCategory = { ...mockFilters, category_id: 99999 }
       render(
         <ThingHeader
@@ -170,10 +155,10 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('全部分类')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开分类筛选' })).toBeInTheDocument()
     })
 
-    it('应该在选中子分类时显示子分类名称', () => {
+    it('应该在选中子分类时保持分类图标按钮', () => {
       const filtersWithChildCategory = { ...mockFilters, category_id: 2 }
       render(
         <ThingHeader
@@ -190,10 +175,10 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('手机')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开分类筛选' })).toBeInTheDocument()
     })
 
-    it('应该在选中标签时显示标签数量', () => {
+    it('应该在选中标签时保持标签图标按钮', () => {
       const filtersWithTags = { ...mockFilters, tags: '1,2' }
       render(
         <ThingHeader
@@ -210,7 +195,7 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('2个标签')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开标签筛选' })).toBeInTheDocument()
     })
 
     it('应该支持数组格式的 tags 过滤参数', () => {
@@ -230,12 +215,13 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByText('2个标签')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '打开标签筛选' })).toBeInTheDocument()
     })
   })
 
   describe('分类筛选', () => {
-    it('应该直接渲染分类选择器，不再额外包一层菜单', () => {
+    it('应该通过右侧抽屉显示完整分类列表', async () => {
+      const user = userEvent.setup()
       render(
         <ThingHeader
           categories={mockCategories}
@@ -251,8 +237,63 @@ describe('ThingHeader', () => {
         />
       )
 
-      expect(screen.getByTestId('category-tree-select')).toBeInTheDocument()
-      expect(screen.getByText('全部分类')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: '打开分类筛选' }))
+
+      const dialog = screen.getByRole('dialog')
+      expect(within(dialog).getByRole('textbox', { name: '搜索分类' })).toBeInTheDocument()
+      expect(within(dialog).getByRole('button', { name: '只显示主分类' })).toBeInTheDocument()
+      expect(within(dialog).getByText('电子产品')).toBeInTheDocument()
+      expect(within(dialog).getByText('手机')).toBeInTheDocument()
+    })
+
+    it('应该支持切换为只显示父分类', async () => {
+      const user = userEvent.setup()
+      render(
+        <ThingHeader
+          categories={mockCategories}
+          tags={mockTags}
+          areas={mockAreas}
+          rooms={mockRooms}
+          spots={mockSpots}
+          filters={mockFilters}
+          hasActiveFilters={false}
+          viewMode="list"
+          onApplyFilters={mockOnApplyFilters}
+          onViewModeChange={mockOnViewModeChange}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: '打开分类筛选' }))
+      const dialog = screen.getByRole('dialog')
+
+      await user.click(within(dialog).getByRole('button', { name: '只显示主分类' }))
+
+      expect(within(dialog).getByText('电子产品')).toBeInTheDocument()
+      expect(within(dialog).queryByText('手机')).not.toBeInTheDocument()
+    })
+
+    it('应该支持搜索分类', async () => {
+      const user = userEvent.setup()
+      render(
+        <ThingHeader
+          categories={mockCategories}
+          tags={mockTags}
+          areas={mockAreas}
+          rooms={mockRooms}
+          spots={mockSpots}
+          filters={mockFilters}
+          hasActiveFilters={false}
+          viewMode="list"
+          onApplyFilters={mockOnApplyFilters}
+          onViewModeChange={mockOnViewModeChange}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: '打开分类筛选' }))
+      const dialog = screen.getByRole('dialog')
+      await user.type(within(dialog).getByRole('textbox', { name: '搜索分类' }), '手机')
+
+      expect(within(dialog).getByText('手机')).toBeInTheDocument()
     })
 
     it('应该在选择分类时调用 onApplyFilters', async () => {
@@ -272,8 +313,8 @@ describe('ThingHeader', () => {
         />
       )
 
-      const selectButton = screen.getByText('选择分类')
-      await user.click(selectButton)
+      await user.click(screen.getByRole('button', { name: '打开分类筛选' }))
+      await user.click(within(screen.getByRole('dialog')).getByText('电子产品'))
 
       await waitFor(() => {
         expect(mockOnApplyFilters).toHaveBeenCalledWith({
@@ -302,8 +343,8 @@ describe('ThingHeader', () => {
         />
       )
 
-      const clearButton = screen.getByRole('button', { name: '清空分类筛选' })
-      await user.click(clearButton)
+      await user.click(screen.getByRole('button', { name: '打开分类筛选' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '全部分类' }))
 
       expect(mockOnApplyFilters).toHaveBeenCalledWith({
         ...filtersWithCategory,
@@ -331,12 +372,13 @@ describe('ThingHeader', () => {
         />
       )
 
-      const tagButton = screen.getByText('标签')
+      const tagButton = screen.getByRole('button', { name: '打开标签筛选' })
       await user.click(tagButton)
 
       await waitFor(() => {
-        expect(screen.getByText('重要')).toBeInTheDocument()
-        expect(screen.getByText('常用')).toBeInTheDocument()
+        const dialog = screen.getByRole('dialog')
+        expect(within(dialog).getByText('重要')).toBeInTheDocument()
+        expect(within(dialog).getByText('常用')).toBeInTheDocument()
       })
     })
 
@@ -357,14 +399,14 @@ describe('ThingHeader', () => {
         />
       )
 
-      const tagButton = screen.getByText('标签')
+      const tagButton = screen.getByRole('button', { name: '打开标签筛选' })
       await user.click(tagButton)
 
       await waitFor(() => {
-        expect(screen.getByText('重要')).toBeInTheDocument()
+        expect(within(screen.getByRole('dialog')).getByText('重要')).toBeInTheDocument()
       })
 
-      const importantTag = screen.getByText('重要')
+      const importantTag = within(screen.getByRole('dialog')).getByText('重要')
       await user.click(importantTag)
 
       expect(mockOnApplyFilters).toHaveBeenCalledWith({
@@ -392,14 +434,14 @@ describe('ThingHeader', () => {
         />
       )
 
-      const tagButton = screen.getByText('2个标签')
+      const tagButton = screen.getByRole('button', { name: '打开标签筛选' })
       await user.click(tagButton)
 
       await waitFor(() => {
-        expect(screen.getByText('清除所有标签')).toBeInTheDocument()
+        expect(within(screen.getByRole('dialog')).getByText('清除所有标签')).toBeInTheDocument()
       })
 
-      const clearButton = screen.getByText('清除所有标签')
+      const clearButton = within(screen.getByRole('dialog')).getByText('清除所有标签')
       await user.click(clearButton)
 
       expect(mockOnApplyFilters).toHaveBeenCalledWith({
@@ -427,12 +469,12 @@ describe('ThingHeader', () => {
         />
       )
 
-      await user.click(screen.getByText('1个标签'))
+      await user.click(screen.getByRole('button', { name: '打开标签筛选' }))
       await waitFor(() => {
-        expect(screen.getByText('重要')).toBeInTheDocument()
+        expect(within(screen.getByRole('dialog')).getByText('重要')).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText('重要'))
+      await user.click(within(screen.getByRole('dialog')).getByText('重要'))
 
       expect(mockOnApplyFilters).toHaveBeenCalledWith({
         ...filtersWithTags,
@@ -458,12 +500,12 @@ describe('ThingHeader', () => {
         />
       )
 
-      await user.click(screen.getByText('标签'))
+      await user.click(screen.getByRole('button', { name: '打开标签筛选' }))
 
-      expect(screen.getByText('暂无标签')).toBeInTheDocument()
+      expect(within(screen.getByRole('dialog')).getByText('暂无标签')).toBeInTheDocument()
     })
 
-    it('应该在点击标签菜单外部时关闭标签菜单', async () => {
+    it('应该在按下 Escape 时关闭标签抽屉', async () => {
       const user = userEvent.setup()
       render(
         <ThingHeader
@@ -480,14 +522,14 @@ describe('ThingHeader', () => {
         />
       )
 
-      await user.click(screen.getByText('标签'))
+      await user.click(screen.getByRole('button', { name: '打开标签筛选' }))
       await waitFor(() => {
-        expect(screen.getByText('重要')).toBeInTheDocument()
+        expect(within(screen.getByRole('dialog')).getByText('重要')).toBeInTheDocument()
       })
 
-      fireEvent.mouseDown(document.body)
+      await user.keyboard('{Escape}')
       await waitFor(() => {
-        expect(screen.queryByText('重要')).not.toBeInTheDocument()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       })
     })
   })
@@ -516,6 +558,70 @@ describe('ThingHeader', () => {
       await user.click(galleryTab)
 
       expect(mockOnViewModeChange).toHaveBeenCalledWith('gallery')
+    })
+
+    it('应该只在画廊模式下显示图片大小下拉按钮', () => {
+      const { rerender } = render(
+        <ThingHeader
+          categories={mockCategories}
+          tags={mockTags}
+          areas={mockAreas}
+          rooms={mockRooms}
+          spots={mockSpots}
+          filters={mockFilters}
+          hasActiveFilters={false}
+          viewMode="list"
+          onApplyFilters={mockOnApplyFilters}
+          onViewModeChange={mockOnViewModeChange}
+          onImageSizePresetChange={mockOnImageSizePresetChange}
+        />
+      )
+
+      expect(screen.queryByRole('button', { name: '选择图片大小' })).not.toBeInTheDocument()
+
+      rerender(
+        <ThingHeader
+          categories={mockCategories}
+          tags={mockTags}
+          areas={mockAreas}
+          rooms={mockRooms}
+          spots={mockSpots}
+          filters={mockFilters}
+          hasActiveFilters={false}
+          viewMode="gallery"
+          imageSizePreset="md"
+          onApplyFilters={mockOnApplyFilters}
+          onViewModeChange={mockOnViewModeChange}
+          onImageSizePresetChange={mockOnImageSizePresetChange}
+        />
+      )
+
+      expect(screen.getByRole('button', { name: '选择图片大小' })).toBeInTheDocument()
+    })
+
+    it('应该在画廊模式下通过按钮组下拉选择图片大小', async () => {
+      const user = userEvent.setup()
+      render(
+        <ThingHeader
+          categories={mockCategories}
+          tags={mockTags}
+          areas={mockAreas}
+          rooms={mockRooms}
+          spots={mockSpots}
+          filters={mockFilters}
+          hasActiveFilters={false}
+          viewMode="gallery"
+          imageSizePreset="md"
+          onApplyFilters={mockOnApplyFilters}
+          onViewModeChange={mockOnViewModeChange}
+          onImageSizePresetChange={mockOnImageSizePresetChange}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: '选择图片大小' }))
+      await user.click(await screen.findByTitle(/Set image size to L/))
+
+      expect(mockOnImageSizePresetChange).toHaveBeenCalledWith('lg')
     })
   })
 

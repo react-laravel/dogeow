@@ -13,6 +13,7 @@ import {
 import ItemCard from './ItemCard'
 import ItemGallery from './ItemGallery'
 import { Item, ViewMode } from '@/app/thing/types'
+import type { SizePreset } from './ImageSizeControl'
 
 interface PaginationMeta {
   current_page: number
@@ -32,6 +33,7 @@ interface ThingContentProps {
   searchTerm: string
   hasActiveFilters: boolean
   viewMode: ViewMode
+  imageSizePreset?: SizePreset
   onPageChange: (page: number) => void
   onItemEdit: (id: number) => void
   onItemView: (id: number) => void
@@ -48,6 +50,7 @@ function ThingContent({
   searchTerm,
   hasActiveFilters,
   viewMode,
+  imageSizePreset,
   onPageChange,
   onItemEdit,
   onItemView,
@@ -204,7 +207,7 @@ function ThingContent({
           ))}
         </div>
       ) : (
-        <ItemGallery items={items} onItemView={onItemView} />
+        <ItemGallery items={items} imageSizePreset={imageSizePreset} onItemView={onItemView} />
       )}
 
       {renderPagination()}

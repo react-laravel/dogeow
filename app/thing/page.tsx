@@ -18,6 +18,7 @@ import { useThingSearch } from '@/app/thing/hooks/useThingSearch'
 import { useFormModal } from '@/hooks/useFormModal'
 import { PageContainer } from '@/components/layout'
 import { preloadThingItemImages } from './utils/imagePreload'
+import type { SizePreset } from './components/ImageSizeControl'
 
 // Types
 import { Tag, LocationTreeResponse, ViewMode } from '@/app/thing/types'
@@ -28,6 +29,7 @@ export default function Thing() {
 
   // 视图模式状态
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [imageSizePreset, setImageSizePreset] = useState<SizePreset>('md')
 
   // 弹窗状态（抽象到通用 hook）
   const {
@@ -139,9 +141,11 @@ export default function Thing() {
           filters={filters}
           hasActiveFilters={hasActiveFilters()}
           viewMode={viewMode}
+          imageSizePreset={imageSizePreset}
           onApplyFilters={handleApplyFilters}
           onClearFilters={handleClearFilters}
           onViewModeChange={setViewMode}
+          onImageSizePresetChange={setImageSizePreset}
         />
 
         <ThingContent
@@ -153,6 +157,7 @@ export default function Thing() {
           searchTerm={searchTerm}
           hasActiveFilters={hasActiveFilters()}
           viewMode={viewMode}
+          imageSizePreset={imageSizePreset}
           onPageChange={handlePageChange}
           onItemEdit={handleItemEdit}
           onItemView={handleItemView}

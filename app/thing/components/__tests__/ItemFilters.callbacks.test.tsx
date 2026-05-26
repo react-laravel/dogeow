@@ -171,6 +171,7 @@ describe('ItemFilters callbacks', () => {
     await user.click(screen.getByRole('button', { name: 'basic-public' }))
     await user.click(screen.getByRole('button', { name: 'basic-tags' }))
     await user.click(screen.getByRole('button', { name: 'basic-category-child' }))
+    await user.click(screen.getByRole('tab', { name: '详细' }))
     await user.click(screen.getByRole('button', { name: 'detailed-purchase-from' }))
     await user.click(screen.getByRole('button', { name: 'detailed-purchase-to' }))
     await user.click(screen.getByRole('button', { name: 'detailed-purchase-null' }))
@@ -210,5 +211,35 @@ describe('ItemFilters callbacks', () => {
     vi.advanceTimersByTime(120)
 
     expect(mockOnApply).toHaveBeenCalled()
+  })
+
+  it('does not re-apply unchanged filters when parent onApply callback changes', () => {
+    const firstOnApply = vi.fn()
+    const secondOnApply = vi.fn()
+
+    const { rerender } = render(
+      <ItemFilters
+        onApply={firstOnApply}
+        categories={[]}
+        areas={[]}
+        rooms={[]}
+        spots={[]}
+        tags={[]}
+      />
+    )
+
+    rerender(
+      <ItemFilters
+        onApply={secondOnApply}
+        categories={[]}
+        areas={[]}
+        rooms={[]}
+        spots={[]}
+        tags={[]}
+      />
+    )
+
+    expect(firstOnApply).not.toHaveBeenCalled()
+    expect(secondOnApply).not.toHaveBeenCalled()
   })
 })
