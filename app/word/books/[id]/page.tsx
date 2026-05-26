@@ -381,7 +381,7 @@ export default function BookDetailPage() {
         >
           <SheetContent
             side="bottom"
-            className="h-auto max-h-[520px] rounded-t-3xl border-x-0 border-t p-0 pb-[env(safe-area-inset-bottom)] [&>button:last-child]:hidden"
+            className="h-auto max-h-[520px] rounded-t-3xl border-x-0 border-t p-0 [&>button:last-child]:hidden"
             style={{ top: 'auto' }}
             aria-describedby={undefined}
           >

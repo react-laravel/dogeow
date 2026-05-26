@@ -137,7 +137,7 @@ export function FullscreenVisualizer({
         setActivePanel(nextPanel)
         onActivePanelChange?.(nextPanel)
       }}
-      className="safe-area-top safe-area-right safe-area-bottom safe-area-left fixed inset-0 z-[100] flex flex-col gap-0 bg-black text-white"
+      className="safe-area-top safe-area-right safe-area-left fixed inset-0 z-[100] flex flex-col gap-0 bg-black text-white"
       onMouseMove={resetHideTimer}
       onTouchStart={resetHideTimer}
     >

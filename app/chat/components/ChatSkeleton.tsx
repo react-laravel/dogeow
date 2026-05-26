@@ -9,7 +9,7 @@ const USER_SKELETON_COUNT = 5
 // 聊天页面骨架屏
 export function ChatPageSkeleton() {
   return (
-    <div className="bg-background safe-area-top safe-area-bottom flex h-full flex-col">
+    <div className="bg-background safe-area-top flex h-full flex-col">
       {/* Mobile Header Skeleton */}
       <div className="chat-header-mobile flex items-center justify-between border-b p-4 lg:hidden">
         <div className="flex items-center gap-3">

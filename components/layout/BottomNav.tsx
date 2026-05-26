@@ -37,11 +37,11 @@ const defaultIsActive = (item: BottomNavItem, pathname: string): boolean => {
 
 /**
  * Fixed bottom navigation bar (shadcn-styled). Always pinned to the viewport
- * bottom with safe-area inset. Each item shows an icon above a label.
+ * bottom. Each item shows an icon above a label.
  *
- * Pages using this should add `pb-[calc(4.25rem+env(safe-area-inset-bottom))]`
- * (or use the `BOTTOM_NAV_CONTENT_PADDING` constant) on their scrollable
- * content so the bar does not cover the last items.
+ * Pages using this should add `pb-16` (or use the `BOTTOM_NAV_CONTENT_PADDING`
+ * constant) on their scrollable content so the bar does not cover the last
+ * items.
  */
 export function BottomNav({ items, className, isActive, ariaLabel = '页面导航' }: BottomNavProps) {
   const pathname = usePathname()
@@ -52,7 +52,6 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
       aria-label={ariaLabel}
       className={cn(
         'bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-20 border-t shadow-[0_-1px_0_0_rgba(0,0,0,0.04)] backdrop-blur',
-        'pb-[env(safe-area-inset-bottom,0)]',
         className
       )}
     >
@@ -114,4 +113,4 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
  * Tailwind padding utility to reserve space for the BottomNav. Apply on the
  * scrollable wrapper of pages that render <BottomNav />.
  */
-export const BOTTOM_NAV_CONTENT_PADDING = 'pb-[calc(4rem+env(safe-area-inset-bottom,0))]'
+export const BOTTOM_NAV_CONTENT_PADDING = 'pb-16'

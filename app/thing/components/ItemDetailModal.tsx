@@ -685,7 +685,7 @@ export function ItemDetailModal({
         </div>
 
         {/* 内容区域 - 可滚动区域 */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-[calc(6rem+env(safe-area-inset-bottom,0))] sm:px-6 sm:pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-24 sm:px-6 sm:pb-6">
           {isInlineEditMode ? (
             <Card className="mt-6 overflow-hidden">
               <CardContent className="space-y-6 pt-6">

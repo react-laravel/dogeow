@@ -138,7 +138,7 @@ export function MessageInput({
   return (
     <div
       ref={inputContainerRef}
-      className={`bg-background safe-area-inset-bottom relative border-t-0 p-3 sm:p-4 ${className}`}
+      className={`bg-background relative border-t-0 p-3 sm:p-4 ${className}`}
     >
       {/* 静音状态提示 */}
       {checkMuteStatus() && <MuteStatusAlert muteUntil={muteUntil} muteReason={muteReason} />}

@@ -380,7 +380,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
       </main>
 
       {/* 手机端底部栏：z-50 确保始终在内容之上，避免技能栏等挡住导航 */}
-      <nav className="safe-area-bottom border-border bg-card/95 fixed right-0 bottom-0 left-0 z-50 border-t backdrop-blur lg:hidden">
+      <nav className="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-50 border-t backdrop-blur lg:hidden">
         <div className="flex justify-around">
           {tabs.map(tab => (
             <button

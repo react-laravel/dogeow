@@ -8,7 +8,7 @@ interface FilterActionsProps {
 
 export const FilterActions = memo<FilterActionsProps>(({ hasActiveFilters, onClearAll }) => {
   return (
-    <div className="bg-background mt-4 flex shrink-0 justify-end border-t pt-3 pb-[calc(env(safe-area-inset-bottom,0)+0.25rem)]">
+    <div className="bg-background mt-4 flex shrink-0 justify-end border-t pt-3 pb-1">
       <Button
         variant="outline"
         onClick={onClearAll}

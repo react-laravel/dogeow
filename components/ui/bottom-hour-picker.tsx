@@ -55,7 +55,7 @@ export function BottomHourPicker({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-2xl border-x-0 border-t p-0 pb-[env(safe-area-inset-bottom)]"
+          className="rounded-t-2xl border-x-0 border-t p-0"
           aria-describedby={undefined}
         >
           <div className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 pr-12 backdrop-blur supports-[backdrop-filter]:bg-background/80">
