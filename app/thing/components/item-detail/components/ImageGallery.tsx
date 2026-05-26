@@ -1,7 +1,8 @@
-import React, { memo } from 'react'
+import React, { memo, useEffect } from 'react'
 import Image from 'next/image'
 import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
 import type { Item } from '@/app/thing/types'
+import { preloadThingGalleryImages } from '@/app/thing/utils/imagePreload'
 
 interface ImageGalleryProps {
   images: Item['images']
@@ -12,6 +13,10 @@ interface ImageGalleryProps {
 
 export const ImageGallery = memo<ImageGalleryProps>(
   ({ images, itemName, activeIndex, onIndexChange }) => {
+    useEffect(() => {
+      preloadThingGalleryImages(images)
+    }, [images])
+
     if (!images || images.length === 0) {
       return (
         <div className="bg-muted flex h-48 items-center justify-center rounded-lg">
@@ -26,6 +31,7 @@ export const ImageGallery = memo<ImageGalleryProps>(
           {(() => {
             const safeIndex = Math.min(Math.max(activeIndex, 0), images.length - 1)
             const url = images[safeIndex]?.url ?? ''
+            const shouldUseUnoptimized = url.startsWith('http')
             return (
               <Image
                 src={url}
@@ -33,6 +39,8 @@ export const ImageGallery = memo<ImageGalleryProps>(
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                priority
+                unoptimized={shouldUseUnoptimized}
               />
             )
           })()}
@@ -56,6 +64,7 @@ export const ImageGallery = memo<ImageGalleryProps>(
                   fill
                   className="object-cover"
                   sizes="64px"
+                  unoptimized={image.thumbnail_url?.startsWith('http') ?? false}
                 />
               </div>
             ))}

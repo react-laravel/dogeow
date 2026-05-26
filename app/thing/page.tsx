@@ -17,6 +17,7 @@ import { useThingFilters } from '@/app/thing/hooks/useThingFilters'
 import { useThingSearch } from '@/app/thing/hooks/useThingSearch'
 import { useFormModal } from '@/hooks/useFormModal'
 import { PageContainer } from '@/components/layout'
+import { preloadThingItemImages } from './utils/imagePreload'
 
 // Types
 import { Tag, LocationTreeResponse, ViewMode } from '@/app/thing/types'
@@ -115,9 +116,10 @@ export default function Thing() {
 
   const handleItemView = useCallback(
     (id: number) => {
+      preloadThingItemImages(items.find(item => item.id === id))
       openModal(id, 'view')
     },
-    [openModal]
+    [items, openModal]
   )
 
   const handleItemDeleted = useCallback(() => {
