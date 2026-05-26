@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { Item } from '@/app/thing/types'
+import { getGalleryImageUrl } from '@/app/thing/utils/galleryImageUrl'
 import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
 
 interface GalleryItemProps {
@@ -9,7 +10,8 @@ interface GalleryItemProps {
 }
 
 export function GalleryItem({ item, imageSize, onClick }: GalleryItemProps) {
-  const thumbnailUrl = item.thumbnail_url
+  const imageUrl = getGalleryImageUrl(item, imageSize)
+  const useUnoptimized = imageUrl?.startsWith('http') ?? false
 
   let borderColorClass = 'border-transparent'
   if (item.status === 'expired') borderColorClass = 'border-red-500'
@@ -23,12 +25,14 @@ export function GalleryItem({ item, imageSize, onClick }: GalleryItemProps) {
       style={{ width: `${imageSize}px`, height: `${imageSize}px` }}
       onClick={() => onClick(item)}
     >
-      {thumbnailUrl ? (
+      {imageUrl ? (
         <Image
-          src={thumbnailUrl}
+          key={imageUrl}
+          src={imageUrl}
           alt={item.name}
           fill
           sizes={`${imageSize}px`}
+          unoptimized={useUnoptimized}
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

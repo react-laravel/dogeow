@@ -46,10 +46,31 @@ describe('GalleryItem', () => {
   })
 
   describe('Rendering', () => {
-    it('should render gallery item with image', () => {
+    it('should render gallery item with thumbnail when display size is small', () => {
       render(<GalleryItem item={mockItem} imageSize={200} onClick={mockOnClick} />)
-      expect(screen.getByTestId('next-image')).toBeInTheDocument()
-      expect(screen.getByTestId('next-image')).toHaveAttribute('alt', 'Test Item')
+      const image = screen.getByTestId('next-image')
+      expect(image).toBeInTheDocument()
+      expect(image).toHaveAttribute('alt', 'Test Item')
+      expect(image).toHaveAttribute('src', 'https://example.com/thumb.jpg')
+    })
+
+    it('should render full image when display size exceeds thumbnail', () => {
+      const itemWithFull = {
+        ...mockItem,
+        primary_image: {
+          id: 1,
+          path: 'a.jpg',
+          thumbnail_path: 'a-thumb.jpg',
+          thumbnail_url: 'https://example.com/thumb.jpg',
+          url: 'https://example.com/full.jpg',
+        },
+      } as Item
+
+      render(<GalleryItem item={itemWithFull} imageSize={400} onClick={mockOnClick} />)
+      expect(screen.getByTestId('next-image')).toHaveAttribute(
+        'src',
+        'https://example.com/full.jpg'
+      )
     })
 
     it('should render placeholder when thumbnail_url is not available', () => {
