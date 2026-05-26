@@ -66,17 +66,7 @@ const getImageSizes = (gridArea: string): string => {
 
 // 提取图标组件
 const TileIcon = memo(
-  ({
-    tile,
-    tileName,
-    index,
-    decorated,
-  }: {
-    tile: Tile
-    tileName: string
-    index: number
-    decorated: boolean
-  }) => {
+  ({ tile, tileName, decorated }: { tile: Tile; tileName: string; decorated: boolean }) => {
     if (!tile.icon) return null
 
     if (typeof tile.icon === 'string' && tile.icon.length > 0) {
@@ -88,7 +78,7 @@ const TileIcon = memo(
           height={24}
           className="object-contain sm:h-6 sm:w-6"
           sizes={IMAGE_SIZES.ICON}
-          priority={index < 4}
+          priority
           quality={PERFORMANCE.IMAGE_QUALITY}
         />
       )
@@ -108,7 +98,7 @@ const TileIcon = memo(
 TileIcon.displayName = 'TileIcon'
 
 export const TileCard = memo(
-  ({ tile, index, customStyles = '', projectCoverMode, needsLogin, onClick }: TileCardProps) => {
+  ({ tile, customStyles = '', projectCoverMode, needsLogin, onClick }: TileCardProps) => {
     const { t } = useTranslation()
     const [imageError, setImageError] = useState(false)
     const [imageLoaded, setImageLoaded] = useState(false)
@@ -189,7 +179,7 @@ export const TileCard = memo(
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               sizes={getImageSizes(gridArea)}
-              priority={index < 4}
+              priority
               onError={handleImageError}
               onLoad={handleImageLoad}
               quality={PERFORMANCE.IMAGE_QUALITY}
@@ -224,12 +214,7 @@ export const TileCard = memo(
                 usesDecoratedCover ? '' : TILE_CLASSES.GLASS_ICON_SHELL
               }`}
             >
-              <TileIcon
-                tile={tile}
-                tileName={tileName}
-                index={index}
-                decorated={usesDecoratedCover}
-              />
+              <TileIcon tile={tile} tileName={tileName} decorated={usesDecoratedCover} />
             </div>
           )}
 

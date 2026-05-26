@@ -18,13 +18,12 @@ interface IconLayoutProps {
 
 interface IconTileProps {
   tile: Tile
-  index: number
   projectCoverMode: ProjectCoverMode
   needsLogin: boolean
   onClick: () => void
 }
 
-const IconTile = memo(({ tile, index, projectCoverMode, needsLogin, onClick }: IconTileProps) => {
+const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTileProps) => {
   const { t } = useTranslation()
   const [imageError, setImageError] = useState(false)
 
@@ -73,7 +72,7 @@ const IconTile = memo(({ tile, index, projectCoverMode, needsLogin, onClick }: I
               fill
               className="object-cover"
               sizes="(max-width: 640px) 20vw, 120px"
-              priority={index < 4}
+              priority
               onError={handleImageError}
               quality={PERFORMANCE.IMAGE_QUALITY}
             />
@@ -112,14 +111,13 @@ IconTile.displayName = 'IconTile'
 export const IconLayout = memo(
   ({ tiles, projectCoverMode, getTileStatus, handleTileClick }: IconLayoutProps) => (
     <div className="grid grid-cols-4 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
-      {tiles.map((tile, index) => {
+      {tiles.map(tile => {
         const tileStatus = getTileStatus(tile)
 
         return (
           <IconTile
             key={tile.name}
             tile={tile}
-            index={index}
             projectCoverMode={projectCoverMode}
             needsLogin={tileStatus.needsLogin}
             onClick={() => handleTileClick(tile)}
