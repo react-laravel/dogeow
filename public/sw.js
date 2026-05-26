@@ -1,7 +1,7 @@
 // Service Worker for DogeOW PWA
 // Bump this whenever SW fetch behavior changes. PWARegister also appends this
 // version as a query string to bypass stale CDN copies of /sw.js.
-const CACHE_NAME = 'dogeow-v1.0.3'
+const CACHE_NAME = 'dogeow-v1.0.4'
 const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
 
 // 安装事件 - 缓存资源
@@ -91,9 +91,16 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // 页面导航交给浏览器 / Next.js 自己处理，避免 Service Worker 把站内
-  // 路由切换变成 document fetch，表现得像硬刷新。
+  // 页面导航网络优先；网络失败时返回离线页，避免 iOS PWA 刷新时直接显示
+  // Safari 的 “This page couldn’t load” 系统错误页。
   if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return caches.match('/offline').then(response => {
+          return response || Response.error()
+        })
+      })
+    )
     return
   }
 

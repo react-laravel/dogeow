@@ -53,13 +53,7 @@ describe('RootLayout', () => {
     )
 
     expect(document.documentElement).toHaveAttribute('lang', 'zh-CN')
-    expect(document.body).toHaveClass(
-      'flex',
-      'h-screen',
-      'flex-col',
-      'overflow-hidden',
-      'antialiased'
-    )
+    expect(document.body).toHaveClass('flex', 'h-dvh', 'flex-col', 'overflow-hidden', 'antialiased')
   })
 
   it('renders provider chain and child content', () => {

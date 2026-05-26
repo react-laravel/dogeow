@@ -70,7 +70,7 @@ export const metadata: Metadata = {
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-status-bar-style': 'default',
     'apple-mobile-web-app-title': 'DogeOW',
     'msapplication-TileColor': '#000000',
     'theme-color': '#000000',
@@ -98,6 +98,8 @@ const themeBootstrapScript = `
     if (themeColor) themeColor.setAttribute('content', backgroundColor)
     const tileColor = document.querySelector('meta[name="msapplication-TileColor"]')
     if (tileColor) tileColor.setAttribute('content', backgroundColor)
+    const statusBarStyle = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+    if (statusBarStyle) statusBarStyle.setAttribute('content', 'default')
   } catch {}
 })()
 `
@@ -112,7 +114,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
-      <body className="flex h-screen flex-col overflow-hidden antialiased">
+      <body className="flex h-dvh flex-col overflow-hidden antialiased">
         <SWRProvider>
           <ThemeProvider>
             <UIThemeProvider>

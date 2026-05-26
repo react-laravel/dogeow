@@ -61,7 +61,6 @@ function syncThemeChrome(themeMode: ResolvedThemeMode) {
 
   const isDark = themeMode === 'dark'
   const backgroundColor = isDark ? '#000000' : '#ffffff'
-  const statusBarStyle = isDark ? 'black-translucent' : 'default'
   const root = document.documentElement
 
   root.style.colorScheme = themeMode
@@ -73,7 +72,7 @@ function syncThemeChrome(themeMode: ResolvedThemeMode) {
 
   upsertMeta('theme-color', backgroundColor)
   upsertMeta('msapplication-TileColor', backgroundColor)
-  upsertMeta('apple-mobile-web-app-status-bar-style', statusBarStyle)
+  upsertMeta('apple-mobile-web-app-status-bar-style', 'default')
   upsertMeta('color-scheme', 'light dark')
 }
 

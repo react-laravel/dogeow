@@ -184,7 +184,7 @@ describe('ThemeProvider', () => {
       expect(document.documentElement.style.backgroundColor).toBe('rgb(0, 0, 0)')
       expect(
         document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
-      ).toHaveAttribute('content', 'black-translucent')
+      ).toHaveAttribute('content', 'default')
       expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
         'content',
         '#000000'

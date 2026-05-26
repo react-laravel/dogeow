@@ -39,7 +39,7 @@ const defaultIsActive = (item: BottomNavItem, pathname: string): boolean => {
  * Fixed bottom navigation bar (shadcn-styled). Always pinned to the viewport
  * bottom. Each item shows an icon above a label.
  *
- * Pages using this should add `pb-16` (or use the `BOTTOM_NAV_CONTENT_PADDING`
+ * Pages using this should add `pb-14` (or use the `BOTTOM_NAV_CONTENT_PADDING`
  * constant) on their scrollable content so the bar does not cover the last
  * items.
  */
@@ -113,4 +113,4 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
  * Tailwind padding utility to reserve space for the BottomNav. Apply on the
  * scrollable wrapper of pages that render <BottomNav />.
  */
-export const BOTTOM_NAV_CONTENT_PADDING = 'pb-16'
+export const BOTTOM_NAV_CONTENT_PADDING = 'pb-14'
