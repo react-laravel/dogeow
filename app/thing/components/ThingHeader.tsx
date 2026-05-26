@@ -251,6 +251,7 @@ function ThingHeader({
       <SheetContent
         side="right"
         className="w-[calc(100vw-6rem)] max-w-[12rem] gap-0 p-0 sm:w-[12rem]"
+        onOpenAutoFocus={event => event.preventDefault()}
       >
         <SheetHeader className="border-border border-b px-4 py-3">
           <SheetTitle>分类</SheetTitle>
