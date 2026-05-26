@@ -9,6 +9,7 @@
   --primary: hsl(35 97% 55%);
   --primary-color: #fc9d1c;
   --app-header-height: 50px;
+  --app-header-total-height: calc(var(--app-header-height) + env(safe-area-inset-top, 0px));
   --navbar-height: var(--app-header-height);
 
   --background: oklch(1 0 0);
@@ -161,6 +162,11 @@
 /* end 隐藏滚动条但保留滚动功能 */
 
 /* 安全区域支持 */
+.safe-area-header {
+  height: var(--app-header-total-height);
+  padding-top: env(safe-area-inset-top, 0);
+}
+
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 0);
 }

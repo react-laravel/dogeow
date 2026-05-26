@@ -40,6 +40,7 @@ describe('LayoutRenderer', () => {
     expect(screen.getByTestId('lazy-app-launcher')).toBeInTheDocument()
     expect(screen.getByTestId('scroll-button')).toBeInTheDocument()
     expect(screen.getByTestId('content')).toBeInTheDocument()
+    expect(document.getElementById('header-container')).toHaveClass('safe-area-header')
   })
 
   it('skips the site shell on the standalone RPG host route', () => {

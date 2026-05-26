@@ -96,14 +96,11 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
       {Header && (
         <header
           className={cn(
-            'z-30 w-full flex-none border-b shadow-sm',
+            'safe-area-header z-30 w-full flex-none border-b shadow-sm',
             'bg-background',
             theme.layout.header.position === 'fixed' && 'fixed top-0 right-0 left-0',
             theme.layout.header.position === 'sticky' && 'sticky top-0'
           )}
-          style={{
-            height: theme.layout.header.height,
-          }}
         >
           <Header />
         </header>
@@ -112,7 +109,7 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
       {/* 主内容区域 */}
       <div
         className={`flex min-h-0 flex-1 overflow-hidden ${
-          theme.layout.header.position === 'fixed' ? 'pt-[var(--app-header-height)]' : ''
+          theme.layout.header.position === 'fixed' ? 'pt-[var(--app-header-total-height)]' : ''
         }`}
       >
         {/* 左侧边栏 */}
@@ -169,7 +166,7 @@ function DefaultLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-full flex-col">
       <div
         id="header-container"
-        className="bg-background/90 sticky top-0 z-30 h-[var(--app-header-height)] flex-none border-b shadow-sm backdrop-blur"
+        className="safe-area-header bg-background/90 sticky top-0 z-30 flex-none border-b shadow-sm backdrop-blur"
       >
         <div className="mx-auto flex h-full w-full max-w-7xl items-center px-2 sm:px-4">
           <LazyAppLauncher />
