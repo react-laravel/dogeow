@@ -42,7 +42,7 @@ export const CategoryParentRow = memo<CategoryParentRowProps>(
     inputRef,
   }) => {
     return (
-      <TableRow className="hover:bg-accent/30 transition-colors">
+      <TableRow className="bg-muted/60 hover:bg-muted/80 dark:bg-muted/25 dark:hover:bg-muted/40 transition-colors">
         <TableCell>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">

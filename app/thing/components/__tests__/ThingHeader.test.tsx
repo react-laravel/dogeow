@@ -323,6 +323,7 @@ describe('ThingHeader', () => {
           page: 1,
         })
       })
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
 
     it('应该支持清空分类筛选', async () => {
@@ -414,6 +415,7 @@ describe('ThingHeader', () => {
         tags: '1',
         page: 1,
       })
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
 
     it('应该支持清除所有标签', async () => {
