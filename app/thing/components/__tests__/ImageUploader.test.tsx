@@ -61,9 +61,13 @@ describe('ImageUploader', () => {
 
   describe('渲染', () => {
     it('应该渲染上传按钮', () => {
-      render(<ImageUploader onImagesChange={mockOnImagesChange} />)
+      const { container } = render(<ImageUploader onImagesChange={mockOnImagesChange} />)
 
       expect(screen.getByText('上传图片')).toBeInTheDocument()
+      expect(container.querySelector('input[type="file"]')).toHaveAttribute(
+        'accept',
+        'image/*,.heic,.heif'
+      )
     })
 
     it('应该显示现有图片', () => {

@@ -328,7 +328,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         className="hidden"
         ref={fileInputRef}
         onChange={handleFileSelect}
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         multiple
       />
 
