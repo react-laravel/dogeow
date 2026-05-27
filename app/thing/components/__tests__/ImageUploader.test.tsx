@@ -119,7 +119,7 @@ describe('ImageUploader', () => {
       })
     })
 
-    it('应该在点击图片时设置为主图', async () => {
+    it('应该在点击图片时打开预览', async () => {
       const user = userEvent.setup()
       render(
         <ImageUploader onImagesChange={mockOnImagesChange} existingImages={mockExistingImages} />
@@ -128,14 +128,8 @@ describe('ImageUploader', () => {
       const images = screen.getAllByTestId('uploaded-image')
       await user.click(images[1])
 
-      await waitFor(() => {
-        expect(mockOnImagesChange).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ id: 1, is_primary: false }),
-            expect.objectContaining({ id: 2, is_primary: true }),
-          ])
-        )
-      })
+      expect(await screen.findByText('图片预览')).toBeInTheDocument()
+      expect(mockOnImagesChange).not.toHaveBeenCalled()
     })
 
     it('应该在点击上传按钮时打开文件选择器', async () => {

@@ -1,7 +1,24 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { UploadedImage } from '../types'
@@ -17,6 +34,87 @@ interface ImageUploaderProps {
   compactAddButton?: boolean
 }
 
+type SortableUploadedImage = UploadedImage & {
+  sortableId: string
+}
+
+const normalizePrimaryImages = (imageList: UploadedImage[]): UploadedImage[] =>
+  imageList.map((image, index) => ({
+    ...image,
+    is_primary: index === 0,
+  }))
+
+const getImageKey = (image: UploadedImage, index: number) =>
+  String(image.id ?? image.path ?? image.url ?? index)
+
+interface SortableImageTileProps {
+  image: SortableUploadedImage
+  index: number
+  onPreview: (image: UploadedImage) => void
+  onRemove: (index: number) => void
+}
+
+function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageTileProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: image.sortableId,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative h-28 w-28 shrink-0 touch-none sm:h-32 sm:w-32 ${
+        isDragging ? 'z-20 opacity-70' : ''
+      }`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        role="button"
+        tabIndex={0}
+        className="relative h-full w-full cursor-grab overflow-hidden rounded-md border active:cursor-grabbing"
+        onClick={() => onPreview(image)}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onPreview(image)
+          }
+        }}
+        aria-label={`预览图片 ${index + 1}`}
+      >
+        <Image
+          src={image.thumbnail_url || image.url}
+          alt={`上传图片 ${index + 1}`}
+          fill
+          className={`object-cover ${image.is_primary ? 'ring-primary ring-2 ring-inset' : ''}`}
+          sizes="8rem"
+        />
+      </div>
+      {image.is_primary && (
+        <div className="bg-primary absolute top-2 left-2 rounded-md px-2 py-1 text-xs text-white">
+          主图
+        </div>
+      )}
+      <button
+        onClick={event => {
+          event.stopPropagation()
+          onRemove(index)
+        }}
+        className="absolute top-2 right-2 z-10 rounded-full bg-black/70 p-1 text-white opacity-100 transition-colors hover:bg-red-600 hover:text-white"
+        type="button"
+        aria-label="删除图片"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 const ImageUploader: React.FC<ImageUploaderProps> = ({
   onImagesChange,
   existingImages = [],
@@ -26,7 +124,25 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [images, setImages] = useState<UploadedImage[]>(existingImages)
+  const [images, setImages] = useState<UploadedImage[]>(() =>
+    normalizePrimaryImages(existingImages)
+  )
+  const [previewImage, setPreviewImage] = useState<UploadedImage | null>(null)
+  const sortableImages = useMemo<SortableUploadedImage[]>(
+    () => images.map((image, index) => ({ ...image, sortableId: getImageKey(image, index) })),
+    [images]
+  )
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 180,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const { trigger: uploadImages } = useSWRMutation(
     '/upload/images',
@@ -69,7 +185,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       const response = await uploadImages(formData)
 
       // 更新图片列表
-      const newImages = [...images, ...response]
+      const newImages = normalizePrimaryImages([...images, ...response])
       setImages(newImages)
       onImagesChange(newImages)
 
@@ -90,94 +206,87 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   const removeImage = (index: number) => {
     const newImages = [...images]
     newImages.splice(index, 1)
-    setImages(newImages)
-    onImagesChange(newImages)
+    const normalizedImages = normalizePrimaryImages(newImages)
+    setImages(normalizedImages)
+    onImagesChange(normalizedImages)
   }
 
-  // 设置主图
-  const setPrimaryImage = (index: number) => {
-    const newImages = images.map((img, idx) => ({
-      ...img,
-      is_primary: idx === index,
-    }))
-    setImages(newImages)
-    onImagesChange(newImages)
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = sortableImages.findIndex(image => image.sortableId === active.id)
+    const newIndex = sortableImages.findIndex(image => image.sortableId === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const reorderedImages = normalizePrimaryImages(arrayMove(images, oldIndex, newIndex))
+    setImages(reorderedImages)
+    onImagesChange(reorderedImages)
   }
 
   return (
     <div>
-      {images.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {images.map((image, index) => (
-            <div key={image.id ?? image.path} className="group relative aspect-square">
-              <Image
-                src={image.thumbnail_url || image.url}
-                alt={`上传图片 ${index + 1}`}
-                fill
-                className={`rounded-md border object-cover ${image.is_primary ? 'ring-primary ring-2' : ''}`}
-                onClick={() => setPrimaryImage(index)}
-                style={{ objectFit: 'cover' }}
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-              />
-              {image.is_primary && (
-                <div className="bg-primary absolute top-2 left-2 rounded-md px-2 py-1 text-xs text-white">
-                  主图
-                </div>
-              )}
-              <button
-                onClick={() => removeImage(index)}
-                className="absolute top-2 right-2 z-10 rounded-full bg-black/70 p-1 text-white opacity-100 transition-colors hover:bg-red-600 hover:text-white"
-                type="button"
-                aria-label="删除图片"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {images.length < maxImages ? (
-        compactAddButton ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="inline-flex h-9 gap-2 border-dashed px-3"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+      <div className="flex flex-wrap items-start gap-3">
+        {images.length > 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            {uploading ? (
-              <>
-                <svg className="text-muted-foreground h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                <span className="text-xs">上传中...</span>
-              </>
-            ) : (
-              <>
-                <Upload className="text-muted-foreground h-4 w-4" />
-                <span className="text-muted-foreground text-xs">上传图片</span>
-              </>
-            )}
-          </Button>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            <SortableContext items={sortableImages.map(image => image.sortableId)}>
+              {sortableImages.map((image, index) => (
+                <SortableImageTile
+                  key={image.sortableId}
+                  image={image}
+                  index={index}
+                  onPreview={setPreviewImage}
+                  onRemove={removeImage}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : null}
+
+        {images.length < maxImages ? (
+          compactAddButton ? (
             <Button
               type="button"
               variant="outline"
-              className="flex aspect-square h-full w-full flex-col items-center justify-center border-dashed"
+              className="inline-flex h-9 gap-2 border-dashed px-3"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <svg className="text-muted-foreground h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="text-xs">上传中...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground text-xs">上传图片</span>
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex h-28 w-28 shrink-0 flex-col items-center justify-center border-dashed sm:h-32 sm:w-32"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
             >
@@ -205,14 +314,14 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 </div>
               ) : (
                 <>
-                  <Upload className="text-muted-foreground mb-2 h-8 w-8" />
+                  <Upload className="text-muted-foreground mb-2 h-6 w-6" />
                   <span className="text-muted-foreground text-xs">上传图片</span>
                 </>
               )}
             </Button>
-          </div>
-        )
-      ) : null}
+          )
+        ) : null}
+      </div>
 
       <input
         type="file"
@@ -222,6 +331,24 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         accept="image/*"
         multiple
       />
+
+      <Dialog open={Boolean(previewImage)} onOpenChange={open => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl p-4">
+          <DialogTitle className="sr-only">图片预览</DialogTitle>
+          <DialogDescription className="sr-only">查看上传图片的大图预览</DialogDescription>
+          {previewImage ? (
+            <div className="relative max-h-[80vh] overflow-hidden rounded-md">
+              <Image
+                src={previewImage.url}
+                alt="图片预览"
+                width={1200}
+                height={900}
+                className="max-h-[80vh] w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
