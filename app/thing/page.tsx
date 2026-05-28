@@ -17,6 +17,7 @@ import { useThingFilters } from '@/app/thing/hooks/useThingFilters'
 import { useThingSearch } from '@/app/thing/hooks/useThingSearch'
 import { useFormModal } from '@/hooks/useFormModal'
 import { PageContainer } from '@/components/layout'
+import { PullToRefresh } from '@/components/ui/pull-to-refresh'
 import { preloadThingItemImages } from './utils/imagePreload'
 import type { SizePreset } from './components/ImageSizeControl'
 
@@ -101,6 +102,10 @@ export default function Thing() {
     fetchItems(filters)
   }, [fetchItems, filters])
 
+  const handlePullToRefresh = useCallback(async () => {
+    await fetchItems(filters)
+  }, [fetchItems, filters])
+
   // 处理清除筛选
   const handleClearFilters = useCallback(() => {
     setSearchTerm('')
@@ -131,40 +136,42 @@ export default function Thing() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col space-y-4">
-        <ThingHeader
-          categories={categories}
-          tags={tags ?? []}
-          areas={locationData?.areas ?? []}
-          rooms={locationData?.rooms ?? []}
-          spots={locationData?.spots ?? []}
-          filters={filters}
-          hasActiveFilters={hasActiveFilters()}
-          viewMode={viewMode}
-          imageSizePreset={imageSizePreset}
-          onApplyFilters={handleApplyFilters}
-          onClearFilters={handleClearFilters}
-          onViewModeChange={setViewMode}
-          onImageSizePresetChange={setImageSizePreset}
-        />
+      <PullToRefresh onRefresh={handlePullToRefresh}>
+        <div className="flex flex-col space-y-4">
+          <ThingHeader
+            categories={categories}
+            tags={tags ?? []}
+            areas={locationData?.areas ?? []}
+            rooms={locationData?.rooms ?? []}
+            spots={locationData?.spots ?? []}
+            filters={filters}
+            hasActiveFilters={hasActiveFilters()}
+            viewMode={viewMode}
+            imageSizePreset={imageSizePreset}
+            onApplyFilters={handleApplyFilters}
+            onClearFilters={handleClearFilters}
+            onViewModeChange={setViewMode}
+            onImageSizePresetChange={setImageSizePreset}
+          />
 
-        <ThingContent
-          items={items}
-          loading={loading}
-          error={error}
-          meta={meta}
-          currentPage={currentPage}
-          searchTerm={searchTerm}
-          hasActiveFilters={hasActiveFilters()}
-          viewMode={viewMode}
-          imageSizePreset={imageSizePreset}
-          onPageChange={handlePageChange}
-          onItemEdit={handleItemEdit}
-          onItemView={handleItemView}
-          onReload={handleReload}
-          onClearFilters={handleClearFilters}
-        />
-      </div>
+          <ThingContent
+            items={items}
+            loading={loading}
+            error={error}
+            meta={meta}
+            currentPage={currentPage}
+            searchTerm={searchTerm}
+            hasActiveFilters={hasActiveFilters()}
+            viewMode={viewMode}
+            imageSizePreset={imageSizePreset}
+            onPageChange={handlePageChange}
+            onItemEdit={handleItemEdit}
+            onItemView={handleItemView}
+            onReload={handleReload}
+            onClearFilters={handleClearFilters}
+          />
+        </div>
+      </PullToRefresh>
 
       <ThingSpeedDial />
 

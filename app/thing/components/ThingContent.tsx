@@ -220,8 +220,8 @@ function ThingContent({
     return renderError()
   }
 
-  // 默认显示骨架屏（loading 状态）
-  if (loading) {
+  // 默认显示骨架屏（仅在没有可复用数据时）
+  if (loading && items.length === 0) {
     return renderLoading()
   }
 

@@ -76,6 +76,29 @@ describe('ThingContent', () => {
       const loadingCards = screen.getAllByTestId('loading-card')
       expect(loadingCards.length).toBeGreaterThan(0)
     })
+
+    it('有已有数据时加载中应优先显示列表', () => {
+      render(
+        <ThingContent
+          items={mockItems}
+          loading={true}
+          error={null}
+          meta={mockMeta}
+          currentPage={1}
+          searchTerm=""
+          hasActiveFilters={false}
+          viewMode="list"
+          onPageChange={mockOnPageChange}
+          onItemEdit={mockOnItemEdit}
+          onItemView={mockOnItemView}
+          onReload={mockOnReload}
+          onClearFilters={mockOnClearFilters}
+        />
+      )
+
+      expect(screen.getByText('Item 1')).toBeInTheDocument()
+      expect(screen.queryByTestId('loading-card')).not.toBeInTheDocument()
+    })
   })
 
   describe('错误状态', () => {
