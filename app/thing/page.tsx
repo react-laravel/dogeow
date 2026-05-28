@@ -178,6 +178,7 @@ export default function Thing() {
       {/* 物品详情弹窗 */}
       <ItemDetailModal
         itemId={selectedItemId}
+        initialItem={items.find(item => item.id === selectedItemId) ?? null}
         open={modalOpen}
         onOpenChange={setModalOpen}
         mode={modalMode as 'view' | 'edit' | undefined}

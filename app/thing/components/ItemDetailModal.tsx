@@ -23,7 +23,15 @@ import CategoryTreeSelect from './CategoryTreeSelect'
 import { TagsSection } from './forms/components/TagsSection'
 import { LocationSection } from './forms/components/LocationSection'
 import { QuantityDialog } from './forms/components/QuantityDialog'
-import { Tag, ItemFormData, UploadedImage, LocationSelection, Room, Spot } from '@/app/thing/types'
+import {
+  Tag,
+  Item,
+  ItemFormData,
+  UploadedImage,
+  LocationSelection,
+  Room,
+  Spot,
+} from '@/app/thing/types'
 import { useAuth } from '@/hooks/useAuth'
 import AutoSaveStatus from './item-detail/AutoSaveStatus'
 import CreateTagDialog from './item-detail/CreateTagDialog'
@@ -51,6 +59,7 @@ function ModalLoadingState() {
 
 interface ItemDetailModalProps {
   itemId: number | null
+  initialItem?: Item | null
   open: boolean
   onOpenChange: (open: boolean) => void
   mode?: 'view' | 'edit'
@@ -60,6 +69,7 @@ interface ItemDetailModalProps {
 
 export function ItemDetailModal({
   itemId,
+  initialItem,
   open,
   onOpenChange,
   mode: externalMode,
@@ -76,14 +86,19 @@ export function ItemDetailModal({
   const setMode = onModeChange ?? setInternalMode
 
   const { data: item, error, isLoading: loading } = useItem(itemId ?? 0)
+  const listItem = useMemo(
+    () => (initialItem && initialItem.id === itemId ? initialItem : null),
+    [initialItem, itemId]
+  )
+  const resolvedItem = item ?? listItem
   const { deleteItem } = useItemStore()
   const { user } = useAuth()
 
   // 检查是否可以编辑（是否为物品所有者）
   const canEdit = useMemo(() => {
-    return user && item && item.user?.id === user.id
-  }, [user, item])
-  const trimmedDescription = item?.description?.trim()
+    return user && resolvedItem && resolvedItem.user?.id === user.id
+  }, [user, resolvedItem])
+  const trimmedDescription = resolvedItem?.description?.trim()
   const hasDescription =
     Boolean(trimmedDescription) &&
     trimmedDescription !== '无描述' &&
@@ -227,10 +242,10 @@ export function ItemDetailModal({
   )
 
   // 初始化编辑数据 - 使用 ref 访问 item，避免依赖变化
-  const itemRef = useRef(item)
+  const itemRef = useRef(resolvedItem)
   useEffect(() => {
-    itemRef.current = item
-  }, [item])
+    itemRef.current = resolvedItem
+  }, [resolvedItem])
 
   const initializeEditData = useCallback(async () => {
     const currentItem = itemRef.current
@@ -325,7 +340,7 @@ export function ItemDetailModal({
 
   useEffect(() => {
     // 只在编辑模式、弹窗打开、数据加载完成时才触发自动保存
-    if (mode !== 'edit' || editLoading || !item || !open) return
+    if (mode !== 'edit' || editLoading || !resolvedItem || !open) return
 
     const currentData: AutoSaveData = {
       formData,
@@ -346,7 +361,16 @@ export function ItemDetailModal({
       // 更新参考数据
       initialDataRef.current = currentData
     }
-  }, [formData, selectedTags, uploadedImages, mode, editLoading, item, open, triggerAutoSave])
+  }, [
+    formData,
+    selectedTags,
+    uploadedImages,
+    mode,
+    editLoading,
+    resolvedItem,
+    open,
+    triggerAutoSave,
+  ])
 
   // 当初始数据设置时，更新 ref（在 initializeEditData 完成后）
   const formDataRef = useRef(formData)
@@ -357,7 +381,7 @@ export function ItemDetailModal({
   uploadedImagesRef.current = uploadedImages
 
   useEffect(() => {
-    if (mode === 'edit' && !editLoading && item && formData.name) {
+    if (mode === 'edit' && !editLoading && resolvedItem && formData.name) {
       const currentData: AutoSaveData = {
         formData: formDataRef.current,
         selectedTags: selectedTagsRef.current,
@@ -368,7 +392,7 @@ export function ItemDetailModal({
         initialDataRef.current = currentData
       }
     }
-  }, [mode, editLoading, item, formData.name])
+  }, [mode, editLoading, resolvedItem, formData.name])
 
   // 区域变化时加载房间
   useEffect(() => {
@@ -397,7 +421,7 @@ export function ItemDetailModal({
     // 只在满足所有条件且未初始化时才执行
     if (
       mode === 'edit' &&
-      item &&
+      resolvedItem &&
       !editLoading &&
       itemId &&
       editInitializedRef.current !== itemId
@@ -405,7 +429,7 @@ export function ItemDetailModal({
       initializeEditData()
       refreshAreasRef.current()
     }
-  }, [mode, item, editLoading, itemId, initializeEditData])
+  }, [mode, resolvedItem, editLoading, itemId, initializeEditData])
 
   // 当itemId变化时，重置初始化标记
   useEffect(() => {
@@ -443,21 +467,21 @@ export function ItemDetailModal({
 
   // 当itemId变化时，如果是编辑模式，需要重新初始化编辑数据
   useEffect(() => {
-    if (open && itemId && mode === 'edit' && item) {
+    if (open && itemId && mode === 'edit' && resolvedItem) {
       // useItemEdit hook会自动处理数据初始化
     }
-  }, [open, itemId, mode, item])
+  }, [open, itemId, mode, resolvedItem])
 
   // Keep active image index within bounds whenever images change
   useEffect(() => {
-    const length = item?.images?.length ?? 0
+    const length = resolvedItem?.images?.length ?? 0
     if (length === 0) {
       if (activeImageIndex !== 0) setActiveImageIndex(0)
       return
     }
     if (activeImageIndex > length - 1) setActiveImageIndex(0)
     if (activeImageIndex < 0) setActiveImageIndex(0)
-  }, [item?.images, activeImageIndex])
+  }, [resolvedItem?.images, activeImageIndex])
 
   const handleEdit = useCallback(() => {
     if (!itemId || !canEdit) return
@@ -525,7 +549,7 @@ export function ItemDetailModal({
   if (!itemId) return null
 
   // 编辑模式初始化期间显示加载态
-  if (mode === 'edit' && (editLoading || !item || loading)) {
+  if (mode === 'edit' && (editLoading || !resolvedItem || (loading && !listItem))) {
     return (
       <Modal
         open={open}
@@ -539,7 +563,7 @@ export function ItemDetailModal({
   }
 
   // 查看模式：显示物品详情
-  if (loading) {
+  if (loading && !resolvedItem) {
     return (
       <Modal
         open={open}
@@ -552,7 +576,7 @@ export function ItemDetailModal({
     )
   }
 
-  if (error || (!loading && !item)) {
+  if ((error && !resolvedItem) || (!loading && !resolvedItem)) {
     return (
       <Modal
         open={open}
@@ -570,23 +594,23 @@ export function ItemDetailModal({
     )
   }
 
-  if (!item) return null
+  if (!resolvedItem) return null
 
   const displayCategoryName =
     mode === 'edit'
       ? (categories.find(category => category.id.toString() === formData.category_id)?.name ??
         '未分类')
-      : (item.category?.name ?? '未分类')
-  const displayName = mode === 'edit' ? formData.name || item.name : item.name
+      : (resolvedItem.category?.name ?? '未分类')
+  const displayName = mode === 'edit' ? formData.name || resolvedItem.name : resolvedItem.name
   const isInlineEditMode = mode === 'edit'
-  const isPublicItem = isInlineEditMode ? formData.is_public : item.is_public
+  const isPublicItem = isInlineEditMode ? formData.is_public : resolvedItem.is_public
 
   return (
     <>
       <Modal
         open={open}
         onOpenChange={onOpenChange}
-        title={`物品详情${item.name ? ` - ${item.name}` : ''}`}
+        title={`物品详情${resolvedItem.name ? ` - ${resolvedItem.name}` : ''}`}
         contentClassName={DETAIL_MODAL_CONTENT_CLASS}
       >
         <div className="bg-background sticky top-0 z-10 flex flex-shrink-0 flex-col gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
@@ -632,7 +656,7 @@ export function ItemDetailModal({
 
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <StatusIndicator status={item.status} />
+              <StatusIndicator status={resolvedItem.status} />
               {isInlineEditMode ? (
                 <>
                   <Input
@@ -724,13 +748,13 @@ export function ItemDetailModal({
                   </div>
                 ) : null}
 
-                {(item.purchase_price || item.purchase_date) && (
+                {(resolvedItem.purchase_price || resolvedItem.purchase_date) && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {item.purchase_price && (
-                      <InfoCard label="价格" value={`¥${item.purchase_price}`} />
+                    {resolvedItem.purchase_price && (
+                      <InfoCard label="价格" value={`¥${resolvedItem.purchase_price}`} />
                     )}
-                    {item.purchase_date && (
-                      <InfoCard label="购买日期" value={formatDate(item.purchase_date)} />
+                    {resolvedItem.purchase_date && (
+                      <InfoCard label="购买日期" value={formatDate(resolvedItem.purchase_date)} />
                     )}
                   </div>
                 )}
@@ -738,7 +762,7 @@ export function ItemDetailModal({
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="space-y-3">
                     <h3 className="text-base font-semibold">时间信息</h3>
-                    <TimeInfo item={item} />
+                    <TimeInfo item={resolvedItem} />
                   </div>
                   <div className="space-y-3">
                     <LocationSection
@@ -754,19 +778,19 @@ export function ItemDetailModal({
             </Card>
           ) : (
             <div className="mt-6 space-y-6">
-              {item.images && item.images.length > 0 ? (
+              {resolvedItem.images && resolvedItem.images.length > 0 ? (
                 <ImageGallery
-                  images={item.images}
-                  itemName={item.name}
+                  images={resolvedItem.images}
+                  itemName={resolvedItem.name}
                   activeIndex={activeImageIndex}
                   onIndexChange={setActiveImageIndex}
                 />
               ) : null}
 
-              {item.tags && item.tags.length > 0 ? (
+              {resolvedItem.tags && resolvedItem.tags.length > 0 ? (
                 <div className="space-y-3">
                   <h3 className="text-base font-semibold">标签</h3>
-                  <TagsDisplay tags={item.tags} />
+                  <TagsDisplay tags={resolvedItem.tags} />
                 </div>
               ) : null}
 
@@ -777,14 +801,18 @@ export function ItemDetailModal({
                 </div>
               ) : null}
 
-              {(item.quantity > 1 || item.purchase_price || item.purchase_date) && (
+              {(resolvedItem.quantity > 1 ||
+                resolvedItem.purchase_price ||
+                resolvedItem.purchase_date) && (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {item.quantity > 1 && <InfoCard label="数量" value={item.quantity} />}
-                  {item.purchase_price && (
-                    <InfoCard label="价格" value={`¥${item.purchase_price}`} />
+                  {resolvedItem.quantity > 1 && (
+                    <InfoCard label="数量" value={resolvedItem.quantity} />
                   )}
-                  {item.purchase_date && (
-                    <InfoCard label="购买日期" value={formatDate(item.purchase_date)} />
+                  {resolvedItem.purchase_price && (
+                    <InfoCard label="价格" value={`¥${resolvedItem.purchase_price}`} />
+                  )}
+                  {resolvedItem.purchase_date && (
+                    <InfoCard label="购买日期" value={formatDate(resolvedItem.purchase_date)} />
                   )}
                 </div>
               )}
@@ -792,11 +820,11 @@ export function ItemDetailModal({
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-3">
                   <h3 className="text-base font-semibold">时间信息</h3>
-                  <TimeInfo item={item} />
+                  <TimeInfo item={resolvedItem} />
                 </div>
                 <div className="space-y-3">
                   <h3 className="text-base font-semibold">存放位置</h3>
-                  <LocationInfo item={item} />
+                  <LocationInfo item={resolvedItem} />
                 </div>
               </div>
             </div>
@@ -823,7 +851,7 @@ export function ItemDetailModal({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDelete}
-        itemName={item.name}
+        itemName={resolvedItem.name}
       />
     </>
   )
