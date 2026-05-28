@@ -82,10 +82,9 @@ function ItemCardImage({
     return size ? Math.floor(size * 0.6) : 48
   }, [size])
 
-  const shouldUseUnoptimized = imageSrc?.startsWith('http') ?? false
-
   // 使用 key 来强制在图片变化时重新渲染，重置状态
   const imageKey = primaryImage?.id || primaryImage?.path || 'no-image'
+  const imageClassName = size ? 'object-contain object-center' : 'object-cover'
 
   return (
     <div key={imageKey} className={containerClassName} style={containerStyle}>
@@ -96,9 +95,9 @@ function ItemCardImage({
           fill={!size}
           width={size}
           height={size}
-          className="object-cover"
+          className={imageClassName}
           onError={() => setImageError(true)}
-          unoptimized={shouldUseUnoptimized}
+          unoptimized
           sizes={sizesAttribute}
           priority={false}
         />

@@ -31,7 +31,6 @@ export const ImageGallery = memo<ImageGalleryProps>(
           {(() => {
             const safeIndex = Math.min(Math.max(activeIndex, 0), images.length - 1)
             const url = images[safeIndex]?.url ?? ''
-            const shouldUseUnoptimized = url.startsWith('http')
             return (
               <Image
                 src={url}
@@ -40,7 +39,7 @@ export const ImageGallery = memo<ImageGalleryProps>(
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 priority
-                unoptimized={shouldUseUnoptimized}
+                unoptimized
               />
             )
           })()}
@@ -64,7 +63,7 @@ export const ImageGallery = memo<ImageGalleryProps>(
                   fill
                   className="object-cover"
                   sizes="64px"
-                  unoptimized={image.thumbnail_url?.startsWith('http') ?? false}
+                  unoptimized
                 />
               </div>
             ))}

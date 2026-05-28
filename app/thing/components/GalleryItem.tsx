@@ -11,7 +11,6 @@ interface GalleryItemProps {
 
 export function GalleryItem({ item, imageSize, onClick }: GalleryItemProps) {
   const imageUrl = getGalleryImageUrl(item, imageSize)
-  const useUnoptimized = imageUrl?.startsWith('http') ?? false
 
   let borderColorClass = 'border-transparent'
   if (item.status === 'expired') borderColorClass = 'border-red-500'
@@ -32,7 +31,7 @@ export function GalleryItem({ item, imageSize, onClick }: GalleryItemProps) {
           alt={item.name}
           fill
           sizes={`${imageSize}px`}
-          unoptimized={useUnoptimized}
+          unoptimized
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

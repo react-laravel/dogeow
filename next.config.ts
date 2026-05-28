@@ -83,6 +83,8 @@ const nextConfig: NextConfig = {
     return config
   },
   images: {
+    // 允许本地开发时加载 127.0.0.1/localhost 图片资源（生产环境保持默认安全策略）
+    dangerouslyAllowLocalIP: process.env.NODE_ENV === 'development',
     remotePatterns: [
       {
         protocol: 'http',
