@@ -30,6 +30,7 @@ vi.mock('@/components/ui/combobox', () => ({
             value={opt.value}
             data-full-label={opt.label}
             data-indent={String(opt.indentLevel ?? 0)}
+            data-keywords={(opt.searchKeywords ?? []).join('|')}
           >
             {opt.displayLabel ?? opt.label}
           </option>
@@ -246,6 +247,15 @@ describe('CategoryTreeSelect', () => {
     expect(childOption).toBeInTheDocument()
     expect(childOption).toHaveAttribute('data-full-label', '电子产品 / 手机')
     expect(childOption).toHaveAttribute('data-indent', '1')
+  })
+
+  it('搜索子分类时应为父分类包含子分类关键词', () => {
+    render(<CategoryTreeSelect onSelect={mockOnSelect} />)
+
+    const parentOption = screen.getByRole('option', { name: '电子产品' })
+    expect(parentOption).toHaveAttribute('data-keywords')
+    expect(parentOption.getAttribute('data-keywords')).toContain('手机')
+    expect(parentOption.getAttribute('data-keywords')).toContain('电子产品 / 手机')
   })
 
   it('应该在分类不存在时回退为未分类', () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react'
+import { Check, ChevronsUpDown, PlusCircle, X } from 'lucide-react'
 
 import { cn } from '@/lib/helpers'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,8 @@ export interface ComboboxOption {
   displayLabel?: string
   searchKeywords?: string[]
   indentLevel?: number
+  id?: number | null
+  parentId?: number | null
   disabled?: boolean
 }
 
@@ -51,15 +53,40 @@ export function Combobox({
 
     const normalizedQuery = searchQuery.toLowerCase()
 
-    return options.filter(option => {
-      const searchableTexts = [
-        option.label,
-        option.displayLabel,
-        ...(option.searchKeywords ?? []),
-      ].filter(Boolean)
+    const getMatchScore = (option: ComboboxOption): number => {
+      const label = option.label.toLowerCase()
+      const displayLabel = option.displayLabel?.toLowerCase() ?? ''
+      const keywords = (option.searchKeywords ?? []).map(keyword => keyword.toLowerCase())
 
-      return searchableTexts.some(text => text?.toLowerCase().includes(normalizedQuery))
-    })
+      if (displayLabel === normalizedQuery || label === normalizedQuery) return 300
+      if (displayLabel.startsWith(normalizedQuery) || label.startsWith(normalizedQuery)) return 220
+      if (displayLabel.includes(normalizedQuery) || label.includes(normalizedQuery)) return 180
+      if (keywords.some(keyword => keyword.startsWith(normalizedQuery))) return 120
+      if (keywords.some(keyword => keyword.includes(normalizedQuery))) return 80
+
+      return 0
+    }
+
+    return options
+      .map((option, index) => ({
+        option,
+        index,
+        score: getMatchScore(option),
+      }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => {
+        // 保持分类等层级数据的父子显示顺序：父级始终在子级上方
+        if (a.option.parentId != null && b.option.id != null && a.option.parentId === b.option.id) {
+          return 1
+        }
+        if (b.option.parentId != null && a.option.id != null && b.option.parentId === a.option.id) {
+          return -1
+        }
+
+        if (b.score !== a.score) return b.score - a.score
+        return a.index - b.index
+      })
+      .map(item => item.option)
   }, [options, searchQuery])
 
   const handleCreateOption = React.useCallback(() => {
@@ -80,6 +107,46 @@ export function Combobox({
     },
     [onChange]
   )
+
+  const handleSearchEnter = React.useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Enter') return
+      if (filteredOptions.length === 0) return
+
+      event.preventDefault()
+
+      const normalizedQuery = searchQuery.trim().toLowerCase()
+      if (!normalizedQuery) {
+        handleSelect(filteredOptions[0])
+        return
+      }
+
+      const preferredOption =
+        filteredOptions.find(option => {
+          const label = option.label.toLowerCase()
+          const displayLabel = option.displayLabel?.toLowerCase() ?? ''
+          return label.includes(normalizedQuery) || displayLabel.includes(normalizedQuery)
+        }) ?? filteredOptions[0]
+
+      handleSelect(preferredOption)
+    },
+    [filteredOptions, handleSelect, searchQuery]
+  )
+
+  const activeCheckedValue = React.useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    if (!normalizedQuery) {
+      return value
+    }
+
+    const directMatch = filteredOptions.find(option => {
+      const label = option.label.toLowerCase()
+      const displayLabel = option.displayLabel?.toLowerCase() ?? ''
+      return label.includes(normalizedQuery) || displayLabel.includes(normalizedQuery)
+    })
+
+    return directMatch?.value ?? filteredOptions[0]?.value ?? value
+  }, [filteredOptions, searchQuery, value])
 
   // 检查是否显示创建选项
   const showCreateOption =
@@ -126,18 +193,31 @@ export function Combobox({
           {/* 搜索输入框 */}
           {showInput && (
             <div className="border-b p-2">
-              <Input
-                placeholder={searchText}
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="h-8"
-                autoComplete="off"
-                autoFocus={false} // 不自动focus，避免弹出键盘，用户需要搜索时可以手动点击输入框
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                inputMode="text"
-              />
+              <div className="relative">
+                <Input
+                  placeholder={searchText}
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchEnter}
+                  className="h-8 pr-8"
+                  autoComplete="off"
+                  autoFocus={false} // 不自动focus，避免弹出键盘，用户需要搜索时可以手动点击输入框
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  inputMode="text"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    aria-label="清空搜索"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 transition-colors"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
             </div>
           )}
 
@@ -181,7 +261,7 @@ export function Combobox({
                     <Check
                       className={cn(
                         'mr-2 h-4 w-4',
-                        value === option.value ? 'opacity-100' : 'opacity-0'
+                        activeCheckedValue === option.value ? 'opacity-100' : 'opacity-0'
                       )}
                     />
                     {option.displayLabel ?? option.label}

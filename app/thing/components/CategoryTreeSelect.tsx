@@ -40,6 +40,9 @@ interface CategoryTreeSelectProps {
 interface FlatCategoryOption {
   value: string
   label: string
+  displayLabel?: string
+  searchKeywords?: string[]
+  indentLevel?: number
   type: 'parent' | 'child' | 'none'
   id: number | null
   parentId?: number | null
@@ -54,7 +57,7 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   className,
   comboboxClassName,
   placeholder = '选择或创建分类',
-  helperText = '可直接搜索完整分类路径，例如：电子产品 / 手机',
+  helperText = '',
   noneOptionLabel = '未分类',
 }) => {
   const { categories, createCategory, fetchCategories } = useItemStore()
@@ -105,9 +108,12 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
     () => [
       noneOption,
       ...categoryTree.flatMap(parent => {
+        const childSearchKeywords =
+          parent.children?.flatMap(child => [child.name, `${parent.name} / ${child.name}`]) ?? []
         const parentOption: FlatCategoryOption = {
           value: `parent:${parent.id}`,
           label: parent.name,
+          searchKeywords: [parent.name, ...childSearchKeywords],
           type: 'parent',
           id: parent.id,
         }
