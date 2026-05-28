@@ -98,11 +98,17 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
     [formData, uploadedImages, selectedTags, updateItem, itemId, item, mode, open]
   )
 
-  const { autoSaving, lastSaved, triggerAutoSave, setInitialData, cancelAutoSave } =
-    useAutoSave<AutoSaveData>({
-      onSave: handleAutoSave,
-      delay: AUTO_SAVE_DELAY,
-    })
+  const {
+    autoSaving,
+    lastSaved,
+    triggerAutoSave,
+    setInitialData,
+    cancelAutoSave,
+    resetAutoSaveStatus,
+  } = useAutoSave<AutoSaveData>({
+    onSave: handleAutoSave,
+    delay: AUTO_SAVE_DELAY,
+  })
 
   // Location handlers
   const loadRooms = useCallback(
@@ -337,6 +343,7 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
   useEffect(() => {
     if (!open) {
       cancelAutoSave()
+      resetAutoSaveStatus()
       setEditLoading(false)
       setFormData(INITIAL_FORM_DATA)
       setUploadedImages([])
@@ -350,7 +357,7 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
       })
       editInitializedRef.current = null
     }
-  }, [open, cancelAutoSave, setInitialData])
+  }, [open, cancelAutoSave, resetAutoSaveStatus, setInitialData])
 
   // Quantity handlers
   const handleQuantityClick = useCallback(() => {

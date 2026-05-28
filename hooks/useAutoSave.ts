@@ -12,6 +12,7 @@ interface UseAutoSaveReturn<T> {
   triggerAutoSave: () => void
   setInitialData: (data: T) => void
   cancelAutoSave: () => void
+  resetAutoSaveStatus: () => void
 }
 
 export function useAutoSave<T>({
@@ -60,6 +61,11 @@ export function useAutoSave<T>({
     }
   }, [])
 
+  const resetAutoSaveStatus = useCallback(() => {
+    setAutoSaving(false)
+    setLastSaved(null)
+  }, [])
+
   // 清理定时器
   useEffect(() => {
     return () => {
@@ -75,5 +81,6 @@ export function useAutoSave<T>({
     triggerAutoSave,
     setInitialData,
     cancelAutoSave,
+    resetAutoSaveStatus,
   }
 }

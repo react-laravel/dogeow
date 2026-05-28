@@ -580,7 +580,6 @@ export function ItemDetailModal({
   const displayName = mode === 'edit' ? formData.name || item.name : item.name
   const isInlineEditMode = mode === 'edit'
   const isPublicItem = isInlineEditMode ? formData.is_public : item.is_public
-  const nameInputWidth = `calc(${Math.min(Math.max(formData.name.trim().length || 4, 4), 18)}ch + 0.75rem)`
 
   return (
     <>
@@ -636,19 +635,27 @@ export function ItemDetailModal({
               <StatusIndicator status={item.status} />
               {isInlineEditMode ? (
                 <>
-                  <div className="flex min-w-0 shrink-0 items-center gap-2">
-                    <Input
-                      value={formData.name}
-                      onChange={event =>
-                        setFormData(prev => ({
-                          ...prev,
-                          name: event.target.value,
-                        }))
-                      }
-                      className="h-10 w-auto min-w-[4ch] max-w-[18rem] flex-none border-0 bg-transparent px-0 text-xl font-semibold shadow-none focus-visible:ring-0"
-                      placeholder="请输入"
-                      style={{ width: nameInputWidth }}
-                    />
+                  <Input
+                    value={formData.name}
+                    onChange={event =>
+                      setFormData(prev => ({
+                        ...prev,
+                        name: event.target.value,
+                      }))
+                    }
+                    className="h-10 min-w-0 flex-1 border-0 bg-transparent px-0 text-xl font-semibold shadow-none focus-visible:ring-0"
+                    placeholder="请输入"
+                  />
+                  <div className="ml-auto flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 rounded-full px-3 text-xs font-medium"
+                      onClick={handleQuantityClick}
+                    >
+                      x{formData.quantity || 1}
+                    </Button>
                     <button
                       type="button"
                       className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
@@ -667,15 +674,6 @@ export function ItemDetailModal({
                       )}
                     </button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 shrink-0 rounded-full px-3 text-xs font-medium"
-                    onClick={handleQuantityClick}
-                  >
-                    x{formData.quantity || 1}
-                  </Button>
                 </>
               ) : (
                 <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -703,7 +701,6 @@ export function ItemDetailModal({
                     onImagesChange={setUploadedImages}
                     existingImages={uploadedImages}
                     maxImages={10}
-                    compactAddButton
                   />
                 </div>
 
