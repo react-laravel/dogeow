@@ -84,7 +84,7 @@ function ItemCardImage({
 
   // 使用 key 来强制在图片变化时重新渲染，重置状态
   const imageKey = primaryImage?.id || primaryImage?.path || 'no-image'
-  const imageClassName = size ? 'object-contain object-center' : 'object-cover'
+  const imageClassName = size ? 'h-full w-full object-contain object-center' : 'object-cover'
 
   return (
     <div key={imageKey} className={containerClassName} style={containerStyle}>

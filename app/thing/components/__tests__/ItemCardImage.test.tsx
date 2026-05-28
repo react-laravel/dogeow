@@ -160,6 +160,26 @@ describe('ItemCardImage', () => {
       const element = container.firstChild as HTMLElement
       expect(element).toHaveStyle({ width: '100px', height: '100px' })
     })
+
+    it('should make sized images fill the square container before object-contain centering', () => {
+      const props = {
+        ...defaultProps,
+        initialPrimaryImage: {
+          id: 1,
+          url: 'https://example.com/wide.jpg',
+        },
+        size: 64,
+      }
+
+      render(<ItemCardImage {...props} />)
+
+      expect(screen.getByTestId('next-image')).toHaveClass(
+        'h-full',
+        'w-full',
+        'object-contain',
+        'object-center'
+      )
+    })
   })
 
   describe('Edge Cases', () => {
