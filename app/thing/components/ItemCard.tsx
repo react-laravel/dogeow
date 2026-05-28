@@ -19,8 +19,8 @@ function ItemCard({ item, onView, isLoading = false }: ItemCardProps) {
   if (isLoading) {
     return (
       <Card className="flex flex-row items-start gap-2 p-0">
-        <Skeleton className="h-16 w-16 flex-shrink-0 rounded" />
-        <div className="flex min-w-0 flex-grow flex-col space-y-2">
+        <Skeleton className="h-16 w-16 flex-shrink-0 rounded-lg border" />
+        <div className="flex min-w-0 flex-grow flex-col space-y-2 p-2">
           <div className="flex items-center justify-between gap-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-16" />
