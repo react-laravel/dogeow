@@ -20,6 +20,22 @@ function normalizeStatus(s: string): StatusKind {
   return 'error'
 }
 
+function serviceDetails(
+  status: string,
+  details: string,
+  responseTime?: number
+): string | undefined {
+  if (responseTime != null && status === 'online') {
+    if (details.startsWith('响应时间:')) {
+      return undefined
+    }
+
+    return details || undefined
+  }
+
+  return details || undefined
+}
+
 export function mapApiToSystemStatus(
   data: SystemStatusApiResponse,
   lastCheck: Date
@@ -28,76 +44,84 @@ export function mapApiToSystemStatus(
   const githubStatus: SystemStatus = data.github
     ? {
         name: 'GitHub API',
+        label: 'REST / GraphQL 配额',
         status: normalizeStatus(data.github.status),
         lastCheck,
         icon: <Github className={iconClass} />,
-        description: 'REST / GraphQL 配额',
         details: data.github.details || undefined,
       }
     : {
         name: 'GitHub API',
+        label: 'REST / GraphQL 配额',
         status: 'warning',
         lastCheck,
         icon: <Github className={iconClass} />,
-        description: 'REST / GraphQL 配额',
         details: LEGACY_GITHUB_STATUS_MESSAGE,
       }
 
   return [
     {
-      name: '小龙虾🦞',
-      status: normalizeStatus(data.openclaw.status),
+      name: data.hermes.name,
+      label: data.hermes.label,
+      status: normalizeStatus(data.hermes.status),
       lastCheck,
       icon: <Server className={iconClass} />,
-      description: 'OpenClaw 应用服务器',
-      details: data.openclaw.details || undefined,
+      responseTimeMs: data.hermes.response_time,
+      details: serviceDetails(data.hermes.status, data.hermes.details, data.hermes.response_time),
     },
     {
       name: '数据库',
+      label: 'MySQL 数据库',
       status: normalizeStatus(data.database.status),
       lastCheck,
       icon: <Database className={iconClass} />,
-      description: 'MySQL 数据库',
-      details: data.database.details || undefined,
+      responseTimeMs: data.database.response_time,
+      details: serviceDetails(
+        data.database.status,
+        data.database.details,
+        data.database.response_time
+      ),
     },
     {
       name: 'Redis',
+      label: 'Redis 缓存服务',
       status: normalizeStatus(data.redis.status),
       lastCheck,
       icon: <Layers className={iconClass} />,
-      description: 'Redis 缓存服务',
-      details: data.redis.details || undefined,
+      responseTimeMs: data.redis.response_time,
+      details: serviceDetails(data.redis.status, data.redis.details, data.redis.response_time),
     },
     {
       name: 'CDN',
+      label: '又拍云 CDN',
       status: normalizeStatus(data.cdn.status),
       lastCheck,
       icon: <Wifi className={iconClass} />,
-      description: '又拍云 CDN',
-      details: data.cdn.details || undefined,
+      responseTimeMs: data.cdn.response_time,
+      details: serviceDetails(data.cdn.status, data.cdn.details, data.cdn.response_time),
     },
     {
       name: 'Reverb',
+      label: 'Laravel Reverb WebSocket',
       status: normalizeStatus(data.reverb.status),
       lastCheck,
       icon: <Activity className={iconClass} />,
-      description: 'Laravel Reverb WebSocket',
       details: data.reverb.details || undefined,
     },
     {
       name: '队列',
+      label: 'Laravel 队列 Worker',
       status: normalizeStatus(data.queue.status),
       lastCheck,
       icon: <ListTodo className={iconClass} />,
-      description: 'Laravel 队列 Worker',
       details: data.queue.details || undefined,
     },
     {
       name: '调度器',
+      label: 'Laravel 任务调度',
       status: normalizeStatus(data.scheduler.status),
       lastCheck,
       icon: <Clock className={iconClass} />,
-      description: 'Laravel 任务调度',
       details: data.scheduler.details || undefined,
     },
     githubStatus,
@@ -113,67 +137,67 @@ export function fallbackStatuses(
   const status: StatusKind = isError ? 'error' : 'online'
   return [
     {
-      name: 'OpenClaw 服务器',
+      name: '小龙虾🦞',
+      label: 'Hermes',
       status,
       lastCheck,
       icon: <Server className={iconClass} />,
-      description: 'OpenClaw 应用服务器',
       details: message,
     },
     {
       name: '数据库',
+      label: 'MySQL 数据库',
       status,
       lastCheck,
       icon: <Database className={iconClass} />,
-      description: 'MySQL 数据库',
       details: message,
     },
     {
       name: 'Redis',
+      label: 'Redis 缓存服务',
       status,
       lastCheck,
       icon: <Layers className={iconClass} />,
-      description: 'Redis 缓存服务',
       details: message,
     },
     {
       name: 'CDN',
+      label: '又拍云 CDN',
       status,
       lastCheck,
       icon: <Wifi className={iconClass} />,
-      description: '又拍云 CDN',
       details: message,
     },
     {
       name: 'Reverb',
+      label: 'Laravel Reverb WebSocket',
       status,
       lastCheck,
       icon: <Activity className={iconClass} />,
-      description: 'Laravel Reverb WebSocket',
       details: message,
     },
     {
       name: '队列',
+      label: 'Laravel 队列 Worker',
       status,
       lastCheck,
       icon: <ListTodo className={iconClass} />,
-      description: 'Laravel 队列 Worker',
       details: message,
     },
     {
       name: '调度器',
+      label: 'Laravel 任务调度',
       status,
       lastCheck,
       icon: <Clock className={iconClass} />,
-      description: 'Laravel 任务调度',
       details: message,
     },
     {
       name: 'GitHub API',
+      label: 'REST / GraphQL 配额',
       status,
       lastCheck,
       icon: <Github className={iconClass} />,
-      description: 'REST / GraphQL 配额',
       details: message,
     },
   ]

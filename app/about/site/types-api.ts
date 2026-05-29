@@ -1,9 +1,12 @@
 /** GET /api/system/status 响应 */
 export interface SystemStatusApiResponse {
-  openclaw: {
+  hermes: {
+    name: string
+    label: string
     online: boolean
     status: string
     details: string
+    response_time?: number
     cpu_percent?: number | null
     memory_percent?: number | null
     disk_percent?: number | null
