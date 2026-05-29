@@ -150,19 +150,19 @@ export default function ItemFilters({
   return (
     <div className="text-foreground flex h-full min-h-0 flex-col px-1">
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="space-y-4 pb-6">
+        <div className="space-y-3 pb-4">
           <div className="w-full">
             <div
               role="tablist"
               aria-label="筛选类型"
-              className="bg-muted border-border mb-4 grid w-full grid-cols-2 rounded-lg border p-[3px]"
+              className="bg-muted border-border mb-3 grid w-full grid-cols-2 rounded-lg border p-[3px]"
             >
               <button
                 type="button"
                 role="tab"
                 aria-selected={activeTab === 'basic'}
                 className={cn(
-                  'text-foreground inline-flex h-8 items-center justify-center rounded-md px-2 text-sm font-medium transition-colors',
+                  'text-foreground inline-flex h-7 items-center justify-center rounded-md px-2 text-xs font-medium transition-colors',
                   activeTab === 'basic' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
                 )}
                 onClick={() => setActiveTab('basic')}
@@ -174,7 +174,7 @@ export default function ItemFilters({
                 role="tab"
                 aria-selected={activeTab === 'detailed'}
                 className={cn(
-                  'text-foreground inline-flex h-8 items-center justify-center rounded-md px-2 text-sm font-medium transition-colors',
+                  'text-foreground inline-flex h-7 items-center justify-center rounded-md px-2 text-xs font-medium transition-colors',
                   activeTab === 'detailed'
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-accent'
@@ -186,7 +186,7 @@ export default function ItemFilters({
             </div>
 
             {activeTab === 'basic' ? (
-              <div role="tabpanel" className="space-y-6">
+              <div role="tabpanel" className="space-y-4">
                 <BasicFiltersTabContent
                   filters={filters}
                   selectedCategory={selectedCategory}
@@ -201,7 +201,7 @@ export default function ItemFilters({
                 />
               </div>
             ) : (
-              <div role="tabpanel" className="space-y-6">
+              <div role="tabpanel" className="space-y-4">
                 <DetailedFiltersTab
                   filters={filters}
                   areas={areas}

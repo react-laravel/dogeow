@@ -31,6 +31,7 @@ export default function Thing() {
   // 视图模式状态
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [imageSizePreset, setImageSizePreset] = useState<SizePreset>('md')
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
 
   // 弹窗状态（抽象到通用 hook）
   const {
@@ -152,6 +153,7 @@ export default function Thing() {
             onClearFilters={handleClearFilters}
             onViewModeChange={setViewMode}
             onImageSizePresetChange={setImageSizePreset}
+            onFiltersOpenChange={setFilterDrawerOpen}
           />
 
           <ThingContent
@@ -173,7 +175,7 @@ export default function Thing() {
         </div>
       </PullToRefresh>
 
-      <ThingSpeedDial />
+      {!filterDrawerOpen ? <ThingSpeedDial /> : null}
 
       {/* 物品详情弹窗 */}
       <ItemDetailModal

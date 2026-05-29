@@ -1,4 +1,5 @@
 import { memo, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -56,6 +57,7 @@ interface ThingHeaderProps {
   onClearFilters?: () => void
   onViewModeChange: (viewMode: ViewMode) => void
   onImageSizePresetChange?: (preset: SizePreset) => void
+  onFiltersOpenChange?: (open: boolean) => void
 }
 
 function ThingHeader({
@@ -72,6 +74,7 @@ function ThingHeader({
   onClearFilters,
   onViewModeChange,
   onImageSizePresetChange,
+  onFiltersOpenChange,
 }: ThingHeaderProps) {
   // 从 filters 派生分类选择状态
   const derivedCategory = useMemo(() => {
@@ -116,6 +119,10 @@ function ThingHeader({
   useEffect(() => {
     setSelectedTags(derivedTags)
   }, [derivedTags])
+
+  useEffect(() => {
+    onFiltersOpenChange?.(filtersOpen)
+  }, [filtersOpen, onFiltersOpenChange])
 
   useEffect(() => {
     if (!filtersOpen) return
@@ -482,7 +489,66 @@ function ThingHeader({
     </div>
   )
 
-  // 渲染筛选侧边栏
+  const filterPanelTop = 'var(--app-header-height, 50px)'
+  const filterPanelHeight = 'calc(100dvh - var(--app-header-height, 50px))'
+
+  const filterDrawerPortal =
+    filtersOpen && typeof document !== 'undefined'
+      ? createPortal(
+          <>
+            <div
+              data-slot="sheet-overlay"
+              className="fixed inset-x-0 bottom-0 z-[135] bg-black/80"
+              style={{ top: filterPanelTop }}
+              aria-hidden="true"
+              onClick={() => setFiltersOpen(false)}
+            />
+
+            <div
+              ref={filterPanelRef}
+              data-slot="sheet-content"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="thing-filter-title"
+              className="bg-background text-foreground border-border fixed right-0 z-[140] flex w-[min(13.5rem,calc(100vw-5rem))] max-w-[13.5rem] flex-col overflow-hidden border-l p-3 shadow-xl"
+              style={{
+                top: filterPanelTop,
+                height: filterPanelHeight,
+                maxHeight: filterPanelHeight,
+              }}
+            >
+              <div className="mb-2 flex shrink-0 items-center justify-between">
+                <h2 id="thing-filter-title" className="text-foreground text-sm font-semibold">
+                  筛选
+                </h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  aria-label="关闭筛选"
+                  onClick={() => setFiltersOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <ItemFilters
+                  onApply={onApplyFilters}
+                  onReset={onClearFilters}
+                  categories={categories}
+                  tags={tags}
+                  areas={areas}
+                  rooms={rooms}
+                  spots={spots}
+                />
+              </div>
+            </div>
+          </>,
+          document.body
+        )
+      : null
+
   const renderFilterSidebar = () => (
     <>
       <Button
@@ -496,53 +562,7 @@ function ThingHeader({
       >
         <SlidersHorizontal className={`mr-2 h-4 w-4 ${hasActiveFilters ? 'text-primary' : ''}`} />
       </Button>
-
-      {filtersOpen ? (
-        <>
-          <div
-            data-slot="sheet-overlay"
-            className="fixed inset-x-0 bottom-0 z-[135] bg-black/80"
-            style={{ top: 'var(--app-header-height, 50px)' }}
-            aria-hidden="true"
-            onClick={() => setFiltersOpen(false)}
-          />
-
-          <div
-            ref={filterPanelRef}
-            data-slot="sheet-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="thing-filter-title"
-            className="bg-background text-foreground border-border fixed right-0 bottom-0 z-[140] flex w-[calc(100vw-4.5rem)] max-w-[17rem] flex-col overflow-hidden border-l p-4 shadow-xl sm:w-[17rem]"
-            style={{ top: 'var(--app-header-height, 50px)' }}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h2 id="thing-filter-title" className="text-foreground font-semibold">
-                筛选
-              </h2>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                aria-label="关闭筛选"
-                onClick={() => setFiltersOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <ItemFilters
-              onApply={onApplyFilters}
-              onReset={onClearFilters}
-              categories={categories}
-              tags={tags}
-              areas={areas}
-              rooms={rooms}
-              spots={spots}
-            />
-          </div>
-        </>
-      ) : null}
+      {filterDrawerPortal}
     </>
   )
 

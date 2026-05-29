@@ -29,17 +29,17 @@ export function DateRangePicker({
   const parseDateValue = (value: string) => (value ? new Date(`${value}T00:00:00`) : undefined)
 
   return (
-    <div className="space-y-3">
-      <Label className="text-base font-medium">{label}</Label>
-      <div className="space-y-3">
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium">{label}</Label>
+      <div className="space-y-2">
         <label
           className={cn(
-            'border-input bg-background flex h-11 w-full items-center gap-2 rounded-md border px-3 text-sm',
+            'border-input bg-background flex h-9 w-full items-center gap-2 rounded-md border px-2.5 text-sm',
             !fromDate && 'text-muted-foreground'
           )}
         >
-          <CalendarIcon className="h-4 w-4" />
-          <span className="shrink-0">开始日期</span>
+          <CalendarIcon className="h-3.5 w-3.5" />
+          <span className="shrink-0 text-xs">开始日期</span>
           <input
             type="date"
             value={formatDateValue(fromDate)}
@@ -50,12 +50,12 @@ export function DateRangePicker({
 
         <label
           className={cn(
-            'border-input bg-background flex h-11 w-full items-center gap-2 rounded-md border px-3 text-sm',
+            'border-input bg-background flex h-9 w-full items-center gap-2 rounded-md border px-2.5 text-sm',
             !toDate && 'text-muted-foreground'
           )}
         >
-          <CalendarIcon className="h-4 w-4" />
-          <span className="shrink-0">结束日期</span>
+          <CalendarIcon className="h-3.5 w-3.5" />
+          <span className="shrink-0 text-xs">结束日期</span>
           <input
             type="date"
             value={formatDateValue(toDate)}

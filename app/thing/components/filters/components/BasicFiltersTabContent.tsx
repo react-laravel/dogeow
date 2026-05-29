@@ -71,7 +71,7 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
       : 'none'
 
     const selectClassName =
-      'bg-background border-input text-foreground h-11 w-full rounded-md border px-3 text-sm focus:border-primary focus:ring-primary'
+      'bg-background border-input text-foreground h-9 w-full rounded-md border px-2.5 text-sm focus:border-primary focus:ring-primary'
 
     const handleCategoryChange = (value: string) => {
       if (value === 'none') {
@@ -84,28 +84,28 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
     }
 
     return (
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <Label className="text-base font-medium">名称</Label>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">名称</Label>
           <Input
             value={filters.name}
             onChange={e => onNameChange(e.target.value)}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-11 border"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-sm"
           />
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-base font-medium">描述</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">描述</Label>
           <Input
             value={filters.description}
             onChange={e => onDescriptionChange(e.target.value)}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-11 border"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-sm"
           />
         </div>
 
         {/* 分类筛选：父子级联，可清空 */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">分类</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">分类</Label>
           <select
             value={categoryValue}
             onChange={event => handleCategoryChange(event.target.value)}
@@ -130,9 +130,9 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
           </Button>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-base font-medium">状态</Label>
-          <div className="bg-muted border-border rounded-lg border px-2 py-1">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">状态</Label>
+          <div className="bg-muted border-border rounded-lg border px-2 py-0.5">
             <select
               value={filters.status || 'all'}
               onChange={event => onStatusChange(event.target.value)}
@@ -147,8 +147,8 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-base font-medium">公开状态</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">公开状态</Label>
           <select
             value={
               filters.is_public === null ? 'null' : filters.is_public === true ? 'true' : 'false'
@@ -165,9 +165,9 @@ export const BasicFiltersTabContent = memo<BasicFiltersTabContentProps>(
           </select>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-base font-medium">标签</Label>
-          <div className="bg-muted border-border rounded-lg border px-2 py-1">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">标签</Label>
+          <div className="bg-muted border-border rounded-lg border px-2 py-0.5">
             <TagSelector
               tags={tags}
               selectedTags={

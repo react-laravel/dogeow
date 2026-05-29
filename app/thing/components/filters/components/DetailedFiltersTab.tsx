@@ -44,10 +44,10 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
     const toSelectValue = (value: string | number | null | undefined) =>
       value === null || value === undefined || value === '' ? 'all' : value.toString()
     const selectClassName =
-      'bg-background border-input text-foreground h-11 w-full rounded-md border px-3 text-sm disabled:opacity-60'
+      'bg-background border-input text-foreground h-9 w-full rounded-md border px-2.5 text-sm disabled:opacity-60'
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <DateRangePicker
           label="购买日期"
           fromDate={filters.purchase_date_from}
@@ -68,30 +68,30 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
           onIncludeNullChange={onIncludeNullExpiryDateChange}
         />
 
-        <div className="space-y-3">
-          <Label className="text-base font-medium">价格范围</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">价格范围</Label>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               placeholder="最低价"
               value={filters.price_from}
               onChange={e => onPriceFromChange(e.target.value)}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-11 border"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-sm"
             />
-            <span className="text-muted-foreground">-</span>
+            <span className="text-muted-foreground text-sm">-</span>
             <Input
               type="number"
               placeholder="最高价"
               value={filters.price_to}
               onChange={e => onPriceToChange(e.target.value)}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-11 border"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-sm"
             />
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-base font-medium">位置</Label>
-          <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">位置</Label>
+          <div className="space-y-2">
             <select
               value={toSelectValue(filters.area_id)}
               onChange={event => onAreaIdChange(event.target.value)}
