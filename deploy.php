@@ -49,6 +49,55 @@ localhost('production')
 // =====================
 // 自定义任务
 // =====================
+desc('部署前检查关键目录权限');
+task('deploy:preflight_permissions', function () {
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+
+workspace_root="{{workspace_root}}"
+deploy_path="{{deploy_path}}"
+expected_user="${DEPLOY_USER:-nginx}"
+actual_user="$(id -un)"
+
+if [ "$actual_user" != "$expected_user" ]; then
+  echo "[deploy] ERROR: 部署必须以 $expected_user 用户运行，当前是 $actual_user" >&2
+  echo "[deploy] 修复：检查 GitHub Actions runner systemd User=、手工 deploy/sudo 命令以及 PM2_HOME。" >&2
+  exit 73
+fi
+
+check_tree_writable() {
+  local label="$1"
+  local path="$2"
+
+  [ -e "$path" ] || return 0
+
+  local bad_owner bad_dirs
+  bad_owner="$({ find "$path" -maxdepth 8 ! -user "$actual_user" -printf "%u:%g %m %p\n" | head -40; } || true)"
+  bad_dirs="$({ find "$path" -maxdepth 8 -type d ! -writable -printf "%u:%g %m %p\n" | head -40; } || true)"
+
+  if [ -n "$bad_owner" ] || [ -n "$bad_dirs" ]; then
+    echo "[deploy] ERROR: $label 存在权限漂移：" >&2
+    if [ -n "$bad_owner" ]; then
+      echo "[deploy] 非 $actual_user 所有的路径：" >&2
+      echo "$bad_owner" >&2
+    fi
+    if [ -n "$bad_dirs" ]; then
+      echo "[deploy] 当前用户不可写的目录：" >&2
+      echo "$bad_dirs" >&2
+    fi
+    echo "[deploy] 这通常是 root 手工运行 npm/git/pm2/deploy 或编辑器/LSP 在部署目录写文件导致。" >&2
+    echo "[deploy] 修复：sudo chown -R $actual_user:$actual_user \"$path\"，并停止 root PM2/LSP/手工进程。" >&2
+    exit 74
+  fi
+}
+
+check_tree_writable "Actions 工作区" "$workspace_root"
+check_tree_writable "部署目录" "$deploy_path"
+'
+BASH);
+});
+
 desc('从当前工作区同步代码到 release 目录');
 task('deploy:update_code', function () {
     $workspaceRoot = rtrim(get('workspace_root'), '/');
@@ -268,6 +317,7 @@ task('deploy', [
     'deploy:info',
     'deploy:setup',
     'deploy:lock',
+    'deploy:preflight_permissions',
     'deploy:release',
     'deploy:update_code',
     'deploy:runtime_files',
