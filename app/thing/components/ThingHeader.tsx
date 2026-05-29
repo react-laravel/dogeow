@@ -498,7 +498,7 @@ function ThingHeader({
           <>
             <div
               data-slot="sheet-overlay"
-              className="fixed inset-x-0 bottom-0 z-[135] bg-black/80"
+              className="fixed inset-x-0 bottom-0 z-[135] bg-black/20"
               style={{ top: filterPanelTop }}
               aria-hidden="true"
               onClick={() => setFiltersOpen(false)}
