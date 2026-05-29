@@ -510,7 +510,7 @@ function ThingHeader({
               role="dialog"
               aria-modal="true"
               aria-labelledby="thing-filter-title"
-              className="bg-background text-foreground border-border fixed right-0 z-[140] flex w-[min(13.5rem,calc(100vw-5rem))] max-w-[13.5rem] flex-col overflow-hidden border-l p-3 shadow-xl"
+              className="bg-background text-foreground border-border fixed right-0 z-[140] flex w-[min(13.5rem,calc(100vw-5rem))] max-w-[13.5rem] flex-col overflow-hidden border-l p-3 shadow-xl max-md:[&_input]:text-base max-md:[&_select]:text-base max-md:[&_textarea]:text-base"
               style={{
                 top: filterPanelTop,
                 height: filterPanelHeight,

@@ -115,7 +115,7 @@ export function TagSelector({
                 placeholder="搜索标签..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="border-input bg-background focus:ring-ring h-9 w-full rounded-md border px-2 text-sm focus:ring-1 focus:outline-none"
+                className="border-input bg-background focus:ring-ring h-9 w-full rounded-md border px-2 text-base focus:ring-1 focus:outline-none"
               />
             </div>
 

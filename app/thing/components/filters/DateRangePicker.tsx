@@ -44,7 +44,7 @@ export function DateRangePicker({
             type="date"
             value={formatDateValue(fromDate)}
             onChange={event => onFromDateChange(parseDateValue(event.target.value))}
-            className="text-foreground min-w-0 flex-1 bg-transparent outline-none"
+            className="text-foreground min-w-0 flex-1 bg-transparent text-base outline-none"
           />
         </label>
 
@@ -60,7 +60,7 @@ export function DateRangePicker({
             type="date"
             value={formatDateValue(toDate)}
             onChange={event => onToDateChange(parseDateValue(event.target.value))}
-            className="text-foreground min-w-0 flex-1 bg-transparent outline-none"
+            className="text-foreground min-w-0 flex-1 bg-transparent text-base outline-none"
           />
         </label>
 

@@ -44,7 +44,7 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
     const toSelectValue = (value: string | number | null | undefined) =>
       value === null || value === undefined || value === '' ? 'all' : value.toString()
     const selectClassName =
-      'bg-background border-input text-foreground h-9 w-full rounded-md border px-2.5 text-sm disabled:opacity-60'
+      'bg-background border-input text-foreground h-9 w-full rounded-md border px-2.5 text-base disabled:opacity-60'
 
     return (
       <div className="space-y-4">
@@ -76,7 +76,7 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
               placeholder="最低价"
               value={filters.price_from}
               onChange={e => onPriceFromChange(e.target.value)}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-sm"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-base"
             />
             <span className="text-muted-foreground text-sm">-</span>
             <Input
@@ -84,7 +84,7 @@ export const DetailedFiltersTab = memo<DetailedFiltersTabProps>(
               placeholder="最高价"
               value={filters.price_to}
               onChange={e => onPriceToChange(e.target.value)}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-sm"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:ring-primary focus:border-primary h-9 border text-base"
             />
           </div>
         </div>
