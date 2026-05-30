@@ -73,6 +73,7 @@ export interface AudioControllerOptions {
   // Music store data
   currentTrack: string
   availableTracks: MusicTrack[]
+  suppressPrimaryAudio?: boolean
   // Refs
   refs: AudioRefs
   // Utilities

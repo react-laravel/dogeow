@@ -117,6 +117,8 @@ export function AppLauncher({
     handleAudioError,
     getCurrentTrackName,
     formatTime,
+    audioMountKey,
+    handoffAudioRef,
   } = audioManager
 
   // 切换显示模式
@@ -515,6 +517,7 @@ export function AppLauncher({
         {renderContent()}
 
         <audio
+          key={audioMountKey}
           ref={audioRef}
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdate}
@@ -526,6 +529,16 @@ export function AppLauncher({
           preload="none"
           crossOrigin="anonymous"
           // 手机端特殊属性
+          playsInline={true}
+          webkit-playsinline="true"
+          controls={false}
+        />
+        <audio
+          ref={handoffAudioRef}
+          onEnded={switchToNextTrack}
+          hidden
+          preload="none"
+          crossOrigin="anonymous"
           playsInline={true}
           webkit-playsinline="true"
           controls={false}

@@ -32,6 +32,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     callbacks,
     currentTrack,
     availableTracks,
+    suppressPrimaryAudio = false,
     refs,
     buildAudioUrl,
     initAudioContext,
@@ -70,6 +71,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
   // Setup audio source
   const setupMediaSource = useCallback(() => {
+    if (suppressPrimaryAudio) return
     if (!audioRef.current || !currentTrack) return
 
     try {
@@ -112,10 +114,12 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     volume,
     audioRef,
     gainNodeRef,
+    suppressPrimaryAudio,
   ])
 
   // Listen for currentTrack changes
   useEffect(() => {
+    if (suppressPrimaryAudio) return
     if (!currentTrack || !audioRef.current) return
 
     const desiredUrl = buildAudioUrl(currentTrack)
@@ -134,10 +138,11 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     if (!isSameByMark && !isSameByElement) {
       setupMediaSource()
     }
-  }, [currentTrack, buildAudioUrl, setupMediaSource, audioRef])
+  }, [currentTrack, buildAudioUrl, setupMediaSource, audioRef, suppressPrimaryAudio])
 
   // Handle play/pause
   useEffect(() => {
+    if (suppressPrimaryAudio) return
     if (!audioRef.current) return
 
     const playAudio = async () => {
@@ -202,6 +207,7 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     setAudioError,
     audioContextRef,
     audioRef,
+    suppressPrimaryAudio,
   ])
 
   // Toggle play/pause
