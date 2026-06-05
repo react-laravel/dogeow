@@ -19,6 +19,8 @@ import { StatusIndicator } from './item-detail/components/StatusIndicator'
 import { TimeInfo } from './item-detail/components/TimeInfo'
 import { formatDate } from './item-detail/utils/dateUtils'
 import ImageUploader from './ImageUploader'
+import { ImageUploadHeader } from './ImageUploadHeader'
+import { useRemoveBgPreference } from '../hooks/useRemoveBgPreference'
 import CategoryTreeSelect from './CategoryTreeSelect'
 import { TagsSection } from './forms/components/TagsSection'
 import { LocationSection } from './forms/components/LocationSection'
@@ -108,6 +110,7 @@ export function ItemDetailModal({
   const [editLoading, setEditLoading] = useState(false)
   const [formData, setFormData] = useState<ItemFormData>(INITIAL_FORM_DATA)
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const { removeBgEnabled, setRemoveBgEnabled } = useRemoveBgPreference()
   const [selectedLocation, setSelectedLocation] = useState<LocationSelection>(undefined)
   const [locationPath, setLocationPath] = useState<string>('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -720,11 +723,17 @@ export function ItemDetailModal({
             <Card className="mt-6 overflow-hidden">
               <CardContent className="space-y-6 pt-6">
                 <div className="space-y-3">
-                  <h3 className="text-base font-semibold">图片</h3>
+                  <ImageUploadHeader
+                    removeBgEnabled={removeBgEnabled}
+                    onRemoveBgChange={setRemoveBgEnabled}
+                  />
                   <ImageUploader
                     onImagesChange={setUploadedImages}
                     existingImages={uploadedImages}
                     maxImages={10}
+                    removeBgEnabled={removeBgEnabled}
+                    onRemoveBgChange={setRemoveBgEnabled}
+                    showRemoveBgToggle={false}
                   />
                 </div>
 

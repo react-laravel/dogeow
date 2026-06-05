@@ -1,10 +1,11 @@
+'use client'
+
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { UploadedImage } from '../types'
 import ImageUploader from './ImageUploader'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { AlertCircle } from 'lucide-react'
+import { ImageUploadHeader } from './ImageUploadHeader'
+import { useRemoveBgPreference } from '../hooks/useRemoveBgPreference'
 
 interface ImageSectionProps {
   uploadedImages: UploadedImage[]
@@ -12,6 +13,8 @@ interface ImageSectionProps {
 }
 
 const ImageSection = ({ uploadedImages, setUploadedImages }: ImageSectionProps) => {
+  const { removeBgEnabled, setRemoveBgEnabled } = useRemoveBgPreference()
+
   return (
     <Card>
       <CardHeader>
@@ -20,32 +23,17 @@ const ImageSection = ({ uploadedImages, setUploadedImages }: ImageSectionProps) 
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Label>物品图片</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="查看上传说明"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p className="text-xs">
-                    支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10
-                    张。点击图片可设为主图。勾选「上传时自动去背景」后，会异步调用去背景服务并替换展示图，原图会保留。
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <ImageUploadHeader
+            removeBgEnabled={removeBgEnabled}
+            onRemoveBgChange={setRemoveBgEnabled}
+          />
           <ImageUploader
             onImagesChange={setUploadedImages}
             existingImages={uploadedImages}
             maxImages={10}
+            removeBgEnabled={removeBgEnabled}
+            onRemoveBgChange={setRemoveBgEnabled}
+            showRemoveBgToggle={false}
           />
         </div>
       </CardContent>

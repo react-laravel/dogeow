@@ -3,9 +3,9 @@ import { UseFormReturn } from 'react-hook-form'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { AlertCircle } from 'lucide-react'
 import ImageUploader from '../../ImageUploader'
+import { ImageUploadHeader } from '../../ImageUploadHeader'
+import { useRemoveBgPreference } from '../../../hooks/useRemoveBgPreference'
 import LocationComboboxSelectSimple from '../../LocationComboboxSelectSimple'
 import CategoryTreeSelect, { CategorySelection } from '../../CategoryTreeSelect'
 import { NameInput } from '../../forms/components/NameInput'
@@ -76,6 +76,7 @@ export default function UnifiedBasicInfoForm({
   const [internalLocationPath, setInternalLocationPath] = useState<string>('')
   const [internalSelectedLocation, setInternalSelectedLocation] =
     useState<LocationSelection>(undefined)
+  const { removeBgEnabled, setRemoveBgEnabled } = useRemoveBgPreference()
 
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false)
   const [tempQuantity, setTempQuantity] = useState(1)
@@ -252,31 +253,17 @@ export default function UnifiedBasicInfoForm({
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="images">物品图片</Label>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="查看上传说明"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p className="text-xs">
-                  支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10 张。点击图片可设为主图。
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <ImageUploadHeader
+          removeBgEnabled={removeBgEnabled}
+          onRemoveBgChange={setRemoveBgEnabled}
+        />
         <ImageUploader
           onImagesChange={setUploadedImages}
           existingImages={uploadedImages}
           maxImages={10}
+          removeBgEnabled={removeBgEnabled}
+          onRemoveBgChange={setRemoveBgEnabled}
+          showRemoveBgToggle={false}
         />
       </div>
 

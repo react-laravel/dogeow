@@ -13,6 +13,17 @@ vi.mock('../ImageUploader', () => ({
   ),
 }))
 
+vi.mock('../ImageUploadHeader', () => ({
+  ImageUploadHeader: () => <div data-testid="image-upload-header">Image Upload Header</div>,
+}))
+
+vi.mock('../../hooks/useRemoveBgPreference', () => ({
+  useRemoveBgPreference: () => ({
+    removeBgEnabled: false,
+    setRemoveBgEnabled: vi.fn(),
+  }),
+}))
+
 describe('ImageSection', () => {
   const mockSetUploadedImages = vi.fn()
   const mockUploadedImages: UploadedImage[] = [
@@ -34,17 +45,10 @@ describe('ImageSection', () => {
       expect(screen.getByText('编辑物品的图片')).toBeInTheDocument()
     })
 
-    it('应该渲染物品图片标签', () => {
+    it('应该渲染图片上传头部', () => {
       render(<ImageSection uploadedImages={[]} setUploadedImages={mockSetUploadedImages} />)
 
-      expect(screen.getByText('物品图片')).toBeInTheDocument()
-    })
-
-    it('应该渲染帮助提示按钮', () => {
-      render(<ImageSection uploadedImages={[]} setUploadedImages={mockSetUploadedImages} />)
-
-      const helpButton = screen.getByLabelText('查看上传说明')
-      expect(helpButton).toBeInTheDocument()
+      expect(screen.getByTestId('image-upload-header')).toBeInTheDocument()
     })
 
     it('应该渲染 ImageUploader 组件', () => {

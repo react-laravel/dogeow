@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import {
   closestCenter,
   DndContext,
@@ -40,6 +40,9 @@ interface ImageUploaderProps {
   maxImages?: number
   maxSize?: number // 单位：MB
   compactAddButton?: boolean
+  removeBgEnabled?: boolean
+  onRemoveBgChange?: (enabled: boolean) => void
+  showRemoveBgToggle?: boolean
 }
 
 type SortableUploadedImage = UploadedImage & {
@@ -138,9 +141,18 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   maxImages = 10,
   maxSize = 20,
   compactAddButton = false,
+  removeBgEnabled: removeBgEnabledProp,
+  onRemoveBgChange,
+  showRemoveBgToggle = true,
 }) => {
   const [uploading, setUploading] = useState(false)
-  const [removeBgEnabled, setRemoveBgEnabled] = useState(false)
+  const [internalRemoveBgEnabled, setInternalRemoveBgEnabled] = useState(() =>
+    getRemoveBgPreference()
+  )
+  const isRemoveBgControlled = onRemoveBgChange !== undefined
+  const removeBgEnabled = isRemoveBgControlled
+    ? (removeBgEnabledProp ?? false)
+    : internalRemoveBgEnabled
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [images, setImages] = useState<UploadedImage[]>(() =>
     normalizePrimaryImages(existingImages)
@@ -169,10 +181,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       return post<UploadedImage[]>(url, arg)
     }
   )
-
-  useEffect(() => {
-    setRemoveBgEnabled(getRemoveBgPreference())
-  }, [])
 
   const updateImages = useCallback(
     (nextImages: UploadedImage[]) => {
@@ -213,8 +221,12 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   )
 
   const handleRemoveBgToggle = (checked: boolean) => {
-    setRemoveBgEnabled(checked)
-    setRemoveBgPreference(checked)
+    if (isRemoveBgControlled) {
+      onRemoveBgChange?.(checked)
+    } else {
+      setInternalRemoveBgEnabled(checked)
+      setRemoveBgPreference(checked)
+    }
   }
 
   // 处理文件选择
@@ -299,17 +311,19 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Switch
-          id="thing-remove-bg"
-          checked={removeBgEnabled}
-          onCheckedChange={handleRemoveBgToggle}
-          disabled={uploading}
-        />
-        <Label htmlFor="thing-remove-bg" className="text-sm font-normal">
-          上传时自动去背景
-        </Label>
-      </div>
+      {showRemoveBgToggle ? (
+        <div className="flex items-center justify-end gap-2">
+          <Switch
+            id="thing-remove-bg-inline"
+            checked={removeBgEnabled}
+            onCheckedChange={handleRemoveBgToggle}
+            disabled={uploading}
+          />
+          <Label htmlFor="thing-remove-bg-inline" className="text-sm font-normal">
+            上传时自动去背景
+          </Label>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-start gap-3">
         {images.length > 0 ? (
