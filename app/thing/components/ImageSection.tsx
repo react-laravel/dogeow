@@ -35,7 +35,8 @@ const ImageSection = ({ uploadedImages, setUploadedImages }: ImageSectionProps) 
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="text-xs">
-                    支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10 张。点击图片可设为主图。
+                    支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10
+                    张。点击图片可设为主图。勾选「上传时自动去背景」后，会异步调用去背景服务并替换展示图，原图会保留。
                   </p>
                 </TooltipContent>
               </Tooltip>

@@ -45,6 +45,8 @@ export interface ItemImage {
   url?: string
 }
 
+export type RmbgStatus = 'pending' | 'processing' | 'done' | 'failed' | 'skipped'
+
 // 上传图片类型
 export type UploadedImage = {
   path: string
@@ -53,6 +55,9 @@ export type UploadedImage = {
   thumbnail_url: string
   id?: number
   is_primary?: boolean
+  origin_path?: string
+  origin_url?: string
+  rmbg_status?: RmbgStatus
 }
 
 // 图片预览类型

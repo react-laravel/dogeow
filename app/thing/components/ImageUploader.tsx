@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   closestCenter,
   DndContext,
@@ -19,12 +19,20 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Upload, X } from 'lucide-react'
+import { Loader2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { UploadedImage } from '../types'
 import useSWRMutation from 'swr/mutation'
 import { post } from '@/lib/api'
 import Image from 'next/image'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import {
+  applyRmbgResult,
+  getRemoveBgPreference,
+  pollRmbgStatus,
+  setRemoveBgPreference,
+} from '../utils/rmbg'
 
 interface ImageUploaderProps {
   onImagesChange: (images: UploadedImage[]) => void
@@ -53,6 +61,9 @@ interface SortableImageTileProps {
   onPreview: (image: UploadedImage) => void
   onRemove: (index: number) => void
 }
+
+const isRmbgProcessing = (image: UploadedImage) =>
+  image.rmbg_status === 'pending' || image.rmbg_status === 'processing'
 
 function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageTileProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -95,11 +106,17 @@ function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageT
           sizes="8rem"
         />
       </div>
-      {image.is_primary && (
+      {image.is_primary ? (
         <div className="bg-primary absolute top-2 left-2 rounded-md px-2 py-1 text-xs text-white">
           主图
         </div>
-      )}
+      ) : null}
+      {isRmbgProcessing(image) ? (
+        <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-xs text-white">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          去背景中
+        </div>
+      ) : null}
       <button
         onClick={event => {
           event.stopPropagation()
@@ -123,11 +140,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   compactAddButton = false,
 }) => {
   const [uploading, setUploading] = useState(false)
+  const [removeBgEnabled, setRemoveBgEnabled] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [images, setImages] = useState<UploadedImage[]>(() =>
     normalizePrimaryImages(existingImages)
   )
   const [previewImage, setPreviewImage] = useState<UploadedImage | null>(null)
+  const pollingPathsRef = useRef<Set<string>>(new Set())
   const sortableImages = useMemo<SortableUploadedImage[]>(
     () => images.map((image, index) => ({ ...image, sortableId: getImageKey(image, index) })),
     [images]
@@ -150,6 +169,53 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       return post<UploadedImage[]>(url, arg)
     }
   )
+
+  useEffect(() => {
+    setRemoveBgEnabled(getRemoveBgPreference())
+  }, [])
+
+  const updateImages = useCallback(
+    (nextImages: UploadedImage[]) => {
+      const normalizedImages = normalizePrimaryImages(nextImages)
+      setImages(normalizedImages)
+      onImagesChange(normalizedImages)
+    },
+    [onImagesChange]
+  )
+
+  const startRmbgPolling = useCallback(
+    (uploadedImage: UploadedImage) => {
+      if (!uploadedImage.path || pollingPathsRef.current.has(uploadedImage.path)) {
+        return
+      }
+
+      pollingPathsRef.current.add(uploadedImage.path)
+
+      void pollRmbgStatus(uploadedImage.path, result => {
+        setImages(currentImages => {
+          const nextImages = currentImages.map(image =>
+            image.path === uploadedImage.path ? applyRmbgResult(image, result) : image
+          )
+          onImagesChange(normalizePrimaryImages(nextImages))
+          return normalizePrimaryImages(nextImages)
+        })
+      }).then(outcome => {
+        pollingPathsRef.current.delete(uploadedImage.path)
+
+        if (outcome === 'failed') {
+          toast.error('去背景失败，已保留原图')
+        } else if (outcome === 'timeout') {
+          toast.error('去背景超时，已保留原图')
+        }
+      })
+    },
+    [onImagesChange]
+  )
+
+  const handleRemoveBgToggle = (checked: boolean) => {
+    setRemoveBgEnabled(checked)
+    setRemoveBgPreference(checked)
+  }
 
   // 处理文件选择
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,17 +245,25 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     Array.from(files).forEach(file => {
       formData.append('images[]', file)
     })
+    if (removeBgEnabled) {
+      formData.append('remove_bg', '1')
+    }
 
     try {
       // 调用上传API
       const response = await uploadImages(formData)
 
-      // 更新图片列表
       const newImages = normalizePrimaryImages([...images, ...response])
-      setImages(newImages)
-      onImagesChange(newImages)
+      updateImages(newImages)
 
-      toast.success('图片上传成功')
+      if (removeBgEnabled) {
+        response
+          .filter(image => image.rmbg_status === 'pending' && image.path)
+          .forEach(image => startRmbgPolling(image))
+        toast.success('图片上传成功，正在异步去背景')
+      } else {
+        toast.success('图片上传成功')
+      }
     } catch (error) {
       toast.error('图片上传失败')
       console.error('上传图片失败:', error)
@@ -205,10 +279,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   // 移除图片
   const removeImage = (index: number) => {
     const newImages = [...images]
-    newImages.splice(index, 1)
-    const normalizedImages = normalizePrimaryImages(newImages)
-    setImages(normalizedImages)
-    onImagesChange(normalizedImages)
+    const removed = newImages.splice(index, 1)[0]
+    if (removed?.path) {
+      pollingPathsRef.current.delete(removed.path)
+    }
+    updateImages(newImages)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -219,13 +294,23 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     const newIndex = sortableImages.findIndex(image => image.sortableId === over.id)
     if (oldIndex < 0 || newIndex < 0) return
 
-    const reorderedImages = normalizePrimaryImages(arrayMove(images, oldIndex, newIndex))
-    setImages(reorderedImages)
-    onImagesChange(reorderedImages)
+    updateImages(arrayMove(images, oldIndex, newIndex))
   }
 
   return (
-    <div>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Switch
+          id="thing-remove-bg"
+          checked={removeBgEnabled}
+          onCheckedChange={handleRemoveBgToggle}
+          disabled={uploading}
+        />
+        <Label htmlFor="thing-remove-bg" className="text-sm font-normal">
+          上传时自动去背景
+        </Label>
+      </div>
+
       <div className="flex flex-wrap items-start gap-3">
         {images.length > 0 ? (
           <DndContext
