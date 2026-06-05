@@ -74,6 +74,9 @@ export interface AudioControllerOptions {
   currentTrack: string
   availableTracks: MusicTrack[]
   suppressPrimaryAudio?: boolean
+  handoffAudioRef?: React.RefObject<HTMLAudioElement | null>
+  nativeHandoffActive?: boolean
+  shouldDeferBackgroundResume?: () => boolean
   // Refs
   refs: AudioRefs
   // Utilities

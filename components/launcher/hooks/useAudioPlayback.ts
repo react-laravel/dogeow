@@ -2,9 +2,10 @@
  * Audio playback control hook
  * Refactored to use Value Objects to reduce LongParameterList
  */
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
 import { toast } from 'sonner'
+import { isAbortPlayError, safePlay } from '../audio/safePlay'
 import { shouldUpdatePlayingStateOnPause } from '../audio/playbackStateUtils'
 import type {
   AudioControllerOptions,
@@ -33,6 +34,9 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     currentTrack,
     availableTracks,
     suppressPrimaryAudio = false,
+    handoffAudioRef,
+    nativeHandoffActive = false,
+    shouldDeferBackgroundResume,
     refs,
     buildAudioUrl,
     initAudioContext,
@@ -54,7 +58,33 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
   const { audioRef, gainNodeRef, audioContextRef } = refs
   const wasPlayingBeforeHiddenRef = useRef(false)
   const backgroundTransitionAtRef = useRef<number | null>(null)
+  const isPlayingRef = useRef(isPlaying)
+  const [playbackResumeNonce, setPlaybackResumeNonce] = useState(0)
   const { setCurrentTrack } = useMusicStore()
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying
+  }, [isPlaying])
+
+  const getActiveAudio = useCallback((): HTMLAudioElement | null => {
+    if (nativeHandoffActive && handoffAudioRef?.current?.src) {
+      return handoffAudioRef.current
+    }
+
+    return audioRef.current
+  }, [audioRef, handoffAudioRef, nativeHandoffActive])
+
+  const reportPlayError = useCallback(
+    (error: unknown) => {
+      if (isAbortPlayError(error)) {
+        return
+      }
+
+      const message = error instanceof Error ? error.message : String(error)
+      setAudioError(`Playback failed: ${message}`)
+    },
+    [setAudioError]
+  )
 
   const markBackgroundTransition = useCallback(() => {
     backgroundTransitionAtRef.current = Date.now()
@@ -142,36 +172,42 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
 
   // Handle play/pause
   useEffect(() => {
-    if (suppressPrimaryAudio) return
-    if (!audioRef.current) return
+    const activeAudio = getActiveAudio()
+    if (!activeAudio) return
 
     const playAudio = async () => {
-      if (!audioContextRef.current && audioRef.current && audioRef.current.src) {
+      if (!isPlayingRef.current) {
+        return
+      }
+
+      const playbackTarget = getActiveAudio()
+      if (!playbackTarget) {
+        return
+      }
+
+      const primaryAudio = audioRef.current
+      const shouldInitVisualizer =
+        !nativeHandoffActive &&
+        !audioContextRef.current &&
+        primaryAudio &&
+        primaryAudio.src &&
+        playbackTarget === primaryAudio
+
+      if (shouldInitVisualizer) {
         try {
-          initAudioContext(audioRef.current)
+          initAudioContext(primaryAudio)
           await new Promise(resolve => setTimeout(resolve, 50))
 
           const ctx = audioContextRef.current as AudioContext | null
           if (shouldResumeAudioContext(ctx)) {
             await ctx.resume()
           }
-
-          // 音量由 audio 元素直接控制
-          if (audioRef.current) {
-            audioRef.current.volume = isMuted ? 0 : volume
-            audioRef.current.muted = isMuted
-            await audioRef.current.play()
-          }
         } catch (err) {
           console.error('Failed to initialize AudioContext:', err)
-          if (audioRef.current) {
-            audioRef.current.play().catch(handlePlayError)
-          }
         }
-        return
       }
 
-      if (audioContextRef.current) {
+      if (audioContextRef.current && !nativeHandoffActive) {
         if (shouldResumeAudioContext(audioContextRef.current)) {
           try {
             await audioContextRef.current.resume()
@@ -181,21 +217,22 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
         }
       }
 
-      if (audioRef.current) {
-        audioRef.current.volume = isMuted ? 0 : volume
-        audioRef.current.muted = isMuted
-        audioRef.current.play().catch(handlePlayError)
+      playbackTarget.volume = isMuted ? 0 : volume
+      playbackTarget.muted = isMuted
+
+      try {
+        await safePlay(playbackTarget)
+      } catch (err) {
+        reportPlayError(err)
       }
     }
 
-    const handlePlayError = (err: Error) => {
-      setAudioError(`Playback failed: ${err.message}`)
-    }
+    const canAutoPlay = readyToPlay || nativeHandoffActive
 
-    if (isPlaying && readyToPlay && userInteracted) {
-      playAudio()
+    if (isPlaying && canAutoPlay && userInteracted) {
+      void playAudio()
     } else if (!isPlaying) {
-      audioRef.current.pause()
+      activeAudio.pause()
     }
   }, [
     isPlaying,
@@ -204,47 +241,60 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     isMuted,
     volume,
     initAudioContext,
-    setAudioError,
+    reportPlayError,
     audioContextRef,
     audioRef,
-    suppressPrimaryAudio,
+    getActiveAudio,
+    nativeHandoffActive,
+    playbackResumeNonce,
   ])
 
   // Toggle play/pause
   const togglePlay = useCallback(() => {
-    if (!audioRef.current || !currentTrack) return
+    const activeAudio = getActiveAudio()
+    if (!activeAudio || !currentTrack) return
 
-    const hasReadySource = Boolean(audioRef.current.src || currentTrack)
+    const hasReadySource = Boolean(activeAudio.src || currentTrack)
     if ((!availableTracks || availableTracks.length === 0) && !hasReadySource) {
       setAudioError('Playlist is empty, no music to play')
       toast.error('Playlist is empty', { description: 'Please add music files to the playlist' })
       return
     }
 
-    if (!audioRef.current.src) {
+    if (!nativeHandoffActive && audioRef.current && !audioRef.current.src) {
       setupMediaSource()
     }
 
     if (isPlaying) {
-      audioRef.current.pause()
+      activeAudio.pause()
       setIsPlaying(false)
-    } else {
-      if (!audioContextRef.current && audioRef.current.src) {
-        initAudioContext(audioRef.current)
-      }
-      audioRef.current.play().catch(err => setAudioError(`Playback failed: ${err.message}`))
-      setIsPlaying(true)
+      return
     }
+
+    if (
+      !nativeHandoffActive &&
+      !audioContextRef.current &&
+      audioRef.current?.src &&
+      activeAudio === audioRef.current
+    ) {
+      initAudioContext(audioRef.current)
+    }
+
+    void safePlay(activeAudio).catch(reportPlayError)
+    setIsPlaying(true)
   }, [
     currentTrack,
     isPlaying,
     setupMediaSource,
     setIsPlaying,
     setAudioError,
+    reportPlayError,
     availableTracks,
     initAudioContext,
     audioContextRef,
     audioRef,
+    getActiveAudio,
+    nativeHandoffActive,
   ])
 
   // Switch track
@@ -257,7 +307,8 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
         return
       }
 
-      audioRef.current?.pause()
+      getActiveAudio()?.pause()
+      handoffAudioRef?.current?.pause()
 
       const currentIndex = availableTracks.findIndex(track => track.path === currentTrack)
       let nextIndex = -1
@@ -297,7 +348,8 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       setAudioError,
       setIsPlaying,
       setupMediaSource,
-      audioRef,
+      getActiveAudio,
+      handoffAudioRef,
     ]
   )
 
@@ -306,11 +358,12 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newTime = parseFloat(e.target.value)
       setCurrentTime(newTime)
-      if (audioRef.current) {
-        audioRef.current.currentTime = newTime
+      const activeAudio = getActiveAudio()
+      if (activeAudio) {
+        activeAudio.currentTime = newTime
       }
     },
-    [setCurrentTime, audioRef]
+    [setCurrentTime, getActiveAudio]
   )
 
   // Sync volume - 统一用 audio 元素控制音量
@@ -322,73 +375,100 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       audioRef.current.muted = isMuted
     }
 
+    if (handoffAudioRef?.current) {
+      handoffAudioRef.current.volume = targetVolume
+      handoffAudioRef.current.muted = isMuted
+    }
+
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = isMuted ? 0 : 1
     }
-  }, [volume, isMuted, audioRef, gainNodeRef])
+  }, [volume, isMuted, audioRef, handoffAudioRef, gainNodeRef])
+
+  const bindPlaybackStateListeners = useCallback(
+    (audio: HTMLAudioElement) => {
+      const handlePlay = () => {
+        clearBackgroundTransition()
+        setIsPlaying(true)
+      }
+      const handlePause = () => {
+        setTimeout(() => {
+          const isDocumentHidden = typeof document !== 'undefined' && document.hidden
+          if (
+            shouldUpdatePlayingStateOnPause({
+              isEnded: audio.ended,
+              isDocumentHidden,
+              isDuringBackgroundTransition: isDuringBackgroundTransition(),
+            })
+          ) {
+            setIsPlaying(false)
+          }
+        }, 100)
+      }
+
+      audio.addEventListener('play', handlePlay)
+      audio.addEventListener('pause', handlePause)
+
+      return () => {
+        audio.removeEventListener('play', handlePlay)
+        audio.removeEventListener('pause', handlePause)
+      }
+    },
+    [clearBackgroundTransition, isDuringBackgroundTransition, setIsPlaying]
+  )
 
   // Sync real playback state
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
-    const handlePlay = () => {
-      clearBackgroundTransition()
-      setIsPlaying(true)
-    }
-    const handlePause = () => {
-      // 延迟检查 document.hidden，避免与 visibilitychange 的竞态条件
-      // 切换 app / 锁屏时，pause 事件可能在 visibilitychange 之前触发，
-      // 此时 document.hidden 还是 false，会错误地将 isPlaying 设为 false
-      setTimeout(() => {
-        const isDocumentHidden = typeof document !== 'undefined' && document.hidden
-        if (
-          shouldUpdatePlayingStateOnPause({
-            isEnded: audio.ended,
-            isDocumentHidden,
-            isDuringBackgroundTransition: isDuringBackgroundTransition(),
-          })
-        ) {
-          setIsPlaying(false)
-        }
-      }, 100)
+    return bindPlaybackStateListeners(audio)
+  }, [audioRef, bindPlaybackStateListeners])
+
+  useEffect(() => {
+    if (!nativeHandoffActive) return
+
+    const handoffAudio = handoffAudioRef?.current
+    if (!handoffAudio) return
+
+    return bindPlaybackStateListeners(handoffAudio)
+  }, [bindPlaybackStateListeners, handoffAudioRef, nativeHandoffActive])
+
+  useEffect(() => {
+    if (!nativeHandoffActive) return
+
+    const handoffAudio = handoffAudioRef?.current
+    if (!handoffAudio) return
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(handoffAudio.currentTime)
     }
 
-    audio.addEventListener('play', handlePlay)
-    audio.addEventListener('pause', handlePause)
-
+    handoffAudio.addEventListener('timeupdate', handleTimeUpdate)
     return () => {
-      audio.removeEventListener('play', handlePlay)
-      audio.removeEventListener('pause', handlePause)
+      handoffAudio.removeEventListener('timeupdate', handleTimeUpdate)
     }
-  }, [audioRef, clearBackgroundTransition, isDuringBackgroundTransition, setIsPlaying])
+  }, [handoffAudioRef, nativeHandoffActive, setCurrentTime])
 
   // Handle page visibility changes
   useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (!audioRef.current) return
+    const handleVisibilityChange = () => {
+      const activeAudio = getActiveAudio()
+      if (!activeAudio) return
 
-      // 页面隐藏时：记录当前播放状态
       if (document.hidden) {
         markBackgroundTransition()
-        wasPlayingBeforeHiddenRef.current = isPlaying && !audioRef.current.paused
+        wasPlayingBeforeHiddenRef.current = isPlaying && !activeAudio.paused
         return
       }
 
-      // 页面重新可见时：只有在锁屏前确实在播放，且当前状态仍为播放时才恢复
-      if (wasPlayingBeforeHiddenRef.current && isPlaying) {
+      if (shouldDeferBackgroundResume?.()) {
+        return
+      }
+
+      if (wasPlayingBeforeHiddenRef.current && isPlaying && activeAudio.paused) {
         wasPlayingBeforeHiddenRef.current = false
-        try {
-          if (shouldResumeAudioContext(audioContextRef.current)) {
-            await audioContextRef.current.resume()
-          }
-          // 只有在音频实际暂停状态时才尝试播放
-          if (audioRef.current.paused) {
-            await audioRef.current.play()
-          }
-        } catch (err) {
-          console.warn('Failed to resume playback:', err)
-        }
+        setPlaybackResumeNonce(nonce => nonce + 1)
       }
     }
 
@@ -408,28 +488,30 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       window.removeEventListener('blur', handleWindowBlur)
       window.removeEventListener('pagehide', handlePageHide)
     }
-  }, [audioContextRef, audioRef, isPlaying, markBackgroundTransition])
+  }, [getActiveAudio, isPlaying, markBackgroundTransition, shouldDeferBackgroundResume])
 
   // Toggle mute
   const toggleMute = useCallback(() => {
     const nextMuted = !isMuted
     setIsMuted(nextMuted)
 
-    if (!audioRef.current) return
+    const activeAudio = getActiveAudio()
+    if (!activeAudio) return
 
-    audioRef.current.volume = nextMuted ? 0 : volume
-    audioRef.current.muted = nextMuted
+    activeAudio.volume = nextMuted ? 0 : volume
+    activeAudio.muted = nextMuted
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = nextMuted ? 0 : 1
     }
-  }, [isMuted, volume, setIsMuted, audioRef, gainNodeRef])
+  }, [isMuted, volume, setIsMuted, gainNodeRef, getActiveAudio])
 
   // Reset current time
   const resetCurrentTime = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0
+    const activeAudio = getActiveAudio()
+    if (activeAudio) {
+      activeAudio.currentTime = 0
     }
-  }, [audioRef])
+  }, [getActiveAudio])
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
@@ -439,9 +521,9 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     setAudioError(null)
 
     if (isPlaying && audioRef.current.paused) {
-      audioRef.current.play().catch(err => setAudioError(`Playback failed: ${err.message}`))
+      void safePlay(audioRef.current).catch(reportPlayError)
     }
-  }, [isPlaying, setDuration, setAudioError, audioRef])
+  }, [isPlaying, setDuration, setAudioError, reportPlayError, audioRef])
 
   // Handle audio error
   const handleAudioError = useCallback(

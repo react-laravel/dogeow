@@ -138,6 +138,8 @@ export function useAudioBackgroundHandoff({
     isTransitioningRef.current = true
 
     try {
+      handoffAudio.pause()
+
       const needsSrcUpdate = applyPlaybackSnapshotSync(visualizerAudio, snapshot)
 
       if (!audioContextRef.current) {
@@ -156,6 +158,14 @@ export function useAudioBackgroundHandoff({
       setNativeHandoffActive(false)
     } catch (error) {
       console.warn('可视化音频恢复失败:', error)
+
+      if (snapshot.wasPlaying && handoffAudio.paused) {
+        try {
+          await handoffAudio.play()
+        } catch {
+          // keep handoff active so controls still target the audible element
+        }
+      }
     } finally {
       isTransitioningRef.current = false
     }
@@ -172,11 +182,15 @@ export function useAudioBackgroundHandoff({
   ])
 
   useEffect(() => {
-    if (typeof document === 'undefined' || playbackMode !== 'visualizer') {
+    if (typeof document === 'undefined') {
       return
     }
 
     const handleVisibilityChange = () => {
+      if (!routesPlaybackThroughWebAudio()) {
+        return
+      }
+
       if (document.hidden) {
         void handoffToNativeAudio()
         return
@@ -189,5 +203,5 @@ export function useAudioBackgroundHandoff({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [handoffToNativeAudio, playbackMode, restoreVisualizerAudio])
+  }, [handoffToNativeAudio, restoreVisualizerAudio, routesPlaybackThroughWebAudio])
 }

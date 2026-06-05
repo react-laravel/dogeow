@@ -109,6 +109,9 @@ export const useAudioManager = () => {
     currentTrack,
     availableTracks,
     suppressPrimaryAudio: nativeHandoffActive,
+    handoffAudioRef,
+    nativeHandoffActive,
+    shouldDeferBackgroundResume: visualizer.routesPlaybackThroughWebAudio,
     refs: {
       audioRef,
       audioContextRef: visualizer.audioContextRef,
