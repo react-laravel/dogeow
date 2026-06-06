@@ -24,7 +24,7 @@ require 'recipe/common.php';
 // 基本配置
 // =====================
 set('application', 'dogeow');
-set('keep_releases', 5);
+set('keep_releases', 2);
 set('git_tty', false); // CI 环境没有 TTY
 set('workspace_root', __DIR__);
 set('writable_mode', 'chmod');
