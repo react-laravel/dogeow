@@ -167,7 +167,7 @@ export default function LearnPage() {
                 返回首页
               </Button>
               <Button onClick={() => void handleContinue()} disabled={isContinuing}>
-                继续一组
+                再学一组
               </Button>
             </div>
           </CardContent>
@@ -188,15 +188,12 @@ export default function LearnPage() {
             <div>
               <h2 className="mb-1 text-lg font-semibold">当前没有新单词了</h2>
               <p className="text-muted-foreground text-sm">
-                这本单词书的新词已学完，可以去复习，或换一本单词书继续
+                这本单词书当前没有可学习或可复习的单词，可以换一本单词书继续
               </p>
             </div>
             <div className="flex justify-center gap-2">
-              <Link href="/word/review">
-                <Button>去复习</Button>
-              </Link>
               <Link href="/word">
-                <Button variant="outline">返回首页</Button>
+                <Button>返回首页</Button>
               </Link>
             </div>
           </CardContent>

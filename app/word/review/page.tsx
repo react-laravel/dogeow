@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { WordCard } from '../components/WordCard'
-import { useReviewWords, useWordSettings, checkIn } from '../hooks/useWord'
+import { useDailyWords, useReviewWords, useWordSettings, checkIn } from '../hooks/useWord'
 import { useWordStore } from '../stores/wordStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,6 +18,7 @@ export default function ReviewPage() {
   const router = useRouter()
   const { data: settings, isLoading: settingsLoading } = useWordSettings()
   const { data: words, isLoading: wordsLoading, error, mutate } = useReviewWords()
+  const { data: dailyWords, isLoading: dailyWordsLoading } = useDailyWords()
   const {
     studyQueue,
     initialStudyCount,
@@ -35,7 +36,7 @@ export default function ReviewPage() {
   const [isContinuing, setIsContinuing] = useState(false)
   const [cardNonce, setCardNonce] = useState(0)
 
-  const isLoading = settingsLoading || wordsLoading
+  const isLoading = settingsLoading || wordsLoading || dailyWordsLoading
   const hasSelectedBook = !!settings?.current_book_id
 
   const beginSession = useCallback(
@@ -167,7 +168,7 @@ export default function ReviewPage() {
                 返回首页
               </Button>
               <Button onClick={() => void handleContinue()} disabled={isContinuing}>
-                继续一组
+                再复习一组
               </Button>
             </div>
           </CardContent>
@@ -177,6 +178,8 @@ export default function ReviewPage() {
   }
 
   const wordsArray = normalizeWordsResponse(words)
+  const dailyWordsArray = normalizeWordsResponse(dailyWords)
+  const hasLearnableWords = dailyWordsArray.length > 0
 
   // 今天没有需要复习的单词
   if (wordsArray.length === 0 && studyQueue.length === 0) {
@@ -188,15 +191,19 @@ export default function ReviewPage() {
             <div>
               <h2 className="mb-1 text-lg font-semibold">今天没有需要复习的单词</h2>
               <p className="text-muted-foreground text-sm">
-                先去学习新单词吧，学过的单词会在适当的时间提醒你复习
+                {hasLearnableWords
+                  ? '先去学习新单词吧，学过的单词会在适当的时间提醒你复习'
+                  : '这本单词书当前没有可学习或可复习的单词，可以换一本单词书继续'}
               </p>
             </div>
             <div className="flex justify-center gap-2">
-              <Link href="/word/learn">
-                <Button>去学习</Button>
-              </Link>
+              {hasLearnableWords && (
+                <Link href="/word/learn">
+                  <Button>去学习</Button>
+                </Link>
+              )}
               <Link href="/word">
-                <Button variant="outline">返回首页</Button>
+                <Button variant={hasLearnableWords ? 'outline' : 'default'}>返回首页</Button>
               </Link>
             </div>
           </CardContent>
