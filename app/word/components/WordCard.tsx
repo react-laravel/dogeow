@@ -55,9 +55,16 @@ export function WordCard({ word, onResult }: WordCardProps) {
   }
 
   const handleMarkAndNext = async (remembered: boolean) => {
+    if (!remembered && !word.is_review_word) {
+      onResult(false)
+      return
+    }
+
     setIsMarking(true)
     try {
-      await markWord(word.id, remembered)
+      if (remembered || word.is_review_word) {
+        await markWord(word.id, remembered)
+      }
       setTimeout(() => onResult(remembered), 150)
     } catch (error) {
       console.error('标记单词失败:', error)

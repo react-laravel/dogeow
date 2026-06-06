@@ -120,7 +120,8 @@ export const useBookWordsInfinite = (
 }
 
 // 学习相关 hooks
-export const useDailyWords = () => useSWR<Word[]>('/word/daily', fetcher)
+export const useDailyWords = () =>
+  useSWR<Word[]>('/word/daily', fetcher, { revalidateOnMount: true, revalidateOnFocus: true })
 
 export const useReviewWords = () => useSWR<Word[]>('/word/review', fetcher)
 

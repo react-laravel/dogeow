@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { WordCard } from '../components/WordCard'
-import { useDailyWords, useWordSettings, checkIn } from '../hooks/useWord'
+import { useDailyWords, useWordSettings, useWordStats, checkIn } from '../hooks/useWord'
 import { useWordStore } from '../stores/wordStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,7 +16,10 @@ import { normalizeWordsResponse } from '../types'
 
 export default function LearnPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const wantsContinue = searchParams.get('continue') === '1'
   const { data: settings, isLoading: settingsLoading } = useWordSettings()
+  const { data: stats, isLoading: statsLoading } = useWordStats()
   const { data: words, isLoading: wordsLoading, error, mutate } = useDailyWords()
   const {
     studyQueue,
@@ -34,9 +37,12 @@ export default function LearnPage() {
   const [sessionKey, setSessionKey] = useState(0)
   const [isContinuing, setIsContinuing] = useState(false)
   const [cardNonce, setCardNonce] = useState(0)
+  const [hasPreparedSession, setHasPreparedSession] = useState(false)
 
-  const isLoading = settingsLoading || wordsLoading
+  const isLoading = settingsLoading || statsLoading || wordsLoading || !hasPreparedSession
   const hasSelectedBook = !!settings?.current_book_id
+  const todayCheckedIn = stats?.today_checked_in ?? false
+  const shouldPromptContinue = wantsContinue || todayCheckedIn
 
   const beginSession = useCallback(
     (wordsArray: ReturnType<typeof normalizeWordsResponse>) => {
@@ -48,13 +54,28 @@ export default function LearnPage() {
   )
 
   useEffect(() => {
+    void mutate().finally(() => setHasPreparedSession(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
     if (!hasSelectedBook || !words || learningStatus === 'completed') return
+    // 今日已打卡或从首页点「再学一组」时，不自动开新组，等用户确认
+    if (shouldPromptContinue && studyQueue.length === 0) return
 
     const wordsArray = normalizeWordsResponse(words)
     if (wordsArray.length > 0 && studyQueue.length === 0) {
       beginSession(wordsArray)
     }
-  }, [words, hasSelectedBook, sessionKey, learningStatus, studyQueue.length, beginSession])
+  }, [
+    words,
+    hasSelectedBook,
+    sessionKey,
+    learningStatus,
+    studyQueue.length,
+    beginSession,
+    shouldPromptContinue,
+  ])
 
   const handleComplete = async () => {
     setIsCompleting(true)
@@ -83,7 +104,7 @@ export default function LearnPage() {
     reset()
     setSessionKey(key => key + 1)
     try {
-      const nextWords = await mutate()
+      const nextWords = await mutate(undefined, { revalidate: true })
       const wordsArray = normalizeWordsResponse(nextWords)
       if (wordsArray.length > 0) {
         beginSession(wordsArray)
@@ -178,6 +199,35 @@ export default function LearnPage() {
 
   const wordsArray = normalizeWordsResponse(words)
 
+  // 今日已打卡 / 主动续学：等待用户点「再学一组」
+  if (shouldPromptContinue && studyQueue.length === 0 && wordsArray.length > 0) {
+    return (
+      <PageContainer maxWidth="md">
+        <Card>
+          <CardContent className="space-y-4 p-6 text-center">
+            <CheckCircle2 className="text-primary mx-auto h-12 w-12" />
+            <div>
+              <h2 className="mb-1 text-lg font-semibold">
+                {todayCheckedIn ? '今日已打卡' : '继续学习'}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                还有 {wordsArray.length} 个单词可以学习，要再学一组吗？
+              </p>
+            </div>
+            <div className="flex justify-center gap-2">
+              <Button onClick={() => router.push('/word')} variant="outline">
+                返回首页
+              </Button>
+              <Button onClick={() => void handleContinue()} disabled={isContinuing}>
+                再学一组
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </PageContainer>
+    )
+  }
+
   // 没有可学单词
   if (wordsArray.length === 0 && studyQueue.length === 0) {
     return (
@@ -188,12 +238,19 @@ export default function LearnPage() {
             <div>
               <h2 className="mb-1 text-lg font-semibold">当前没有新单词了</h2>
               <p className="text-muted-foreground text-sm">
-                这本单词书当前没有可学习或可复习的单词，可以换一本单词书继续
+                这本单词书当前没有可学习或可复习的单词
               </p>
             </div>
-            <div className="flex justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                onClick={() => void handleContinue()}
+                disabled={isContinuing}
+                variant="default"
+              >
+                再学一组
+              </Button>
               <Link href="/word">
-                <Button>返回首页</Button>
+                <Button variant="outline">返回首页</Button>
               </Link>
             </div>
           </CardContent>

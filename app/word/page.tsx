@@ -98,8 +98,8 @@ export default function WordPage() {
 
       {/* 学习模式 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* 开始学习按钮 */}
-        <Link href="/word/learn">
+        {/* 开始学习 / 再学一组 */}
+        <Link href={todayCheckedIn ? '/word/learn?continue=1' : '/word/learn'}>
           <Card className="h-full transition-shadow hover:shadow-md">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
@@ -107,8 +107,10 @@ export default function WordPage() {
                   <BookOpen className="text-primary h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-medium">{todayCheckedIn ? '继续学习' : '开始学习'}</h3>
-                  <p className="text-muted-foreground text-sm">学习新单词 + 复习旧单词</p>
+                  <h3 className="font-medium">{todayCheckedIn ? '再学一组' : '开始学习'}</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {todayCheckedIn ? '继续学习新单词 + 复习' : '学习新单词 + 复习旧单词'}
+                  </p>
                 </div>
               </div>
             </CardContent>

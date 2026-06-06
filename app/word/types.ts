@@ -19,6 +19,8 @@ export interface Word {
   frequency: number
   book?: Book
   education_levels?: EducationLevel[]
+  /** 来自每日学习接口：true 表示复习词，false 表示新词 */
+  is_review_word?: boolean
 }
 
 export interface Book {
