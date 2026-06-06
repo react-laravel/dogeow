@@ -99,21 +99,16 @@ export const useLanguageStore = create<LanguageState>()(
             console.log('[LanguageStore] 初始化语言...')
           }
 
-          // 优先使用显式存储偏好；其次使用非默认当前语言
+          // 仅当用户显式保存过语言偏好时才跳过浏览器检测
           const storedPreference = state.getLanguagePreference()
-          const currentLanguagePreference =
-            state.currentLanguage && state.currentLanguage !== 'zh-CN'
-              ? state.currentLanguage
-              : null
-          const preferredLanguage = storedPreference || currentLanguagePreference
 
-          if (preferredLanguage) {
+          if (storedPreference) {
             if (shouldLog()) {
-              console.log('[LanguageStore] ✅ 使用存储/当前偏好:', preferredLanguage)
+              console.log('[LanguageStore] ✅ 使用存储偏好:', storedPreference)
             }
-            const translationFunction = createTranslationFunction(preferredLanguage)
+            const translationFunction = createTranslationFunction(storedPreference)
             set({
-              currentLanguage: preferredLanguage,
+              currentLanguage: storedPreference,
               t: translationFunction,
               isAutoDetected: false,
               lastDetectionTime: Date.now(),

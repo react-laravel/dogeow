@@ -19,6 +19,7 @@ vi.mock('@/lib/i18n', () => ({
     { code: 'en', name: 'English', nativeName: 'English', isDefault: false },
     { code: 'ja', name: 'Japanese', nativeName: '日本語', isDefault: false },
   ]),
+  isSupportedLanguage: vi.fn((lang: string) => ['zh-CN', 'zh-TW', 'en', 'ja'].includes(lang)),
 }))
 
 // Import mocked functions for testing
@@ -105,11 +106,25 @@ describe('languageStore', () => {
     expect(mockCreateTranslationFunction).toHaveBeenCalledWith('en')
   })
 
-  it('should use stored language when initializing if already set to non-default', async () => {
-    // Set up store with a non-default language
+  it('should use stored language when initializing if preference is saved', async () => {
+    localStorage.setItem('dogeow-language-preference', 'ja')
+
+    const { result } = renderHook(() => useLanguageStore())
+
+    await act(async () => {
+      await result.current.initializeLanguage()
+    })
+
+    expect(result.current.currentLanguage).toBe('ja')
+    expect(mockDetectBrowserLanguage).not.toHaveBeenCalled()
+    expect(mockCreateTranslationFunction).toHaveBeenCalledWith('ja')
+  })
+
+  it('should detect browser language when persisted current language is stale english default', async () => {
     act(() => {
       useLanguageStore.setState({
-        currentLanguage: 'ja',
+        currentLanguage: 'en',
+        isAutoDetected: false,
         availableLanguages: mockGetAvailableLanguages(),
       })
     })
@@ -120,10 +135,8 @@ describe('languageStore', () => {
       await result.current.initializeLanguage()
     })
 
-    // Should use the stored language, not detect browser language
-    expect(result.current.currentLanguage).toBe('ja')
-    expect(mockDetectBrowserLanguage).not.toHaveBeenCalled()
-    expect(mockCreateTranslationFunction).toHaveBeenCalledWith('ja')
+    expect(mockDetectBrowserLanguage).toHaveBeenCalled()
+    expect(result.current.currentLanguage).toBe('en')
   })
 
   it('should detect browser language when stored language is default zh-CN', async () => {
