@@ -20,11 +20,12 @@ import { useWordPronunciation } from '../hooks/useWordPronunciation'
 
 interface WordCardProps {
   word: Word
-  onNext: () => void
+  /** remembered=true 表示记住了；false 表示记不住（重新入队） */
+  onResult: (remembered: boolean) => void
 }
 
-export function WordCard({ word, onNext }: WordCardProps) {
-  const { showTranslation, toggleTranslation, updateDailyProgress, learningStatus } = useWordStore()
+export function WordCard({ word, onResult }: WordCardProps) {
+  const { showTranslation, toggleTranslation } = useWordStore()
   const [isMarking, setIsMarking] = useState(false)
   const [isMarkingSimple, setIsMarkingSimple] = useState(false)
   const [showAIDialog, setShowAIDialog] = useState(false)
@@ -57,18 +58,10 @@ export function WordCard({ word, onNext }: WordCardProps) {
     setIsMarking(true)
     try {
       await markWord(word.id, remembered)
-
-      // 更新进度
-      if (learningStatus === 'learning') {
-        updateDailyProgress('learned')
-      } else if (learningStatus === 'reviewing') {
-        updateDailyProgress('reviewed')
-      }
-
-      // 进入下一个单词
-      setTimeout(onNext, 150)
+      setTimeout(() => onResult(remembered), 150)
     } catch (error) {
       console.error('标记单词失败:', error)
+      toast.error('标记失败，请重试')
     } finally {
       setIsMarking(false)
     }
@@ -83,8 +76,7 @@ export function WordCard({ word, onNext }: WordCardProps) {
     try {
       await markWordAsSimple(word.id)
       toast.success('已设为简单词，后续不再背诵')
-      updateDailyProgress('learned')
-      onNext()
+      onResult(true)
     } catch (error) {
       console.error('设为简单词失败:', error)
       toast.error('操作失败')
@@ -211,7 +203,7 @@ export function WordCard({ word, onNext }: WordCardProps) {
                 </div>
               )}
 
-              {/* 确认按钮 - 记住了 / AI / 还是不会 */}
+              {/* 确认按钮 - 记住了 / AI / 记不住 */}
               <div className="flex items-center justify-center gap-3 pt-2">
                 <Button
                   onClick={() => handleMarkAndNext(true)}
@@ -235,7 +227,7 @@ export function WordCard({ word, onNext }: WordCardProps) {
                   variant="outline"
                   className="max-w-[120px] flex-1"
                 >
-                  还是不会
+                  记不住
                 </Button>
               </div>
             </div>

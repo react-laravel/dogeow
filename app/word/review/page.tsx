@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { WordCard } from '../components/WordCard'
 import { useReviewWords, useWordSettings, checkIn } from '../hooks/useWord'
@@ -19,40 +19,42 @@ export default function ReviewPage() {
   const { data: settings, isLoading: settingsLoading } = useWordSettings()
   const { data: words, isLoading: wordsLoading, error, mutate } = useReviewWords()
   const {
-    currentWords,
+    studyQueue,
+    initialStudyCount,
     setCurrentWords,
-    currentIndex,
-    nextWord,
     learningStatus,
     setLearningStatus,
     dailyProgress,
     startStudy,
+    resolveCurrentWord,
+    getCurrentWord,
     reset,
   } = useWordStore()
   const [isCompleting, setIsCompleting] = useState(false)
+  const [sessionKey, setSessionKey] = useState(0)
+  const [isContinuing, setIsContinuing] = useState(false)
+  const [cardNonce, setCardNonce] = useState(0)
 
   const isLoading = settingsLoading || wordsLoading
   const hasSelectedBook = !!settings?.current_book_id
 
+  const beginSession = useCallback(
+    (wordsArray: ReturnType<typeof normalizeWordsResponse>) => {
+      if (wordsArray.length === 0) return
+      setCurrentWords(wordsArray)
+      startStudy('reviewing')
+    },
+    [setCurrentWords, startStudy]
+  )
+
   useEffect(() => {
-    if (!words) return
+    if (!words || learningStatus === 'completed') return
 
     const wordsArray = normalizeWordsResponse(words)
-
-    if (wordsArray.length > 0) {
-      setCurrentWords(wordsArray)
-      setLearningStatus('reviewing')
-      startStudy()
+    if (wordsArray.length > 0 && studyQueue.length === 0) {
+      beginSession(wordsArray)
     }
-  }, [words, setCurrentWords, setLearningStatus, startStudy])
-
-  const handleNext = () => {
-    if (currentIndex < currentWords.length - 1) {
-      nextWord()
-    } else {
-      handleComplete()
-    }
-  }
+  }, [words, sessionKey, learningStatus, studyQueue.length, beginSession])
 
   const handleComplete = async () => {
     setIsCompleting(true)
@@ -68,13 +70,31 @@ export default function ReviewPage() {
     }
   }
 
-  const handleContinue = () => {
+  const handleWordResult = (remembered: boolean) => {
+    setCardNonce(n => n + 1)
+    const isSessionComplete = resolveCurrentWord(remembered)
+    if (isSessionComplete) {
+      void handleComplete()
+    }
+  }
+
+  const handleContinue = async () => {
+    setIsContinuing(true)
     reset()
-    mutate()
+    setSessionKey(key => key + 1)
+    try {
+      const nextWords = await mutate()
+      const wordsArray = normalizeWordsResponse(nextWords)
+      if (wordsArray.length > 0) {
+        beginSession(wordsArray)
+      }
+    } finally {
+      setIsContinuing(false)
+    }
   }
 
   // 加载中
-  if (isLoading) {
+  if (isLoading || isContinuing) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
@@ -146,7 +166,9 @@ export default function ReviewPage() {
               <Button onClick={() => router.push('/word')} variant="outline">
                 返回首页
               </Button>
-              <Button onClick={handleContinue}>继续一组</Button>
+              <Button onClick={() => void handleContinue()} disabled={isContinuing}>
+                继续一组
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -157,7 +179,7 @@ export default function ReviewPage() {
   const wordsArray = normalizeWordsResponse(words)
 
   // 今天没有需要复习的单词
-  if (wordsArray.length === 0) {
+  if (wordsArray.length === 0 && studyQueue.length === 0) {
     return (
       <PageContainer maxWidth="md">
         <Card>
@@ -184,7 +206,7 @@ export default function ReviewPage() {
   }
 
   // 正在初始化
-  if (currentWords.length === 0) {
+  if (studyQueue.length === 0) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
@@ -192,7 +214,9 @@ export default function ReviewPage() {
     )
   }
 
-  const currentWord = currentWords[currentIndex]
+  const currentWord = getCurrentWord()
+  const completedInSession = dailyProgress.reviewed
+  const progressTotal = initialStudyCount || studyQueue.length + completedInSession
 
   return (
     <PageContainer maxWidth="2xl">
@@ -203,11 +227,23 @@ export default function ReviewPage() {
           </Button>
         </Link>
         <p className="text-muted-foreground text-sm">
-          {currentIndex + 1} / {currentWords.length}
+          {completedInSession} / {progressTotal}
+          {studyQueue.length > 1 && (
+            <span className="text-muted-foreground/70 ml-1">（待完成 {studyQueue.length}）</span>
+          )}
         </p>
         <div className="w-9" />
       </div>
-      {currentWord && <WordCard word={currentWord} onNext={handleNext} />}
+      {currentWord && (
+        <WordCard
+          key={`${currentWord.id}-${sessionKey}-${cardNonce}`}
+          word={currentWord}
+          onResult={handleWordResult}
+        />
+      )}
+      {isCompleting && (
+        <p className="text-muted-foreground mt-4 text-center text-sm">正在打卡...</p>
+      )}
     </PageContainer>
   )
 }
