@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
+import useAuthStore from '@/stores/authStore'
+import { subscribeRmbgStatusUpdates } from '../utils/rmbg'
 import type { Item, RmbgStatus } from '../types'
 
 const ACTIVE_RMBG_STATUSES: RmbgStatus[] = ['pending', 'processing']
@@ -18,17 +20,21 @@ export function useItemRmbgRefresh(
   item: Item | undefined,
   refreshItem: () => Promise<Item | undefined>
 ): void {
+  const userId = useAuthStore(state => state.user?.id)
+
   useEffect(() => {
-    if (!itemHasPendingRmbg(item)) {
+    if (!item || !itemHasPendingRmbg(item) || !userId) {
       return
     }
 
-    const intervalId = window.setInterval(() => {
-      void refreshItem()
-    }, 2000)
+    return subscribeRmbgStatusUpdates(userId, event => {
+      if (event.item_id !== item.id) {
+        return
+      }
 
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [item, refreshItem])
+      if (event.status === 'done' || event.status === 'failed') {
+        void refreshItem()
+      }
+    })
+  }, [item, refreshItem, userId])
 }

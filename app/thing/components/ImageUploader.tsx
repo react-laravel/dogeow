@@ -29,10 +29,12 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
   applyRmbgResult,
+  extractUploadUserId,
   getRemoveBgPreference,
-  pollRmbgStatus,
   setRemoveBgPreference,
+  waitForRmbgStatus,
 } from '../utils/rmbg'
+import useAuthStore from '@/stores/authStore'
 
 interface ImageUploaderProps {
   onImagesChange: (images: UploadedImage[]) => void
@@ -153,6 +155,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   const removeBgEnabled = isRemoveBgControlled
     ? (removeBgEnabledProp ?? false)
     : internalRemoveBgEnabled
+  const userId = useAuthStore(state => state.user?.id)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [images, setImages] = useState<UploadedImage[]>(() =>
     normalizePrimaryImages(existingImages)
@@ -191,15 +194,20 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     [onImagesChange]
   )
 
-  const startRmbgPolling = useCallback(
+  const startRmbgListening = useCallback(
     (uploadedImage: UploadedImage) => {
       if (!uploadedImage.path || pollingPathsRef.current.has(uploadedImage.path)) {
         return
       }
 
+      const uploadUserId = extractUploadUserId(uploadedImage.path) ?? userId
+      if (!uploadUserId) {
+        return
+      }
+
       pollingPathsRef.current.add(uploadedImage.path)
 
-      void pollRmbgStatus(uploadedImage.path, result => {
+      void waitForRmbgStatus(uploadedImage.path, uploadUserId, result => {
         setImages(currentImages => {
           const nextImages = currentImages.map(image =>
             image.path === uploadedImage.path ? applyRmbgResult(image, result) : image
@@ -217,7 +225,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         }
       })
     },
-    [onImagesChange]
+    [onImagesChange, userId]
   )
 
   const handleRemoveBgToggle = (checked: boolean) => {
@@ -271,7 +279,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       if (removeBgEnabled) {
         response
           .filter(image => image.rmbg_status === 'pending' && image.path)
-          .forEach(image => startRmbgPolling(image))
+          .forEach(image => startRmbgListening(image))
         toast.success('图片上传成功，正在异步去背景')
       } else {
         toast.success('图片上传成功')

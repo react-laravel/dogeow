@@ -1,10 +1,6 @@
-import { get } from '@/lib/api'
 import type { RmbgStatus, UploadedImage } from '../types'
 
 export const THING_REMOVE_BG_STORAGE_KEY = 'thing_remove_bg_enabled'
-
-const POLL_INTERVAL_MS = 2000
-const MAX_POLL_ATTEMPTS = 60
 
 export type RmbgStatusResponse = {
   status: RmbgStatus | 'unknown'
@@ -33,35 +29,6 @@ export function setRemoveBgPreference(enabled: boolean): void {
   window.localStorage.setItem(THING_REMOVE_BG_STORAGE_KEY, enabled ? '1' : '0')
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-export async function pollRmbgStatus(
-  path: string,
-  onUpdate: (result: RmbgStatusResponse) => void
-): Promise<'done' | 'failed' | 'timeout'> {
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-    await sleep(POLL_INTERVAL_MS)
-
-    const status = await get<RmbgStatusResponse>(
-      `/upload/images/rmbg-status?path=${encodeURIComponent(path)}`
-    )
-
-    if (status.status === 'done') {
-      onUpdate(status)
-      return 'done'
-    }
-
-    if (status.status === 'failed') {
-      onUpdate(status)
-      return 'failed'
-    }
-  }
-
-  return 'timeout'
-}
-
 export function applyRmbgResult(image: UploadedImage, result: RmbgStatusResponse): UploadedImage {
   return {
     ...image,
@@ -74,3 +41,6 @@ export function applyRmbgResult(image: UploadedImage, result: RmbgStatusResponse
     rmbg_status: result.status === 'unknown' ? image.rmbg_status : result.status,
   }
 }
+
+export { waitForRmbgStatus, subscribeRmbgStatusUpdates, extractUploadUserId } from './rmbgRealtime'
+export type { RmbgStatusEvent } from './rmbgRealtime'
