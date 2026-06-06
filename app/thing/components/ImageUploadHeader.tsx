@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { AlertCircle } from 'lucide-react'
 
 const IMAGE_UPLOAD_HELP_TEXT =
-  '支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10 张。点击图片可设为主图。勾选「上传时自动去背景」后，会异步调用去背景服务并替换展示图，原图会保留。'
+  '支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10 张。点击图片可设为主图。勾选「上传时自动去背景」后，会异步去背景；无需等待完成即可创建物品，去背景完成后会自动替换物品图片，原图会保留。'
 
 interface ImageUploadHeaderProps {
   label?: string

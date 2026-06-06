@@ -20,6 +20,7 @@ import { TimeInfo } from './item-detail/components/TimeInfo'
 import { formatDate } from './item-detail/utils/dateUtils'
 import ImageUploader from './ImageUploader'
 import { ImageUploadHeader } from './ImageUploadHeader'
+import { useItemRmbgRefresh } from '../hooks/useItemRmbgRefresh'
 import { useRemoveBgPreference } from '../hooks/useRemoveBgPreference'
 import CategoryTreeSelect from './CategoryTreeSelect'
 import { TagsSection } from './forms/components/TagsSection'
@@ -87,7 +88,8 @@ export function ItemDetailModal({
   const mode = externalMode ?? internalMode
   const setMode = onModeChange ?? setInternalMode
 
-  const { data: item, error, isLoading: loading } = useItem(itemId ?? 0)
+  const { data: item, error, isLoading: loading, mutate } = useItem(itemId ?? 0)
+  useItemRmbgRefresh(item, () => mutate())
   const listItem = useMemo(
     () => (initialItem && initialItem.id === itemId ? initialItem : null),
     [initialItem, itemId]

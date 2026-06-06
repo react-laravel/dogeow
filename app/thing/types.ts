@@ -43,6 +43,7 @@ export interface ItemImage {
   thumbnail_url?: string
   path?: string
   url?: string
+  rmbg_status?: RmbgStatus
 }
 
 export type RmbgStatus = 'pending' | 'processing' | 'done' | 'failed' | 'skipped'
@@ -166,6 +167,7 @@ export interface Item {
     thumbnail_url?: string
     url?: string
     is_primary: boolean
+    rmbg_status?: RmbgStatus
   }>
   primary_image?: {
     id: number

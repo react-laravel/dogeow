@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Edit, Trash2, Lock } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Lock, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout'
 import Image from 'next/image'
@@ -14,6 +14,7 @@ import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
 import { toast } from 'sonner'
 import { useItemStore } from '@/app/thing/stores/itemStore'
 import { useItem } from '../services/api'
+import { useItemRmbgRefresh } from '../hooks/useItemRmbgRefresh'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { isLightColor } from '@/lib/helpers'
 import { Item, Tag } from '@/app/thing/types'
@@ -101,15 +102,26 @@ const ImageGallery = ({
       <div className="bg-muted relative aspect-square overflow-hidden rounded-lg shadow-sm">
         {(() => {
           const safeIndex = Math.min(Math.max(activeIndex, 0), images.length - 1)
-          const url = images[safeIndex]?.url ?? ''
+          const currentImage = images[safeIndex]
+          const url = currentImage?.url ?? ''
+          const isRmbgProcessing =
+            currentImage?.rmbg_status === 'pending' || currentImage?.rmbg_status === 'processing'
           return (
-            <Image
-              src={url}
-              alt={itemName}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
+            <>
+              <Image
+                src={url}
+                alt={itemName}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              />
+              {isRmbgProcessing ? (
+                <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-xs text-white">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  去背景中，完成后自动更新
+                </div>
+              ) : null}
+            </>
           )
         })()}
       </div>
@@ -257,7 +269,8 @@ export default function ItemDetail() {
     return Number.isFinite(parsed) ? parsed : NaN
   }, [params])
 
-  const { data: item, error, isLoading: loading } = useItem(itemId)
+  const { data: item, error, isLoading: loading, mutate } = useItem(itemId)
+  useItemRmbgRefresh(item, () => mutate())
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
