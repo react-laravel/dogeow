@@ -68,6 +68,10 @@ const nextConfig: NextConfig = {
   },
   // 将 Next 默认的 module polyfills 缩减到仅保留当前目标浏览器仍缺失的 URL.canParse。
   turbopack: {
+    // Deployer builds inside /var/www/dogeow/releases/<n> while older releases and
+    // the deploy root also contain package-lock.json. Pin the project root to this
+    // release directory so Next.js does not infer /var/www/dogeow as a workspace.
+    root: __dirname,
     resolveAlias: nextPolyfillModuleAliasesForTurbopack,
   },
   webpack: config => {

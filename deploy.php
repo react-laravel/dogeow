@@ -141,9 +141,26 @@ task('deploy:vendors', function () {
     run('cd {{release_path}} && npm ci');
 });
 
+desc('准备跨发布的 Next.js 构建缓存');
+task('deploy:prepare_next_cache', function () {
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+
+shared_cache="{{deploy_path}}/shared/.next-cache"
+release_next="{{release_path}}/.next"
+release_cache="$release_next/cache"
+
+mkdir -p "$shared_cache" "$release_next"
+rm -rf "$release_cache"
+ln -sfn "$shared_cache" "$release_cache"
+'
+BASH);
+});
+
 desc('构建 Next.js 生产产物');
 task('deploy:build', function () {
-    run('cd {{release_path}} && npm run build');
+    run('cd {{release_path}} && NEXT_TELEMETRY_DISABLED=1 npm run build');
 });
 
 desc('保留跨发布的 Next 静态资源');
@@ -324,6 +341,7 @@ task('deploy', [
     'deploy:shared',
     'deploy:writable',
     'deploy:vendors',
+    'deploy:prepare_next_cache',
     'deploy:build',
     'deploy:preserve_next_static',
     'deploy:prune_missing_next_static_refs',
