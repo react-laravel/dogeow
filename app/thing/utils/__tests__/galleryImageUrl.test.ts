@@ -14,9 +14,9 @@ const baseItem = {
 } as Item
 
 describe('getGalleryImageUrl', () => {
-  it('uses thumbnail when display size is within thumbnail bounds', () => {
+  it('prefers full image even when display size is within thumbnail bounds', () => {
     expect(getGalleryImageUrl(baseItem, GALLERY_THUMBNAIL_MAX_PX)).toBe(
-      'https://example.com/thumb.jpg'
+      'https://example.com/full.jpg'
     )
   })
 

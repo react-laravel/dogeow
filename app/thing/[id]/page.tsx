@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Edit, Trash2, Lock, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Lock } from 'lucide-react'
 import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout'
-import Image from 'next/image'
-import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
 import { toast } from 'sonner'
 import { useItemStore } from '@/app/thing/stores/itemStore'
 import { useItem } from '../services/api'
@@ -20,6 +18,7 @@ import { isLightColor } from '@/lib/helpers'
 import { Item, Tag } from '@/app/thing/types'
 import { ItemRelationsDisplay } from '../components/ItemRelationsDisplay'
 import { StatusIndicator } from '../components/item-detail/components/StatusIndicator'
+import { ImageGallery } from '../components/item-detail/components/ImageGallery'
 import { useAuth } from '@/hooks/useAuth'
 
 // 日期格式化工具函数
@@ -77,82 +76,6 @@ const TagsDisplay = ({ tags }: { tags: Tag[] }) => {
   )
 }
 
-// 图片展示组件
-const ImageGallery = ({
-  images,
-  itemName,
-  activeIndex,
-  onIndexChange,
-}: {
-  images: Item['images']
-  itemName: string
-  activeIndex: number
-  onIndexChange: (index: number) => void
-}) => {
-  if (!images || images.length === 0) {
-    return (
-      <div className="bg-muted flex h-48 items-center justify-center rounded-lg">
-        <ImagePlaceholder className="text-gray-400 opacity-40" size={64} />
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="bg-muted relative aspect-square overflow-hidden rounded-lg shadow-sm">
-        {(() => {
-          const safeIndex = Math.min(Math.max(activeIndex, 0), images.length - 1)
-          const currentImage = images[safeIndex]
-          const url = currentImage?.url ?? ''
-          const isRmbgProcessing =
-            currentImage?.rmbg_status === 'pending' || currentImage?.rmbg_status === 'processing'
-          return (
-            <>
-              <Image
-                src={url}
-                alt={itemName}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              />
-              {isRmbgProcessing ? (
-                <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-xs text-white">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  去背景中，完成后自动更新
-                </div>
-              ) : null}
-            </>
-          )
-        })()}
-      </div>
-
-      {images.length > 1 && (
-        <div className="flex flex-wrap justify-center gap-2 py-2">
-          {images.map((image, index: number) => (
-            <div
-              key={image.id}
-              className={`relative aspect-square h-16 w-16 cursor-pointer overflow-hidden rounded-md border-2 transition-all ${
-                index === activeIndex
-                  ? 'border-primary ring-primary/20 ring-2'
-                  : 'border-muted hover:border-muted-foreground/50'
-              }`}
-              onClick={() => onIndexChange(index)}
-            >
-              <Image
-                src={image.thumbnail_url ?? ''}
-                alt={`${itemName} 图片 ${index + 1}`}
-                fill
-                className="object-cover"
-                sizes="64px"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // 信息卡片组件
 const InfoCard = ({
   label,
@@ -186,7 +109,7 @@ const LocationInfo = ({ item }: { item: Item }) => {
 
   if (!hasLocation) {
     return (
-      <div className="bg-muted flex h-20 items-center justify-center rounded-lg">
+      <div className="bg-background flex h-20 items-center justify-center rounded-lg border p-3 shadow-sm">
         <p className="text-muted-foreground text-sm">未指定存放位置</p>
       </div>
     )

@@ -35,6 +35,7 @@ import {
   waitForRmbgStatus,
 } from '../utils/rmbg'
 import useAuthStore from '@/stores/authStore'
+import { THING_IMAGE_CLASS, THING_IMAGE_FRAME_CLASS } from './thingImageStyles'
 
 interface ImageUploaderProps {
   onImagesChange: (images: UploadedImage[]) => void
@@ -93,7 +94,8 @@ function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageT
         {...listeners}
         role="button"
         tabIndex={0}
-        className="relative h-full w-full cursor-grab overflow-hidden rounded-md border active:cursor-grabbing"
+        className={`${THING_IMAGE_FRAME_CLASS} relative h-full w-full cursor-grab rounded-md border active:cursor-grabbing`}
+        style={{ backgroundColor: 'transparent' }}
         onClick={() => onPreview(image)}
         onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -104,11 +106,20 @@ function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageT
         aria-label={`预览图片 ${index + 1}`}
       >
         <Image
-          src={image.thumbnail_url || image.url}
+          src={image.url || image.thumbnail_url}
           alt={`上传图片 ${index + 1}`}
-          fill
-          className={`object-cover ${image.is_primary ? 'ring-primary ring-2 ring-inset' : ''}`}
+          width={128}
+          height={128}
+          className={`${THING_IMAGE_CLASS} ${image.is_primary ? 'ring-primary ring-2 ring-inset' : ''}`}
+          style={{
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            backgroundColor: 'transparent',
+          }}
           sizes="8rem"
+          unoptimized
         />
       </div>
       {image.is_primary ? (
@@ -450,7 +461,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 alt="图片预览"
                 width={1200}
                 height={900}
-                className="max-h-[80vh] w-full object-contain"
+                className={`max-h-[80vh] w-auto max-w-full ${THING_IMAGE_CLASS}`}
+                style={{ backgroundColor: 'transparent' }}
               />
             </div>
           ) : null}

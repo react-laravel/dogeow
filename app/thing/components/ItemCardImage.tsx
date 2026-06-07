@@ -3,6 +3,7 @@
 import { useState, useMemo, memo } from 'react'
 import Image from 'next/image'
 import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
+import { THING_IMAGE_CLASS, THING_IMAGE_FRAME_CLASS } from './thingImageStyles'
 
 export interface ImageData {
   id?: number
@@ -52,7 +53,7 @@ function ItemCardImage({
     return null
   }, [initialPrimaryImage, images])
 
-  const imageSrc = primaryImage?.thumbnail_url || primaryImage?.url
+  const imageSrc = primaryImage?.url || primaryImage?.thumbnail_url
 
   // 根据size动态设置sizes属性
   const sizesAttribute = useMemo(() => {
@@ -65,7 +66,7 @@ function ItemCardImage({
 
   // 容器样式
   const containerClassName = useMemo(() => {
-    const baseClasses = 'relative overflow-hidden rounded border-b-2'
+    const baseClasses = `${THING_IMAGE_FRAME_CLASS} relative rounded border-b-2`
     const statusColor = getStatusBorderColor(status)
 
     if (size) {
@@ -84,25 +85,48 @@ function ItemCardImage({
 
   // 使用 key 来强制在图片变化时重新渲染，重置状态
   const imageKey = primaryImage?.id || primaryImage?.path || 'no-image'
-  const imageClassName = size ? 'h-full w-full object-contain object-center' : 'object-cover'
 
   return (
-    <div key={imageKey} className={containerClassName} style={containerStyle}>
+    <div
+      key={imageKey}
+      className={containerClassName}
+      style={{ ...containerStyle, backgroundColor: 'transparent' }}
+    >
       {imageSrc && !imageError ? (
-        <Image
-          src={imageSrc}
-          alt={`${itemName} 图片`}
-          fill={!size}
-          width={size}
-          height={size}
-          className={imageClassName}
-          onError={() => setImageError(true)}
-          unoptimized
-          sizes={sizesAttribute}
-          priority={false}
-        />
+        size ? (
+          <Image
+            src={imageSrc}
+            alt={`${itemName} 图片`}
+            width={size}
+            height={size}
+            className={THING_IMAGE_CLASS}
+            style={{
+              width: 'auto',
+              height: 'auto',
+              maxWidth: size,
+              maxHeight: size,
+              backgroundColor: 'transparent',
+            }}
+            onError={() => setImageError(true)}
+            unoptimized
+            sizes={sizesAttribute}
+            priority={false}
+          />
+        ) : (
+          <Image
+            src={imageSrc}
+            alt={`${itemName} 图片`}
+            fill
+            className={`${THING_IMAGE_CLASS} h-full w-full`}
+            style={{ backgroundColor: 'transparent' }}
+            onError={() => setImageError(true)}
+            unoptimized
+            sizes={sizesAttribute}
+            priority={false}
+          />
+        )
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gray-50">
+        <div className="flex h-full w-full items-center justify-center bg-transparent">
           <ImagePlaceholder className="text-gray-400 opacity-40" size={placeholderSize} />
         </div>
       )}

@@ -41,7 +41,7 @@ function ItemCard({ item, onView, isLoading = false }: ItemCardProps) {
       onClick={onView}
     >
       {/* 缩略图，优化尺寸和圆角 */}
-      <div className="bg-muted/50 h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border transition-shadow group-hover:shadow-sm">
+      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border bg-transparent transition-shadow group-hover:shadow-sm">
         <ItemCardImage
           initialPrimaryImage={item.primary_image}
           images={item.images}

@@ -12,15 +12,14 @@ function resolvePrimaryImage(item: GalleryImageItem) {
 }
 
 /**
- * 画廊展示用图片 URL：显示尺寸大于缩略图时返回原图，否则用缩略图以节省带宽。
+ * 画廊展示用图片 URL：优先用原图，避免缩略图文件自带留白影响展示。
  */
-export function getGalleryImageUrl(item: GalleryImageItem, displaySizePx: number): string | null {
+export function getGalleryImageUrl(item: GalleryImageItem, _displaySizePx: number): string | null {
   const primary = resolvePrimaryImage(item)
   const thumbnailUrl = item.thumbnail_url ?? primary?.thumbnail_url ?? null
   const fullUrl = primary?.url ?? null
-  const useFullSize = displaySizePx > GALLERY_THUMBNAIL_MAX_PX
 
-  if (useFullSize && fullUrl) {
+  if (fullUrl) {
     return fullUrl
   }
 

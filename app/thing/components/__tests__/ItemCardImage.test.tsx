@@ -107,7 +107,7 @@ describe('ItemCardImage', () => {
   })
 
   describe('Props', () => {
-    it('should use thumbnail_url when available', () => {
+    it('should prefer full url over thumbnail_url', () => {
       const props = {
         ...defaultProps,
         initialPrimaryImage: {
@@ -118,7 +118,7 @@ describe('ItemCardImage', () => {
       }
       render(<ItemCardImage {...props} />)
       const image = screen.getByTestId('next-image')
-      expect(image).toHaveAttribute('src', 'https://example.com/thumb.jpg')
+      expect(image).toHaveAttribute('src', 'https://example.com/image.jpg')
     })
 
     it('should apply status border color for expired status', () => {
@@ -174,10 +174,11 @@ describe('ItemCardImage', () => {
       render(<ItemCardImage {...props} />)
 
       expect(screen.getByTestId('next-image')).toHaveClass(
-        'h-full',
-        'w-full',
+        'max-h-full',
+        'max-w-full',
         'object-contain',
-        'object-center'
+        'object-center',
+        'bg-transparent'
       )
     })
   })

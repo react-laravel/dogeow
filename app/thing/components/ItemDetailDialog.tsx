@@ -23,6 +23,7 @@ import {
 import { Item } from '@/app/thing/types'
 import { formatDate } from '@/lib/helpers/dateUtils'
 import { getLocationPath } from '@/app/thing/utils'
+import { THING_IMAGE_CLASS, THING_IMAGE_FRAME_CLASS } from './thingImageStyles'
 
 interface ItemDetailDialogProps {
   item: Item | null
@@ -114,13 +115,23 @@ export function ItemDetailDialog({
         <div className="grid gap-6 py-4 md:grid-cols-2">
           <div className="space-y-4">
             {imageUrl ? (
-              <div className="bg-muted relative aspect-square overflow-hidden rounded-lg">
+              <div
+                className={`${THING_IMAGE_FRAME_CLASS} relative max-h-[min(70vh,560px)] w-full rounded-lg`}
+              >
                 <Image
                   src={imageUrl}
                   alt={item.name}
-                  fill
-                  className="object-contain"
+                  width={0}
+                  height={0}
                   sizes={getImageSizes()}
+                  className={`h-auto max-h-[min(70vh,560px)] w-auto max-w-full ${THING_IMAGE_CLASS}`}
+                  style={{
+                    width: 'auto',
+                    height: 'auto',
+                    maxWidth: '100%',
+                    backgroundColor: 'transparent',
+                  }}
+                  unoptimized
                 />
               </div>
             ) : (
