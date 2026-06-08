@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
 
 export default function PrivacyPage() {
@@ -75,7 +76,11 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="mb-4 text-2xl font-semibold">联系我们</h2>
           <p className="mb-4">
-            如果您对本隐私政策有任何疑问，请通过网站联系方式与我们联系（建设中）。
+            如果您对本隐私政策有任何疑问，请前往
+            <Link href="/about/contact" className="text-primary mx-1 underline underline-offset-2">
+              联系我们
+            </Link>
+            页面与我们取得联系。
           </p>
         </section>
 
