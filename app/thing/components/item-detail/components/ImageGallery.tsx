@@ -1,5 +1,5 @@
 import React, { memo, useEffect } from 'react'
-import Image from 'next/image'
+import ThingImage from '../../ThingImage'
 import { Loader2 } from 'lucide-react'
 import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
 import type { Item } from '@/app/thing/types'
@@ -37,7 +37,7 @@ export const ImageGallery = memo<ImageGalleryProps>(
       <div className="space-y-3">
         <div className="flex w-full justify-center">
           <div className="relative max-w-full">
-            <Image
+            <ThingImage
               src={url}
               alt={itemName}
               width={0}
@@ -51,7 +51,6 @@ export const ImageGallery = memo<ImageGalleryProps>(
                 backgroundColor: 'transparent',
               }}
               priority
-              unoptimized
             />
             {isRmbgProcessing ? (
               <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-xs text-white">
@@ -74,7 +73,7 @@ export const ImageGallery = memo<ImageGalleryProps>(
                 }`}
                 onClick={() => onIndexChange(index)}
               >
-                <Image
+                <ThingImage
                   src={image.thumbnail_url ?? ''}
                   alt={`${itemName} 图片 ${index + 1}`}
                   width={64}
@@ -88,7 +87,6 @@ export const ImageGallery = memo<ImageGalleryProps>(
                     backgroundColor: 'transparent',
                   }}
                   sizes="64px"
-                  unoptimized
                 />
               </div>
             ))}

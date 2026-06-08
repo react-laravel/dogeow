@@ -24,7 +24,7 @@ import { toast } from 'sonner'
 import { UploadedImage } from '../types'
 import useSWRMutation from 'swr/mutation'
 import { post } from '@/lib/api'
-import Image from 'next/image'
+import ThingImage from './ThingImage'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
@@ -105,7 +105,7 @@ function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageT
         }}
         aria-label={`预览图片 ${index + 1}`}
       >
-        <Image
+        <ThingImage
           src={image.url || image.thumbnail_url}
           alt={`上传图片 ${index + 1}`}
           width={128}
@@ -119,7 +119,6 @@ function SortableImageTile({ image, index, onPreview, onRemove }: SortableImageT
             backgroundColor: 'transparent',
           }}
           sizes="8rem"
-          unoptimized
         />
       </div>
       {image.is_primary ? (
@@ -456,7 +455,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           <DialogDescription className="sr-only">查看上传图片的大图预览</DialogDescription>
           {previewImage ? (
             <div className="relative max-h-[80vh] overflow-hidden rounded-md">
-              <Image
+              <ThingImage
                 src={previewImage.url}
                 alt="图片预览"
                 width={1200}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, memo } from 'react'
-import Image from 'next/image'
+import ThingImage from './ThingImage'
 import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
 import { THING_IMAGE_CLASS, THING_IMAGE_FRAME_CLASS } from './thingImageStyles'
 
@@ -94,7 +94,7 @@ function ItemCardImage({
     >
       {imageSrc && !imageError ? (
         size ? (
-          <Image
+          <ThingImage
             src={imageSrc}
             alt={`${itemName} 图片`}
             width={size}
@@ -108,19 +108,17 @@ function ItemCardImage({
               backgroundColor: 'transparent',
             }}
             onError={() => setImageError(true)}
-            unoptimized
             sizes={sizesAttribute}
             priority={false}
           />
         ) : (
-          <Image
+          <ThingImage
             src={imageSrc}
             alt={`${itemName} 图片`}
             fill
             className={`${THING_IMAGE_CLASS} h-full w-full`}
             style={{ backgroundColor: 'transparent' }}
             onError={() => setImageError(true)}
-            unoptimized
             sizes={sizesAttribute}
             priority={false}
           />

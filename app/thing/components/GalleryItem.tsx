@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import ThingImage from './ThingImage'
 import { Item } from '@/app/thing/types'
 import { getGalleryImageUrl } from '@/app/thing/utils/galleryImageUrl'
 import ImagePlaceholder from '@/components/ui/icons/image-placeholder'
@@ -25,13 +25,12 @@ export function GalleryItem({ item, imageSize, onClick }: GalleryItemProps) {
       onClick={() => onClick(item)}
     >
       {imageUrl ? (
-        <Image
+        <ThingImage
           key={imageUrl}
           src={imageUrl}
           alt={item.name}
           fill
           sizes={`${imageSize}px`}
-          unoptimized
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

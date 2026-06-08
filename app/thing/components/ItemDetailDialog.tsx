@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import Image from 'next/image'
+import ThingImage from './ThingImage'
 import {
   Globe,
   LockIcon,
@@ -118,7 +118,7 @@ export function ItemDetailDialog({
               <div
                 className={`${THING_IMAGE_FRAME_CLASS} relative max-h-[min(70vh,560px)] w-full rounded-lg`}
               >
-                <Image
+                <ThingImage
                   src={imageUrl}
                   alt={item.name}
                   width={0}
@@ -131,7 +131,6 @@ export function ItemDetailDialog({
                     maxWidth: '100%',
                     backgroundColor: 'transparent',
                   }}
-                  unoptimized
                 />
               </div>
             ) : (
