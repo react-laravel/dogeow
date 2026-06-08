@@ -22,6 +22,8 @@ const createResponse = (): SystemStatusApiResponse => ({
   },
   database: {
     status: 'online',
+    label: 'PostgreSQL 数据库',
+    driver: 'pgsql',
     details: 'ok',
   },
   redis: {
@@ -51,6 +53,16 @@ describe('mapApiToSystemStatus', () => {
       label: 'Hermes',
       status: 'online',
       responseTimeMs: 12.5,
+    })
+  })
+
+  it('maps the database label from the backend', () => {
+    const statuses = mapApiToSystemStatus(createResponse())
+    const databaseStatus = statuses.find(item => item.name === '数据库')
+
+    expect(databaseStatus).toMatchObject({
+      label: 'PostgreSQL 数据库',
+      status: 'online',
     })
   })
 

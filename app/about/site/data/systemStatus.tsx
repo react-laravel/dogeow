@@ -65,7 +65,7 @@ export function mapApiToSystemStatus(data: SystemStatusApiResponse): SystemStatu
     },
     {
       name: '数据库',
-      label: 'MySQL 数据库',
+      label: data.database.label ?? '数据库',
       status: normalizeStatus(data.database.status),
       icon: <Database className={iconClass} />,
       responseTimeMs: data.database.response_time,
@@ -129,7 +129,7 @@ export function fallbackStatuses(message: string, isError: boolean = true): Syst
     },
     {
       name: '数据库',
-      label: 'MySQL 数据库',
+      label: '数据库',
       status,
       icon: <Database className={iconClass} />,
       details: message,

@@ -23,6 +23,8 @@ export interface SystemStatusApiResponse {
   }
   database: {
     status: string
+    label?: string
+    driver?: string
     details: string
     response_time?: number
   }
