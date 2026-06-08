@@ -1,5 +1,4 @@
 import React from 'react'
-import { Clock } from 'lucide-react'
 import { getStatusConfig } from '../utils/statusConfig'
 import type { SystemStatus } from '../types'
 
@@ -39,13 +38,11 @@ export const SystemStatusItem: React.FC<SystemStatusItemProps> = ({ status }) =>
               {status.label}
             </p>
           </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3 shrink-0" />
-              <span>{status.lastCheck.toLocaleTimeString()}</span>
-            </div>
-            {secondaryRight ? <span className="truncate text-right">{secondaryRight}</span> : null}
-          </div>
+          {secondaryRight ? (
+            <p className="mt-2 truncate text-xs text-gray-500 dark:text-gray-400">
+              {secondaryRight}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

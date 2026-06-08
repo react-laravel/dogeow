@@ -13,7 +13,6 @@ export interface SystemStatus {
   name: string
   label: string
   status: 'online' | 'offline' | 'warning' | 'error'
-  lastCheck: Date
   icon: React.ReactNode
   responseTimeMs?: number
   details?: string

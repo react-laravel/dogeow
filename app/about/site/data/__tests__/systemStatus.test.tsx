@@ -44,7 +44,7 @@ const createResponse = (): SystemStatusApiResponse => ({
 
 describe('mapApiToSystemStatus', () => {
   it('maps Hermes display fields from the backend', () => {
-    const statuses = mapApiToSystemStatus(createResponse(), new Date('2026-03-10T00:00:00Z'))
+    const statuses = mapApiToSystemStatus(createResponse())
     const hermesStatus = statuses.find(item => item.name === '小龙虾🦞')
 
     expect(hermesStatus).toMatchObject({
@@ -55,7 +55,7 @@ describe('mapApiToSystemStatus', () => {
   })
 
   it('maps the GitHub status when the backend provides it', () => {
-    const statuses = mapApiToSystemStatus(createResponse(), new Date('2026-03-10T00:00:00Z'))
+    const statuses = mapApiToSystemStatus(createResponse())
     const githubStatus = statuses.find(item => item.name === 'GitHub API')
 
     expect(githubStatus).toMatchObject({
@@ -68,7 +68,7 @@ describe('mapApiToSystemStatus', () => {
     const legacyResponse = createResponse()
     delete legacyResponse.github
 
-    const statuses = mapApiToSystemStatus(legacyResponse, new Date('2026-03-10T00:00:00Z'))
+    const statuses = mapApiToSystemStatus(legacyResponse)
     const githubStatus = statuses.find(item => item.name === 'GitHub API')
 
     expect(githubStatus).toMatchObject({

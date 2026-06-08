@@ -36,17 +36,13 @@ function serviceDetails(
   return details || undefined
 }
 
-export function mapApiToSystemStatus(
-  data: SystemStatusApiResponse,
-  lastCheck: Date
-): SystemStatus[] {
+export function mapApiToSystemStatus(data: SystemStatusApiResponse): SystemStatus[] {
   const iconClass = 'h-5 w-5 text-gray-600 dark:text-gray-400'
   const githubStatus: SystemStatus = data.github
     ? {
         name: 'GitHub API',
         label: 'REST / GraphQL 配额',
         status: normalizeStatus(data.github.status),
-        lastCheck,
         icon: <Github className={iconClass} />,
         details: data.github.details || undefined,
       }
@@ -54,7 +50,6 @@ export function mapApiToSystemStatus(
         name: 'GitHub API',
         label: 'REST / GraphQL 配额',
         status: 'warning',
-        lastCheck,
         icon: <Github className={iconClass} />,
         details: LEGACY_GITHUB_STATUS_MESSAGE,
       }
@@ -64,7 +59,6 @@ export function mapApiToSystemStatus(
       name: data.hermes.name,
       label: data.hermes.label,
       status: normalizeStatus(data.hermes.status),
-      lastCheck,
       icon: <Server className={iconClass} />,
       responseTimeMs: data.hermes.response_time,
       details: serviceDetails(data.hermes.status, data.hermes.details, data.hermes.response_time),
@@ -73,7 +67,6 @@ export function mapApiToSystemStatus(
       name: '数据库',
       label: 'MySQL 数据库',
       status: normalizeStatus(data.database.status),
-      lastCheck,
       icon: <Database className={iconClass} />,
       responseTimeMs: data.database.response_time,
       details: serviceDetails(
@@ -86,7 +79,6 @@ export function mapApiToSystemStatus(
       name: 'Redis',
       label: 'Redis 缓存服务',
       status: normalizeStatus(data.redis.status),
-      lastCheck,
       icon: <Layers className={iconClass} />,
       responseTimeMs: data.redis.response_time,
       details: serviceDetails(data.redis.status, data.redis.details, data.redis.response_time),
@@ -95,7 +87,6 @@ export function mapApiToSystemStatus(
       name: 'CDN',
       label: '又拍云 CDN',
       status: normalizeStatus(data.cdn.status),
-      lastCheck,
       icon: <Wifi className={iconClass} />,
       responseTimeMs: data.cdn.response_time,
       details: serviceDetails(data.cdn.status, data.cdn.details, data.cdn.response_time),
@@ -104,7 +95,6 @@ export function mapApiToSystemStatus(
       name: 'Reverb',
       label: 'Laravel Reverb WebSocket',
       status: normalizeStatus(data.reverb.status),
-      lastCheck,
       icon: <Activity className={iconClass} />,
       details: data.reverb.details || undefined,
     },
@@ -112,7 +102,6 @@ export function mapApiToSystemStatus(
       name: '队列',
       label: 'Laravel 队列 Worker',
       status: normalizeStatus(data.queue.status),
-      lastCheck,
       icon: <ListTodo className={iconClass} />,
       details: data.queue.details || undefined,
     },
@@ -120,7 +109,6 @@ export function mapApiToSystemStatus(
       name: '调度器',
       label: 'Laravel 任务调度',
       status: normalizeStatus(data.scheduler.status),
-      lastCheck,
       icon: <Clock className={iconClass} />,
       details: data.scheduler.details || undefined,
     },
@@ -128,11 +116,7 @@ export function mapApiToSystemStatus(
   ]
 }
 
-export function fallbackStatuses(
-  message: string,
-  lastCheck: Date,
-  isError: boolean = true
-): SystemStatus[] {
+export function fallbackStatuses(message: string, isError: boolean = true): SystemStatus[] {
   const iconClass = 'h-5 w-5 text-gray-600 dark:text-gray-400'
   const status: StatusKind = isError ? 'error' : 'online'
   return [
@@ -140,7 +124,6 @@ export function fallbackStatuses(
       name: '小龙虾🦞',
       label: 'Hermes',
       status,
-      lastCheck,
       icon: <Server className={iconClass} />,
       details: message,
     },
@@ -148,7 +131,6 @@ export function fallbackStatuses(
       name: '数据库',
       label: 'MySQL 数据库',
       status,
-      lastCheck,
       icon: <Database className={iconClass} />,
       details: message,
     },
@@ -156,7 +138,6 @@ export function fallbackStatuses(
       name: 'Redis',
       label: 'Redis 缓存服务',
       status,
-      lastCheck,
       icon: <Layers className={iconClass} />,
       details: message,
     },
@@ -164,7 +145,6 @@ export function fallbackStatuses(
       name: 'CDN',
       label: '又拍云 CDN',
       status,
-      lastCheck,
       icon: <Wifi className={iconClass} />,
       details: message,
     },
@@ -172,7 +152,6 @@ export function fallbackStatuses(
       name: 'Reverb',
       label: 'Laravel Reverb WebSocket',
       status,
-      lastCheck,
       icon: <Activity className={iconClass} />,
       details: message,
     },
@@ -180,7 +159,6 @@ export function fallbackStatuses(
       name: '队列',
       label: 'Laravel 队列 Worker',
       status,
-      lastCheck,
       icon: <ListTodo className={iconClass} />,
       details: message,
     },
@@ -188,7 +166,6 @@ export function fallbackStatuses(
       name: '调度器',
       label: 'Laravel 任务调度',
       status,
-      lastCheck,
       icon: <Clock className={iconClass} />,
       details: message,
     },
@@ -196,7 +173,6 @@ export function fallbackStatuses(
       name: 'GitHub API',
       label: 'REST / GraphQL 配额',
       status,
-      lastCheck,
       icon: <Github className={iconClass} />,
       details: message,
     },
@@ -206,7 +182,12 @@ export function fallbackStatuses(
 const fetcher = (endpoint: string) =>
   apiRequest<SystemStatusApiResponse>(endpoint, 'GET', undefined, { handleError: false })
 
-export const useSystemStatus = (): SystemStatus[] => {
+export interface SystemStatusSnapshot {
+  statuses: SystemStatus[]
+  lastCheck: Date
+}
+
+export const useSystemStatus = (): SystemStatusSnapshot => {
   const { data, error, isLoading } = useSWR<SystemStatusApiResponse>(STATUS_KEY, fetcher, {
     refreshInterval: REFRESH_INTERVAL_MS,
     revalidateOnFocus: false,
@@ -215,15 +196,23 @@ export const useSystemStatus = (): SystemStatus[] => {
   return useMemo(() => {
     const lastCheck = new Date()
     if (error) {
-      return fallbackStatuses(
-        error instanceof Error ? error.message : '获取状态失败，请稍后刷新',
+      return {
+        statuses: fallbackStatuses(
+          error instanceof Error ? error.message : '获取状态失败，请稍后刷新',
+          true
+        ),
         lastCheck,
-        true
-      )
+      }
     }
     if (isLoading || !data) {
-      return fallbackStatuses('加载中…', lastCheck, false)
+      return {
+        statuses: fallbackStatuses('加载中…', false),
+        lastCheck,
+      }
     }
-    return mapApiToSystemStatus(data, lastCheck)
+    return {
+      statuses: mapApiToSystemStatus(data),
+      lastCheck,
+    }
   }, [data, error, isLoading])
 }
