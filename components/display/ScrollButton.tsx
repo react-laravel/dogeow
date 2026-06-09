@@ -68,8 +68,7 @@ export function ScrollButton() {
         width={24}
         height={24}
         alt="回到顶部"
-        className="h-6 w-6"
-        style={{ width: 'auto', height: 'auto' }}
+        style={{ width: 24, height: 24 }}
       />
     </div>
   )
