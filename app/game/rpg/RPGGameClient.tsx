@@ -365,8 +365,18 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
           </div>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-32 lg:pb-4">
-          <div className="w-full min-w-0">
+        <div
+          className={`flex min-h-0 flex-1 flex-col pb-32 lg:pb-4 ${
+            activeTab === 'shop' ? 'overflow-hidden' : 'overflow-y-auto'
+          }`}
+        >
+          <div
+            className={
+              activeTab === 'shop'
+                ? 'flex h-full min-h-0 w-full min-w-0 flex-col'
+                : 'w-full min-w-0'
+            }
+          >
             <ErrorBoundary>
               {activeTab === 'character' && <CharacterPanel />}
               {activeTab === 'inventory' && <InventoryPanel />}

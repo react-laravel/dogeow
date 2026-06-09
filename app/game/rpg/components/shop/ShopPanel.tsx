@@ -136,107 +136,100 @@ export function ShopPanel() {
   }
 
   return (
-    <div className="space-y-2 sm:space-y-3">
-      {/* 商店物品网格 - 紧凑布局 */}
-      <div className="bg-card border-border rounded-lg border p-2 sm:p-3">
-        <div className="text-foreground mb-2 flex flex-wrap items-baseline justify-between gap-1.5 sm:mb-3">
-          <h4 className="text-sm font-medium">
-            商店物品
-            <span className="text-muted-foreground ml-1.5 text-xs">
-              ({filteredItems.length}/{shopItems.length})
-            </span>
-          </h4>
-          {countdown != null && (
-            <span className="text-muted-foreground text-[10px] sm:text-xs">
-              {countdown > 0
-                ? `刷新倒计时: ${Math.floor(countdown / 60)}分${countdown % 60}秒`
-                : '刷新中...'}
-            </span>
-          )}
-        </div>
-
-        {/* 类型筛选标签 - 两行布局 */}
-        <div className="mb-2 flex flex-wrap gap-1.5 sm:mb-3">
-          <div className="flex flex-wrap gap-1.5">
-            {SHOP_TYPE_FILTERS.slice(0, 5).map(filter => (
-              <button
-                key={filter.id}
-                onClick={() => setTypeFilter(typeFilter === filter.id ? null : filter.id)}
-                className={`rounded-md px-4 py-1.5 text-sm transition-colors ${
-                  typeFilter === filter.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {SHOP_TYPE_FILTERS.slice(5).map(filter => (
-              <button
-                key={filter.id}
-                onClick={() => setTypeFilter(typeFilter === filter.id ? null : filter.id)}
-                className={`rounded-md px-4 py-1.5 text-sm transition-colors ${
-                  typeFilter === filter.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex min-h-0 justify-center overflow-auto p-0.5">
-          <div className="grid w-max max-w-full grid-cols-[repeat(5,3.25rem)] gap-2.5 sm:grid-cols-[repeat(6,3.25rem)] sm:gap-3">
-            {filteredItems.map(item => {
-              const isSelected = selectedShopItem?.id === item.id
-              const borderColor = isSelected
-                ? undefined
-                : item.quality
-                  ? QUALITY_COLORS[item.quality]
-                  : undefined
-
+    <>
+      <div className="-ml-3 flex h-full min-h-0 flex-col overflow-hidden sm:-ml-4">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* 左侧分类栏 - 贴屏幕左边缘 */}
+          <aside className="flex w-[3.75rem] shrink-0 flex-col justify-center gap-2.5 py-3 sm:w-16 sm:gap-3">
+            {SHOP_TYPE_FILTERS.map(filter => {
+              const isActive = typeFilter === filter.id
               return (
                 <button
-                  key={item.id}
-                  onClick={() => handleSelectShopItem(item)}
-                  className={`flex h-14 w-14 shrink-0 flex-col rounded border-2 transition-all hover:scale-105 ${
-                    isSelected
-                      ? 'border-green-500 bg-green-500/20 shadow-lg shadow-green-500/50 dark:border-green-400 dark:bg-green-400/20'
-                      : 'bg-muted/50 hover:border-muted-foreground/30 hover:bg-muted'
+                  key={filter.id}
+                  onClick={() => setTypeFilter(isActive ? null : filter.id)}
+                  className={`flex h-11 w-full shrink-0 items-center justify-center rounded-r-xl text-[1.4rem] transition-colors sm:h-12 sm:text-2xl ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted active:bg-muted/80'
                   }`}
-                  style={borderColor ? { borderColor } : undefined}
-                  disabled={isLoading}
-                  title={`${item.name} - ${formatCopper(item.buy_price, 1)}`}
+                  title={filter.id}
                 >
-                  <span className="flex min-h-0 flex-1 items-center justify-center text-lg">
-                    <ShopItemIcon item={item} />
-                  </span>
-                  <span className="border-border/50 bg-muted/80 flex shrink-0 items-center justify-center overflow-hidden rounded-b-[calc(0.2rem-2px)] border-t px-1.5 py-1">
-                    <CopperDisplay copper={item.buy_price} size="xs" nowrap maxParts={1} />
-                  </span>
+                  {filter.label}
                 </button>
               )
             })}
-          </div>
-        </div>
+          </aside>
 
-        {/* 刷新按钮和价格 */}
-        <div className="flex items-center justify-center pt-2">
-          <button
-            type="button"
-            onClick={() => refreshShopItems()}
-            disabled={isLoading || !canAffordRefresh}
-            className="text-muted-foreground hover:text-foreground border-border flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors disabled:opacity-50"
-            title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span className="text-xs">刷新商店</span>
-            <CopperDisplay copper={SHOP_REFRESH_COST_COPPER} size="xs" nowrap maxParts={1} />
-          </button>
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 sm:px-4">
+              <h4 className="text-foreground text-sm font-medium">
+                商店物品
+                <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                  {filteredItems.length}/{shopItems.length}
+                </span>
+              </h4>
+              {countdown != null && (
+                <span className="bg-muted/60 text-muted-foreground rounded-full px-2.5 py-0.5 text-[10px] sm:text-xs">
+                  {countdown > 0
+                    ? `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`
+                    : '刷新中'}
+                </span>
+              )}
+            </div>
+
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-2 sm:px-3">
+              {filteredItems.length > 0 ? (
+                <div className="grid h-full w-full max-h-full max-w-lg grid-cols-5 grid-rows-4 gap-1.5 sm:gap-2">
+                  {filteredItems.map(item => {
+                    const isSelected = selectedShopItem?.id === item.id
+                    const borderColor = isSelected
+                      ? undefined
+                      : item.quality
+                        ? QUALITY_COLORS[item.quality]
+                        : undefined
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSelectShopItem(item)}
+                        className={`flex h-full min-h-0 w-full min-w-0 flex-col rounded-md border-2 transition-all active:scale-95 ${
+                          isSelected
+                            ? 'border-green-500 bg-green-500/20 shadow-md shadow-green-500/30 dark:border-green-400 dark:bg-green-400/20'
+                            : 'bg-muted/40 hover:bg-muted/60'
+                        }`}
+                        style={borderColor ? { borderColor } : undefined}
+                        disabled={isLoading}
+                        title={`${item.name} - ${formatCopper(item.buy_price, 1)}`}
+                      >
+                        <span className="flex min-h-0 flex-1 items-center justify-center p-1">
+                          <ShopItemIcon item={item} />
+                        </span>
+                        <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-1 py-0.5">
+                          <CopperDisplay copper={item.buy_price} size="xs" nowrap maxParts={1} />
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm">暂无该分类物品</p>
+              )}
+            </div>
+
+            <div className="flex shrink-0 justify-center px-3 py-2 sm:px-4">
+              <button
+                type="button"
+                onClick={() => refreshShopItems()}
+                disabled={isLoading || !canAffordRefresh}
+                className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2 rounded-full px-4 py-2 text-xs transition-colors disabled:opacity-50"
+                title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>刷新商店</span>
+                <CopperDisplay copper={SHOP_REFRESH_COST_COPPER} size="xs" nowrap maxParts={1} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -254,6 +247,6 @@ export function ShopPanel() {
         levelEnough={!!levelEnough}
         equippedItem={selectedShopItem ? getEquippedItem(selectedShopItem) : null}
       />
-    </div>
+    </>
   )
 }
