@@ -16,11 +16,17 @@ type SoundEffect =
   | 'teleport'
   | 'potion'
 
+type PlayOptions = {
+  /** 忽略战斗页限制，仅用于设置页试听等场景 */
+  force?: boolean
+}
+
 class SoundManager {
   private sounds: Map<SoundEffect, HTMLAudioElement> = new Map()
   private audioCache: Map<string, HTMLAudioElement> = new Map()
   private enabled: boolean = true
   private volume: number = 0.3
+  private combatTabActive: boolean = false
   // 单例 AudioContext - 避免每次播放音效都创建新实例
   private audioContext: AudioContext | null = null
 
@@ -101,15 +107,25 @@ class SoundManager {
     }
   }
 
-  play(effect: SoundEffect) {
-    if (!this.enabled || typeof window === 'undefined') return
+  setCombatTabActive(active: boolean) {
+    this.combatTabActive = active
+  }
+
+  private canPlay(options?: PlayOptions) {
+    if (!this.enabled || typeof window === 'undefined') return false
+    if (!this.combatTabActive && !options?.force) return false
+    return true
+  }
+
+  play(effect: SoundEffect, options?: PlayOptions) {
+    if (!this.canPlay(options)) return
 
     // 使用 Web Audio API 生成简单音效
     this.playGeneratedSound(effect)
   }
 
-  playSkill(skill?: Pick<SkillUsedEntry, 'name' | 'effect_key'> | null) {
-    if (!this.enabled || typeof window === 'undefined' || !skill) return
+  playSkill(skill?: Pick<SkillUsedEntry, 'name' | 'effect_key'> | null, options?: PlayOptions) {
+    if (!this.canPlay(options) || !skill) return
 
     const url = getSkillSoundUrl(skill)
     if (!url) {

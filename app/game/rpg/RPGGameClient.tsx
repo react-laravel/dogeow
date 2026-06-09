@@ -19,6 +19,7 @@ import { RpgRegistrationGate } from './components/auth/RpgRegistrationGate'
 import useAuthStore from '@/stores/authStore'
 import { CopperDisplay } from './components/shared/CopperDisplay'
 import { CircularProgress } from './components/shared/CircularProgress'
+import { soundManager } from './utils/soundManager'
 
 import './rpg.module.css'
 
@@ -91,6 +92,11 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     stopCombatRef.current = stopCombat
     setShouldAutoCombatRef.current = setShouldAutoCombat
   }, [startCombat, stopCombat, setShouldAutoCombat])
+
+  useEffect(() => {
+    soundManager.setCombatTabActive(activeTab === 'combat')
+    return () => soundManager.setCombatTabActive(false)
+  }, [activeTab])
 
   // 战斗WebSocket注册：character 未加载时用 selectedCharacterId 订阅，确保一开始就能收战斗推送
   useCombatWebSocket(character?.id ?? selectedCharacterId ?? null)

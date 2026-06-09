@@ -26,11 +26,10 @@ const SoundSettingsInner = ({ onLogout }: SoundSettingsProps) => {
   }, [])
 
   const handleTestSound = useCallback(() => {
-    soundManager.play('button_click')
+    soundManager.play('button_click', { force: true })
   }, [])
 
   const handleLogout = useCallback(() => {
-    soundManager.play('button_click')
     reset()
     onLogout?.()
   }, [reset, onLogout])
