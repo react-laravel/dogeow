@@ -1,45 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import Image from 'next/image'
 import type { GameItem, ItemQuality, ShopItem } from '@/app/game/rpg/types'
 import { QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '@/app/game/rpg/types'
 import { ItemTipIcon } from './ItemTipIcon'
+import { ShopItemIcon } from './ShopItemIcon'
 import {
   getItemDisplayName,
   getItemTotalStats,
-  getShopItemIcon,
   ITEM_TYPE_NAMES,
 } from '@/app/game/rpg/utils/itemUtils'
 import { CopperDisplay } from '@/app/game/rpg/components/shared/CopperDisplay'
-import { getRpgItemImageUrl } from '@/app/game/rpg/utils/assetUrls'
-
-/** 商店物品图标：优先使用图片，加载失败则用 emoji */
-function ShopItemIcon({ item, className }: { item: ShopItem; className?: string }) {
-  const definitionId = item.id
-  const fallback = getShopItemIcon(item.type, item.sub_type)
-  const [useImg, setUseImg] = useState(true)
-  const src = getRpgItemImageUrl(item.icon, definitionId)
-
-  return (
-    <span
-      className={`relative inline-flex h-full w-full items-center justify-center ${className ?? ''}`}
-    >
-      {useImg ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          className="object-contain"
-          sizes="100px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        <span className="drop-shadow-sm">{fallback}</span>
-      )}
-    </span>
-  )
-}
 
 interface ItemDetailContentProps {
   item: GameItem | ShopItem
@@ -97,7 +67,13 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
           className="relative flex h-[100px] w-[100px] shrink-0 items-center justify-center rounded-lg border-2 shadow-sm"
           style={{ borderColor: QUALITY_COLORS[quality as ItemQuality] }}
         >
-          <ShopItemIcon item={item as ShopItem} className="h-full w-full" />
+          <ShopItemIcon
+            itemId={(item as ShopItem).id}
+            icon={(item as ShopItem).icon}
+            type={(item as ShopItem).type}
+            subType={(item as ShopItem).sub_type}
+            className="h-full w-full"
+          />
         </span>
       ) : (
         <ItemTipIcon item={item as GameItem} className="shrink-0 drop-shadow-lg" />
