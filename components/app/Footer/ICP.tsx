@@ -17,7 +17,8 @@ const ICP = () => {
           alt="ICP 图标"
           width={16}
           height={16}
-          className="mr-1 inline-block align-middle opacity-70"
+          className="mr-1 inline-block h-4 w-4 align-middle opacity-70"
+          style={{ width: 'auto', height: 'auto' }}
         />
         <span>闽公网安备35020302033650号</span>
       </ExternalLink>

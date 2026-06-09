@@ -63,7 +63,14 @@ export function ScrollButton() {
       onClick={scrollToTop}
       onKeyDown={e => e.key === 'Enter' && scrollToTop()}
     >
-      <Image src={asset('/bfr.png')} width={24} height={24} alt="回到顶部" />
+      <Image
+        src={asset('/bfr.png')}
+        width={24}
+        height={24}
+        alt="回到顶部"
+        className="h-6 w-6"
+        style={{ width: 'auto', height: 'auto' }}
+      />
     </div>
   )
 }

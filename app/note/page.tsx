@@ -2,6 +2,7 @@
 
 import './note-styles.css'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { apiRequest } from '@/lib/api'
 import { logger } from '@/lib/logger'
 import { List, Network, Search, X } from 'lucide-react'
@@ -11,7 +12,6 @@ import NoteSpeedDial from './components/NoteSpeedDial'
 import GraphView from './components/GraphView'
 import { normalizeNotes } from './utils/api'
 import { getWikiGraph } from '@/lib/api/wiki'
-import { hasNoteContent } from './utils/noteUtils'
 import type { Note } from './types/note'
 import NoteLoadingSkeleton from './components/NoteLoadingSkeleton'
 import NoteEmptyState from './components/NoteEmptyState'
@@ -68,6 +68,7 @@ function ViewModeSwitch({
 }
 
 export default function NotePage() {
+  const pathname = usePathname()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -78,23 +79,25 @@ export default function NotePage() {
   const graphCreateLinkRef = useRef<(() => void) | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
-  // 获取笔记列表
-  useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const data = await apiRequest<Note[] | { notes: Note[] }>('/notes')
-        setNotes(normalizeNotes<Note>(data))
-      } catch (error) {
-        logger.error('获取笔记列表失败:', error)
-        toast.error('无法加载笔记列表')
-        setNotes([])
-      } finally {
-        setLoading(false)
-      }
+  const fetchNotes = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await apiRequest<Note[] | { notes: Note[] }>('/notes')
+      setNotes(normalizeNotes<Note>(data))
+    } catch (error) {
+      logger.error('获取笔记列表失败:', error)
+      toast.error('无法加载笔记列表')
+      setNotes([])
+    } finally {
+      setLoading(false)
     }
-
-    fetchNotes()
   }, [])
+
+  useEffect(() => {
+    if (pathname === '/note') {
+      void fetchNotes()
+    }
+  }, [pathname, fetchNotes])
 
   // 获取图谱节点数量
   const fetchGraphNodeCount = useCallback(async () => {
@@ -131,12 +134,7 @@ export default function NotePage() {
     })
   }, [notes])
 
-  // 计算有内容的笔记数量
-  const notesWithContent = useMemo(() => {
-    return sortedNotes.filter(hasNoteContent)
-  }, [sortedNotes])
-
-  const notesWithContentCount = notesWithContent.length
+  const noteCount = sortedNotes.length
 
   // 渲染图谱视图
   if (viewMode === 'graph') {
@@ -146,7 +144,7 @@ export default function NotePage() {
           <ViewModeSwitch
             viewMode={viewMode}
             onChangeMode={setViewMode}
-            listCount={notesWithContentCount}
+            listCount={noteCount}
             graphCount={graphNodeCount}
           />
 
@@ -235,7 +233,7 @@ export default function NotePage() {
         <ViewModeSwitch
           viewMode={viewMode}
           onChangeMode={setViewMode}
-          listCount={notesWithContentCount}
+          listCount={noteCount}
           graphCount={graphNodeCount}
         />
       </header>
@@ -243,11 +241,11 @@ export default function NotePage() {
       <main>
         {loading ? (
           <NoteLoadingSkeleton />
-        ) : notesWithContentCount === 0 ? (
+        ) : noteCount === 0 ? (
           <NoteEmptyState />
         ) : (
           <div className="space-y-4" role="list" aria-label="笔记列表">
-            {notesWithContent.map(note => (
+            {sortedNotes.map(note => (
               <div key={note.id} role="listitem">
                 <NoteCard note={note} />
               </div>

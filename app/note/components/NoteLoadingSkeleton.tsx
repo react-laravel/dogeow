@@ -1,18 +1,22 @@
 'use client'
 
 import { memo } from 'react'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
 const SKELETON_ITEMS_COUNT = 3
 
 const LoadingSkeleton = memo(() => (
-  <div className="animate-pulse space-y-4">
+  <div className="animate-pulse space-y-4" role="status" aria-label="加载中">
     {Array.from({ length: SKELETON_ITEMS_COUNT }, (_, i) => (
-      <Card key={i} className="border p-0 dark:border-slate-700">
-        <div className="mx-4 mt-4 mb-2 h-5 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="mx-4 mb-4 h-4 w-1/4 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="mx-4 mb-1 h-3 w-full rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="mx-4 mb-4 h-3 w-full rounded bg-gray-200 dark:bg-gray-700" />
+      <Card key={i} className="overflow-hidden">
+        <CardHeader className="space-y-2 pb-2">
+          <div className="bg-muted h-5 w-1/3 max-w-[12rem] rounded" />
+          <div className="bg-muted h-4 w-1/4 max-w-[8rem] rounded" />
+        </CardHeader>
+        <CardContent className="space-y-2 py-2">
+          <div className="bg-muted h-3 w-full rounded" />
+          <div className="bg-muted h-3 w-5/6 rounded" />
+        </CardContent>
       </Card>
     ))}
   </div>

@@ -1,7 +1,8 @@
-import React, { memo, useState } from 'react'
+import React, { memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Save, Loader2, Lock, Unlock } from 'lucide-react'
+import { cn } from '@/lib/helpers'
 
 interface NoteEditorToolbarProps {
   title: string
@@ -10,40 +11,35 @@ interface NoteEditorToolbarProps {
   onTitleChange: (value: string) => void
   onSave: () => void
   onTogglePrivacy: () => void
+  className?: string
 }
 
 export const NoteEditorToolbar = memo<NoteEditorToolbarProps>(
-  ({ title, isPrivate, isSaving, onTitleChange, onSave, onTogglePrivacy }) => {
-    // 添加按钮交互状态
-    const [privacyButtonHovered, setPrivacyButtonHovered] = useState(false)
-    const [saveButtonHovered, setSaveButtonHovered] = useState(false)
-    const [privacyButtonPressed, setPrivacyButtonPressed] = useState(false)
-    const [saveButtonPressed, setSaveButtonPressed] = useState(false)
+  ({ title, isPrivate, isSaving, onTitleChange, onSave, onTogglePrivacy, className }) => {
+    const canAct = Boolean(title.trim()) && !isSaving
 
     return (
-      <div className="mb-4 flex items-center gap-2">
+      <div
+        className={cn(
+          'border-border/60 bg-card/80 mb-4 flex items-center gap-2 rounded-2xl border p-2 shadow-sm backdrop-blur-sm',
+          className
+        )}
+      >
         <Input
           value={title}
           onChange={e => onTitleChange(e.target.value)}
-          placeholder="请输入笔记标题"
-          className="flex-1 text-lg font-medium"
+          placeholder="笔记标题"
+          disabled={isSaving}
+          className="h-11 flex-1 border-0 bg-transparent px-2 text-lg font-medium shadow-none focus-visible:ring-0"
         />
         <Button
           onClick={onTogglePrivacy}
-          onMouseEnter={() => setPrivacyButtonHovered(true)}
-          onMouseLeave={() => setPrivacyButtonHovered(false)}
-          onMouseDown={() => setPrivacyButtonPressed(true)}
-          onMouseUp={() => setPrivacyButtonPressed(false)}
           variant="ghost"
           size="icon"
-          disabled={isSaving || !title.trim()}
-          className="text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          disabled={!canAct}
+          className="text-muted-foreground hover:text-foreground h-10 w-10 shrink-0"
           title={`${isPrivate ? '切换为公开' : '切换为私密'} (Ctrl+Shift+P)`}
-          style={{
-            transform: `translateY(${privacyButtonHovered ? '-2px' : '0'}) scale(${privacyButtonPressed ? '0.95' : '1'})`,
-            transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: privacyButtonHovered ? '0 4px 8px rgba(0,0,0,0.1)' : 'none',
-          }}
+          aria-label={isPrivate ? '切换为公开' : '切换为私密'}
         >
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -55,19 +51,11 @@ export const NoteEditorToolbar = memo<NoteEditorToolbarProps>(
         </Button>
         <Button
           onClick={onSave}
-          onMouseEnter={() => setSaveButtonHovered(true)}
-          onMouseLeave={() => setSaveButtonHovered(false)}
-          onMouseDown={() => setSaveButtonPressed(true)}
-          onMouseUp={() => setSaveButtonPressed(false)}
           size="icon"
-          disabled={isSaving || !title.trim()}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          disabled={!canAct}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 w-10 shrink-0"
           title="保存 (Ctrl+S)"
-          style={{
-            transform: `translateY(${saveButtonHovered ? '-2px' : '0'}) scale(${saveButtonPressed ? '0.95' : '1'})`,
-            transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: saveButtonHovered ? '0 6px 12px rgba(0,0,0,0.15)' : 'none',
-          }}
+          aria-label="保存笔记"
         >
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         </Button>

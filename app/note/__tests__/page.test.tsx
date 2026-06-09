@@ -3,6 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import NotePage from '../page'
 
 // Mock dependencies
+vi.mock('next/navigation', () => ({
+  usePathname: vi.fn(() => '/note'),
+}))
+
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href} data-testid="link">
@@ -116,6 +120,31 @@ describe('NotePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Test Note 1')).toBeInTheDocument()
       expect(screen.getByText('Test Note 2')).toBeInTheDocument()
+    })
+  })
+
+  it('should render title-only notes in the list', async () => {
+    const mockNotes = [
+      {
+        id: 3,
+        title: '只有标题的笔记',
+        content:
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":""}]}]}',
+        content_markdown: '',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T12:00:00Z',
+        is_draft: false,
+      },
+    ]
+
+    const { apiRequest } = await import('@/lib/api')
+    vi.mocked(apiRequest).mockResolvedValue(mockNotes)
+
+    render(<NotePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('只有标题的笔记')).toBeInTheDocument()
+      expect(screen.getByText('(无内容)')).toBeInTheDocument()
     })
   })
 
