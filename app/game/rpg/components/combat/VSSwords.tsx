@@ -1,5 +1,7 @@
 'use client'
 
+import styles from '../../rpg.module.css'
+
 /** VS 区域：可点击的 emoji，未战斗静止、战斗中播放动画；死亡时显示复活 */
 export function VSSwords({
   isFighting,
@@ -25,7 +27,7 @@ export function VSSwords({
     >
       <span
         className={`flex h-8 items-center justify-center text-3xl leading-none sm:h-10 sm:text-4xl ${
-          !isCharacterDead && isFighting ? 'vs-emoji-fighting' : ''
+          !isCharacterDead && isFighting ? styles['vs-emoji-fighting'] : ''
         }`}
         aria-hidden
       >

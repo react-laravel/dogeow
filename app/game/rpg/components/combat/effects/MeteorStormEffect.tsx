@@ -4,13 +4,21 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { EffectBaseProps } from './types'
 
 /** 流星火雨特效 */
-export function MeteorStormEffect({ active, onComplete, targetPosition }: EffectBaseProps) {
+export function MeteorStormEffect({ active, onComplete, onHit, targetPosition }: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const meteorsRef = useRef<any[]>([])
   const explosionsRef = useRef<any[]>([])
   const firesRef = useRef<any[]>([])
   const rafRef = useRef<number>(0)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const targetRef = useRef({ x: 0.5, y: 0.5 })
+  const hasCalledHitRef = useRef(false)
+  const onHitRef = useRef(onHit)
+
+  useEffect(() => {
+    onHitRef.current = onHit
+  }, [onHit])
 
   useEffect(() => {
     if (targetPosition) {
@@ -28,28 +36,30 @@ export function MeteorStormEffect({ active, onComplete, targetPosition }: Effect
     const target = targetRef.current
 
     for (let i = 0; i < 8; i++) {
-      setTimeout(() => {
-        meteorsRef.current.push({
-          startXPct: target.x + (Math.random() - 0.5) * 0.8,
-          startYPct: -0.1,
-          targetXPct: target.x + (Math.random() - 0.5) * 0.25,
-          targetYPct: target.y + (Math.random() - 0.5) * 0.15,
-          x: 0,
-          y: 0,
-          targetX: 0,
-          targetY: 0,
-          speed: 8 + Math.random() * 6,
-          size: 8 + Math.random() * 12,
-          angle: 0,
-          trail: [],
-          color: `hsl(${15 + Math.random() * 25}, 100%, ${50 + Math.random() * 20}%)`,
-          alive: true,
-          initialized: false,
-        })
-      }, i * 120)
+      timersRef.current.push(
+        setTimeout(() => {
+          meteorsRef.current.push({
+            startXPct: target.x + (Math.random() - 0.5) * 0.8,
+            startYPct: -0.1,
+            targetXPct: target.x + (Math.random() - 0.5) * 0.25,
+            targetYPct: target.y + (Math.random() - 0.5) * 0.15,
+            x: 0,
+            y: 0,
+            targetX: 0,
+            targetY: 0,
+            speed: 8 + Math.random() * 6,
+            size: 8 + Math.random() * 12,
+            angle: 0,
+            trail: [],
+            color: `hsl(${15 + Math.random() * 25}, 100%, ${50 + Math.random() * 20}%)`,
+            alive: true,
+            initialized: false,
+          })
+        }, i * 120)
+      )
     }
 
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       if (meteorsRef.current.length > 30) return
       meteorsRef.current.push({
         startXPct: target.x + (Math.random() - 0.5) * 0.6,
@@ -70,7 +80,15 @@ export function MeteorStormEffect({ active, onComplete, targetPosition }: Effect
       })
     }, 200)
 
-    setTimeout(() => clearInterval(interval), 3000)
+    // 持续生成 1.2s（加上余焰约 2.5s 内播完），避免超出后端约 3s 的回合间隔
+    timersRef.current.push(
+      setTimeout(() => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
+        }
+      }, 1200)
+    )
   }, [])
 
   const hasActivatedRef = useRef(false)
@@ -78,6 +96,7 @@ export function MeteorStormEffect({ active, onComplete, targetPosition }: Effect
   useEffect(() => {
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
+      hasCalledHitRef.current = false
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(true)
       cast()
@@ -85,6 +104,19 @@ export function MeteorStormEffect({ active, onComplete, targetPosition }: Effect
       hasActivatedRef.current = false
     }
   }, [active, cast])
+
+  // 卸载时清理生成定时器，避免向旧实例继续追加流星
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.length = 0
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!isActive) return
@@ -122,6 +154,11 @@ export function MeteorStormEffect({ active, onComplete, targetPosition }: Effect
 
         if (dist < 30 || m.y > canvasHeight) {
           m.alive = false
+          // 第一颗流星落地即视觉命中
+          if (!hasCalledHitRef.current) {
+            hasCalledHitRef.current = true
+            onHitRef.current?.()
+          }
           explosionsRef.current.push({
             x: m.x,
             y: m.y,
@@ -149,7 +186,8 @@ export function MeteorStormEffect({ active, onComplete, targetPosition }: Effect
 
       for (let i = firesRef.current.length - 1; i >= 0; i--) {
         const f = firesRef.current[i]
-        f.life -= 0.005
+        // 余焰约 0.8s 烧完，保证整段特效收在一个回合（约 3s）内
+        f.life -= 0.02
         if (f.radius < f.maxRadius) f.radius += 0.3
         if (f.life <= 0) firesRef.current.splice(i, 1)
       }

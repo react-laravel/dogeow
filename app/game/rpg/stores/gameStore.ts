@@ -1209,7 +1209,9 @@ const store: StateCreator<GameState> = (set, get) => ({
 
     if (typedData.defeat || typedData.auto_stopped) {
       soundManager.play('combat_defeat')
-    } else {
+    } else if (!typedData.skills_used?.length) {
+      // 技能回合的音效由 BattleArena 负责：施法时播技能音、视觉命中时播命中音，
+      // 此处不再立即播 combat_hit，避免音画错位和重复音效
       soundManager.play('combat_hit')
     }
 

@@ -75,6 +75,7 @@ export function BattleArena({
   const hasValidMonsters = monsters?.some(m => m != null) ?? false
 
   // 技能特效类型：直接使用后端返回的 effect_key
+  // 注意：只列出已实现特效组件的 key（heal 无特效组件，列入会导致扣血显示一直被挂起）
   const computedSkillEffect = useMemo((): SkillEffectType | null => {
     if (!skillUsed?.effect_key) return null
     const key = skillUsed.effect_key
@@ -85,7 +86,6 @@ export function BattleArena({
       'ice-arrow',
       'ice-age',
       'blackhole',
-      'heal',
       'lightning',
       'chain-lightning',
     ]
@@ -179,8 +179,8 @@ export function BattleArena({
 
   // 技能特效状态
   const [activeSkillEffect, setActiveSkillEffect] = useState<SkillEffectType | null>(null)
-  const lastSkillUsedIdRef = useRef<number>(0)
-  const skillTriggerCountRef = useRef<number>(0)
+  // 每次触发递增，作为 SkillEffect 的 key：连续回合同一技能也能重新挂载、完整重播动画
+  const [effectNonce, setEffectNonce] = useState(0)
 
   // 有技能时在 useLayoutEffect 里立即设为延迟显示，首帧重绘即传扣血前数据
 
@@ -189,36 +189,45 @@ export function BattleArena({
       if (skillUsed !== lastSkillUsedRef.current) {
         lastSkillUsedRef.current = skillUsed
         skillAnimationCompletedRef.current = false
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 技能动画期间同步 UI
-      setShowDamageAndHp(false)
-      skillTriggerCountRef.current += 1
-      const uniqueSkillId = skillUsed.skill_id * 10000 + skillTriggerCountRef.current
-      if (lastSkillUsedIdRef.current !== uniqueSkillId) {
-        lastSkillUsedIdRef.current = uniqueSkillId
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 技能动画期间同步 UI
+        setShowDamageAndHp(false)
         setActiveSkillEffect(computedSkillEffect)
+        setEffectNonce(n => n + 1)
       }
     } else {
       lastSkillUsedRef.current = null
+      // 回合已推进且本回合无技能：上一回合特效若仍在播，视为已结算，
+      // 其迟到的 onComplete 不再重复播命中音/改血量
+      skillAnimationCompletedRef.current = true
       setShowDamageAndHp(true)
     }
   }, [skillUsed, computedSkillEffect])
 
-  /** 技能视觉命中时调用（如冰箭击中），提前显示扣血，不等尾效播完 */
-  const handleHit = useCallback(() => {
+  /** 结算本回合：显示扣血与最终血量，并在视觉命中时播放命中音效 */
+  const settleRound = useCallback(() => {
+    if (skillAnimationCompletedRef.current) return
     skillAnimationCompletedRef.current = true
     setShowDamageAndHp(true)
     setDisplayMonsterHp(pendingFinalHpRef.current)
+    // 命中音效与视觉命中对齐（技能回合的 combat_hit 不在 store 收到推送时播放）
+    soundManager.play('combat_hit')
   }, [])
 
-  const handleSkillComplete = () => {
-    if (!skillAnimationCompletedRef.current) {
-      skillAnimationCompletedRef.current = true
-      setShowDamageAndHp(true)
-      setDisplayMonsterHp(pendingFinalHpRef.current)
-    }
+  /** 技能视觉命中时调用（如冰箭击中），提前显示扣血，不等尾效播完 */
+  const handleHit = settleRound
+
+  const handleSkillComplete = useCallback(() => {
+    settleRound()
     setActiveSkillEffect(null)
-  }
+  }, [settleRound])
+
+  // 看门狗：后端约 3 秒一回合，特效若超时未回调 onComplete（卡帧/标签页后台等），
+  // 强制结算，保证下一回合数据到达前 UI 已经是最终状态
+  useEffect(() => {
+    if (!activeSkillEffect) return
+    const watchdog = setTimeout(handleSkillComplete, 2600)
+    return () => clearTimeout(watchdog)
+  }, [activeSkillEffect, effectNonce, handleSkillComplete])
 
   // 冰河世纪作为「地面层」在怪物背后，其它技能在顶层
   const effectLayerZ = activeSkillEffect === 'ice-age' ? 'z-0' : 'z-10'
@@ -228,6 +237,7 @@ export function BattleArena({
       {/* 技能特效层：冰河世纪在底层（地面冰面，延伸到怪物身后），其它技能在顶层 */}
       {activeSkillEffect && (
         <SkillEffect
+          key={effectNonce}
           type={activeSkillEffect}
           active={true}
           targetPosition={computedTargetPos}

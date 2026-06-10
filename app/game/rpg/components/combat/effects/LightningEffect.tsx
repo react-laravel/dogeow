@@ -27,13 +27,20 @@ function generateBoltSegments() {
 }
 
 /** 雷击特效 */
-export function LightningEffect({ active, onComplete, targetPosition }: EffectBaseProps) {
+export function LightningEffect({ active, onComplete, onHit, targetPosition }: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const boltsRef = useRef<any[]>([])
   const impactsRef = useRef<any[]>([])
   const rafRef = useRef<number>(0)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const [isActive, setIsActive] = useState(false)
   const targetRef = useRef({ x: 0.5, y: 0.5 })
+  const hasCalledHitRef = useRef(false)
+  const onHitRef = useRef(onHit)
+
+  useEffect(() => {
+    onHitRef.current = onHit
+  }, [onHit])
 
   useEffect(() => {
     if (targetPosition) {
@@ -59,34 +66,43 @@ export function LightningEffect({ active, onComplete, targetPosition }: EffectBa
       flash: true,
     })
 
-    setTimeout(() => {
-      boltsRef.current.push({
-        xPct: target.x + (Math.random() - 0.5) * 0.05,
-        yPct: 0,
-        targetXPct: target.x + (Math.random() - 0.5) * 0.05,
-        targetYPct: target.y,
-        x: 0,
-        y: 0,
-        targetX: 0,
-        targetY: 0,
-        segments: generateBoltSegments(),
-        alpha: 0.7,
-        initialized: false,
-        flash: false,
-      })
-    }, 100)
+    timersRef.current.push(
+      setTimeout(() => {
+        boltsRef.current.push({
+          xPct: target.x + (Math.random() - 0.5) * 0.05,
+          yPct: 0,
+          targetXPct: target.x + (Math.random() - 0.5) * 0.05,
+          targetYPct: target.y,
+          x: 0,
+          y: 0,
+          targetX: 0,
+          targetY: 0,
+          segments: generateBoltSegments(),
+          alpha: 0.7,
+          initialized: false,
+          flash: false,
+        })
+      }, 100)
+    )
 
-    setTimeout(() => {
-      impactsRef.current.push({
-        xPct: target.x,
-        yPct: target.y,
-        x: 0,
-        y: 0,
-        radius: 0,
-        maxRadius: 40,
-        alpha: 1,
-      })
-    }, 150)
+    timersRef.current.push(
+      setTimeout(() => {
+        impactsRef.current.push({
+          xPct: target.x,
+          yPct: target.y,
+          x: 0,
+          y: 0,
+          radius: 0,
+          maxRadius: 40,
+          alpha: 1,
+        })
+        // 冲击波出现即视觉命中
+        if (!hasCalledHitRef.current) {
+          hasCalledHitRef.current = true
+          onHitRef.current?.()
+        }
+      }, 150)
+    )
   }, [])
 
   const hasActivatedRef = useRef(false)
@@ -94,16 +110,23 @@ export function LightningEffect({ active, onComplete, targetPosition }: EffectBa
   useEffect(() => {
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
+      hasCalledHitRef.current = false
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(true)
       cast()
-      setTimeout(() => {
-        cast()
-      }, 2000)
     } else if (!active) {
       hasActivatedRef.current = false
     }
   }, [active, cast])
+
+  // 卸载/重挂载时清理未执行的延迟段，避免在旧实例上追加幽灵闪电
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.length = 0
+    }
+  }, [])
 
   useEffect(() => {
     if (!isActive) return

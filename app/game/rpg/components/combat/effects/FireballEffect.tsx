@@ -4,13 +4,19 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { EffectBaseProps } from './types'
 
 /** 火球特效 */
-export function FireballEffect({ active, onComplete, targetPosition }: EffectBaseProps) {
+export function FireballEffect({ active, onComplete, onHit, targetPosition }: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fireballsRef = useRef<any[]>([])
   const explosionsRef = useRef<any[]>([])
   const rafRef = useRef<number>(0)
   const [isActive, setIsActive] = useState(false)
   const targetRef = useRef({ x: 0.5, y: 0.5 })
+  const hasCalledHitRef = useRef(false)
+  const onHitRef = useRef(onHit)
+
+  useEffect(() => {
+    onHitRef.current = onHit
+  }, [onHit])
 
   useEffect(() => {
     if (targetPosition) {
@@ -43,6 +49,7 @@ export function FireballEffect({ active, onComplete, targetPosition }: EffectBas
   useEffect(() => {
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
+      hasCalledHitRef.current = false
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(true)
       cast()
@@ -75,6 +82,11 @@ export function FireballEffect({ active, onComplete, targetPosition }: EffectBas
         if (dist < 20) {
           f.alive = false
           explosionsRef.current.push({ x: f.x, y: f.y, radius: 0, maxRadius: 60, alpha: 1 })
+          // 爆炸瞬间即视觉命中，提前结算扣血而不等尾焰淡出
+          if (!hasCalledHitRef.current) {
+            hasCalledHitRef.current = true
+            onHitRef.current?.()
+          }
         }
         if (!f.alive) fireballsRef.current.splice(i, 1)
       }

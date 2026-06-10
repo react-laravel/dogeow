@@ -52,16 +52,24 @@ function generateBoltSegments(): { x: number; y: number }[] {
 export function ChainLightningEffect({
   active,
   onComplete,
+  onHit,
   targetPositions = [],
 }: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const boltsRef = useRef<Bolt[]>([])
   const impactsRef = useRef<Impact[]>([])
   const rafRef = useRef<number>(0)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const [isActive, setIsActive] = useState(false)
   const targetsRef = useRef<{ x: number; y: number }[]>([])
   const chainIndexRef = useRef(0)
   const hasCompletedRef = useRef(false)
+  const hasCalledHitRef = useRef(false)
+  const onHitRef = useRef(onHit)
+
+  useEffect(() => {
+    onHitRef.current = onHit
+  }, [onHit])
 
   useEffect(() => {
     targetsRef.current = targetPositions
@@ -105,21 +113,28 @@ export function ChainLightningEffect({
 
       boltsRef.current.push(bolt)
 
-      setTimeout(() => {
-        impactsRef.current.push({
-          xPct: target.x,
-          yPct: target.y,
-          x: 0,
-          y: 0,
-          radius: 0,
-          maxRadius: 35,
-          alpha: 1,
-          initialized: false,
-        })
-      }, 150)
+      timersRef.current.push(
+        setTimeout(() => {
+          impactsRef.current.push({
+            xPct: target.x,
+            yPct: target.y,
+            x: 0,
+            y: 0,
+            radius: 0,
+            maxRadius: 35,
+            alpha: 1,
+            initialized: false,
+          })
+          // 第一段冲击波出现即视觉命中
+          if (!hasCalledHitRef.current) {
+            hasCalledHitRef.current = true
+            onHitRef.current?.()
+          }
+        }, 150)
+      )
 
       chainIndexRef.current = index + 1
-      setTimeout(() => castNextBolt(index + 1), 200)
+      timersRef.current.push(setTimeout(() => castNextBolt(index + 1), 200))
     }
 
     castNextBolt(0)
@@ -131,6 +146,7 @@ export function ChainLightningEffect({
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
       hasCompletedRef.current = false
+      hasCalledHitRef.current = false
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(true)
       castChain()
@@ -139,6 +155,15 @@ export function ChainLightningEffect({
       chainIndexRef.current = 0
     }
   }, [active, castChain])
+
+  // 卸载时清理链式定时器，避免在旧实例上继续推进闪电链
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.length = 0
+    }
+  }, [])
 
   useEffect(() => {
     if (!isActive) return

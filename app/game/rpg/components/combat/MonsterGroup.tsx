@@ -60,6 +60,24 @@ export function MonsterGroup({
   const [appearingMonsters, setAppearingMonsters] = useState<Set<string>>(new Set())
   // 记录需要显示被攻击后退动画的怪物 position
   const [hitMonsters, setHitMonsters] = useState<Set<number>>(new Set())
+  // 本组件创建的所有定时器，卸载时统一清理，避免对已卸载组件 setState
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  const scheduleTimeout = (fn: () => void, ms: number) => {
+    const t = setTimeout(() => {
+      timersRef.current.delete(t)
+      fn()
+    }, ms)
+    timersRef.current.add(t)
+  }
+
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.clear()
+    }
+  }, [])
 
   const handleMonsterClick = (m: MonsterWithMeta) => {
     setSelectedMonster(m)
@@ -107,7 +125,6 @@ export function MonsterGroup({
     })
 
     if (newAppearing.length > 0) {
-      console.log('[MonsterGroup] New monsters appearing:', newAppearing)
       // 立即更新 ref，用于渲染时判断
       newAppearingRef.current = new Set(newAppearing)
       queueMicrotask(() => {
@@ -121,14 +138,14 @@ export function MonsterGroup({
         newAppearing.forEach(id => updatedAppeared.add(id))
         saveAppearedMonsters(updatedAppeared)
       })
-      // 1.2秒后移除动画标记
-      setTimeout(() => {
+      // 1.2秒后移除动画标记（与 monster-appear 动画时长一致）
+      scheduleTimeout(() => {
         setAppearingMonsters(prev => {
           const next = new Set(prev)
           newAppearing.forEach(id => next.delete(id))
           return next
         })
-        newAppearingRef.current.delete(newAppearing[0])
+        newAppearing.forEach(id => newAppearingRef.current.delete(id))
       }, 1200)
     }
 
@@ -155,7 +172,7 @@ export function MonsterGroup({
     if (Object.keys(newDamage).length > 0) {
       queueMicrotask(() => {
         setDamageTexts(newDamage)
-        setTimeout(() => setDamageTexts({}), 1500)
+        scheduleTimeout(() => setDamageTexts({}), 1500)
       })
       // 触发被攻击后退动画（被攻击且伤害大于0时）
       const hitPositions = validMonsters
@@ -170,25 +187,31 @@ export function MonsterGroup({
       if (hitPositions.length > 0) {
         queueMicrotask(() => {
           setHitMonsters(new Set(hitPositions))
-          // 300ms后清除动画状态
-          setTimeout(() => setHitMonsters(new Set()), 300)
+          // 300ms后清除动画状态（与 monster-hit 动画时长一致）
+          scheduleTimeout(() => setHitMonsters(new Set()), 300)
         })
       }
     }
 
-    // 检测怪物死亡：HP <= 0 时触发死亡动画
-    validMonsters.forEach(m => {
-      if ((m.hp ?? 0) <= 0) {
-        // 使用 position 作为 key 来区分同一波中的不同怪物实例
-        const key = `pos-${m.position}`
-        setDeadMonsters(prev => {
-          if (!prev.has(key)) {
-            // 新死亡：添加到死亡集合，1.5秒后动画结束
-            return new Set([...prev, key])
+    // 检测怪物死亡/复位：HP <= 0 时触发死亡动画；该位置出现活怪（新一波）时移除标记
+    queueMicrotask(() => {
+      setDeadMonsters(prev => {
+        let changed = false
+        const next = new Set(prev)
+        validMonsters.forEach(m => {
+          const key = `pos-${m.position}`
+          if ((m.hp ?? 0) <= 0) {
+            if (!next.has(key)) {
+              next.add(key)
+              changed = true
+            }
+          } else if (next.has(key)) {
+            next.delete(key)
+            changed = true
           }
-          return prev
         })
-      }
+        return changed ? next : prev
+      })
     })
 
     prevMonstersRef.current = validMonsters

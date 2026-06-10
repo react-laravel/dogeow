@@ -4,13 +4,20 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { EffectBaseProps } from './types'
 
 /** 黑洞特效 */
-export function BlackholeEffect({ active, onComplete, targetPosition }: EffectBaseProps) {
+export function BlackholeEffect({ active, onComplete, onHit, targetPosition }: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const blackholeRef = useRef<any>(null)
   const particlesRef = useRef<any[]>([])
   const rafRef = useRef<number>(0)
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isActive, setIsActive] = useState(false)
   const targetRef = useRef({ x: 0.5, y: 0.5 })
+  const hasCalledHitRef = useRef(false)
+  const onHitRef = useRef(onHit)
+
+  useEffect(() => {
+    onHitRef.current = onHit
+  }, [onHit])
 
   useEffect(() => {
     if (targetPosition) {
@@ -37,16 +44,24 @@ export function BlackholeEffect({ active, onComplete, targetPosition }: EffectBa
   useEffect(() => {
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
+      hasCalledHitRef.current = false
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(true)
       cast()
-      setTimeout(() => {
+      // 1.6s 后开始坍缩（含淡出整体约 2.3s），收在一个回合（约 3s）内
+      collapseTimerRef.current = setTimeout(() => {
         if (blackholeRef.current) blackholeRef.current.active = false
-      }, 3000)
+      }, 1600)
     } else if (!active) {
       hasActivatedRef.current = false
     }
   }, [active, cast])
+
+  useEffect(() => {
+    return () => {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!isActive) return
@@ -64,6 +79,11 @@ export function BlackholeEffect({ active, onComplete, targetPosition }: EffectBa
 
       if (bh.active && bh.radius < bh.maxRadius) {
         bh.radius += 2
+        // 黑洞完全展开即视觉命中
+        if (bh.radius >= bh.maxRadius && !hasCalledHitRef.current) {
+          hasCalledHitRef.current = true
+          onHitRef.current?.()
+        }
       } else if (!bh.active && bh.radius > 0) {
         bh.radius -= 3
       }

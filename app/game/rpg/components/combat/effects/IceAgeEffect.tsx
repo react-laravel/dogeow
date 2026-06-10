@@ -7,12 +7,19 @@ import type { EffectBaseProps } from './types'
 export function IceAgeEffect({
   active,
   onComplete,
+  onHit,
   targetPosition,
   targetPositions = [],
 }: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const [isActive, setIsActive] = useState(false)
+  const hasCalledHitRef = useRef(false)
+  const onHitRef = useRef(onHit)
+
+  useEffect(() => {
+    onHitRef.current = onHit
+  }, [onHit])
 
   const iceCenterY = 0.26
   const iceCenterX = 0.5
@@ -26,6 +33,7 @@ export function IceAgeEffect({
   useEffect(() => {
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
+      hasCalledHitRef.current = false
       progressRef.current = 0
       lifeRef.current = 1
       waveRef.current = 0
@@ -68,7 +76,14 @@ export function IceAgeEffect({
     const update = () => {
       progressRef.current = Math.min(1, progressRef.current + 0.025)
       waveRef.current += 0.035
-      lifeRef.current -= 0.004
+      // 约 2.2s 消散完，收在一个回合（约 3s）内
+      lifeRef.current -= 0.0075
+
+      // 冰面铺满即视觉命中
+      if (progressRef.current >= 1 && !hasCalledHitRef.current) {
+        hasCalledHitRef.current = true
+        onHitRef.current?.()
+      }
 
       const progress = progressRef.current
       const life = Math.max(0, lifeRef.current)
