@@ -117,18 +117,27 @@ export const createEquipmentGameMock = () => ({
 
 export const createGameItemSlotMock = (testId = 'game-item-slot') => ({
   GameItemSlot: ({
+    disabled = false,
     emptyLabel,
+    isSelected = false,
     item,
     onClick,
     title,
   }: {
+    disabled?: boolean
     emptyLabel?: string
+    isSelected?: boolean
     item?: { definition?: { name?: string } } | null
     onClick: () => void
     title: string
   }) => (
     <div data-testid={testId}>
-      <button type="button" onClick={onClick} disabled={!item}>
+      <button
+        type="button"
+        data-selected={isSelected ? 'true' : 'false'}
+        onClick={onClick}
+        disabled={disabled || !item}
+      >
         {item?.definition?.name ?? emptyLabel ?? title}
       </button>
     </div>

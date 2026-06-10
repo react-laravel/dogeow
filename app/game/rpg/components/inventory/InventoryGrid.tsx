@@ -1,49 +1,20 @@
 'use client'
 
-import { type ItemActionType } from '@/components/game'
 import { type GameItem } from '../../types'
 import { InventoryGridItem } from './InventoryGridItem'
 import { type InventorySlotCell } from './inventoryUtils'
 
 interface InventoryGridProps {
-  canSocket: (item: GameItem) => boolean
-  canUnsocket: (item: GameItem) => boolean
   displaySlots: InventorySlotCell[]
-  gemsInInventoryCount: number
-  getCompareActions: (item: GameItem) => ItemActionType[]
-  getEquippedItem: (item: GameItem) => GameItem | null
-  getEquippedRings: () => GameItem[]
-  handleCompareAction: (action: ItemActionType, item: GameItem) => void
-  hasEquippedItem: (item: GameItem) => boolean
   isLoading: boolean
-  onEquip: () => void
-  onMove: (toStorage: boolean) => void
-  onOpenGemSelector: (item: GameItem) => void
   onSelectedItemChange: (item: GameItem | null) => void
-  onSell: () => void
-  onUnsocketGem: (socketIndex: number) => void
-  onUsePotion: () => void
   selectedItemId: number | null
 }
 
 export function InventoryGrid({
-  canSocket,
-  canUnsocket,
   displaySlots,
-  gemsInInventoryCount,
-  getCompareActions,
-  getEquippedItem,
-  getEquippedRings,
-  handleCompareAction,
-  hasEquippedItem,
   isLoading,
-  onEquip,
-  onMove,
-  onOpenGemSelector,
   onSelectedItemChange,
-  onSell,
-  onUnsocketGem,
-  onUsePotion,
   selectedItemId,
 }: InventoryGridProps) {
   return (
@@ -57,23 +28,9 @@ export function InventoryGrid({
           return (
             <InventoryGridItem
               key={item.id}
-              canSocket={canSocket}
-              canUnsocket={canUnsocket}
               cell={{ ...cell, item }}
-              gemsInInventoryCount={gemsInInventoryCount}
-              getCompareActions={getCompareActions}
-              getEquippedItem={getEquippedItem}
-              getEquippedRings={getEquippedRings}
-              handleCompareAction={handleCompareAction}
-              hasEquippedItem={hasEquippedItem}
               isLoading={isLoading}
-              onEquip={onEquip}
-              onMove={onMove}
-              onOpenGemSelector={onOpenGemSelector}
               onSelectedItemChange={onSelectedItemChange}
-              onSell={onSell}
-              onUnsocketGem={onUnsocketGem}
-              onUsePotion={onUsePotion}
               selectedItemId={selectedItemId}
             />
           )

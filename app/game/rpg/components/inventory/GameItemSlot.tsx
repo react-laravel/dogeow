@@ -9,6 +9,7 @@ import { ItemSocketIndicators } from './ItemSocketIndicators'
 type SlotVariant = 'inventory' | 'equipment'
 
 interface GameItemSlotProps {
+  disabled?: boolean
   emptyLabel?: string
   footer?: ReactNode
   isSelected?: boolean
@@ -19,6 +20,7 @@ interface GameItemSlotProps {
 }
 
 export const GameItemSlot = memo(function GameItemSlot({
+  disabled = false,
   emptyLabel,
   footer,
   isSelected = false,
@@ -42,8 +44,10 @@ export const GameItemSlot = memo(function GameItemSlot({
         title={title}
       >
         <button
+          type="button"
           onClick={onClick}
-          className="relative flex h-10 w-full items-center justify-center text-lg"
+          disabled={disabled}
+          className="relative flex h-10 w-full items-center justify-center text-lg disabled:opacity-50"
         >
           <FilledSlotContent item={item} showQuantityBadge />
         </button>
