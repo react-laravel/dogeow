@@ -11,11 +11,19 @@ interface QualityStat {
   totalPrice: number
 }
 
+const AUTO_RECYCLE_INCREMENTS = [10, 50, 100] as const
+const AUTO_RECYCLE_MAX = 99999
+const AUTO_RECYCLE_BTN_CLASS =
+  'bg-muted text-muted-foreground hover:bg-muted/80 rounded px-1 py-1.5 text-xs transition-colors disabled:opacity-50'
+
 interface InventoryToolbarProps {
+  autoRecycleMaxValue: number | null
   categoryId: string
   inventoryCount: number
   inventorySize: number
   isLoading: boolean
+  isSavingAutoRecycle: boolean
+  onAutoRecycleMaxValueChange: (maxValue: number | null) => void
   onCategoryChange: (categoryId: string) => void
   onRecycleQuality: (quality: string) => void
   onShowStorageChange: (showStorage: boolean) => void
@@ -28,10 +36,13 @@ interface InventoryToolbarProps {
 }
 
 export function InventoryToolbar({
+  autoRecycleMaxValue,
   categoryId,
   inventoryCount,
   inventorySize,
   isLoading,
+  isSavingAutoRecycle,
+  onAutoRecycleMaxValueChange,
   onCategoryChange,
   onRecycleQuality,
   onShowStorageChange,
@@ -43,6 +54,16 @@ export function InventoryToolbar({
   storageSize,
 }: InventoryToolbarProps) {
   const [sortOpen, setSortOpen] = useState(false)
+
+  const handleAdjustAutoRecycleValue = (delta: number) => {
+    const current = autoRecycleMaxValue ?? 0
+    const next = current + delta
+    if (next <= 0) {
+      onAutoRecycleMaxValueChange(null)
+      return
+    }
+    onAutoRecycleMaxValueChange(Math.min(AUTO_RECYCLE_MAX, next))
+  }
 
   return (
     <div className="mb-3 flex shrink-0 flex-wrap items-center gap-1.5 sm:mb-4 sm:gap-2">
@@ -126,7 +147,7 @@ export function InventoryToolbar({
                 <span>回收</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-48 space-y-1 p-2" align="end">
+            <PopoverContent className="w-56 space-y-1 p-2" align="end">
               {RECYCLE_QUALITIES.map(quality => {
                 const stats = qualityStats[quality] || { count: 0, totalPrice: 0 }
                 const isDisabled = stats.count === 0
@@ -156,6 +177,63 @@ export function InventoryToolbar({
                   </button>
                 )
               })}
+              <div className="border-border mt-2 border-t pt-2">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-xs">自动回收（单价≤）</span>
+                  <span className="flex items-center gap-1">
+                    {autoRecycleMaxValue && autoRecycleMaxValue > 0 ? (
+                      <CopperDisplay copper={autoRecycleMaxValue} size="xs" />
+                    ) : (
+                      <span className="text-muted-foreground text-xs">关闭</span>
+                    )}
+                    {isSavingAutoRecycle && <span className="animate-spin text-xs">⏳</span>}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {AUTO_RECYCLE_INCREMENTS.map(amount => (
+                    <button
+                      key={`dec-${amount}`}
+                      type="button"
+                      onClick={() => handleAdjustAutoRecycleValue(-amount)}
+                      disabled={
+                        isLoading ||
+                        isSavingAutoRecycle ||
+                        !autoRecycleMaxValue ||
+                        autoRecycleMaxValue <= 0
+                      }
+                      className={AUTO_RECYCLE_BTN_CLASS}
+                    >
+                      -{amount}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-1 grid grid-cols-3 gap-1">
+                  {AUTO_RECYCLE_INCREMENTS.map(amount => (
+                    <button
+                      key={`inc-${amount}`}
+                      type="button"
+                      onClick={() => handleAdjustAutoRecycleValue(amount)}
+                      disabled={isLoading || isSavingAutoRecycle}
+                      className={AUTO_RECYCLE_BTN_CLASS}
+                    >
+                      +{amount}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onAutoRecycleMaxValueChange(null)}
+                  disabled={
+                    isLoading ||
+                    isSavingAutoRecycle ||
+                    !autoRecycleMaxValue ||
+                    autoRecycleMaxValue <= 0
+                  }
+                  className={`${AUTO_RECYCLE_BTN_CLASS} mt-1.5 w-full`}
+                >
+                  关闭
+                </button>
+              </div>
             </PopoverContent>
           </Popover>
         )}

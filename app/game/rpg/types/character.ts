@@ -28,6 +28,8 @@ export interface GameCharacter {
   hp_potion_threshold?: number
   auto_use_mp_potion?: boolean
   mp_potion_threshold?: number
+  /** 自动回收单价上限（铜），null/0 表示关闭 */
+  auto_recycle_max_value?: number | null
   created_at: string
   updated_at: string
 }

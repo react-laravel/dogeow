@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { GameItem } from '../../types'
 import { useGameStore } from '../../stores/gameStore'
@@ -26,6 +26,8 @@ export function InventoryPanel() {
     equipItem,
     sellItem,
     sellItemsByQuality,
+    updateAutoRecycleSettings,
+    character,
     moveItem,
     sortInventory,
     consumePotion,
@@ -39,9 +41,11 @@ export function InventoryPanel() {
       inventorySize: s.inventorySize,
       storageSize: s.storageSize,
       equipment: s.equipment,
+      character: s.character,
       equipItem: s.equipItem,
       sellItem: s.sellItem,
       sellItemsByQuality: s.sellItemsByQuality,
+      updateAutoRecycleSettings: s.updateAutoRecycleSettings,
       moveItem: s.moveItem,
       sortInventory: s.sortInventory,
       consumePotion: s.consumePotion,
@@ -50,6 +54,8 @@ export function InventoryPanel() {
       isLoading: s.isLoading,
     }))
   )
+
+  const [isSavingAutoRecycle, setIsSavingAutoRecycle] = useState(false)
 
   const {
     canSocket,
@@ -119,6 +125,17 @@ export function InventoryPanel() {
     (socketIndex: number) => void handleUnsocketGem(socketIndex),
     [handleUnsocketGem]
   )
+  const handleAutoRecycleMaxValueChange = useCallback(
+    async (maxValue: number | null) => {
+      setIsSavingAutoRecycle(true)
+      try {
+        await updateAutoRecycleSettings(maxValue)
+      } finally {
+        setIsSavingAutoRecycle(false)
+      }
+    },
+    [updateAutoRecycleSettings]
+  )
 
   return (
     <>
@@ -142,10 +159,13 @@ export function InventoryPanel() {
         {/* 背包/仓库 - 装备栏已移至角色面板 */}
         <div className="bg-card border-border flex min-w-0 flex-1 flex-col rounded-lg border p-3 sm:p-4">
           <InventoryToolbar
+            autoRecycleMaxValue={character?.auto_recycle_max_value ?? null}
             categoryId={categoryId}
             inventoryCount={inventory.length}
             inventorySize={inventorySize}
             isLoading={isLoading}
+            isSavingAutoRecycle={isSavingAutoRecycle}
+            onAutoRecycleMaxValueChange={handleAutoRecycleMaxValueChange}
             onCategoryChange={setCategoryId}
             onRecycleQuality={handleRecycleQuality}
             onShowStorageChange={setShowStorage}

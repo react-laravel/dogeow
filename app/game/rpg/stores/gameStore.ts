@@ -149,6 +149,7 @@ interface GameState {
   unequipItem: (slot: EquipmentSlot) => Promise<void>
   sellItem: (itemId: number, quantity?: number) => Promise<void>
   sellItemsByQuality: (quality: string) => Promise<{ count: number; total_price: number }>
+  updateAutoRecycleSettings: (maxValue: number | null) => Promise<void>
   moveItem: (itemId: number, toStorage: boolean, slotIndex?: number) => Promise<void>
   sortInventory: (sortBy: 'quality' | 'price' | 'default') => Promise<void>
   socketGem: (itemId: number, gemItemId: number, socketIndex: number) => Promise<void>
@@ -686,6 +687,37 @@ const store: StateCreator<GameState> = (set, get) => ({
     } catch (error) {
       setRequestError(set, error)
       return { count: 0, total_price: 0 }
+    }
+  },
+
+  updateAutoRecycleSettings: async (maxValue: number | null) => {
+    startRequest(set)
+    try {
+      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
+        context: 'updateAutoRecycleSettings',
+        warn: false,
+      })
+      if (!selectedId) return
+      const response = (await post('/rpg/inventory/auto-recycle-settings', {
+        character_id: selectedId,
+        auto_recycle_max_value: maxValue ?? 0,
+      })) as {
+        character: GameCharacter
+        recycled: { count: number; total_price: number; copper: number }
+      }
+      set(state => ({
+        ...state,
+        character: state.character
+          ? { ...state.character, ...response.character, copper: response.recycled.copper }
+          : response.character,
+        isLoading: false,
+      }))
+      if (response.recycled.count > 0) {
+        soundManager.play('gold')
+        await get().fetchInventory()
+      }
+    } catch (error) {
+      setRequestError(set, error)
     }
   },
 
