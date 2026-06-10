@@ -5,6 +5,7 @@ import {
   getInventoryCompareActions,
   handleInventoryCompareAction,
   hasEquippedItemFor,
+  isHigherValueThanEquipped,
 } from '../inventoryEquipmentUtils'
 import { createItem } from './testUtils'
 
@@ -70,6 +71,16 @@ describe('inventoryEquipmentUtils', () => {
         })
       )
     ).toBe(false)
+  })
+
+  it('detects when inventory item unit sell price exceeds equipped item', () => {
+    const equipped = createItem({ id: 35, sell_price: 100 })
+    const better = createItem({ id: 36, sell_price: 150 })
+    const worse = createItem({ id: 37, sell_price: 80 })
+
+    expect(isHigherValueThanEquipped(better, equipped)).toBe(true)
+    expect(isHigherValueThanEquipped(worse, equipped)).toBe(false)
+    expect(isHigherValueThanEquipped(better, null)).toBe(false)
   })
 
   it('returns ring items as an array for compare rendering', () => {

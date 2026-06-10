@@ -121,9 +121,11 @@ Deployer 每次发布时会自动把这些文件复制到新 release。
 2. Runner checkout 仓库
 3. 下载 / 复用 `~/.deployer/dep.phar`
 4. 执行 `dep deploy production -v`
-5. Deployer 依次：同步当前工作区到 release → 复制服务器本地配置 → `npm ci` → `npm run build` → 切换 `current` → `pm2 reload`
+5. Deployer 依次：同步当前工作区到 release → 复制服务器本地配置 → `npm ci` → `npm run build` → 切换 `current` → `pm2 reload` → 调用 dogeow-api 的 `notify:deploy dogeow`
 
 全程 `current` 直到最后一刻才切换，因此 HTTP 请求不中断。
+
+部署通知在 **dogeow-api** 的 `shared/.env` 中配置 `DEPLOY_NOTIFY_USER_IDS`（逗号分隔用户 ID）。前端部署默认调用 `/var/www/dogeow-api/current/artisan`，路径不同可设置环境变量 `DOGEOW_API_CURRENT_PATH`。
 
 ---
 

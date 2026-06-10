@@ -358,3 +358,17 @@ task('deploy', [
 // =====================
 after('deploy:failed', 'deploy:unlock');
 after('rollback', 'pm2:restart');
+
+desc('发送部署完成站内通知');
+task('deploy:notify', function () {
+    $apiPath = getenv('DOGEOW_API_CURRENT_PATH') ?: '/var/www/dogeow-api/current';
+
+    run(<<<BASH
+if [ -f "{$apiPath}/artisan" ]; then
+  cd "{$apiPath}" && {{bin/php}} artisan notify:deploy dogeow --no-interaction || true
+else
+  echo "[deploy] 未找到 dogeow-api ({$apiPath})，跳过部署通知"
+fi
+BASH);
+});
+after('deploy:success', 'deploy:notify');

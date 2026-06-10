@@ -1,6 +1,6 @@
 import type { ItemActionType } from '@/components/game'
 import type { GameItem } from '../../types'
-import { getEquipmentSlot } from '../../utils/itemUtils'
+import { getEquipmentSlot, getItemSellUnitPrice } from '../../utils/itemUtils'
 
 type EquippedItems = Record<string, GameItem | null | undefined>
 
@@ -21,6 +21,15 @@ export const getEquippedItemFor = (equipment: EquippedItems, item: GameItem): Ga
 
 export const hasEquippedItemFor = (equipment: EquippedItems, item: GameItem): boolean =>
   getEquippedItemFor(equipment, item) != null
+
+export const isHigherValueThanEquipped = (
+  item: GameItem,
+  equippedItem: GameItem | null
+): boolean => {
+  if (!equippedItem) return false
+
+  return getItemSellUnitPrice(item) > getItemSellUnitPrice(equippedItem)
+}
 
 export const getEquippedRingItems = (equipment: EquippedItems): GameItem[] =>
   equipment.ring ? [equipment.ring] : []

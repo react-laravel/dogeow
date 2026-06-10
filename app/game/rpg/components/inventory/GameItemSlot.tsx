@@ -5,6 +5,7 @@ import { ItemIcon } from '@/components/game'
 import type { GameItem } from '../../types'
 import { QUALITY_COLORS } from '../../types'
 import { ItemSocketIndicators } from './ItemSocketIndicators'
+import { ItemUpgradeIndicator } from './ItemUpgradeIndicator'
 
 type SlotVariant = 'inventory' | 'equipment'
 
@@ -14,6 +15,7 @@ interface GameItemSlotProps {
   footer?: ReactNode
   isSelected?: boolean
   item: GameItem | null | undefined
+  showUpgradeIndicator?: boolean
   onClick: () => void
   title: string
   variant: SlotVariant
@@ -21,7 +23,17 @@ interface GameItemSlotProps {
 
 export const GameItemSlot = memo(
   forwardRef<HTMLDivElement, GameItemSlotProps>(function GameItemSlot(
-    { disabled = false, emptyLabel, footer, isSelected = false, item, onClick, title, variant },
+    {
+      disabled = false,
+      emptyLabel,
+      footer,
+      isSelected = false,
+      item,
+      onClick,
+      showUpgradeIndicator = false,
+      title,
+      variant,
+    },
     ref
   ) {
     if (variant === 'inventory' && item) {
@@ -45,7 +57,11 @@ export const GameItemSlot = memo(
             disabled={disabled}
             className="relative flex h-10 w-full items-center justify-center text-lg disabled:opacity-50"
           >
-            <FilledSlotContent item={item} showQuantityBadge />
+            <FilledSlotContent
+              item={item}
+              showQuantityBadge
+              showUpgradeIndicator={showUpgradeIndicator}
+            />
           </button>
           {footer}
         </div>
@@ -82,13 +98,16 @@ export const GameItemSlot = memo(
 function FilledSlotContent({
   item,
   showQuantityBadge = false,
+  showUpgradeIndicator = false,
 }: {
   item: GameItem
   showQuantityBadge?: boolean
+  showUpgradeIndicator?: boolean
 }) {
   return (
     <>
       <ItemIcon item={item} className="drop-shadow-sm" />
+      {showUpgradeIndicator && <ItemUpgradeIndicator />}
       {showQuantityBadge && item.quantity > 1 && (
         <span className="absolute top-0 -right-1 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black/70 text-[9px] font-bold text-white">
           {item.quantity}
