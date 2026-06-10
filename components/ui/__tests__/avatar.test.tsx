@@ -134,21 +134,21 @@ describe('Avatar', () => {
       consoleSpy.mockRestore()
     })
 
-    it('should handle dicebear URLs with unoptimized loading', () => {
+    it('should handle dicebear URLs', () => {
       render(<AvatarImage src="https://dicebear.com/api/avataaars/test.svg" alt="Test avatar" />)
 
       const image = screen.getByTestId('avatar-image')
       expect(image).toBeInTheDocument()
     })
 
-    it('should handle ui-avatars URLs with unoptimized loading', () => {
+    it('should handle ui-avatars URLs', () => {
       render(<AvatarImage src="https://ui-avatars.com/api/?name=Test" alt="Test avatar" />)
 
       const image = screen.getByTestId('avatar-image')
       expect(image).toBeInTheDocument()
     })
 
-    it('should handle robohash URLs with unoptimized loading', () => {
+    it('should handle robohash URLs', () => {
       render(<AvatarImage src="https://robohash.org/test" alt="Test avatar" />)
 
       const image = screen.getByTestId('avatar-image')

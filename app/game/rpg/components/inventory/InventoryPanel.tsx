@@ -1,5 +1,8 @@
 'use client'
 
+import { useCallback } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import type { GameItem } from '../../types'
 import { useGameStore } from '../../stores/gameStore'
 import { GemSelectorDialog } from './GemSelectorDialog'
 import { InventoryGrid } from './InventoryGrid'
@@ -29,7 +32,24 @@ export function InventoryPanel() {
     socketGem,
     unsocketGem,
     isLoading,
-  } = useGameStore()
+  } = useGameStore(
+    useShallow(s => ({
+      inventory: s.inventory,
+      storage: s.storage,
+      inventorySize: s.inventorySize,
+      storageSize: s.storageSize,
+      equipment: s.equipment,
+      equipItem: s.equipItem,
+      sellItem: s.sellItem,
+      sellItemsByQuality: s.sellItemsByQuality,
+      moveItem: s.moveItem,
+      sortInventory: s.sortInventory,
+      consumePotion: s.consumePotion,
+      socketGem: s.socketGem,
+      unsocketGem: s.unsocketGem,
+      isLoading: s.isLoading,
+    }))
+  )
 
   const {
     canSocket,
@@ -82,6 +102,24 @@ export function InventoryPanel() {
     storageSize,
   })
 
+  const getEquippedItem = useCallback(
+    (item: GameItem) => getEquippedItemFor(equipment, item),
+    [equipment]
+  )
+  const getEquippedRings = useCallback(() => getEquippedRingItems(equipment), [equipment])
+  const hasEquippedItem = useCallback(
+    (item: GameItem) => hasEquippedItemFor(equipment, item),
+    [equipment]
+  )
+  const onEquip = useCallback(() => void handleEquip(), [handleEquip])
+  const onSell = useCallback(() => void handleSell(), [handleSell])
+  const onUsePotion = useCallback(() => void handleUsePotion(), [handleUsePotion])
+  const onMove = useCallback((toStorage: boolean) => void handleMove(toStorage), [handleMove])
+  const onUnsocketGem = useCallback(
+    (socketIndex: number) => void handleUnsocketGem(socketIndex),
+    [handleUnsocketGem]
+  )
+
   return (
     <>
       <GemSelectorDialog
@@ -125,18 +163,18 @@ export function InventoryPanel() {
             displaySlots={displaySlots}
             gemsInInventoryCount={gemsInInventory.length}
             getCompareActions={getCompareActions}
-            getEquippedItem={item => getEquippedItemFor(equipment, item)}
-            getEquippedRings={() => getEquippedRingItems(equipment)}
+            getEquippedItem={getEquippedItem}
+            getEquippedRings={getEquippedRings}
             handleCompareAction={handleCompareAction}
-            hasEquippedItem={item => hasEquippedItemFor(equipment, item)}
+            hasEquippedItem={hasEquippedItem}
             isLoading={isLoading}
-            onEquip={() => void handleEquip()}
-            onMove={toStorage => void handleMove(toStorage)}
+            onEquip={onEquip}
+            onMove={onMove}
             onOpenGemSelector={openGemSelector}
             onSelectedItemChange={setSelectedItem}
-            onSell={() => void handleSell()}
-            onUnsocketGem={socketIndex => void handleUnsocketGem(socketIndex)}
-            onUsePotion={() => void handleUsePotion()}
+            onSell={onSell}
+            onUnsocketGem={onUnsocketGem}
+            onUsePotion={onUsePotion}
             selectedItemId={selectedItemId}
           />
         </div>

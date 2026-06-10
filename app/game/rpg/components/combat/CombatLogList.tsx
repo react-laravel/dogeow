@@ -10,38 +10,11 @@ import {
   type CombatLogDetail,
 } from '../../types'
 import { useMemo, useState, useEffect } from 'react'
-import Image from 'next/image'
+import { useShallow } from 'zustand/react/shallow'
 import { CopperDisplay } from '../shared/CopperDisplay'
-import { getRpgItemImageUrl } from '../../utils/assetUrls'
-import { getItemDisplayName } from '../../utils/itemUtils'
 import { ItemDetailModal } from '@/components/game'
 import { useGameStore } from '../../stores/gameStore'
 import { X, Swords, Shield, Zap, Target, Skull, Award, Coins } from 'lucide-react'
-
-function ItemTipIcon({ item, className }: { item: GameItem; className?: string }) {
-  const definitionId = item.definition?.id
-  const src = getRpgItemImageUrl(item.definition?.icon, definitionId)
-  const [useImg, setUseImg] = useState(definitionId != null)
-
-  return (
-    <div
-      className={`relative flex h-14 w-14 items-center justify-center rounded-md bg-black/30 sm:h-16 sm:w-16 ${className}`}
-    >
-      {useImg && src ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          className="rounded object-cover"
-          sizes="64px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        <span className="text-3xl sm:text-4xl">{item.definition?.icon || '📦'}</span>
-      )}
-    </div>
-  )
-}
 
 function ItemDetailDialog({ item, onClose }: { item: GameItem; onClose: () => void }) {
   return (
@@ -57,7 +30,13 @@ function ItemDetailDialog({ item, onClose }: { item: GameItem; onClose: () => vo
 
 /** 战斗日志详情弹窗 */
 function CombatLogDetailDialog({ logId, onClose }: { logId: number; onClose: () => void }) {
-  const { fetchCombatLogDetail, clearCombatLogDetail, combatLogDetail } = useGameStore()
+  const { fetchCombatLogDetail, clearCombatLogDetail, combatLogDetail } = useGameStore(
+    useShallow(s => ({
+      fetchCombatLogDetail: s.fetchCombatLogDetail,
+      clearCombatLogDetail: s.clearCombatLogDetail,
+      combatLogDetail: s.combatLogDetail,
+    }))
+  )
 
   useEffect(() => {
     fetchCombatLogDetail(logId)

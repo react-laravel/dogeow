@@ -1,5 +1,6 @@
 'use client'
 
+import { memo, useCallback } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { FullComparePanel, type ItemActionType } from '@/components/game'
 import type { GameItem } from '../../types'
@@ -30,7 +31,7 @@ interface InventoryGridItemProps {
   selectedItemId: number | null
 }
 
-export function InventoryGridItem({
+export const InventoryGridItem = memo(function InventoryGridItem({
   canSocket,
   canUnsocket,
   cell,
@@ -56,17 +57,27 @@ export function InventoryGridItem({
   const equippedRings = item.definition?.type === 'ring' ? getEquippedRings() : []
   const compareActions = showCompare ? getCompareActions(item) : []
 
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) onSelectedItemChange(null)
+    },
+    [onSelectedItemChange]
+  )
+
+  const handleClick = useCallback(() => {
+    onSelectedItemChange(isSelected ? null : item)
+  }, [isSelected, item, onSelectedItemChange])
+
+  const handleClose = useCallback(() => {
+    onSelectedItemChange(null)
+  }, [onSelectedItemChange])
+
   return (
-    <Popover
-      open={isSelected}
-      onOpenChange={open => {
-        if (!open) onSelectedItemChange(null)
-      }}
-    >
+    <Popover open={isSelected} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <GameItemSlot
           item={item}
-          onClick={() => onSelectedItemChange(isSelected ? null : item)}
+          onClick={handleClick}
           title={getItemDisplayName(item)}
           variant="inventory"
           isSelected={isSelected}
@@ -114,7 +125,7 @@ export function InventoryGridItem({
           {!showCompare && (
             <InventoryItemDetailCard
               item={item}
-              onClose={() => onSelectedItemChange(null)}
+              onClose={handleClose}
               onUnsocketGem={onUnsocketGem}
               isLoading={isLoading}
               showBuyPrice
@@ -140,4 +151,4 @@ export function InventoryGridItem({
       </PopoverContent>
     </Popover>
   )
-}
+})

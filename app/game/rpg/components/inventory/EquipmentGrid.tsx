@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '../../stores/gameStore'
 import { EquipmentSlot, GameItem } from '../../types'
 import { EquipmentDetailOverlay } from './EquipmentDetailOverlay'
@@ -15,7 +16,14 @@ interface EquipmentGridProps {
 }
 
 export function EquipmentGrid({ equipment, onUnequip }: EquipmentGridProps) {
-  const { socketGem, unsocketGem, inventory, isLoading } = useGameStore()
+  const { socketGem, unsocketGem, inventory, isLoading } = useGameStore(
+    useShallow(s => ({
+      socketGem: s.socketGem,
+      unsocketGem: s.unsocketGem,
+      inventory: s.inventory,
+      isLoading: s.isLoading,
+    }))
+  )
   const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot | null>(null)
 
   const selectedItem = selectedSlot ? equipment[selectedSlot] : null

@@ -62,7 +62,6 @@ export function NavCard({ item, highlight }: NavCardProps) {
               width={28}
               height={28}
               className="h-7 w-7 object-contain"
-              unoptimized
             />
           ) : (
             <Globe className="text-muted-foreground h-4 w-4" />

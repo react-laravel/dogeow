@@ -1,49 +1,10 @@
 'use client'
 
 import { useState, useCallback, useMemo, useRef } from 'react'
-import Image from 'next/image'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '../../stores/gameStore'
 import type { SkillWithLearnedState, CharacterClass } from '../../types'
-import { getRpgSkillImageUrl } from '../../utils/assetUrls'
-
-/** 技能图标 */
-function SkillIcon({
-  icon,
-  effectKey,
-  name,
-}: {
-  icon?: string | null
-  effectKey?: string | null
-  name: string
-}) {
-  const resolvedIcon = (() => {
-    if (effectKey) {
-      return effectKey.endsWith('.png') ? effectKey : `${effectKey}.png`
-    }
-    if (icon && /\.(png|jpe?g|webp|gif|svg)$/i.test(icon)) return icon
-    return null
-  })()
-  const fallback = icon && icon.length <= 4 ? icon : (name?.[0] ?? '?')
-  const iconFile = resolvedIcon
-  const [useImg, setUseImg] = useState(iconFile != null)
-  const src = useImg && iconFile ? getRpgSkillImageUrl(iconFile) : ''
-  return (
-    <span className="bg-muted relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded text-lg">
-      {src ? (
-        <Image
-          src={src}
-          alt={name}
-          fill
-          className="object-cover"
-          sizes="40px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        fallback
-      )}
-    </span>
-  )
-}
+import { SkillIcon } from '../shared/SkillIcon'
 
 /** 技能分支配置 */
 const BRANCH_CONFIG: Record<string, { name: string; color: string; icon: string }> = {
@@ -101,7 +62,9 @@ function SkillCard({
       className={cardClass}
       onClick={() => !isLearned && !isLocked && canLearn && onLearn(skill)}
     >
-      <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name || ''} />
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center">
+        <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name || ''} />
+      </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-foreground text-sm font-medium">{skill.name}</span>
@@ -237,7 +200,14 @@ function BranchView({
 }
 
 export function SkillPanel() {
-  const { character, skills, learnSkill, isLoading } = useGameStore()
+  const { character, skills, learnSkill, isLoading } = useGameStore(
+    useShallow(s => ({
+      character: s.character,
+      skills: s.skills,
+      learnSkill: s.learnSkill,
+      isLoading: s.isLoading,
+    }))
+  )
   const [learningSkill, setLearningSkill] = useState<SkillWithLearnedState | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<string>('all')
 

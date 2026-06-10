@@ -5,12 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ChatMessageItem } from '../ChatMessageItem'
 
 vi.mock('next/image', () => ({
-  default: ({
-    src,
-    alt,
-    unoptimized: _unoptimized,
-    ...props
-  }: React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => (
+  default: ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
     <img src={src} alt={alt} {...props} />
   ),
 }))

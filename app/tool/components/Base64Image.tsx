@@ -168,7 +168,6 @@ export default function Base64Image() {
                           alt="预览"
                           width={192}
                           height={128}
-                          unoptimized
                           className="max-h-32 max-w-48 object-contain"
                         />
                       </div>
@@ -223,7 +222,6 @@ export default function Base64Image() {
                         alt="Base64 解码预览"
                         width={400}
                         height={256}
-                        unoptimized
                         className="max-h-64 max-w-full object-contain"
                       />
                     </div>

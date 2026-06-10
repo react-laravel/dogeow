@@ -21,15 +21,7 @@ export const MapCardMonsterAvatar = memo(function MapCardMonsterAvatar({
       title={name}
     >
       {src && !failed ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          unoptimized
-          className="object-cover"
-          sizes="24px"
-          onError={handleError}
-        />
+        <Image src={src} alt="" fill className="object-cover" sizes="24px" onError={handleError} />
       ) : (
         (name?.[0] ?? '?')
       )}

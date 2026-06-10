@@ -55,7 +55,6 @@ export const MonsterIcon = memo(function MonsterIcon({
         src={src}
         alt={name}
         fill
-        unoptimized
         className="object-cover"
         sizes={size === 'sm' ? '48px' : size === 'lg' ? '96px' : '64px'}
         onError={handleError}

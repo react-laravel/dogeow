@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useGameStore } from './stores/gameStore'
 import { CreateCharacter } from './components/character/CreateCharacter'
 import { CharacterSelect } from './components/character/CharacterSelect'
@@ -18,8 +18,7 @@ import { useCombatWebSocket } from './hooks/useCombatWebSocket'
 import { useLockAppScroll } from './hooks/useLockAppScroll'
 import { RpgRegistrationGate } from './components/auth/RpgRegistrationGate'
 import useAuthStore from '@/stores/authStore'
-import { CopperDisplay } from './components/shared/CopperDisplay'
-import { CircularProgress } from './components/shared/CircularProgress'
+import { RpgStatusHeader } from './components/shared/RpgStatusHeader'
 import { soundManager } from './utils/soundManager'
 
 import './rpg.module.css'
@@ -31,42 +30,34 @@ interface RPGGameClientProps {
 }
 
 export default function RPGGameClient({ requireRegistration = false }: RPGGameClientProps) {
-  const {
-    character,
-    characters,
-    selectedCharacterId,
-    activeTab,
-    setActiveTab,
-    fetchCharacter,
-    fetchCharacters,
-    fetchInventory,
-    fetchSkills,
-    fetchMaps,
-    fetchCombatStatus,
-    fetchCombatLogs,
-    isLoading,
-    error,
-    isFighting,
-    shouldAutoCombat,
-    currentMap,
-    currentHp,
-    currentMana,
-    startCombat,
-    stopCombat,
-    setShouldAutoCombat,
-    combatStats,
-    combatResult,
-    experienceTable,
-  } = useGameStore()
+  const character = useGameStore(s => s.character)
+  const characters = useGameStore(s => s.characters)
+  const selectedCharacterId = useGameStore(s => s.selectedCharacterId)
+  const activeTab = useGameStore(s => s.activeTab)
+  const setActiveTab = useGameStore(s => s.setActiveTab)
+  const fetchCharacter = useGameStore(s => s.fetchCharacter)
+  const fetchCharacters = useGameStore(s => s.fetchCharacters)
+  const fetchInventory = useGameStore(s => s.fetchInventory)
+  const fetchSkills = useGameStore(s => s.fetchSkills)
+  const fetchMaps = useGameStore(s => s.fetchMaps)
+  const fetchCombatStatus = useGameStore(s => s.fetchCombatStatus)
+  const fetchCombatLogs = useGameStore(s => s.fetchCombatLogs)
+  const isLoading = useGameStore(s => s.isLoading)
+  const error = useGameStore(s => s.error)
+  const startCombat = useGameStore(s => s.startCombat)
+  const stopCombat = useGameStore(s => s.stopCombat)
+  const setShouldAutoCombat = useGameStore(s => s.setShouldAutoCombat)
 
   const { isAuthenticated, loading: authLoading } = useAuthStore()
   const [showCreateView, setShowCreateView] = useState(false)
   const [initialFetchDone, setInitialFetchDone] = useState(false)
-  // 切换 tab 时重置滚动位置
-  const handleTabChange = (tabId: typeof activeTab) => {
-    window.scrollTo(0, 0)
-    setActiveTab(tabId)
-  }
+  const handleTabChange = useCallback(
+    (tabId: typeof activeTab) => {
+      window.scrollTo(0, 0)
+      setActiveTab(tabId)
+    },
+    [setActiveTab]
+  )
   // 视图由数据派生，避免在 effect 中 setState；首次拉取完成前固定为 select 避免闪屏
   let resolvedView: GameView
   if (!initialFetchDone) {
@@ -105,50 +96,54 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   const isShopTab = activeTab === 'shop' && resolvedView === 'game' && character != null
   useLockAppScroll(isShopTab)
 
-  // 自动挂机战斗逻辑，维护自动刷怪定时器
+  // 自动挂机战斗：用 subscribe 避免 HP/战斗推送触发整页重渲染
   useEffect(() => {
-    if (!combatStats) return
+    const runAutoCombat = () => {
+      const state = useGameStore.getState()
+      const {
+        combatStats,
+        currentHp,
+        character: activeCharacter,
+        currentMap,
+        isFighting,
+        shouldAutoCombat,
+      } = state
 
-    const hpValue = currentHp ?? combatStats.max_hp ?? 0
-    const autoStartKey = character?.id && currentMap?.id ? `${character.id}:${currentMap.id}` : null
+      if (!combatStats) return
 
-    if (hpValue <= 0 && isFighting) {
-      stopCombatRef.current()
-      setShouldAutoCombatRef.current(false)
-      autoStartRequestKeyRef.current = null
-      return
+      const hpValue = currentHp ?? combatStats.max_hp ?? 0
+      const autoStartKey =
+        activeCharacter?.id && currentMap?.id ? `${activeCharacter.id}:${currentMap.id}` : null
+
+      if (hpValue <= 0 && isFighting) {
+        stopCombatRef.current()
+        setShouldAutoCombatRef.current(false)
+        autoStartRequestKeyRef.current = null
+        return
+      }
+
+      if (!combatStatusReadyRef.current) return
+
+      if (!shouldAutoCombat || !currentMap || !autoStartKey || hpValue <= 0) {
+        autoStartRequestKeyRef.current = null
+        return
+      }
+
+      if (isFighting) {
+        autoStartRequestKeyRef.current = autoStartKey
+        return
+      }
+
+      if (autoStartRequestKeyRef.current !== autoStartKey) {
+        autoStartRequestKeyRef.current = autoStartKey
+        void startCombatRef.current()
+      }
     }
 
-    if (!combatStatusReadyRef.current) {
-      return
-    }
-
-    if (!shouldAutoCombat || !currentMap || !autoStartKey || hpValue <= 0) {
-      autoStartRequestKeyRef.current = null
-      return
-    }
-
-    if (isFighting) {
-      autoStartRequestKeyRef.current = autoStartKey
-      return
-    }
-
-    // 自动发起战斗：同一角色/地图只尝试一次，避免 start 失败时死循环重试
-    if (autoStartRequestKeyRef.current !== autoStartKey) {
-      autoStartRequestKeyRef.current = autoStartKey
-      void startCombatRef.current()
-    }
-
-    // 自动战斗由后端 start 接口启动，服务器每 3 秒执行一回合并通过 Reverb WebSocket 推送，无需前端定时器
-  }, [
-    character?.id,
-    isFighting,
-    currentMap,
-    currentMap?.id,
-    shouldAutoCombat,
-    combatStats,
-    currentHp,
-  ])
+    const unsub = useGameStore.subscribe(runAutoCombat)
+    runAutoCombat()
+    return unsub
+  }, [])
 
   // 认证完成后拉取角色列表；.then 内 setState 为异步，不触发 set-state-in-effect 规则
   useEffect(() => {
@@ -262,15 +257,6 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     { id: 'settings' as const, name: '设置', icon: '⚙️' },
   ]
 
-  const { expPercent, expToNext } =
-    character && experienceTable
-      ? (() => {
-          const next = experienceTable[character.level + 1] ?? (character.level + 1) * 5000
-          const pct = next > 0 ? Math.max(0, Math.min(100, (character.experience / next) * 100)) : 0
-          return { expPercent: pct, expToNext: next }
-        })()
-      : { expPercent: 0, expToNext: 0 }
-
   return (
     <div
       className={`bg-background text-foreground flex flex-col ${
@@ -287,65 +273,9 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
       >
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            {character && combatStats && (
-              <div className="flex w-full items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-                {/* 左侧：货币 */}
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="self-center text-yellow-600 dark:text-yellow-400">
-                    <CopperDisplay copper={character.copper} size="sm" maxParts={3} />
-                  </span>
-                </div>
-                {/* 中间：血量/魔量 */}
-                <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <CircularProgress
-                      percent={
-                        combatStats.max_hp > 0
-                          ? ((currentHp ?? combatStats.max_hp) / combatStats.max_hp) * 100
-                          : 0
-                      }
-                      color="red"
-                    />
-                    <span className="text-xs text-red-500 sm:text-sm dark:text-red-400">
-                      {currentHp ?? combatStats.max_hp}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CircularProgress
-                      percent={
-                        combatStats.max_mana > 0
-                          ? ((currentMana ?? combatStats.max_mana) / combatStats.max_mana) * 100
-                          : 0
-                      }
-                      color="blue"
-                    />
-                    <span className="text-xs text-blue-500 sm:text-sm dark:text-blue-400">
-                      {currentMana ?? combatStats.max_mana}
-                    </span>
-                  </div>
-                </div>
-                {/* 右侧：经验值 */}
-                <div className="flex shrink-0">
-                  <span className="text-muted-foreground text-xs sm:text-sm">
-                    {character.experience.toLocaleString()} / {expToNext.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            )}
+            <RpgStatusHeader />
           </div>
         </div>
-        {/* 经验条 1px，紧贴状态栏下方 */}
-        {character && (
-          <div className="bg-muted absolute right-0 bottom-0 left-0 h-px overflow-hidden">
-            <div
-              className="h-full min-w-0 transition-[width] duration-300"
-              style={{
-                width: `${expPercent}%`,
-                backgroundColor: expPercent > 0 ? '#f59e0b' : 'transparent',
-              }}
-            />
-          </div>
-        )}
       </header>
 
       {/* 主体内容/导航 */}

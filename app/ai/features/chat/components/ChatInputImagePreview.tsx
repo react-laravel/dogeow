@@ -27,7 +27,6 @@ export const ChatInputImagePreview = React.memo<ChatInputImagePreviewProps>(
               alt={`上传图片 ${index + 1}`}
               width={56}
               height={56}
-              unoptimized
               className="h-14 w-14 rounded-md border object-cover"
             />
             {item.uploading && (

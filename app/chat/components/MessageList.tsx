@@ -111,7 +111,6 @@ const MessageItem = React.memo(function MessageItem({
             loading="lazy"
             decoding="async"
             priority={false}
-            unoptimized
           />
         ) : (
           <MentionHighlight text={messageText} className="break-words whitespace-pre-wrap" />

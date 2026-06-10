@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { ItemActionType } from '@/components/game'
 import type { GameItem } from '../../types'
 import { getInventoryCompareActions, handleInventoryCompareAction } from './inventoryEquipmentUtils'
@@ -46,73 +46,94 @@ export function useInventoryPanelActions({
     unsocketGem,
   })
 
-  const handleEquip = async (item: GameItem | null = selectedItem) => {
-    if (!item) return
+  const handleEquip = useCallback(
+    async (item: GameItem | null = selectedItem) => {
+      if (!item) return
 
-    await equipItem(item.id)
-    setSelectedItem(null)
-  }
+      await equipItem(item.id)
+      setSelectedItem(null)
+    },
+    [equipItem, selectedItem]
+  )
 
-  const handleSell = async (item: GameItem | null = selectedItem) => {
-    if (!item) return
+  const handleSell = useCallback(
+    async (item: GameItem | null = selectedItem) => {
+      if (!item) return
 
-    setSelectedItem(item)
+      setSelectedItem(item)
 
-    if (item.quantity > 1) {
-      setSellQuantity(1)
-      setShowSellConfirm(true)
-      return
-    }
+      if (item.quantity > 1) {
+        setSellQuantity(1)
+        setShowSellConfirm(true)
+        return
+      }
 
-    await sellItem(item.id, 1)
-    setSelectedItem(null)
-  }
+      await sellItem(item.id, 1)
+      setSelectedItem(null)
+    },
+    [sellItem, selectedItem]
+  )
 
-  const handleSellConfirm = async () => {
+  const handleSellConfirm = useCallback(async () => {
     if (!selectedItem) return
 
     await sellItem(selectedItem.id, sellQuantity)
     setShowSellConfirm(false)
     setSelectedItem(null)
-  }
+  }, [selectedItem, sellItem, sellQuantity])
 
-  const closeSellConfirm = () => {
+  const closeSellConfirm = useCallback(() => {
     setShowSellConfirm(false)
-  }
+  }, [])
 
-  const handleMove = async (toStorage: boolean, item: GameItem | null = selectedItem) => {
-    if (!item) return
+  const handleMove = useCallback(
+    async (toStorage: boolean, item: GameItem | null = selectedItem) => {
+      if (!item) return
 
-    await moveItem(item.id, toStorage)
-    setSelectedItem(null)
-  }
+      await moveItem(item.id, toStorage)
+      setSelectedItem(null)
+    },
+    [moveItem, selectedItem]
+  )
 
-  const handleUsePotion = async (item: GameItem | null = selectedItem) => {
-    if (!item) return
+  const handleUsePotion = useCallback(
+    async (item: GameItem | null = selectedItem) => {
+      if (!item) return
 
-    await consumePotion(item.id)
-    setSelectedItem(null)
-  }
+      await consumePotion(item.id)
+      setSelectedItem(null)
+    },
+    [consumePotion, selectedItem]
+  )
 
-  const handleUnsocketGem = async (socketIndex: number, item: GameItem | null = selectedItem) => {
-    await handleInventoryUnsocketGem(item, socketIndex)
-  }
+  const handleUnsocketGem = useCallback(
+    async (socketIndex: number, item: GameItem | null = selectedItem) => {
+      await handleInventoryUnsocketGem(item, socketIndex)
+    },
+    [handleInventoryUnsocketGem, selectedItem]
+  )
 
   const canSocket = canSocketItem
   const canUnsocket = canUnsocketItem
 
-  const getCompareActions = (item: GameItem): ItemActionType[] =>
-    getInventoryCompareActions(item, { canSocket, canUnsocket })
+  const getCompareActions = useCallback(
+    (item: GameItem): ItemActionType[] =>
+      getInventoryCompareActions(item, { canSocket, canUnsocket }),
+    [canSocket, canUnsocket]
+  )
 
-  const handleCompareAction = (action: ItemActionType, item: GameItem) => {
-    handleInventoryCompareAction(action, item, {
-      onEquip: handleEquip,
-      onMoveToStorage: currentItem => handleMove(true, currentItem),
-      onSell: handleSell,
-      onSocket: openGemSelector,
-      onUnsocket: currentItem => handleUnsocketGem(0, currentItem),
-    })
-  }
+  const handleCompareAction = useCallback(
+    (action: ItemActionType, item: GameItem) => {
+      handleInventoryCompareAction(action, item, {
+        onEquip: handleEquip,
+        onMoveToStorage: currentItem => handleMove(true, currentItem),
+        onSell: handleSell,
+        onSocket: openGemSelector,
+        onUnsocket: currentItem => handleUnsocketGem(0, currentItem),
+      })
+    },
+    [handleEquip, handleMove, handleSell, handleUnsocketGem, openGemSelector]
+  )
 
   return {
     canSocket,

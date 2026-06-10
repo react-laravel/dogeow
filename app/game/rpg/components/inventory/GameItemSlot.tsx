@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import { ItemIcon } from '@/components/game'
 import type { GameItem } from '../../types'
 import { QUALITY_COLORS } from '../../types'
@@ -18,7 +18,7 @@ interface GameItemSlotProps {
   variant: SlotVariant
 }
 
-export function GameItemSlot({
+export const GameItemSlot = memo(function GameItemSlot({
   emptyLabel,
   footer,
   isSelected = false,
@@ -69,7 +69,7 @@ export function GameItemSlot({
       {item ? <FilledSlotContent item={item} /> : <EmptySlotLabel label={emptyLabel} />}
     </button>
   )
-}
+})
 
 function FilledSlotContent({
   item,

@@ -31,7 +31,6 @@ export const PreviewContent = memo<PreviewContentProps>(
           alt={previewFile?.name ?? ''}
           width={800}
           height={600}
-          unoptimized
           className="max-h-[60vh] max-w-full object-contain"
         />
       )

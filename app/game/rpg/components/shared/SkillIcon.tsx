@@ -33,7 +33,6 @@ export const SkillIcon = memo(function SkillIcon({
           src={src}
           alt={name}
           fill
-          unoptimized
           className="object-cover"
           sizes="36px"
           onError={handleError}

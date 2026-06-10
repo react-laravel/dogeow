@@ -10,7 +10,6 @@ vi.mock('next/image', () => ({
     alt,
     onError,
     fill: _fill,
-    unoptimized: _unoptimized,
     priority: _priority,
     ...props
   }: {
@@ -18,7 +17,6 @@ vi.mock('next/image', () => ({
     alt?: string
     onError?: () => void
     fill?: boolean
-    unoptimized?: boolean
     priority?: boolean
     [k: string]: unknown
   }) => <img src={src} alt={alt} onError={onError} data-testid="next-image" {...props} />,

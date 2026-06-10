@@ -190,7 +190,6 @@ export default function MoonDiceGame(_props: MoonDiceGameProps) {
         width={48}
         height={48}
         className="h-12 w-12 rounded-md border bg-white object-contain shadow-sm"
-        unoptimized
       />
     )
   }

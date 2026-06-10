@@ -44,7 +44,6 @@ export const ChatMessageItem = React.memo<ChatMessageItemProps>(({ message, vari
         alt={`消息图片 ${index + 1}`}
         width={128}
         height={128}
-        unoptimized
         className="h-24 w-24 rounded-md border object-cover"
       />
     )
