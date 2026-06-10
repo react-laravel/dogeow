@@ -1,29 +1,38 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { getRpgMonsterImageUrl } from '../../utils/assetUrls'
 
-export function MapCardMonsterAvatar({ icon, name }: { icon?: string | null; name: string }) {
-  const [useImg, setUseImg] = useState(true)
-  const src = getRpgMonsterImageUrl(icon)
+export const MapCardMonsterAvatar = memo(function MapCardMonsterAvatar({
+  icon,
+  name,
+}: {
+  icon?: string | null
+  name: string
+}) {
+  const src = useMemo(() => getRpgMonsterImageUrl(icon), [icon])
+  const [failed, setFailed] = useState(false)
+  const handleError = useCallback(() => setFailed(true), [])
+
   return (
     <span
       className="bg-muted/80 relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 text-[10px] font-medium"
       title={name}
     >
-      {useImg ? (
+      {src && !failed ? (
         <Image
           src={src}
           alt=""
           fill
+          unoptimized
           className="object-cover"
           sizes="24px"
-          onError={() => setUseImg(false)}
+          onError={handleError}
         />
       ) : (
         (name?.[0] ?? '?')
       )}
     </span>
   )
-}
+})

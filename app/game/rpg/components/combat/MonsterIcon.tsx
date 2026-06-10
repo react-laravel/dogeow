@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { getRpgMonsterImageUrl } from '../../utils/assetUrls'
 
 import { type MonsterType } from '../../types'
@@ -14,7 +14,7 @@ const MONSTER_TYPE_BORDER_COLORS: Record<MonsterType, string> = {
 }
 
 /** 怪物图标：仅使用后端返回的英文 icon 文件名，缺失时回退为文字占位。 */
-export function MonsterIcon({
+export const MonsterIcon = memo(function MonsterIcon({
   icon,
   name,
   size = 'md',
@@ -26,8 +26,9 @@ export function MonsterIcon({
   monsterType?: MonsterType
 }) {
   const fallback = name && name[0] ? name[0] : '?'
-  const src = getRpgMonsterImageUrl(icon)
-  const [useImg, setUseImg] = useState(true)
+  const src = useMemo(() => getRpgMonsterImageUrl(icon), [icon])
+  const [failed, setFailed] = useState(false)
+  const handleError = useCallback(() => setFailed(true), [])
   const sizeClass =
     size === 'sm'
       ? 'h-12 w-12 text-lg'
@@ -35,22 +36,30 @@ export function MonsterIcon({
         ? 'h-20 w-20 text-2xl sm:h-24 sm:w-24 sm:text-3xl'
         : 'h-14 w-14 text-xl sm:h-16 sm:w-16 sm:text-2xl'
   const borderColorClass = MONSTER_TYPE_BORDER_COLORS[monsterType]
+
+  if (!src || failed) {
+    return (
+      <span
+        className={`bg-destructive/20 relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 ${borderColorClass} ${sizeClass}`}
+      >
+        {fallback}
+      </span>
+    )
+  }
+
   return (
     <span
       className={`bg-destructive/20 relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 ${borderColorClass} ${sizeClass}`}
     >
-      {useImg && src ? (
-        <Image
-          src={src}
-          alt={name}
-          fill
-          className="object-cover"
-          sizes={size === 'sm' ? '48px' : size === 'lg' ? '96px' : '64px'}
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        fallback
-      )}
+      <Image
+        src={src}
+        alt={name}
+        fill
+        unoptimized
+        className="object-cover"
+        sizes={size === 'sm' ? '48px' : size === 'lg' ? '96px' : '64px'}
+        onError={handleError}
+      />
     </span>
   )
-}
+})
