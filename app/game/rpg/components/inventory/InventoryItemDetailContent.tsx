@@ -1,0 +1,121 @@
+'use client'
+
+import { FullComparePanel, type ItemActionType } from '@/components/game'
+import type { GameItem } from '../../types'
+import { isEquippable } from '../../utils/itemUtils'
+import { InventoryDetailActions } from './InventoryDetailActions'
+import { InventoryItemDetailCard } from './InventoryItemDetailCard'
+import type { InventorySlotCell } from './inventoryUtils'
+
+interface InventoryItemDetailContentProps {
+  canSocket: (item: GameItem) => boolean
+  canUnsocket: (item: GameItem) => boolean
+  gemsInInventoryCount: number
+  getCompareActions: (item: GameItem) => ItemActionType[]
+  getEquippedItem: (item: GameItem) => GameItem | null
+  getEquippedRings: () => GameItem[]
+  handleCompareAction: (action: ItemActionType, item: GameItem) => void
+  hasEquippedItem: (item: GameItem) => boolean
+  isLoading: boolean
+  item: GameItem
+  onClose: () => void
+  onEquip: () => void
+  onMove: (toStorage: boolean) => void
+  onOpenGemSelector: (item: GameItem) => void
+  onSell: () => void
+  onUnsocketGem: (socketIndex: number) => void
+  onUsePotion: () => void
+  source: InventorySlotCell['source']
+}
+
+export function getInventoryDetailPopoverWidth(
+  item: GameItem,
+  showCompare: boolean,
+  ringCount: number
+) {
+  if (showCompare && item.definition?.type === 'ring' && ringCount === 2) {
+    return 'w-[840px]'
+  }
+  if (showCompare) {
+    return 'w-[420px]'
+  }
+  return 'w-[280px]'
+}
+
+export function InventoryItemDetailContent({
+  canSocket,
+  canUnsocket,
+  gemsInInventoryCount,
+  getCompareActions,
+  getEquippedItem,
+  getEquippedRings,
+  handleCompareAction,
+  hasEquippedItem,
+  isLoading,
+  item,
+  onClose,
+  onEquip,
+  onMove,
+  onOpenGemSelector,
+  onSell,
+  onUnsocketGem,
+  onUsePotion,
+  source,
+}: InventoryItemDetailContentProps) {
+  const showCompare = isEquippable(item) && source === 'inventory' && hasEquippedItem(item)
+  const equippedRings = item.definition?.type === 'ring' ? getEquippedRings() : []
+  const compareActions = showCompare ? getCompareActions(item) : []
+
+  return (
+    <div className="flex flex-col">
+      {showCompare && (
+        <>
+          {item.definition?.type === 'ring' &&
+            equippedRings.length === 2 &&
+            equippedRings.map(equippedRing => (
+              <FullComparePanel
+                key={equippedRing.id}
+                newItem={item}
+                equippedItem={equippedRing}
+                actions={compareActions}
+                onAction={action => handleCompareAction(action, item)}
+              />
+            ))}
+          {(item.definition?.type !== 'ring' || equippedRings.length !== 2) && (
+            <FullComparePanel
+              newItem={item}
+              equippedItem={getEquippedItem(item)!}
+              actions={compareActions}
+              onAction={action => handleCompareAction(action, item)}
+            />
+          )}
+        </>
+      )}
+      {!showCompare && (
+        <InventoryItemDetailCard
+          item={item}
+          onClose={onClose}
+          onUnsocketGem={onUnsocketGem}
+          isLoading={isLoading}
+          showBuyPrice
+          footer={
+            <InventoryDetailActions
+              canSocket={canSocket}
+              canUnsocket={canUnsocket}
+              gemsInInventoryCount={gemsInInventoryCount}
+              isLoading={isLoading}
+              item={item}
+              onEquip={onEquip}
+              onMove={onMove}
+              onOpenGemSelector={onOpenGemSelector}
+              onSell={onSell}
+              onUnsocketGem={onUnsocketGem}
+              onUsePotion={onUsePotion}
+              source={source}
+            />
+          }
+        />
+      )}
+    </div>
+  )
+}

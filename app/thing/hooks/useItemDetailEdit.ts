@@ -4,7 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useItemStore } from '@/app/thing/stores/itemStore'
 import { useAutoSave } from '@/hooks/useAutoSave'
-import { ItemFormData, UploadedImage, LocationSelection, Room, Spot, Tag } from '@/app/thing/types'
+import {
+  Item,
+  ItemFormData,
+  UploadedImage,
+  LocationSelection,
+  Room,
+  Spot,
+  Tag,
+} from '@/app/thing/types'
 import { INITIAL_FORM_DATA, AUTO_SAVE_DELAY } from '../constants'
 import {
   convertImagesToUploadedFormat,
@@ -18,7 +26,7 @@ import { logger } from '@/lib/logger'
 
 interface UseItemDetailEditProps {
   itemId: number | null
-  item: any
+  item: Item | null | undefined
   mode: 'view' | 'edit'
   open: boolean
 }
@@ -411,5 +419,7 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
     handleCategorySelect,
     loadRooms,
     loadSpots,
+    categories,
+    tags,
   }
 }

@@ -48,6 +48,7 @@ export const createPopoverMock = ({
         </PopoverContext.Provider>
       )
     },
+    PopoverAnchor: ({ children }: { children: ReactNode }) => <>{children}</>,
     PopoverTrigger: ({ children }: { children: ReactNode }) => {
       const { isOpen, onOpenChange } = useContext(PopoverContext)
 

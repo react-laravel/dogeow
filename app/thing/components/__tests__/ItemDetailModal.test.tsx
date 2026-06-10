@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useState } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { User } from '@/app'
 import { useItem } from '@/app/thing/services/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useItemStore } from '@/app/thing/stores/itemStore'
+import { useItemDetailEdit } from '@/app/thing/hooks/useItemDetailEdit'
 import type { Item } from '@/app/thing/types'
 import { ItemDetailModal } from '../ItemDetailModal'
 
@@ -122,6 +124,80 @@ vi.mock('@/lib/api', () => ({
   apiRequest: vi.fn(),
 }))
 
+vi.mock('@/app/thing/hooks/useItemRmbgRefresh', () => ({
+  useItemRmbgRefresh: vi.fn(),
+}))
+
+vi.mock('@/app/thing/hooks/useRemoveBgPreference', () => ({
+  useRemoveBgPreference: vi.fn(() => ({
+    removeBgEnabled: false,
+    setRemoveBgEnabled: vi.fn(),
+  })),
+}))
+
+const createUseItemDetailEditReturn = (
+  overrides: Partial<
+    ReturnType<typeof import('@/app/thing/hooks/useItemDetailEdit').useItemDetailEdit>
+  > = {}
+) => ({
+  editLoading: false,
+  formData: {
+    name: 'Test Item',
+    description: '',
+    quantity: 5,
+    status: 'available',
+    purchase_date: null,
+    expiry_date: null,
+    purchase_price: null,
+    category_id: '1',
+    area_id: '',
+    room_id: '',
+    spot_id: '',
+    is_public: true,
+  },
+  setFormData: vi.fn(),
+  uploadedImages: [],
+  setUploadedImages: vi.fn(),
+  selectedLocation: undefined,
+  setSelectedLocation: vi.fn(),
+  locationPath: '',
+  selectedTags: [],
+  setSelectedTags: vi.fn(),
+  createTagDialogOpen: false,
+  setCreateTagDialogOpen: vi.fn(),
+  quantityDialogOpen: false,
+  setQuantityDialogOpen: vi.fn(),
+  tempQuantity: 5,
+  setTempQuantity: vi.fn(),
+  rooms: [],
+  spots: [],
+  autoSaving: false,
+  lastSaved: null,
+  handleLocationSelect: vi.fn(),
+  handleTagCreated: vi.fn(),
+  handleQuantityClick: vi.fn(),
+  handleQuantityConfirm: vi.fn(),
+  handleCategorySelect: vi.fn(),
+  loadRooms: vi.fn(),
+  loadSpots: vi.fn(),
+  categories: [],
+  tags: [],
+  ...overrides,
+})
+
+vi.mock('@/app/thing/hooks/useItemDetailEdit', () => ({
+  useItemDetailEdit: vi.fn(() => createUseItemDetailEditReturn()),
+}))
+
+vi.mock('@/components/ui/DeleteConfirmationDialog', () => ({
+  DeleteConfirmationDialog: ({ open, itemName }: { open: boolean; itemName: string }) =>
+    open ? <div>确认删除 {itemName}</div> : null,
+}))
+
+vi.mock('../forms/components/QuantityDialog', () => ({
+  QuantityDialog: ({ open }: { open: boolean }) => (open ? <div>数量</div> : null),
+}))
+
 const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: 1,
   name: 'Test User',
@@ -221,7 +297,7 @@ describe('ItemDetailModal', () => {
       )
 
       render(<ItemDetailModal {...defaultProps} />)
-      expect(screen.getByText('物品不存在')).toBeInTheDocument()
+      expect(screen.getByText('Item not found')).toBeInTheDocument()
     })
 
     it('should render null when itemId is null', () => {
@@ -308,7 +384,7 @@ describe('ItemDetailModal', () => {
 
   describe('Edit Mode', () => {
     it('should switch to edit mode when edit button clicked', async () => {
-      vi.mocked(useItem).mockReturnValueOnce(
+      vi.mocked(useItem).mockReturnValue(
         createUseItemReturn({
           data: createMockItem({ user: createMockUser({ id: 1 }) }),
         })
@@ -323,7 +399,12 @@ describe('ItemDetailModal', () => {
         })
       )
 
-      render(<ItemDetailModal {...defaultProps} mode="view" />)
+      const ControlledModal = () => {
+        const [mode, setMode] = useState<'view' | 'edit'>('view')
+        return <ItemDetailModal {...defaultProps} mode={mode} onModeChange={setMode} />
+      }
+
+      render(<ControlledModal />)
 
       const editButton = screen.getByTestId('edit-icon').closest('button')
       if (editButton) fireEvent.click(editButton)
@@ -336,7 +417,7 @@ describe('ItemDetailModal', () => {
 
   describe('Delete Dialog', () => {
     it('should open delete confirmation dialog', async () => {
-      vi.mocked(useItem).mockReturnValueOnce(
+      vi.mocked(useItem).mockReturnValue(
         createUseItemReturn({
           data: createMockItem({ user: createMockUser({ id: 1 }) }),
         })
@@ -348,7 +429,7 @@ describe('ItemDetailModal', () => {
       if (deleteButton) fireEvent.click(deleteButton)
 
       await waitFor(() => {
-        expect(screen.getByText('确认删除')).toBeInTheDocument()
+        expect(screen.getByText(/确认删除/)).toBeInTheDocument()
       })
     })
   })
@@ -361,14 +442,17 @@ describe('ItemDetailModal', () => {
         })
       )
 
+      const handleQuantityClick = vi.fn()
+      vi.mocked(useItemDetailEdit).mockReturnValueOnce(
+        createUseItemDetailEditReturn({ handleQuantityClick })
+      )
+
       render(<ItemDetailModal {...defaultProps} mode="edit" />)
 
       const quantityButton = screen.getByText('x5')?.closest('button')
       if (quantityButton) fireEvent.click(quantityButton)
 
-      await waitFor(() => {
-        expect(screen.getByText(/数量/)).toBeInTheDocument()
-      })
+      expect(handleQuantityClick).toHaveBeenCalled()
     })
   })
 

@@ -6,7 +6,6 @@ import type { GameItem } from '../../types'
 import { useGameStore } from '../../stores/gameStore'
 import { GemSelectorDialog } from './GemSelectorDialog'
 import { InventoryGrid } from './InventoryGrid'
-import { InventoryItemDetailOverlay } from './InventoryItemDetailOverlay'
 import { InventoryToolbar } from './InventoryToolbar'
 import { SellQuantityDialog } from './SellQuantityDialog'
 import {
@@ -139,26 +138,6 @@ export function InventoryPanel() {
         onClose={closeSellConfirm}
         onConfirm={handleSellConfirm}
       />
-      <InventoryItemDetailOverlay
-        canSocket={canSocket}
-        canUnsocket={canUnsocket}
-        gemsInInventoryCount={gemsInInventory.length}
-        getCompareActions={getCompareActions}
-        getEquippedItem={getEquippedItem}
-        getEquippedRings={getEquippedRings}
-        handleCompareAction={handleCompareAction}
-        hasEquippedItem={hasEquippedItem}
-        isLoading={isLoading}
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-        onEquip={onEquip}
-        onMove={onMove}
-        onOpenGemSelector={openGemSelector}
-        onSell={onSell}
-        onUnsocketGem={onUnsocketGem}
-        onUsePotion={onUsePotion}
-        source={showStorage ? 'storage' : 'inventory'}
-      />
       <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row">
         {/* 背包/仓库 - 装备栏已移至角色面板 */}
         <div className="bg-card border-border flex min-w-0 flex-1 flex-col rounded-lg border p-3 sm:p-4">
@@ -179,9 +158,23 @@ export function InventoryPanel() {
           />
 
           <InventoryGrid
+            canSocket={canSocket}
+            canUnsocket={canUnsocket}
             displaySlots={displaySlots}
+            gemsInInventoryCount={gemsInInventory.length}
+            getCompareActions={getCompareActions}
+            getEquippedItem={getEquippedItem}
+            getEquippedRings={getEquippedRings}
+            handleCompareAction={handleCompareAction}
+            hasEquippedItem={hasEquippedItem}
             isLoading={isLoading}
+            onEquip={onEquip}
+            onMove={onMove}
+            onOpenGemSelector={openGemSelector}
             onSelectedItemChange={setSelectedItem}
+            onSell={onSell}
+            onUnsocketGem={onUnsocketGem}
+            onUsePotion={onUsePotion}
             selectedItemId={selectedItemId}
           />
         </div>
