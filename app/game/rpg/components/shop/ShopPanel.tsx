@@ -161,7 +161,7 @@ export function ShopPanel() {
 
   return (
     <>
-      <div className="-ml-3 flex h-full min-h-0 flex-col overflow-hidden sm:-ml-4">
+      <div className="-ml-3 flex h-full min-h-0 flex-col overflow-hidden overscroll-none sm:-ml-4">
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <aside className="flex w-[3.75rem] shrink-0 flex-col justify-center gap-2.5 py-3 sm:w-16 sm:gap-3">
             {SHOP_TYPE_FILTERS.map(filter => {

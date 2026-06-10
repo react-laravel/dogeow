@@ -15,6 +15,7 @@ import { PotionSettings } from './components/settings/PotionSettings'
 import { FloatingTextOverlay } from './components/shared/FloatingTextOverlay'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { useCombatWebSocket } from './hooks/useCombatWebSocket'
+import { useLockAppScroll } from './hooks/useLockAppScroll'
 import { RpgRegistrationGate } from './components/auth/RpgRegistrationGate'
 import useAuthStore from '@/stores/authStore'
 import { CopperDisplay } from './components/shared/CopperDisplay'
@@ -100,6 +101,9 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
 
   // 战斗WebSocket注册：character 未加载时用 selectedCharacterId 订阅，确保一开始就能收战斗推送
   useCombatWebSocket(character?.id ?? selectedCharacterId ?? null)
+
+  const isShopTab = activeTab === 'shop' && resolvedView === 'game' && character != null
+  useLockAppScroll(isShopTab)
 
   // 自动挂机战斗逻辑，维护自动刷怪定时器
   useEffect(() => {
@@ -268,7 +272,11 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
       : { expPercent: 0, expToNext: 0 }
 
   return (
-    <div className="bg-background text-foreground flex min-h-screen flex-col">
+    <div
+      className={`bg-background text-foreground flex flex-col ${
+        isShopTab ? 'h-full min-h-0 overflow-hidden overscroll-none' : 'min-h-screen'
+      }`}
+    >
       {requireRegistration && <RpgRegistrationGate />}
       <FloatingTextOverlay />
 
@@ -341,7 +349,11 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
       </header>
 
       {/* 主体内容/导航 */}
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col overflow-hidden px-3 pt-14 pb-3 sm:px-4 sm:pt-16 sm:pb-4">
+      <main
+        className={`mx-auto flex w-full max-w-7xl flex-1 flex-col overflow-hidden px-3 sm:px-4 ${
+          isShopTab ? 'min-h-0 pt-14 pb-0 sm:pt-16' : 'pt-14 pb-3 sm:pt-16 sm:pb-4'
+        }`}
+      >
         <nav className="bg-muted mb-4 hidden gap-1 rounded-lg p-1 lg:flex">
           {tabs.map(tab => (
             <button
@@ -366,16 +378,14 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
         )}
 
         <div
-          className={`flex min-h-0 flex-1 flex-col pb-32 lg:pb-4 ${
-            activeTab === 'shop' ? 'overflow-hidden' : 'overflow-y-auto'
+          className={`flex min-h-0 flex-1 flex-col ${
+            isShopTab
+              ? 'overflow-hidden overscroll-none pb-28 lg:pb-4'
+              : 'overflow-y-auto pb-32 lg:pb-4'
           }`}
         >
           <div
-            className={
-              activeTab === 'shop'
-                ? 'flex h-full min-h-0 w-full min-w-0 flex-col'
-                : 'w-full min-w-0'
-            }
+            className={isShopTab ? 'flex h-full min-h-0 w-full min-w-0 flex-col' : 'w-full min-w-0'}
           >
             <ErrorBoundary>
               {activeTab === 'character' && <CharacterPanel />}
