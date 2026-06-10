@@ -281,9 +281,10 @@ export function FullComparePanel({
   const equippedStats = getItemTotalStats(equippedItem)
   const comparableStatKeys = getComparableStatKeys(equippedStats, newStats)
 
-  // 获取新物品的卖出价（与背包槽位一致：优先 sell_price，否则按 buy_price 一半）
-  const newItemSellPrice =
-    newItem.sell_price ?? Math.floor((newItem.definition?.buy_price ?? 0) / 2)
+  // 商店对比显示买入价；背包对比显示卖出价（与背包槽位一致）
+  const newItemDisplayPrice = isShop
+    ? (newItem.definition?.buy_price ?? 0)
+    : (newItem.sell_price ?? Math.floor((newItem.definition?.buy_price ?? 0) / 2))
   const newItemRequiredLevel = newItem.definition?.required_level ?? 0
 
   // 获取已装备物品的价格信息
@@ -380,7 +381,7 @@ export function FullComparePanel({
             )}
             <div className="flex justify-between text-yellow-600 dark:text-yellow-400">
               <span>{isShop ? '价格' : '卖出'}</span>
-              <CopperDisplay copper={newItemSellPrice} size="xs" nowrap />
+              <CopperDisplay copper={newItemDisplayPrice} size="xs" nowrap />
             </div>
           </div>
         </div>
