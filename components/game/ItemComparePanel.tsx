@@ -11,6 +11,40 @@ import {
   getEquipmentSlot,
 } from '@/app/game/rpg/utils/itemUtils'
 import { CopperDisplay } from '@/app/game/rpg/components/shared/CopperDisplay'
+import { ItemSocketIndicators } from '@/app/game/rpg/components/inventory/ItemSocketIndicators'
+
+function CompareItemIconSlot({
+  item,
+  sizeClass = 'h-10 w-10',
+}: {
+  item: GameItem
+  sizeClass?: string
+}) {
+  return (
+    <div
+      className={`relative flex ${sizeClass} items-center justify-center rounded border-2`}
+      style={{ borderColor: QUALITY_COLORS[item.quality as ItemQuality] }}
+    >
+      <ItemIcon item={item} className="drop-shadow-sm" />
+      <ItemSocketIndicators item={item} className="absolute -top-1 -right-1 z-10" />
+    </div>
+  )
+}
+
+function getComparedStatClass(value: number, compareValue: number): string {
+  if (value > compareValue) return 'font-medium text-green-500'
+  if (value < compareValue) return 'font-medium text-red-500'
+  return 'font-medium'
+}
+
+function getComparableStatKeys(
+  leftStats: Record<string, number>,
+  rightStats: Record<string, number>
+): string[] {
+  return Array.from(new Set([...Object.keys(leftStats), ...Object.keys(rightStats)])).filter(
+    stat => (leftStats[stat] || 0) !== 0 || (rightStats[stat] || 0) !== 0
+  )
+}
 
 interface ItemComparePanelProps {
   newItem: GameItem | ShopItem
@@ -62,12 +96,7 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
         <div className="p-2">
           {/* 已装备物品图标 */}
           <div className="mb-2 flex justify-center">
-            <div
-              className="flex h-12 w-12 items-center justify-center rounded border-2"
-              style={{ borderColor: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
-            >
-              <ItemIcon item={equippedItem} className="drop-shadow-sm" />
-            </div>
+            <CompareItemIconSlot item={equippedItem} sizeClass="h-12 w-12" />
           </div>
           {/* 已装备物品名称 */}
           <div className="mb-2 text-center">
@@ -111,15 +140,15 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
         <div className="p-2">
           {/* 新物品图标 */}
           <div className="mb-2 flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded border-2 border-green-500">
-              {isShopItem ? (
+            {isShopItem ? (
+              <div className="flex h-12 w-12 items-center justify-center rounded border-2 border-green-500">
                 <span className="text-2xl">
                   {getShopItemIcon((newItem as ShopItem).type, (newItem as ShopItem).sub_type)}
                 </span>
-              ) : (
-                <ItemIcon item={newItem as GameItem} className="drop-shadow-sm" />
-              )}
-            </div>
+              </div>
+            ) : (
+              <CompareItemIconSlot item={newItem as GameItem} sizeClass="h-12 w-12" />
+            )}
           </div>
           {/* 新物品名称 */}
           <div className="mb-2 text-center">
@@ -188,12 +217,7 @@ export function EquipmentComparePanel({
       <div className="p-2">
         {/* 已装备物品图标 */}
         <div className="mb-1 flex justify-center">
-          <div
-            className="relative flex h-9 w-9 items-center justify-center rounded border-2"
-            style={{ borderColor: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
-          >
-            <ItemIcon item={equippedItem} className="drop-shadow-sm" />
-          </div>
+          <CompareItemIconSlot item={equippedItem} sizeClass="h-9 w-9" />
         </div>
         {/* 已装备物品名称 */}
         <div className="mb-1 text-center">
@@ -239,7 +263,7 @@ export function EquipmentComparePanel({
   )
 }
 
-/** 完整对比面板 - 用于Modal弹窗：左右装备+各自属性，下方差异 */
+/** 完整对比面板 - 用于Modal弹窗：左右装备+各自属性（差异以色标注） */
 export function FullComparePanel({
   newItem,
   equippedItem,
@@ -255,16 +279,7 @@ export function FullComparePanel({
 }) {
   const newStats = getItemTotalStats(newItem)
   const equippedStats = getItemTotalStats(equippedItem)
-
-  // 合并所有属性键
-  const allStatKeys = Array.from(new Set([...Object.keys(newStats), ...Object.keys(equippedStats)]))
-
-  // 过滤出有差异的属性
-  const diffStats = allStatKeys.filter(stat => {
-    const newValue = newStats[stat] || 0
-    const equippedValue = equippedStats[stat] || 0
-    return newValue !== equippedValue
-  })
+  const comparableStatKeys = getComparableStatKeys(equippedStats, newStats)
 
   // 获取新物品的卖出价（与背包槽位一致：优先 sell_price，否则按 buy_price 一半）
   const newItemSellPrice =
@@ -283,12 +298,7 @@ export function FullComparePanel({
         {/* 左边：已装备物品 */}
         <div className="border-border flex flex-col border-r p-2">
           <div className="mb-1 flex justify-center">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded border-2"
-              style={{ borderColor: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
-            >
-              <ItemIcon item={equippedItem} className="drop-shadow-sm" />
-            </div>
+            <CompareItemIconSlot item={equippedItem} />
           </div>
           <div className="mb-2 text-center">
             <span
@@ -300,12 +310,18 @@ export function FullComparePanel({
           </div>
           {/* 当前装备属性 */}
           <div className="flex-1 space-y-0.5">
-            {Object.entries(equippedStats).map(([stat, value]) => (
-              <div key={stat} className="flex justify-between">
-                <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                <span className="font-medium">{value}</span>
-              </div>
-            ))}
+            {comparableStatKeys.map(stat => {
+              const equippedValue = equippedStats[stat] || 0
+              const newValue = newStats[stat] || 0
+              return (
+                <div key={stat} className="flex justify-between">
+                  <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
+                  <span className={getComparedStatClass(equippedValue, newValue)}>
+                    {equippedValue}
+                  </span>
+                </div>
+              )
+            })}
           </div>
           {/* 等级需求+价格信息 - 底部 */}
           <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
@@ -331,12 +347,7 @@ export function FullComparePanel({
         {/* 右边：背包物品 */}
         <div className="flex flex-col p-2">
           <div className="mb-1 flex justify-center">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded border-2"
-              style={{ borderColor: QUALITY_COLORS[newItem.quality as ItemQuality] }}
-            >
-              <ItemIcon item={newItem} className="drop-shadow-sm" />
-            </div>
+            <CompareItemIconSlot item={newItem} />
           </div>
           <div className="mb-2 text-center">
             <span
@@ -348,12 +359,16 @@ export function FullComparePanel({
           </div>
           {/* 新物品属性 */}
           <div className="flex-1 space-y-0.5">
-            {Object.entries(newStats).map(([stat, value]) => (
-              <div key={stat} className="flex justify-between">
-                <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                <span className="font-medium">{value}</span>
-              </div>
-            ))}
+            {comparableStatKeys.map(stat => {
+              const equippedValue = equippedStats[stat] || 0
+              const newValue = newStats[stat] || 0
+              return (
+                <div key={stat} className="flex justify-between">
+                  <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
+                  <span className={getComparedStatClass(newValue, equippedValue)}>{newValue}</span>
+                </div>
+              )
+            })}
           </div>
           {/* 等级需求+价格 - 底部 */}
           <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
@@ -414,28 +429,6 @@ export function FullComparePanel({
               </button>
             ))}
           </div>
-        </div>
-      )}
-      {/* 第三个div：属性差异 - 只在有差异时显示 */}
-      {diffStats.length > 0 && (
-        <div className="border-border bg-muted/10 flex-1 space-y-1 border-t p-2">
-          {diffStats.map(stat => {
-            const newValue = newStats[stat] || 0
-            const equippedValue = equippedStats[stat] || 0
-            const diff = newValue - equippedValue
-            return (
-              <div key={stat} className="flex items-center justify-between">
-                <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                <span className="font-medium">
-                  {diff > 0 ? (
-                    <span className="text-green-500">+{diff}</span>
-                  ) : (
-                    <span className="text-red-500">{diff}</span>
-                  )}
-                </span>
-              </div>
-            )
-          })}
         </div>
       )}
     </div>

@@ -183,8 +183,13 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
   // 计算是否有可对比的装备
   // 商店物品中，只有装备类型（不是药水和宝石）才能对比
   const isEquippableType = shopItem.type !== 'potion' && shopItem.type !== 'gem'
-  // 药水类型只显示快捷数量按钮，不显示输入框
   const isPotion = shopItem.type === 'potion'
+  const maxBuyQuantity = 9999
+
+  const handleAddBuyQuantity = (amount: number) => {
+    if (!setBuyQuantity) return
+    setBuyQuantity(Math.min(maxBuyQuantity, buyQuantity + amount))
+  }
   const hasEquipped = isEquippableType && equippedItem != null
 
   // 转换为 GameItem 用于对比计算
@@ -224,60 +229,22 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
 
       {/* 物品详情 - 右边（无对比时）或者购买按钮区域（有对比时） */}
       <div className="flex flex-1 flex-col">
-        {/* 数量选择 - 仅药水显示 */}
         {setBuyQuantity && isPotion && (
           <div className="flex items-center justify-between px-3 pt-2">
-            <span className="text-muted-foreground text-sm">数量:</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setBuyQuantity(Math.max(1, buyQuantity - 1))}
-                className="bg-muted text-foreground hover:bg-secondary h-7 w-7 rounded text-sm transition-colors"
-                disabled={buyQuantity <= 1}
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min={1}
-                max={9999}
-                value={buyQuantity}
-                onChange={e => {
-                  const val = parseInt(e.target.value, 10)
-                  if (!isNaN(val) && val >= 1 && val <= 9999) {
-                    setBuyQuantity(val)
-                  } else if (e.target.value === '') {
-                    setBuyQuantity(1)
-                  }
-                }}
-                className="bg-muted text-foreground hover:bg-secondary border-input h-7 w-12 rounded border px-2 text-center text-sm transition-colors"
-              />
-              <button
-                onClick={() => setBuyQuantity(Math.min(9999, buyQuantity + 1))}
-                className="bg-muted text-foreground hover:bg-secondary h-7 w-7 rounded text-sm transition-colors"
-                disabled={buyQuantity >= 9999}
-              >
-                +
-              </button>
+            <span className="text-muted-foreground text-sm">数量: {buyQuantity}</span>
+            <div className="flex items-center gap-1">
+              {[1, 10, 100].map(qty => (
+                <button
+                  key={qty}
+                  type="button"
+                  onClick={() => handleAddBuyQuantity(qty)}
+                  disabled={buyQuantity >= maxBuyQuantity}
+                  className="bg-muted text-muted-foreground hover:bg-muted/80 rounded px-3 py-1 text-xs transition-colors disabled:opacity-50"
+                >
+                  +{qty}
+                </button>
+              ))}
             </div>
-          </div>
-        )}
-
-        {/* 快捷数量按钮 - 仅药水显示 */}
-        {setBuyQuantity && isPotion && (
-          <div className="flex items-center justify-center gap-1 px-3 pt-1">
-            {[1, 10, 100].map(qty => (
-              <button
-                key={qty}
-                onClick={() => setBuyQuantity(qty)}
-                className={`rounded px-3 py-1 text-xs transition-colors ${
-                  buyQuantity === qty
-                    ? 'bg-green-600 text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {qty}
-              </button>
-            ))}
           </div>
         )}
 

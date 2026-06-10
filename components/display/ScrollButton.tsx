@@ -5,8 +5,17 @@ import Image from 'next/image'
 import { asset } from '@/lib/helpers/assets'
 
 const SCROLL_HEIGHT = 500
-const DEFAULT_BOTTOM = -200
-const DISPLAY_BOTTOM = 40
+const DEFAULT_BOTTOM = -400
+/** bfr.png 原始尺寸 48×316，按宽度等比缩放 */
+const BFR_WIDTH = 22
+const BFR_HEIGHT = Math.round((316 / 48) * BFR_WIDTH)
+
+function getDisplayBottom(): number {
+  if (typeof window === 'undefined') return 40
+  const isMobile = window.matchMedia('(max-width: 1023px)').matches
+  // 移动端预留底部导航栏高度，避免火箭被裁切
+  return isMobile ? 88 : 40
+}
 
 function getScrollContainer(): Element | null {
   if (typeof document === 'undefined') return null
@@ -24,7 +33,7 @@ export function ScrollButton() {
     const toggleVisible = () => {
       const scrolled = el.scrollTop
       if (scrolled > SCROLL_HEIGHT) {
-        setBottom(DISPLAY_BOTTOM)
+        setBottom(getDisplayBottom())
         setDelay('1.5s')
       } else {
         setBottom(DEFAULT_BOTTOM)
@@ -32,9 +41,19 @@ export function ScrollButton() {
       }
     }
 
+    const handleResize = () => {
+      if (el.scrollTop > SCROLL_HEIGHT) {
+        setBottom(getDisplayBottom())
+      }
+    }
+
     toggleVisible()
     el.addEventListener('scroll', toggleVisible)
-    return () => el.removeEventListener('scroll', toggleVisible)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      el.removeEventListener('scroll', toggleVisible)
+      window.removeEventListener('resize', handleResize)
+    }
   }, [])
 
   const scrollToTop = useCallback(() => {
@@ -58,17 +77,18 @@ export function ScrollButton() {
         outline: 'none',
         transition: `bottom ${delay}`,
         cursor: 'pointer',
-        zIndex: 50,
+        zIndex: 60,
       }}
       onClick={scrollToTop}
       onKeyDown={e => e.key === 'Enter' && scrollToTop()}
     >
       <Image
         src={asset('/bfr.png')}
-        width={24}
-        height={24}
+        width={BFR_WIDTH}
+        height={BFR_HEIGHT}
         alt="回到顶部"
-        style={{ width: 24, height: 24 }}
+        className="block h-auto"
+        style={{ width: BFR_WIDTH, height: 'auto' }}
       />
     </div>
   )

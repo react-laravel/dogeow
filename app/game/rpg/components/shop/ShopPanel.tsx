@@ -128,7 +128,7 @@ export function ShopPanel() {
 
   const handleBuy = useCallback(async () => {
     if (!selectedShopItem) return
-    if (!canAfford || !levelEnough) return
+    if (!canAfford || !levelEnough || buyQuantity < 1) return
     await buyItem(selectedShopItem.id, buyQuantity)
     setSelectedShopItem(null)
     setBuyQuantity(1)
@@ -136,7 +136,7 @@ export function ShopPanel() {
 
   const handleSelectShopItem = useCallback((item: ShopItem) => {
     setSelectedShopItem(item)
-    setBuyQuantity(1)
+    setBuyQuantity(item.type === 'potion' ? 0 : 1)
   }, [])
 
   const filteredItems = useMemo(() => {
@@ -238,7 +238,13 @@ export function ShopPanel() {
         setBuyQuantity={setBuyQuantity}
         totalBuyPrice={totalBuyPrice}
         onBuy={handleBuy}
-        disabledBuy={isLoading || !character || !canAfford || !levelEnough}
+        disabledBuy={
+          isLoading ||
+          !character ||
+          !canAfford ||
+          !levelEnough ||
+          (selectedShopItem?.type === 'potion' && buyQuantity < 1)
+        }
         canAfford={!!canAfford}
         levelEnough={!!levelEnough}
         equippedItem={selectedShopItem ? getEquippedItem(selectedShopItem) : null}
