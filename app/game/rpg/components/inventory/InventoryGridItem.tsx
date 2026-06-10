@@ -10,6 +10,7 @@ import {
   getInventoryDetailPopoverWidth,
   InventoryItemDetailContent,
 } from './InventoryItemDetailContent'
+import { ItemSlotSellPriceBadge } from './ItemSlotSellPriceBadge'
 import type { InventorySlotCell } from './inventoryUtils'
 
 const POPOVER_COLLISION_PADDING = { top: 12, right: 12, left: 12, bottom: 72 }
@@ -86,14 +87,7 @@ export const InventoryGridItem = memo(function InventoryGridItem({
           variant="inventory"
           isSelected={isSelected}
           disabled={isLoading}
-          footer={
-            <div className="absolute -bottom-0.5 flex w-full items-center justify-center">
-              <span className="rounded bg-black/70 px-1 text-[9px] font-medium text-yellow-400">
-                {(item.sell_price ?? Math.floor((item.definition?.buy_price ?? 0) / 2)) *
-                  (item.quantity ?? 1)}
-              </span>
-            </div>
-          }
+          footer={<ItemSlotSellPriceBadge item={item} />}
         />
       </PopoverAnchor>
       <PopoverContent

@@ -66,7 +66,14 @@ export const GameItemSlot = memo(
         style={borderColor ? { borderColor } : undefined}
         title={title}
       >
-        {item ? <FilledSlotContent item={item} /> : <EmptySlotLabel label={emptyLabel} />}
+        {item ? (
+          <>
+            <FilledSlotContent item={item} />
+            {footer}
+          </>
+        ) : (
+          <EmptySlotLabel label={emptyLabel} />
+        )}
       </button>
     )
   })

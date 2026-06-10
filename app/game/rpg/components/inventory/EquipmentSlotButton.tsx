@@ -4,6 +4,7 @@ import type { EquipmentSlot, GameItem } from '../../types'
 import { SLOT_NAMES } from '../../types'
 import { getItemDisplayName } from '../../utils/itemUtils'
 import { GameItemSlot } from './GameItemSlot'
+import { ItemSlotSellPriceBadge } from './ItemSlotSellPriceBadge'
 
 interface EquipmentSlotButtonProps {
   item: GameItem | null | undefined
@@ -20,6 +21,7 @@ export function EquipmentSlotButton({ item, label, onClick, slot }: EquipmentSlo
       title={item ? getItemDisplayName(item) : label || SLOT_NAMES[slot]}
       variant="equipment"
       emptyLabel={label || SLOT_NAMES[slot]}
+      footer={item ? <ItemSlotSellPriceBadge item={item} /> : undefined}
     />
   )
 }
