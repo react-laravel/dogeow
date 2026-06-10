@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -6,6 +6,15 @@ interface BulletProps {
   initialPosition: THREE.Vector3
   direction: THREE.Vector3
   onHit?: () => void
+}
+
+/** 以初始位置克隆出拖尾点 */
+function createTrailPoints(initialPosition: THREE.Vector3): THREE.Vector3[] {
+  const points: THREE.Vector3[] = []
+  for (let i = 0; i < 10; i++) {
+    points.push(initialPosition.clone())
+  }
+  return points
 }
 
 /**
@@ -17,20 +26,17 @@ export function Bullet({ initialPosition, direction }: BulletProps) {
   const [position, setPosition] = useState(initialPosition)
   const [hit, setHit] = useState(false)
   const [lifetime, setLifetime] = useState(0)
-  const [trailPositions, setTrailPositions] = useState<THREE.Vector3[]>([])
+  const [trailPositions, setTrailPositions] = useState<THREE.Vector3[]>(() =>
+    createTrailPoints(initialPosition)
+  )
   const speed = 100 // 子弹速度
 
-  // 初始化拖尾 - 使用useEffect同步外部Three.js系统
-
-  useEffect(() => {
-    // 创建拖尾点
-    const points = []
-    for (let i = 0; i < 10; i++) {
-      points.push(initialPosition.clone())
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTrailPositions(points)
-  }, [initialPosition])
+  // 初始位置变化时在渲染期间重建拖尾（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevInitialPosition, setPrevInitialPosition] = useState(initialPosition)
+  if (initialPosition !== prevInitialPosition) {
+    setPrevInitialPosition(initialPosition)
+    setTrailPositions(createTrailPoints(initialPosition))
+  }
 
   // 子弹飞行动画
   useFrame((_, delta) => {

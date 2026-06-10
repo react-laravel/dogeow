@@ -37,9 +37,10 @@ export function useTetrisGame() {
   const [isSoftDropping, setIsSoftDropping] = useState(false)
 
   // 客户端挂载后初始化游戏
+  // 必要场景：随机方块只能在客户端生成（保证 SSR 水合一致），而随机数不允许出现在渲染期
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 客户端随机初始化，无法移入渲染期
     setGameState(prev => ({
       ...prev,
       isClient: true,
@@ -53,7 +54,7 @@ export function useTetrisGame() {
 
   useEffect(() => {
     if (gameState.isClient && !gameState.nextPiece) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 客户端随机生成方块，无法移入渲染期
       setGameState(prev => ({
         ...prev,
         nextPiece: generateRandomTetromino(),

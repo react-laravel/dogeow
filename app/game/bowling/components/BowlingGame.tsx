@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useBowlingStore } from '../store'
 import { BowlingCanvas } from './BowlingCanvas'
 import { GameStats } from './GameStats'
@@ -16,13 +16,13 @@ export function BowlingGame() {
     requestGyroPermission,
   } = useBowlingStore()
 
-  const [isMounted, setIsMounted] = useState(false)
+  // 客户端挂载检测：服务端快照为 false，水合后为 true，避免在 effect 中 setState
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
   const [showPermissionDialog, setShowPermissionDialog] = useState(false)
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 客户端挂载检测
-    setIsMounted(true)
-  }, [])
 
   // 自动检测陀螺仪支持并启动游戏
   useEffect(() => {

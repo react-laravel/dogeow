@@ -93,12 +93,17 @@ export function MeteorStormEffect({ active, onComplete, onHit, targetPosition }:
 
   const hasActivatedRef = useRef(false)
 
+  // active 上升沿在渲染期间同步激活（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevActive, setPrevActive] = useState(false)
+  if (active !== prevActive) {
+    setPrevActive(active)
+    if (active) setIsActive(true)
+  }
+
   useEffect(() => {
     if (active && !hasActivatedRef.current) {
       hasActivatedRef.current = true
       hasCalledHitRef.current = false
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsActive(true)
       cast()
     } else if (!active) {
       hasActivatedRef.current = false

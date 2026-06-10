@@ -22,6 +22,7 @@ export function useJigsawStats(difficulty: number): JigsawStatsHook {
   })
 
   // 从 localStorage 加载统计数据
+  // 必要场景：localStorage 只能在客户端读取，懒初始化会导致 SSR 水合不一致
 
   useEffect(() => {
     try {
@@ -29,7 +30,7 @@ export function useJigsawStats(difficulty: number): JigsawStatsHook {
       if (saved) {
         const parsedStats = JSON.parse(saved)
 
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage 初始化
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage 客户端初始化
         setStats(parsedStats)
       }
     } catch (error) {

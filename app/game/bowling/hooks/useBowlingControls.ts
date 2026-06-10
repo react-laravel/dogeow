@@ -23,36 +23,20 @@ export function useBowlingControls() {
   } = useBowlingStore()
 
   // 实时更新瞄准角度（根据陀螺仪数据或默认角度）
+  // 目标角度可直接派生，在渲染期间同步本地状态，避免在 effect 中 setState
+  const gyroActive = gyroSupported && gyroPermission
+  const targetAimAngle = gyroActive ? Math.max(-30, Math.min(30, tiltX * 30)) : aimAngle
+  const shouldSyncAim = canThrow && !ballThrown && !showingResult
+  if (shouldSyncAim && currentAimAngle !== targetAimAngle) {
+    setCurrentAimAngle(targetAimAngle)
+  }
 
+  // 只有在陀螺仪可用时才更新 store 中的角度（外部副作用保留在 effect 中）
   useEffect(() => {
-    if (canThrow && !ballThrown && !showingResult) {
-      let newAngle = 0
-
-      // 如果陀螺仪可用且有权限，使用陀螺仪数据
-      if (gyroSupported && gyroPermission) {
-        newAngle = Math.max(-30, Math.min(30, tiltX * 30))
-      } else {
-        newAngle = aimAngle
-      }
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 陀螺仪外部输入同步
-      setCurrentAimAngle(newAngle)
-
-      // 只有在陀螺仪可用时才更新store中的角度
-      if (gyroSupported && gyroPermission) {
-        setAimAngle(newAngle)
-      }
+    if (shouldSyncAim && gyroActive) {
+      setAimAngle(targetAimAngle)
     }
-  }, [
-    tiltX,
-    aimAngle,
-    canThrow,
-    ballThrown,
-    showingResult,
-    gyroSupported,
-    gyroPermission,
-    setAimAngle,
-  ])
+  }, [shouldSyncAim, gyroActive, targetAimAngle, setAimAngle])
 
   // 手动角度调整函数
   const updateManualAngle = useCallback(

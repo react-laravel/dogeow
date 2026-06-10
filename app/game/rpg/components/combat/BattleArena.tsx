@@ -182,24 +182,33 @@ export function BattleArena({
   // 每次触发递增，作为 SkillEffect 的 key：连续回合同一技能也能重新挂载、完整重播动画
   const [effectNonce, setEffectNonce] = useState(0)
 
-  // 有技能时在 useLayoutEffect 里立即设为延迟显示，首帧重绘即传扣血前数据
+  // 技能回合变化在渲染期间同步状态（官方“根据 props 调整 state”模式），首帧即传扣血前数据
+  const [lastSkillForRender, setLastSkillForRender] = useState<SkillUsedEntry | null>(null)
+  if (skillUsed && computedSkillEffect) {
+    if (skillUsed !== lastSkillForRender) {
+      setLastSkillForRender(skillUsed)
+      setShowDamageAndHp(false)
+      setActiveSkillEffect(computedSkillEffect)
+      setEffectNonce(n => n + 1)
+    }
+  } else if (lastSkillForRender !== null) {
+    setLastSkillForRender(null)
+    setShowDamageAndHp(true)
+  }
+
+  // ref 簿记与上面的渲染期状态调整保持一致（effect 中不再 setState）
 
   useLayoutEffect(() => {
     if (skillUsed && computedSkillEffect) {
       if (skillUsed !== lastSkillUsedRef.current) {
         lastSkillUsedRef.current = skillUsed
         skillAnimationCompletedRef.current = false
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- 技能动画期间同步 UI
-        setShowDamageAndHp(false)
-        setActiveSkillEffect(computedSkillEffect)
-        setEffectNonce(n => n + 1)
       }
     } else {
       lastSkillUsedRef.current = null
       // 回合已推进且本回合无技能：上一回合特效若仍在播，视为已结算，
       // 其迟到的 onComplete 不再重复播命中音/改血量
       skillAnimationCompletedRef.current = true
-      setShowDamageAndHp(true)
     }
   }, [skillUsed, computedSkillEffect])
 

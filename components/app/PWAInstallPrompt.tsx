@@ -1,7 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useSyncExternalStore } from 'react'
 import { Download, X, Smartphone } from 'lucide-react'
+
+// 以外部 store 方式订阅 standalone 显示模式，避免在 effect 中 setState
+function subscribeDisplayMode(callback: () => void) {
+  const mql = window.matchMedia('(display-mode: standalone)')
+  mql.addEventListener('change', callback)
+  return () => mql.removeEventListener('change', callback)
+}
+
+const getIsStandalone = () => window.matchMedia('(display-mode: standalone)').matches
+const getServerIsStandalone = () => false
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[]
@@ -16,14 +26,16 @@ export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  // 是否以 standalone 模式运行（已安装到主屏幕）
+  const isStandalone = useSyncExternalStore(
+    subscribeDisplayMode,
+    getIsStandalone,
+    getServerIsStandalone
+  )
 
   useEffect(() => {
-    // 检查是否已经安装
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsInstalled(true)
-      return
-    }
+    // 已经安装时无需监听安装事件
+    if (isStandalone) return
 
     // 监听安装提示事件
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -46,7 +58,7 @@ export function PWAInstallPrompt() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleAppInstalled)
     }
-  }, [])
+  }, [isStandalone])
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return
@@ -73,7 +85,7 @@ export function PWAInstallPrompt() {
   }
 
   // 如果已经安装或没有安装提示，不显示组件
-  if (isInstalled || !showInstallPrompt) {
+  if (isStandalone || isInstalled || !showInstallPrompt) {
     return null
   }
 

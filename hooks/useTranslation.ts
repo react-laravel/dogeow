@@ -41,23 +41,21 @@ export function useTranslation(): UseTranslationReturn {
 
   const [isLanguageLoaded, setIsLanguageLoaded] = useState(false)
 
-  // 组件挂载时初始化语言检测 - 使用 useCallback 避免重复调用
-  const initLanguage = useCallback(async () => {
-    if (isLanguageLoaded) return
-
-    try {
-      await initializeLanguage()
-      setIsLanguageLoaded(true)
-    } catch (error) {
-      console.error('初始化语言失败:', error)
-      setIsLanguageLoaded(true) // 即使出错也设置为 true，防止无限加载
-    }
-  }, [initializeLanguage, isLanguageLoaded])
-
+  // 组件挂载时初始化语言检测；setState 发生在异步回调中，而非 effect 同步执行阶段
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 语言初始化
-    initLanguage()
-  }, [initLanguage])
+    let cancelled = false
+    initializeLanguage()
+      .catch(error => {
+        console.error('初始化语言失败:', error)
+      })
+      .finally(() => {
+        // 即使出错也设置为 true，防止无限加载
+        if (!cancelled) setIsLanguageLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [initializeLanguage])
 
   const currentLanguageInfo = useMemo(() => {
     return getCurrentLanguageInfo(currentLanguage)

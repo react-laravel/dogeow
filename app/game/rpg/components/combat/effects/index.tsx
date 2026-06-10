@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import type { SkillEffectProps } from './types'
 import { MeteorStormEffect } from './MeteorStormEffect'
 import { FireballEffect } from './FireballEffect'
@@ -32,19 +32,13 @@ export function SkillEffect({
   className = '',
 }: SkillEffectProps) {
   const [isActive, setIsActive] = useState(false)
-  const wasActiveRef = useRef(false)
 
-  useEffect(() => {
-    if (active && !wasActiveRef.current) {
-      wasActiveRef.current = true
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsActive(true)
-    } else if (!active && wasActiveRef.current) {
-      wasActiveRef.current = false
-
-      setIsActive(false)
-    }
-  }, [active])
+  // active 变化在渲染期间同步（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevActive, setPrevActive] = useState(false)
+  if (active !== prevActive) {
+    setPrevActive(active)
+    setIsActive(active)
+  }
 
   const handleComplete = useCallback(() => {
     setIsActive(false)

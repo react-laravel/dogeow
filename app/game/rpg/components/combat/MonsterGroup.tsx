@@ -93,15 +93,15 @@ export function MonsterGroup({
   const hasValidMonsters = validMonsters.length > 0
 
   // 技能动画期间不显示扣血/伤害/受击，并清空状态，避免先播一次、动画结束再播一次
-
-  useEffect(() => {
+  // 在渲染期间同步清空（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevShowDamageAndHp, setPrevShowDamageAndHp] = useState(showDamageAndHp)
+  if (showDamageAndHp !== prevShowDamageAndHp) {
+    setPrevShowDamageAndHp(showDamageAndHp)
     if (!showDamageAndHp) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 动画期间清空派生状态
       setDamageTexts({})
       setHitMonsters(new Set())
-      return
     }
-  }, [showDamageAndHp])
+  }
 
   // 检测怪物掉血并显示伤害数字，以及检测新怪物
   useEffect(() => {

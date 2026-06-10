@@ -1,4 +1,4 @@
-import { useRef, useState, useLayoutEffect, useEffect, Suspense } from 'react'
+import { useRef, useState, useMemo, useLayoutEffect, useEffect, Suspense } from 'react'
 import { useFrame, ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Explosion } from './Explosion'
@@ -18,65 +18,39 @@ interface TargetProps {
  */
 export function Target({ position, hit, scale, onClick, id }: TargetProps) {
   const mesh = useRef<THREE.Mesh>(null)
-  const [startExplosion, setStartExplosion] = useState(false)
   const [destroyed, setDestroyed] = useState(false)
 
-  // 使用 ref 跟踪爆炸状态以避免在 effect 中设置 state
-  const explosionTriggeredRef = useRef(false)
+  // hit 复位时在渲染期间重置消失状态（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevHit, setPrevHit] = useState(hit)
+  if (hit !== prevHit) {
+    setPrevHit(hit)
+    if (!hit) setDestroyed(false)
+  }
 
-  // 目标的材质 - 修改为useState以确保状态变化时能够重新渲染
-  const [targetMaterial, setTargetMaterial] = useState(
+  // 目标的材质完全由 hit 派生：被击中显示红色，否则显示蓝色
+  const targetMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         color: hit ? '#ff0000' : '#00aaff',
         emissive: hit ? '#550000' : '#004488',
         roughness: 0.2,
         metalness: 0.8,
-      })
+      }),
+    [hit]
   )
 
-  // 当hit状态改变时更新材质和触发爆炸
-
-  // Using useLayoutEffect to sync with Three.js external system
+  // 被击中时播放音效，并在 0.2 秒后开始消失动画（setState 在定时器回调中）
 
   useLayoutEffect(() => {
-    if (hit && !explosionTriggeredRef.current) {
-      explosionTriggeredRef.current = true
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStartExplosion(true)
+    if (!hit) return
 
-      // 设置目标为红色表示被击中
-      setTargetMaterial(
-        new THREE.MeshStandardMaterial({
-          color: '#ff0000',
-          emissive: '#550000',
-          roughness: 0.2,
-          metalness: 0.8,
-        })
-      )
+    playExplosionSound()
 
-      // 播放爆炸音效
-      playExplosionSound()
+    const timer = setTimeout(() => {
+      setDestroyed(true)
+    }, 200)
 
-      // 0.2秒后开始消失动画
-      const timer = setTimeout(() => {
-        setDestroyed(true)
-      }, 200)
-
-      return () => clearTimeout(timer)
-    } else if (!hit) {
-      explosionTriggeredRef.current = false
-      setStartExplosion(false)
-      setDestroyed(false)
-      setTargetMaterial(
-        new THREE.MeshStandardMaterial({
-          color: '#00aaff',
-          emissive: '#004488',
-          roughness: 0.2,
-          metalness: 0.8,
-        })
-      )
-    }
+    return () => clearTimeout(timer)
   }, [hit])
 
   // 为mesh添加id信息，方便射线检测
@@ -149,7 +123,7 @@ export function Target({ position, hit, scale, onClick, id }: TargetProps) {
       </mesh>
 
       {/* 爆炸效果 */}
-      {startExplosion && (
+      {hit && (
         <Suspense fallback={null}>
           <Explosion position={position} color="#ff6600" />
           <pointLight position={position} intensity={5} distance={8} decay={2} color="#ff8800" />

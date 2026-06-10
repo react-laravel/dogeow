@@ -40,6 +40,24 @@ interface TargetData {
   direction: [number, number, number]
 }
 
+/** 按难度设置生成一批随机目标 */
+function createTargets(settings: (typeof difficultySettings)[keyof typeof difficultySettings]) {
+  const newTargets: TargetData[] = []
+
+  for (let i = 0; i < settings.targetCount; i++) {
+    newTargets.push({
+      id: i,
+      position: generateRandomPosition(settings.gameAreaSize),
+      hit: false,
+      scale: Math.random() * 0.3 + 0.5,
+      speed: Math.random() * 0.01 + settings.targetSpeed,
+      direction: generateRandomDirection(),
+    })
+  }
+
+  return newTargets
+}
+
 interface BulletData {
   id: number
   position: THREE.Vector3
@@ -75,7 +93,18 @@ export function GameScene({
 }: GameSceneProps) {
   const { camera, gl, scene } = useThree()
   const controls = useRef<PointerLockControlsImpl | null>(null)
-  const [targets, setTargets] = useState<TargetData[]>([])
+
+  // 根据难度设置参数
+  const settings = difficultySettings[difficulty]
+
+  const [targets, setTargets] = useState<TargetData[]>(() => createTargets(settings))
+
+  // 难度变化时在渲染期间重建目标（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevSettings, setPrevSettings] = useState(settings)
+  if (settings !== prevSettings) {
+    setPrevSettings(settings)
+    setTargets(createTargets(settings))
+  }
 
   // 子弹状态
   const [bullets, setBullets] = useState<BulletData[]>([])
@@ -87,9 +116,6 @@ export function GameScene({
 
   // 指针锁状态
   const [, setPointerLocked] = useState(false)
-
-  // 根据难度设置参数
-  const settings = difficultySettings[difficulty]
 
   // 爆炸效果
   const [explosions, setExplosions] = useState<ExplosionData[]>([])
@@ -106,29 +132,6 @@ export function GameScene({
     },
     []
   )
-
-  // 初始化目标
-
-  useEffect(() => {
-    const newTargets: TargetData[] = []
-
-    for (let i = 0; i < settings.targetCount; i++) {
-      const position = generateRandomPosition(settings.gameAreaSize)
-      const direction = generateRandomDirection()
-
-      newTargets.push({
-        id: i,
-        position,
-        hit: false,
-        scale: Math.random() * 0.3 + 0.5,
-        speed: Math.random() * 0.01 + settings.targetSpeed,
-        direction,
-      })
-    }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTargets(newTargets)
-  }, [settings.gameAreaSize, settings.targetCount, settings.targetSpeed])
 
   // 处理击中目标
   const handleTargetHit = useCallback(

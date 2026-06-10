@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface UseAvatarImageProps {
   seed: string
@@ -20,14 +20,14 @@ export function useAvatarImage({ seed, fallbackInitials }: UseAvatarImageProps) 
 
   const [currentUrlIndex, setCurrentUrlIndex] = useState(-1) // -1 means using primary URL
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed 变化时重置状态
+  // seed 变化时在渲染期间重置状态（官方“根据 props 调整 state”模式），避免在 effect 中 setState
+  const [prevSeed, setPrevSeed] = useState(seed)
+  if (seed !== prevSeed) {
+    setPrevSeed(seed)
     setImageError(false)
-
     setIsLoading(true)
-
     setCurrentUrlIndex(-1)
-  }, [seed])
+  }
 
   const handleImageError = () => {
     console.error('Avatar image failed to load:', getCurrentUrl())
