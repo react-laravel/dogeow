@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { CopperDisplay } from '../shared/CopperDisplay'
 import { GameItem, QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '../../types'
-import { getItemDisplayName } from '../../utils/itemUtils'
+import { formatItemStatValue, getItemDisplayName, getItemTotalStats } from '../../utils/itemUtils'
 import { ItemTipIcon } from '@/components/game'
 import { ItemSocketIndicators } from './ItemSocketIndicators'
 
@@ -24,6 +24,8 @@ export function InventoryItemDetailCard({
   onUnsocketGem,
   showBuyPrice = false,
 }: InventoryItemDetailCardProps) {
+  const displayStats = getItemTotalStats(item)
+
   return (
     <div className="flex flex-col">
       <div
@@ -47,6 +49,9 @@ export function InventoryItemDetailCard({
               <span className="text-xs" style={{ color: QUALITY_COLORS[item.quality] }}>
                 {QUALITY_NAMES[item.quality]}
               </span>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                需求等级: {item.definition?.required_level ?? '—'}
+              </p>
 
               {(item.gems?.length ?? 0) > 0 || (item.sockets != null && item.sockets > 0) ? (
                 <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -73,34 +78,43 @@ export function InventoryItemDetailCard({
           </div>
 
           <div className="mt-1 space-y-0.5 text-xs">
-            {Object.entries(item.stats || {}).map(([stat, value]) => (
+            {Object.entries(displayStats).map(([stat, value]) => (
               <p key={stat} className="text-green-600 dark:text-green-400">
-                +{value} {STAT_NAMES[stat] || stat}
+                +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
               </p>
             ))}
-            {item.affixes?.map((affix, idx) => (
-              <p key={idx} className="text-blue-600 dark:text-blue-400">
-                {Object.entries(affix)
-                  .map(([key, value]) => `+${value} ${STAT_NAMES[key] || key}`)
-                  .join(', ')}
-              </p>
-            ))}
-            <p className="text-muted-foreground">
-              需求等级: {item.definition?.required_level ?? '—'}
-            </p>
+            {item.definition?.type !== 'gem' &&
+              item.affixes?.map((affix, idx) => (
+                <p key={idx} className="text-blue-600 dark:text-blue-400">
+                  {Object.entries(affix)
+                    .map(([key, value]) => {
+                      const num = Number(value)
+                      const display = formatItemStatValue(num, key)
+                      return `+${display} ${STAT_NAMES[key] || key}`
+                    })
+                    .join(', ')}
+                </p>
+              ))}
             {showBuyPrice &&
               item.definition?.buy_price != null &&
               item.definition.buy_price > 0 && (
                 <p className="text-purple-600 dark:text-purple-400">
-                  售价: <CopperDisplay copper={item.definition.buy_price} size="xs" nowrap />
+                  售价:{' '}
+                  <CopperDisplay
+                    copper={item.definition.buy_price}
+                    size="sm"
+                    nowrap
+                    className="font-medium"
+                  />
                 </p>
               )}
-            <p className="text-yellow-600 dark:text-yellow-400">
+            <p className="text-muted-foreground flex items-center gap-1">
               卖出:{' '}
               <CopperDisplay
                 copper={item.sell_price ?? Math.floor((item.definition?.buy_price ?? 0) / 2)}
-                size="xs"
+                size="sm"
                 nowrap
+                className="font-medium"
               />
             </p>
           </div>

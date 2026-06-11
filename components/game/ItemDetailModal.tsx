@@ -249,8 +249,8 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
           </div>
         )}
 
-        {/* 总价 */}
-        {totalBuyPrice != null && totalBuyPrice > 0 && (
+        {/* 总价（仅药水可批量购买） */}
+        {isPotion && totalBuyPrice != null && totalBuyPrice > 0 && (
           <div className="flex items-center justify-between px-3 pt-1">
             <span className="text-foreground text-sm font-medium">总价:</span>
             <span className={canAfford ? '' : 'text-red-500'}>

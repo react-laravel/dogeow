@@ -5,6 +5,7 @@ import { QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '@/app/game/rpg/types'
 import { ItemTipIcon } from './ItemTipIcon'
 import { ShopItemIcon } from './ShopItemIcon'
 import {
+  formatItemStatValue,
   getItemDisplayName,
   getItemTotalStats,
   ITEM_TYPE_NAMES,
@@ -45,14 +46,6 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
   // 获取买价（仅装备显示）
   const buyPrice = !isShopItem ? (item as GameItem).definition?.buy_price : undefined
 
-  // 格式化属性显示（暴击率等浮点精度兜底）
-  const formatStatValue = (val: number, statKey: string): string | number => {
-    if (statKey === 'crit_damage') return `${Math.round(val * 100)}%`
-    if (statKey === 'crit_rate' && Math.abs(val) < 1) return `${Number((val * 100).toFixed(1))}%`
-    if (typeof val === 'number' && !Number.isInteger(val)) return Number(val.toFixed(2))
-    return val
-  }
-
   return (
     <div
       className="relative flex gap-3 p-3"
@@ -92,6 +85,7 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
             <span className="text-xs" style={{ color: QUALITY_COLORS[quality as ItemQuality] }}>
               {QUALITY_NAMES[quality as ItemQuality]}
             </span>
+            <p className="text-muted-foreground mt-0.5 text-xs">需求等级: {requiredLevel ?? '—'}</p>
           </div>
         </div>
 
@@ -104,7 +98,7 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
             }
             return (
               <p key={stat} className="text-green-600 dark:text-green-400">
-                +{formatStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
+                +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
               </p>
             )
           })}
@@ -116,33 +110,25 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
                 {Object.entries(affix)
                   .map(([k, v]) => {
                     const num = Number(v)
-                    const display = formatStatValue(num, k)
+                    const display = formatItemStatValue(num, k)
                     return `+${display} ${STAT_NAMES[k] || k}`
                   })
                   .join(', ')}
               </p>
             ))}
 
-          <p className="text-muted-foreground">需求等级: {requiredLevel ?? '—'}</p>
-
           {/* 买价（仅背包物品有definition时） */}
           {buyPrice != null && buyPrice > 0 && (
             <p className="text-purple-600 dark:text-purple-400">
-              售价: <CopperDisplay copper={buyPrice} size="xs" nowrap />
+              售价: <CopperDisplay copper={buyPrice} size="sm" nowrap className="font-medium" />
             </p>
           )}
 
           {/* 卖出价 */}
           {price != null && price > 0 && (
-            <p
-              className={
-                isShopItem
-                  ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-yellow-600 dark:text-yellow-400'
-              }
-            >
+            <p className="text-muted-foreground">
               {isShopItem ? '价格: ' : '卖出: '}
-              <CopperDisplay copper={price} size="xs" nowrap />
+              <CopperDisplay copper={price} size="sm" nowrap className="font-medium" />
             </p>
           )}
         </div>

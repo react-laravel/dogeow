@@ -22,11 +22,42 @@ function CompareItemIconSlot({
 }) {
   return (
     <div
-      className={`relative flex ${sizeClass} items-center justify-center rounded border-2`}
+      className={`relative flex shrink-0 ${sizeClass} items-center justify-center rounded border-2`}
       style={{ borderColor: QUALITY_COLORS[item.quality as ItemQuality] }}
     >
       <ItemIcon item={item} className="drop-shadow-sm" />
       <ItemSocketIndicators item={item} className="absolute -top-1 -right-1 z-10" />
+    </div>
+  )
+}
+
+function CompareItemHeader({
+  item,
+  name,
+  nameColor,
+  sizeClass = 'h-10 w-10',
+}: {
+  item?: GameItem
+  name: string
+  nameColor: string
+  sizeClass?: string
+}) {
+  const requiredLevel = item?.definition?.required_level
+
+  return (
+    <div className="mb-2 flex items-start gap-2">
+      {item ? <CompareItemIconSlot item={item} sizeClass={sizeClass} /> : null}
+      <div className="min-w-0 flex-1">
+        <span
+          className="block text-sm leading-tight font-bold break-words"
+          style={{ color: nameColor }}
+        >
+          {name}
+        </span>
+        {requiredLevel != null && requiredLevel > 0 ? (
+          <p className="text-muted-foreground mt-0.5 text-xs">需求等级: {requiredLevel}</p>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -94,19 +125,12 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           当前装备
         </div>
         <div className="p-2">
-          {/* 已装备物品图标 */}
-          <div className="mb-2 flex justify-center">
-            <CompareItemIconSlot item={equippedItem} sizeClass="h-12 w-12" />
-          </div>
-          {/* 已装备物品名称 */}
-          <div className="mb-2 text-center">
-            <span
-              className="text-sm font-bold"
-              style={{ color: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
-            >
-              {getItemDisplayName(equippedItem)}
-            </span>
-          </div>
+          <CompareItemHeader
+            item={equippedItem}
+            name={getItemDisplayName(equippedItem)}
+            nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
+            sizeClass="h-12 w-12"
+          />
           {/* 对比属性 */}
           <div className="space-y-1">
             {diffStats.map(stat => {
@@ -123,8 +147,14 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           </div>
           {/* 当前装备价格 */}
           {equippedItem.sell_price != null && equippedItem.sell_price > 0 && (
-            <div className="mt-1 text-center text-yellow-600 dark:text-yellow-400">
-              卖出: <CopperDisplay copper={equippedItem.sell_price} size="xs" nowrap />
+            <div className="text-muted-foreground mt-1 flex justify-between text-xs">
+              <span>卖出</span>
+              <CopperDisplay
+                copper={equippedItem.sell_price}
+                size="sm"
+                nowrap
+                className="font-medium"
+              />
             </div>
           )}
         </div>
@@ -139,24 +169,32 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           {isShopItem ? '商店物品' : '背包物品'}
         </div>
         <div className="p-2">
-          {/* 新物品图标 */}
-          <div className="mb-2 flex justify-center">
-            {isShopItem ? (
-              <div className="flex h-12 w-12 items-center justify-center rounded border-2 border-green-500">
+          {isShopItem ? (
+            <div className="mb-2 flex items-start gap-2">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border-2 border-green-500">
                 <span className="text-2xl">
                   {getShopItemIcon((newItem as ShopItem).type, (newItem as ShopItem).sub_type)}
                 </span>
               </div>
-            ) : (
-              <CompareItemIconSlot item={newItem as GameItem} sizeClass="h-12 w-12" />
-            )}
-          </div>
-          {/* 新物品名称 */}
-          <div className="mb-2 text-center">
-            <span className="text-sm font-bold text-green-600 dark:text-green-400">
-              {isShopItem ? (newItem as ShopItem).name : getItemDisplayName(newItem as GameItem)}
-            </span>
-          </div>
+              <div className="min-w-0 flex-1">
+                <span className="block text-sm leading-tight font-bold break-words text-green-600 dark:text-green-400">
+                  {(newItem as ShopItem).name}
+                </span>
+                {(newItem as ShopItem).required_level > 0 ? (
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    需求等级: {(newItem as ShopItem).required_level}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <CompareItemHeader
+              item={newItem as GameItem}
+              name={getItemDisplayName(newItem as GameItem)}
+              nameColor={QUALITY_COLORS[(newItem as GameItem).quality as ItemQuality]}
+              sizeClass="h-12 w-12"
+            />
+          )}
           {/* 对比属性 */}
           <div className="space-y-1">
             {diffStats.map(stat => {
@@ -218,19 +256,12 @@ export function EquipmentComparePanel({
         当前装备
       </div>
       <div className="p-2">
-        {/* 已装备物品图标 */}
-        <div className="mb-1 flex justify-center">
-          <CompareItemIconSlot item={equippedItem} sizeClass="h-9 w-9" />
-        </div>
-        {/* 已装备物品名称 */}
-        <div className="mb-1 text-center">
-          <span
-            className="text-sm font-bold"
-            style={{ color: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
-          >
-            {getItemDisplayName(equippedItem)}
-          </span>
-        </div>
+        <CompareItemHeader
+          item={equippedItem}
+          name={getItemDisplayName(equippedItem)}
+          nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
+          sizeClass="h-9 w-9"
+        />
       </div>
       {/* 下方显示属性差异 */}
       <div className="border-border/50 bg-muted/10 flex-1 space-y-1 border-t px-2 py-2">
@@ -260,8 +291,14 @@ export function EquipmentComparePanel({
       </div>
       {/* 当前装备价格 */}
       {equippedItem.sell_price != null && equippedItem.sell_price > 0 && (
-        <div className="border-border/50 bg-muted/10 border-t px-2 py-1.5 text-center text-yellow-600 dark:text-yellow-400">
-          卖出: <CopperDisplay copper={equippedItem.sell_price} size="xs" nowrap />
+        <div className="text-muted-foreground border-border/50 bg-muted/10 flex justify-between border-t px-2 py-1.5 text-xs">
+          <span>卖出</span>
+          <CopperDisplay
+            copper={equippedItem.sell_price}
+            size="sm"
+            nowrap
+            className="font-medium"
+          />
         </div>
       )}
     </div>
@@ -295,7 +332,6 @@ export function FullComparePanel({
   const newItemDisplayPrice = isShop
     ? shopBuyPrice
     : (newItem.sell_price ?? Math.floor((newItem.definition?.buy_price ?? 0) / 2))
-  const newItemRequiredLevel = newItem.definition?.required_level ?? 0
 
   // 获取已装备物品的价格信息
   const equippedItemBuyPrice = equippedItem.definition?.buy_price ?? 0
@@ -308,17 +344,11 @@ export function FullComparePanel({
       <div className="grid grid-cols-[2fr_3fr]">
         {/* 左边：已装备物品 */}
         <div className="border-border flex flex-col border-r p-2">
-          <div className="mb-1 flex justify-center">
-            <CompareItemIconSlot item={equippedItem} />
-          </div>
-          <div className="mb-2 text-center">
-            <span
-              className="font-bold"
-              style={{ color: QUALITY_COLORS[equippedItem.quality as ItemQuality] }}
-            >
-              {getItemDisplayName(equippedItem)}
-            </span>
-          </div>
+          <CompareItemHeader
+            item={equippedItem}
+            name={getItemDisplayName(equippedItem)}
+            nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
+          />
           {/* 当前装备属性 */}
           <div className="flex-1 space-y-0.5">
             {equippedStatKeys.map(stat => {
@@ -334,18 +364,16 @@ export function FullComparePanel({
               )
             })}
           </div>
-          {/* 等级需求+价格信息 - 底部 */}
+          {/* 价格信息 - 底部 */}
           <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
-            {equippedItem.definition?.required_level != null &&
-              equippedItem.definition.required_level > 0 && (
-                <div className="text-muted-foreground flex justify-between">
-                  <span>需求等级</span>
-                  <span>{equippedItem.definition.required_level}</span>
-                </div>
-              )}
-            <div className="flex justify-between text-yellow-600 dark:text-yellow-400">
+            <div className="text-muted-foreground flex justify-between">
               <span>卖出</span>
-              <CopperDisplay copper={equippedItemSellPrice} size="xs" nowrap />
+              <CopperDisplay
+                copper={equippedItemSellPrice}
+                size="sm"
+                nowrap
+                className="font-medium"
+              />
             </div>
             {equippedItemBuyPrice > 0 && (
               <div className="flex justify-between text-purple-600 dark:text-purple-400">
@@ -357,17 +385,11 @@ export function FullComparePanel({
         </div>
         {/* 右边：背包物品 */}
         <div className="flex flex-col p-2">
-          <div className="mb-1 flex justify-center">
-            <CompareItemIconSlot item={newItem} />
-          </div>
-          <div className="mb-2 text-center">
-            <span
-              className="font-bold"
-              style={{ color: QUALITY_COLORS[newItem.quality as ItemQuality] }}
-            >
-              {getItemDisplayName(newItem)}
-            </span>
-          </div>
+          <CompareItemHeader
+            item={newItem}
+            name={getItemDisplayName(newItem)}
+            nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
+          />
           {/* 新物品属性 */}
           <div className="flex-1 space-y-0.5">
             {newStatKeys.map(stat => {
@@ -381,17 +403,16 @@ export function FullComparePanel({
               )
             })}
           </div>
-          {/* 等级需求+价格 - 底部 */}
+          {/* 价格 - 底部 */}
           <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
-            {newItemRequiredLevel > 0 && (
-              <div className="text-muted-foreground flex justify-between">
-                <span>需求等级</span>
-                <span>{newItemRequiredLevel}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-yellow-600 dark:text-yellow-400">
+            <div className="text-muted-foreground flex justify-between">
               <span>{isShop ? '价格' : '卖出'}</span>
-              <CopperDisplay copper={newItemDisplayPrice} size="xs" nowrap />
+              <CopperDisplay
+                copper={newItemDisplayPrice}
+                size="sm"
+                nowrap
+                className="font-medium"
+              />
             </div>
           </div>
         </div>

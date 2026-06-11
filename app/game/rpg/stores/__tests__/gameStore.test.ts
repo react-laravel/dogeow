@@ -661,6 +661,30 @@ describe('GameStore', () => {
       expect(useGameStore.getState().shopItems[0]?.id).toBe(2)
     })
 
+    it('should remove purchased gem from shop items', async () => {
+      const { post } = await import('@/lib/api')
+      vi.mocked(post).mockResolvedValueOnce({
+        copper: 900,
+        total_price: 100,
+        quantity: 1,
+        item_name: 'Defense Gem',
+      })
+
+      useGameStore.setState({
+        selectedCharacterId: 1,
+        character: { id: 1, copper: 1000 } as GameCharacter,
+        shopItems: [
+          { id: 10, name: 'Defense Gem', type: 'gem', buy_price: 100 } as ShopItem,
+          { id: 11, name: 'Attack Gem', type: 'gem', buy_price: 120 } as ShopItem,
+        ],
+      })
+
+      await useGameStore.getState().buyItem(10, 1)
+
+      expect(useGameStore.getState().shopItems).toHaveLength(1)
+      expect(useGameStore.getState().shopItems[0]?.id).toBe(11)
+    })
+
     it('should keep potion listings after purchase', async () => {
       const { post } = await import('@/lib/api')
       vi.mocked(post).mockResolvedValueOnce({

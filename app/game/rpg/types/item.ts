@@ -28,6 +28,8 @@ export interface ItemDefinition {
   type: ItemType
   sub_type?: string
   base_stats: Record<string, number>
+  /** 宝石镶嵌加成（仅 type=gem 时有值） */
+  gem_stats?: Record<string, number>
   required_level: number
   icon?: string
   description?: string

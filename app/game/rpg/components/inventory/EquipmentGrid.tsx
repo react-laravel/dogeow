@@ -52,13 +52,6 @@ export function EquipmentGrid({ equipment, onUnequip }: EquipmentGridProps) {
 
   return (
     <>
-      <GemSelectorDialog
-        isOpen={showGemSelector}
-        socketItem={selectedSocketItem}
-        gems={gemsInInventory}
-        onClose={closeGemSelector}
-        onSelect={handleSocketGem}
-      />
       <div className="mx-auto grid w-[280px] max-w-full grid-cols-3 gap-x-4 gap-y-3 sm:w-[320px] sm:gap-x-5 sm:gap-y-4">
         {EQUIPMENT_LAYOUT.map((cell, index) => {
           if (!cell.slot) {
@@ -88,6 +81,13 @@ export function EquipmentGrid({ equipment, onUnequip }: EquipmentGridProps) {
         onOpenGemSelector={openGemSelector}
         onUnequip={handleUnequip}
         onUnsocketGem={handleUnsocketGem}
+      />
+      <GemSelectorDialog
+        isOpen={showGemSelector}
+        socketItem={selectedSocketItem}
+        gems={gemsInInventory}
+        onClose={closeGemSelector}
+        onSelect={handleSocketGem}
       />
     </>
   )

@@ -1376,8 +1376,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       soundManager.play('gold')
       set(state => {
         const purchasedItem = state.shopItems.find(item => item.id === itemId)
-        const isRepeatableShopItem =
-          purchasedItem?.type === 'potion' || purchasedItem?.type === 'gem'
+        const isRepeatableShopItem = purchasedItem?.type === 'potion'
 
         return {
           ...state,

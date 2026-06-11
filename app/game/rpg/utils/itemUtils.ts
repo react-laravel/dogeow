@@ -159,6 +159,10 @@ export function getItemSellTotalValue(item: GameItem): number {
 }
 
 export function getItemTotalStats(item: GameItem): Record<string, number> {
+  if (item.definition?.type === 'gem') {
+    return { ...(item.definition.gem_stats ?? {}) }
+  }
+
   const total: Record<string, number> = { ...(item.stats || {}) }
   // 词缀累加
   item.affixes?.forEach(affix => {
@@ -167,4 +171,12 @@ export function getItemTotalStats(item: GameItem): Record<string, number> {
     })
   })
   return total
+}
+
+/** 格式化物品属性数值（暴击率/暴伤等） */
+export function formatItemStatValue(val: number, statKey: string): string | number {
+  if (statKey === 'crit_damage') return `${Math.round(val * 100)}%`
+  if (statKey === 'crit_rate' && Math.abs(val) < 1) return `${Number((val * 100).toFixed(1))}%`
+  if (!Number.isInteger(val)) return Number(val.toFixed(2))
+  return val
 }

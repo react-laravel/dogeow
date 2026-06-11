@@ -32,7 +32,7 @@ export function GemSelectorDialog({
   const availableSocketCount = (socketItem.sockets ?? 0) - (socketItem.gems?.length ?? 0)
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4">
       <div className="bg-card border-border w-full max-w-sm rounded-lg border p-4 sm:p-6">
         <h4 className="text-foreground mb-3 text-base font-bold sm:mb-4 sm:text-lg">
           选择宝石 (还可镶嵌 {availableSocketCount} 个)
