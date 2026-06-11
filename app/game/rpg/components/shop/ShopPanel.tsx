@@ -12,6 +12,9 @@ import { ItemDetailModal, ShopItemIcon } from '@/components/game'
 /** 强制刷新费用：1 银 = 100 铜 */
 const SHOP_REFRESH_COST_COPPER = 100
 
+/** 每个分类最多展示的物品数量 */
+const SHOP_ITEMS_PER_CATEGORY = 5
+
 /** 商店分类行（顺序与左侧图标一致） */
 const SHOP_TYPE_FILTERS: { id: string; label: string; name: string; types: ItemType[] }[] = [
   { id: 'weapon', label: '⚔️', name: '武器', types: ['weapon'] },
@@ -85,7 +88,7 @@ const ShopItemCell = memo(function ShopItemCell({
           icon={item.icon}
           type={item.type}
           subType={item.sub_type}
-          className="text-sm sm:text-base"
+          className="text-base sm:text-lg"
         />
       </span>
       <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-px">
@@ -150,9 +153,15 @@ export function ShopPanel() {
         ...filter,
         items: shopItems
           .filter(item => filter.types.includes(item.type))
-          .sort((a, b) => b.buy_price - a.buy_price),
+          .sort((a, b) => b.buy_price - a.buy_price)
+          .slice(0, SHOP_ITEMS_PER_CATEGORY),
       })).filter(group => group.items.length > 0),
     [shopItems]
+  )
+
+  const displayedItemCount = useMemo(
+    () => itemsByCategory.reduce((sum, group) => sum + group.items.length, 0),
+    [itemsByCategory]
   )
 
   const selectedItemId = selectedShopItem?.id ?? null
@@ -173,7 +182,7 @@ export function ShopPanel() {
           <h4 className="text-foreground text-sm font-medium">
             商店物品
             <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-              {shopItems.length}
+              {displayedItemCount}
             </span>
           </h4>
           <ShopRefreshCountdown nextRefreshAt={shopNextRefreshAt} />
@@ -187,7 +196,7 @@ export function ShopPanel() {
                 className="border-border/40 flex shrink-0 items-stretch gap-1.5 border-b py-1.5 last:border-b-0"
               >
                 <div
-                  className="bg-muted/60 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base"
+                  className="bg-muted/60 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
                   title={group.name}
                   aria-label={group.name}
                 >
@@ -195,7 +204,7 @@ export function ShopPanel() {
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
                   {group.items.map(item => (
-                    <div key={item.id} className="w-9 shrink-0 sm:w-10">
+                    <div key={item.id} className="w-11 shrink-0 sm:w-12">
                       <ShopItemCell
                         item={item}
                         isSelected={selectedItemId === item.id}
