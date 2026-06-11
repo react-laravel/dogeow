@@ -29,7 +29,7 @@ function CombatLogSkillIcons({ skills }: { skills: SkillUsedEntry[] }) {
             className="relative inline-flex"
             title={useCount > 1 ? `${skill.name} ×${useCount}` : skill.name}
           >
-            <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name} />
+            <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name} size="sm" />
             {useCount > 1 && (
               <span className="bg-background text-foreground absolute -right-0.5 -bottom-0.5 rounded px-0.5 text-[9px] leading-none font-semibold shadow-sm">
                 ×{useCount}
@@ -47,7 +47,7 @@ function CombatLogLootIcon({ item, onClick }: { item: GameItem; onClick: () => v
   return (
     <button
       type="button"
-      className="border-border relative inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded border-2 p-0.5 transition-shadow hover:shadow-md"
+      className="border-border relative inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border p-px transition-shadow hover:shadow-md sm:h-6 sm:w-6"
       style={{
         borderColor: qualityColor,
         background: `linear-gradient(135deg, ${qualityColor}15 0%, ${qualityColor}08 100%)`,

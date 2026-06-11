@@ -9,11 +9,15 @@ export const SkillIcon = memo(function SkillIcon({
   icon,
   effectKey,
   name,
+  size = 'md',
 }: {
   icon?: string | null
   effectKey?: string | null
   name: string
+  size?: 'sm' | 'md'
 }) {
+  const sizeClass = size === 'sm' ? 'h-5 w-5 text-xs' : 'h-8 w-8 text-base sm:h-9 sm:w-9'
+  const imageSize = size === 'sm' ? '20px' : '36px'
   const iconFile = useMemo(() => {
     if (effectKey) {
       return effectKey.endsWith('.png') ? effectKey : `${effectKey}.png`
@@ -27,14 +31,16 @@ export const SkillIcon = memo(function SkillIcon({
   const handleError = useCallback(() => setFailed(true), [])
 
   return (
-    <span className="bg-muted relative flex h-8 w-8 items-center justify-center overflow-hidden rounded text-base sm:h-9 sm:w-9">
+    <span
+      className={`bg-muted relative flex items-center justify-center overflow-hidden rounded ${sizeClass}`}
+    >
       {src && !failed ? (
         <Image
           src={src}
           alt={name}
           fill
           className="object-cover"
-          sizes="36px"
+          sizes={imageSize}
           onError={handleError}
         />
       ) : (
