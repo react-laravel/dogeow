@@ -41,7 +41,7 @@ export const ShopItemIcon = memo(function ShopItemIcon({
     <span
       className={`relative inline-flex h-full w-full items-center justify-center ${className ?? ''}`}
     >
-      <Image src={src} alt="" fill className="object-contain" sizes="48px" onError={handleError} />
+      <Image src={src} alt="" fill className="object-contain" sizes="32px" onError={handleError} />
     </span>
   )
 })

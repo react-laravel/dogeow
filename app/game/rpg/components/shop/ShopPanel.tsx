@@ -70,9 +70,9 @@ const ShopItemCell = memo(function ShopItemCell({
   return (
     <button
       onClick={() => onSelect(item)}
-      className={`flex aspect-square w-full min-w-0 flex-col rounded-lg border-2 transition-all active:scale-95 ${
+      className={`flex aspect-square w-full min-w-0 flex-col rounded-md border transition-all active:scale-95 ${
         isSelected
-          ? 'border-green-500 bg-green-500/20 shadow-md shadow-green-500/30 dark:border-green-400 dark:bg-green-400/20'
+          ? 'border-green-500 bg-green-500/20 shadow-sm shadow-green-500/20 dark:border-green-400 dark:bg-green-400/20'
           : 'bg-muted/40 hover:bg-muted/60'
       }`}
       style={borderColor ? { borderColor } : undefined}
@@ -80,9 +80,15 @@ const ShopItemCell = memo(function ShopItemCell({
       title={`${item.name} - ${formatCopper(item.buy_price, 1)}`}
     >
       <span className="flex min-h-0 flex-1 items-center justify-center p-0.5">
-        <ShopItemIcon itemId={item.id} icon={item.icon} type={item.type} subType={item.sub_type} />
+        <ShopItemIcon
+          itemId={item.id}
+          icon={item.icon}
+          type={item.type}
+          subType={item.sub_type}
+          className="text-sm sm:text-base"
+        />
       </span>
-      <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-0.5">
+      <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-px">
         <CopperDisplay copper={item.buy_price} size="xs" nowrap maxParts={1} />
       </span>
     </button>
@@ -178,18 +184,18 @@ export function ShopPanel() {
             itemsByCategory.map(group => (
               <div
                 key={group.id}
-                className="border-border/40 flex shrink-0 items-stretch gap-2 border-b py-2 last:border-b-0"
+                className="border-border/40 flex shrink-0 items-stretch gap-1.5 border-b py-1.5 last:border-b-0"
               >
                 <div
-                  className="bg-muted/60 flex h-11 w-[3.75rem] shrink-0 items-center justify-center rounded-xl text-[1.4rem] sm:h-12 sm:w-16 sm:text-2xl"
+                  className="bg-muted/60 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base"
                   title={group.name}
                   aria-label={group.name}
                 >
                   {group.label}
                 </div>
-                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
                   {group.items.map(item => (
-                    <div key={item.id} className="w-14 shrink-0 sm:w-16">
+                    <div key={item.id} className="w-9 shrink-0 sm:w-10">
                       <ShopItemCell
                         item={item}
                         isSelected={selectedItemId === item.id}
