@@ -28,11 +28,6 @@ export default function GithubCallbackPage() {
         await setToken(token)
         setUser(user)
 
-        // 存储到 localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('auth-token', token)
-        }
-
         // 跳转到首页
         router.push('/')
       } catch (err) {

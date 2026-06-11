@@ -2,6 +2,13 @@ import { renderHook, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import useAuthStore from '../authStore'
 import type { User, AuthResponse } from '../../app'
+import { AUTH_STORAGE_KEY } from '@/lib/utils/authStorage'
+
+const getPersistedAuthToken = (): string | null => {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY)
+  if (!raw) return null
+  return (JSON.parse(raw) as { state?: { token?: string } }).state?.token ?? null
+}
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({
@@ -205,7 +212,8 @@ describe('authStore', () => {
     expect(result.current.loading).toBe(false)
     expect(result.current.isAuthenticated).toBe(true)
     expect(loginResult!).toEqual(mockAuthResponse)
-    expect(localStorage.getItem('auth-token')).toBe('test-token-123')
+    expect(getPersistedAuthToken()).toBe('test-token-123')
+    expect(localStorage.getItem('auth-token')).toBeNull()
   })
 
   it('should redirect to github provider successfully', async () => {
@@ -358,27 +366,22 @@ describe('authStore', () => {
     expect(result.current.isAuthenticated).toBe(false)
   })
 
-  it('should initialize auth state from localStorage', async () => {
-    // Set up localStorage with token
-    localStorage.setItem('auth-token', 'persisted-token')
-
-    // Mock the initializeAuth function call
+  it('should persist auth state in auth-storage', async () => {
     const { result } = renderHook(() => useAuthStore())
 
-    // Wait for initialization to complete
     await act(async () => {
-      // Simulate the initialization process by calling setToken directly
       await result.current.setToken('persisted-token')
       result.current.setLoading(false)
     })
 
     expect(result.current.token).toBe('persisted-token')
+    expect(getPersistedAuthToken()).toBe('persisted-token')
     expect(result.current.isAuthenticated).toBe(true)
     expect(result.current.loading).toBe(false)
   })
 
   it('should handle initialization when no token in localStorage', async () => {
-    // Ensure localStorage is empty
+    localStorage.removeItem(AUTH_STORAGE_KEY)
     localStorage.removeItem('auth-token')
 
     const { result } = renderHook(() => useAuthStore())
@@ -693,60 +696,20 @@ describe('authStore', () => {
     expect(result.current.getToken()).toBeUndefined()
   })
 
-  it('should test initializeAuth function directly', async () => {
-    // Mock window to simulate browser environment
-    const originalWindow = global.window
-    global.window = {
-      ...originalWindow,
-      localStorage,
-    } as any
+  it('should clear legacy auth-token on logout', async () => {
+    useAuthStore.setState({
+      user: mockUser,
+      token: 'test-token',
+      isAuthenticated: true,
+    })
+    localStorage.setItem('auth-token', 'test-token')
 
-    // Set up localStorage with token
-    localStorage.setItem('auth-token', 'test-initialization-token')
-
-    // Get the store instance
     const { result } = renderHook(() => useAuthStore())
 
-    // Simulate the initialization process
     await act(async () => {
-      // Directly call setToken to simulate what initializeAuth does
-      await result.current.setToken('test-initialization-token')
-      result.current.setLoading(false)
+      await result.current.logout()
     })
 
-    expect(result.current.token).toBe('test-initialization-token')
-    expect(result.current.isAuthenticated).toBe(true)
-    expect(result.current.loading).toBe(false)
-
-    // Restore original window
-    global.window = originalWindow
-  })
-
-  it('should test initializeAuth function with no token', async () => {
-    // Mock window to simulate browser environment
-    const originalWindow = global.window
-    global.window = {
-      ...originalWindow,
-      localStorage,
-    } as any
-
-    // Ensure localStorage is empty
-    localStorage.removeItem('auth-token')
-
-    // Get the store instance
-    const { result } = renderHook(() => useAuthStore())
-
-    // Simulate the initialization process
-    await act(async () => {
-      // Directly call setLoading to simulate what initializeAuth does
-      result.current.setLoading(false)
-    })
-
-    expect(result.current.token).toBeNull()
-    expect(result.current.isAuthenticated).toBe(false)
-    expect(result.current.loading).toBe(false)
-
-    // Restore original window
-    global.window = originalWindow
+    expect(localStorage.getItem('auth-token')).toBeNull()
   })
 })

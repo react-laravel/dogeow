@@ -78,19 +78,8 @@ interface GameState {
   isFighting: boolean
   shouldAutoCombat: boolean // 是否应该自动战斗（不管在哪个标签页）
   combatResult: CombatResult | null
-  /** 刷新页面时由 combat/status 返回的当前怪物，用于在未收到 WebSocket 回合前显示怪物 */
-  currentCombatMonsterFromStatus: {
-    monster: {
-      name: string
-      type: string
-      level: number
-      icon?: string | null
-      hp?: number
-      max_hp?: number
-    }
-    monsterId: number
-    monsters?: CombatMonster[]
-  } | null
+  /** 刷新页面时由 combat/status 返回的当前怪物列表，用于在未收到 WebSocket 回合前显示怪物 */
+  statusCombatMonsters: (CombatMonster | null)[] | null
   combatLogs: (CombatResult | CombatLog)[]
   combatLogDetail: CombatLogDetail | null // 选中的战斗日志详情
 
@@ -231,7 +220,7 @@ const initialState = {
   shouldAutoCombat: false, // 是否应该自动战斗
   enabledSkillIds: [] as number[], // 已启用的技能，可多选
   combatResult: null,
-  currentCombatMonsterFromStatus: null,
+  statusCombatMonsters: null,
   combatLogs: [],
   combatLogDetail: null, // 选中的战斗日志详情
   isLoading: false,
@@ -960,23 +949,6 @@ const store: StateCreator<GameState> = (set, get) => ({
         }
         current_combat_monsters?: (CombatMonster | null)[]
       }
-      const fromStatus =
-        response.is_fighting && response.current_combat_monster
-          ? {
-              monster: {
-                name: response.current_combat_monster.name,
-                type: response.current_combat_monster.type,
-                level: response.current_combat_monster.level,
-                icon: response.current_combat_monster.icon,
-                hp: response.current_combat_monster.hp,
-                max_hp: response.current_combat_monster.max_hp,
-              },
-              monsterId: response.current_combat_monster.id,
-              monsters: response.current_combat_monsters
-                ? response.current_combat_monsters.filter((m): m is CombatMonster => m !== null)
-                : undefined,
-            }
-          : null
       set(state => ({
         ...state,
         isFighting: response.is_fighting,
@@ -984,7 +956,9 @@ const store: StateCreator<GameState> = (set, get) => ({
         combatStats: response.combat_stats,
         currentHp: response.current_hp,
         currentMana: response.current_mana,
-        currentCombatMonsterFromStatus: fromStatus,
+        statusCombatMonsters: response.is_fighting
+          ? (response.current_combat_monsters ?? null)
+          : null,
       }))
     } catch (error) {
       console.error('[GameStore] Fetch combat status error:', error)
@@ -1101,7 +1075,7 @@ const store: StateCreator<GameState> = (set, get) => ({
     // 立即清空战斗结果和战斗状态，避免界面继续显示死亡前的怪物
     startRequest(set, {
       combatResult: null,
-      currentCombatMonsterFromStatus: null,
+      statusCombatMonsters: null,
       isFighting: false,
       shouldAutoCombat: false,
     })
@@ -1120,7 +1094,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         ...withCombatFlag(state, false),
         shouldAutoCombat: false,
         combatResult: null,
-        currentCombatMonsterFromStatus: null,
+        statusCombatMonsters: null,
         isLoading: false,
       }))
     } catch (error) {
@@ -1141,7 +1115,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         ...withCombatFlag(state, false),
         shouldAutoCombat: false,
         combatResult: null,
-        currentCombatMonsterFromStatus: null,
+        statusCombatMonsters: null,
       }))
     }
   },
@@ -1224,11 +1198,7 @@ const store: StateCreator<GameState> = (set, get) => ({
 
     set(state => ({
       ...state,
-      currentCombatMonsterFromStatus: {
-        monster: { name: '', type: 'normal', level: 1 },
-        monsterId: 0,
-        monsters: typedData.monsters || [],
-      },
+      statusCombatMonsters: typedData.monsters || [],
       currentHp,
       currentMana,
     }))

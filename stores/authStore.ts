@@ -3,10 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User, AuthResponse } from '../app'
 import { ApiRequestError, apiRequest, get as apiGet, post } from '@/lib/api'
 import { redirectTo } from '@/lib/auth/redirect'
-
-// 常量定义
-const AUTH_TOKEN_KEY = 'auth-token'
-const STORAGE_KEY = 'auth-storage'
+import {
+  AUTH_STORAGE_KEY,
+  readPersistedAuthToken,
+  removeLegacyAuthToken,
+} from '@/lib/utils/authStorage'
 
 interface AuthState {
   readonly user: User | null
@@ -71,17 +72,6 @@ const memoryStorage = createMemoryStorage()
 const normalizeToken = (token: string | null | undefined): string | null =>
   typeof token === 'string' && token.trim().length > 0 ? token : null
 
-const persistLegacyToken = (token: string | null): void => {
-  if (typeof window === 'undefined') return
-
-  const storage = getSafeStorage()
-  if (token) {
-    storage.setItem(AUTH_TOKEN_KEY, token)
-  } else {
-    storage.removeItem(AUTH_TOKEN_KEY)
-  }
-}
-
 const isWrappedUserPayload = (payload: UserPayload): payload is { user?: User } =>
   !('id' in payload && 'name' in payload && 'email' in payload)
 
@@ -131,7 +121,6 @@ const useAuthStore = create<AuthState>()(
           token: normalizedToken,
           isAuthenticated: Boolean(state.user || normalizedToken),
         }))
-        persistLegacyToken(normalizedToken)
         await syncWithWebSocketAuth(normalizedToken)
       },
 
@@ -144,7 +133,9 @@ const useAuthStore = create<AuthState>()(
           loading: false,
           isAuthenticated: false,
         })
-        persistLegacyToken(null)
+        if (typeof window !== 'undefined') {
+          removeLegacyAuthToken(getSafeStorage())
+        }
         await syncWithWebSocketAuth(null)
       },
 
@@ -172,9 +163,6 @@ const useAuthStore = create<AuthState>()(
             isAuthenticated: Boolean(data.user || normalizedToken),
           })
 
-          persistLegacyToken(normalizedToken)
-
-          // 同步到 WebSocket
           await syncWithWebSocketAuth(normalizedToken)
 
           return data
@@ -234,9 +222,6 @@ const useAuthStore = create<AuthState>()(
             isAuthenticated: Boolean(data.user || normalizedToken),
           })
 
-          persistLegacyToken(normalizedToken)
-
-          // 同步到 WebSocket
           await syncWithWebSocketAuth(normalizedToken)
 
           return data
@@ -343,13 +328,34 @@ const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: STORAGE_KEY,
+      name: AUTH_STORAGE_KEY,
       storage: createJSONStorage(() => getSafeStorage()),
       partialize: state => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<
+          Pick<AuthState, 'user' | 'token' | 'isAuthenticated'>
+        >
+        let token = persisted.token ?? currentState.token
+
+        if (!token && typeof window !== 'undefined') {
+          const migratedToken = readPersistedAuthToken(getSafeStorage())
+          if (migratedToken) {
+            token = migratedToken
+            removeLegacyAuthToken(getSafeStorage())
+          }
+        }
+
+        return {
+          ...currentState,
+          ...persisted,
+          token: token ?? null,
+          isAuthenticated: Boolean(persisted.user || token),
+        }
+      },
       onRehydrateStorage: () => state => {
         if (!state || typeof window === 'undefined') {
           return
@@ -378,28 +384,5 @@ const useAuthStore = create<AuthState>()(
     }
   )
 )
-
-// 初始化认证状态
-const initializeAuth = async (): Promise<void> => {
-  if (typeof window === 'undefined') return
-
-  const { setToken, setLoading } = useAuthStore.getState()
-
-  try {
-    const token = getSafeStorage().getItem(AUTH_TOKEN_KEY)
-    if (token) {
-      await setToken(token)
-    }
-  } catch (error) {
-    console.warn('初始化认证状态失败:', error)
-  } finally {
-    setLoading(false)
-  }
-}
-
-// 延迟初始化避免阻塞
-if (typeof window !== 'undefined') {
-  setTimeout(initializeAuth, 0)
-}
 
 export default useAuthStore

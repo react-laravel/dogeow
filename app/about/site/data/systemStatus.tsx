@@ -11,7 +11,7 @@ const STATUS_KEY = 'system/status'
 const REFRESH_INTERVAL_MS = 12_000
 
 type StatusKind = 'online' | 'offline' | 'warning' | 'error'
-const LEGACY_GITHUB_STATUS_MESSAGE = '当前后端尚未返回 GitHub API 状态'
+const GITHUB_STATUS_UNAVAILABLE_MESSAGE = '当前后端尚未返回 GitHub API 状态'
 
 function normalizeStatus(s: string): StatusKind {
   if (s === 'online') return 'online'
@@ -51,7 +51,7 @@ export function mapApiToSystemStatus(data: SystemStatusApiResponse): SystemStatu
         label: 'REST / GraphQL 配额',
         status: 'warning',
         icon: <Github className={iconClass} />,
-        details: LEGACY_GITHUB_STATUS_MESSAGE,
+        details: GITHUB_STATUS_UNAVAILABLE_MESSAGE,
       }
 
   return [

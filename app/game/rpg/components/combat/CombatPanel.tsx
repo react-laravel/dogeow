@@ -16,6 +16,7 @@ import { BattleArena } from './BattleArena'
 import { BattleSkillBar } from './BattleSkillBar'
 import { CombatLogList } from './CombatLogList'
 import { getActName } from '../../utils/combat'
+import { getPrimaryCombatMonster, getPrimaryCombatMonsterId } from '../../utils/combatUtils'
 import { MapCardMonsterAvatar } from './MapCardMonsterAvatar'
 import { LogIn, Heart, Droplet } from 'lucide-react'
 import { DIFFICULTY_OPTIONS, DIFFICULTY_COLORS } from '../character/CharacterSelect'
@@ -33,7 +34,7 @@ export function CombatPanel() {
   const isLoading = useGameStore(state => state.isLoading)
   const combatLogs = useGameStore(state => state.combatLogs)
   const combatResult = useGameStore(state => state.combatResult)
-  const currentCombatMonsterFromStatus = useGameStore(state => state.currentCombatMonsterFromStatus)
+  const statusCombatMonsters = useGameStore(state => state.statusCombatMonsters)
   const skills = useGameStore(state => state.skills)
   const character = useGameStore(state => state.character)
   const combatStats = useGameStore(state => state.combatStats)
@@ -308,16 +309,21 @@ export function CombatPanel() {
                     currentHp={currentHp}
                     currentMana={currentMana}
                     monster={
-                      combatResult?.monster ?? currentCombatMonsterFromStatus?.monster ?? null
+                      combatResult?.monster ?? getPrimaryCombatMonster(statusCombatMonsters) ?? null
                     }
                     monsterId={
                       combatResult?.monster_id ??
-                      currentCombatMonsterFromStatus?.monsterId ??
-                      character?.combat_monster_id ??
+                      getPrimaryCombatMonsterId(statusCombatMonsters) ??
                       undefined
                     }
                     monsterHpBeforeRound={combatResult?.monster_hp_before_round}
-                    monsters={combatResult?.monsters ?? currentCombatMonsterFromStatus?.monsters}
+                    monsters={
+                      combatResult?.monsters ??
+                      statusCombatMonsters?.filter(
+                        (monster): monster is CombatMonster => monster !== null
+                      ) ??
+                      undefined
+                    }
                     isFighting={isFighting}
                     isLoading={isLoading}
                     // 角色死亡时(currentHp<=0)，点击只是复活，不自动开始战斗

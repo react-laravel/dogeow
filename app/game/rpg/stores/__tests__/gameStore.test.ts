@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useGameStore } from '../gameStore'
+import type { GameCharacter, GameItem, MapDefinition, SkillWithLearnedState } from '../../types'
 
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
@@ -18,12 +19,12 @@ vi.mock('../utils/soundManager', () => ({
 vi.mock('./combatHelpers', () => ({
   reportCombatDebug: vi.fn(),
   extractCombatLogId: vi.fn(() => null),
-  mergeCombatLogsWithUpdate: vi.fn((logs) => logs),
+  mergeCombatLogsWithUpdate: vi.fn(logs => logs),
   hasPotionUsage: vi.fn(() => false),
 }))
 
 vi.mock('./gameStateHelpers', () => ({
-  normalizeEquipmentResponse: vi.fn((equip) => equip),
+  normalizeEquipmentResponse: vi.fn(equip => equip),
   getSelectedCharacterIdOrAbort: vi.fn(() => 1),
   setRequestError: vi.fn(),
   startRequest: vi.fn(),
@@ -55,7 +56,7 @@ describe('GameStore', () => {
       shouldAutoCombat: false,
       enabledSkillIds: [],
       combatResult: null,
-      currentCombatMonsterFromStatus: null,
+      statusCombatMonsters: null,
       combatLogs: [],
       combatLogDetail: null,
       isLoading: false,
@@ -83,9 +84,7 @@ describe('GameStore', () => {
 
   describe('fetchCharacters', () => {
     it('should fetch characters successfully', async () => {
-      const mockCharacters = [
-        { id: 1, name: 'Test Character', class: 'warrior', level: 1 },
-      ]
+      const mockCharacters = [{ id: 1, name: 'Test Character', class: 'warrior', level: 1 }]
       const { apiGet } = await import('@/lib/api')
       vi.mocked(apiGet).mockResolvedValueOnce({ characters: mockCharacters })
 
@@ -128,7 +127,14 @@ describe('GameStore', () => {
         name: 'NewChar',
         class: 'warrior',
         level: 1,
-        combat_stats: { max_hp: 100, max_mana: 50, attack: 10, defense: 5, crit_rate: 0.1, crit_damage: 1.5 },
+        combat_stats: {
+          max_hp: 100,
+          max_mana: 50,
+          attack: 10,
+          defense: 5,
+          crit_rate: 0.1,
+          crit_damage: 1.5,
+        },
       }
       vi.mocked(post).mockResolvedValueOnce({
         character: newCharacter,
@@ -144,7 +150,7 @@ describe('GameStore', () => {
   describe('deleteCharacter', () => {
     it('should delete a character', async () => {
       useGameStore.setState({
-        characters: [{ id: 1, name: 'ToDelete' }],
+        characters: [{ id: 1, name: 'ToDelete' } as GameCharacter],
         selectedCharacterId: 1,
       })
 
@@ -184,12 +190,19 @@ describe('GameStore', () => {
         equipped_item: { id: 2, name: 'Equipped' },
         equipped_slot: 'weapon',
         unequipped_item: null,
-        combat_stats: { max_hp: 100, max_mana: 50, attack: 15, defense: 5, crit_rate: 0.1, crit_damage: 1.5 },
+        combat_stats: {
+          max_hp: 100,
+          max_mana: 50,
+          attack: 15,
+          defense: 5,
+          crit_rate: 0.1,
+          crit_damage: 1.5,
+        },
       })
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        inventory: [{ id: 2, name: 'Sword' }],
+        inventory: [{ id: 2, name: 'Sword' } as unknown as GameItem],
       })
 
       await useGameStore.getState().equipItem(2)
@@ -204,12 +217,19 @@ describe('GameStore', () => {
       const { post } = await import('@/lib/api')
       vi.mocked(post).mockResolvedValueOnce({
         item: { id: 2, name: 'Sword' },
-        combat_stats: { max_hp: 100, max_mana: 50, attack: 10, defense: 5, crit_rate: 0.1, crit_damage: 1.5 },
+        combat_stats: {
+          max_hp: 100,
+          max_mana: 50,
+          attack: 10,
+          defense: 5,
+          crit_rate: 0.1,
+          crit_damage: 1.5,
+        },
       })
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        equipment: { weapon: { id: 2, name: 'Sword' } },
+        equipment: { weapon: { id: 2, name: 'Sword' } as unknown as GameItem },
       })
 
       await useGameStore.getState().unequipItem('weapon')
@@ -226,8 +246,8 @@ describe('GameStore', () => {
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        inventory: [{ id: 2, name: 'Item' }],
-        character: { id: 1, copper: 0 },
+        inventory: [{ id: 2, name: 'Item' } as unknown as GameItem],
+        character: { id: 1, copper: 0 } as GameCharacter,
       })
 
       await useGameStore.getState().sellItem(2, 1)
@@ -262,12 +282,14 @@ describe('GameStore', () => {
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        skills: [{ id: 1, name: 'NewSkill', is_learned: false, type: 'active' }],
+        skills: [
+          { id: 1, name: 'NewSkill', is_learned: false, type: 'active' } as SkillWithLearnedState,
+        ],
       })
 
       await useGameStore.getState().learnSkill(1)
 
-      const skill = useGameStore.getState().skills.find((s) => s.id === 1)
+      const skill = useGameStore.getState().skills.find(s => s.id === 1)
       expect(skill?.is_learned).toBe(true)
     })
   })
@@ -298,7 +320,7 @@ describe('GameStore', () => {
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        maps: [{ id: 1, name: 'Map1' }],
+        maps: [{ id: 1, name: 'Map1', act: 1, monster_ids: [] } as MapDefinition],
       })
 
       await useGameStore.getState().enterMap(1)
@@ -314,11 +336,25 @@ describe('GameStore', () => {
       vi.mocked(apiGet).mockResolvedValueOnce({
         is_fighting: true,
         current_map: { id: 1, name: 'Map1' },
-        combat_stats: { max_hp: 100, max_mana: 50, attack: 10, defense: 5, crit_rate: 0.1, crit_damage: 1.5 },
+        combat_stats: {
+          max_hp: 100,
+          max_mana: 50,
+          attack: 10,
+          defense: 5,
+          crit_rate: 0.1,
+          crit_damage: 1.5,
+        },
         current_hp: 80,
         current_mana: 40,
         last_combat_at: null,
-        current_combat_monster: { id: 1, name: 'Monster', type: 'normal', level: 1, hp: 50, max_hp: 50 },
+        current_combat_monster: {
+          id: 1,
+          name: 'Monster',
+          type: 'normal',
+          level: 1,
+          hp: 50,
+          max_hp: 50,
+        },
       })
 
       useGameStore.setState({ selectedCharacterId: 1 })
@@ -406,7 +442,14 @@ describe('GameStore', () => {
       const { post } = await import('@/lib/api')
       vi.mocked(post).mockResolvedValueOnce({
         character: { id: 1, current_hp: 90 },
-        combat_stats: { max_hp: 100, max_mana: 50, attack: 10, defense: 5, crit_rate: 0.1, crit_damage: 1.5 },
+        combat_stats: {
+          max_hp: 100,
+          max_mana: 50,
+          attack: 10,
+          defense: 5,
+          crit_rate: 0.1,
+          crit_damage: 1.5,
+        },
         current_hp: 90,
         current_mana: 50,
         message: 'Used potion',
@@ -433,7 +476,7 @@ describe('GameStore', () => {
         character: { current_hp: 100, current_mana: 50 },
       })
 
-      expect(useGameStore.getState().currentCombatMonsterFromStatus).toBeDefined()
+      expect(useGameStore.getState().statusCombatMonsters).toHaveLength(1)
     })
 
     it('should not update if not fighting', () => {
@@ -444,7 +487,7 @@ describe('GameStore', () => {
         character: { current_hp: 100, current_mana: 50 },
       })
 
-      expect(useGameStore.getState().currentCombatMonsterFromStatus).toBeNull()
+      expect(useGameStore.getState().statusCombatMonsters).toBeNull()
     })
   })
 
@@ -471,7 +514,7 @@ describe('GameStore', () => {
   describe('handleInventoryUpdate', () => {
     it('should update inventory from websocket', () => {
       useGameStore.getState().handleInventoryUpdate({
-        inventory: [{ id: 1, name: 'NewItem' }],
+        inventory: [{ id: 1, name: 'NewItem' } as unknown as GameItem],
       })
 
       expect(useGameStore.getState().inventory).toHaveLength(1)
@@ -482,11 +525,11 @@ describe('GameStore', () => {
     it('should handle loot dropped event', () => {
       useGameStore.setState({
         inventory: [],
-        character: { id: 1, copper: 100 },
+        character: { id: 1, copper: 100 } as GameCharacter,
       })
 
       useGameStore.getState().handleLootDropped({
-        item: { id: 1, name: 'DroppedItem' },
+        item: { id: 1, name: 'DroppedItem' } as unknown as GameItem,
         copper: 50,
       })
 
@@ -497,13 +540,13 @@ describe('GameStore', () => {
   describe('handleLevelUp', () => {
     it('should handle level up event', () => {
       useGameStore.setState({
-        character: { id: 1, level: 1, current_hp: 100, current_mana: 50 },
+        character: { id: 1, level: 1, current_hp: 100, current_mana: 50 } as GameCharacter,
         currentHp: 100,
         currentMana: 50,
       })
 
       useGameStore.getState().handleLevelUp({
-        character: { id: 1, level: 2, current_hp: 120, current_mana: 60 },
+        character: { id: 1, level: 2, current_hp: 120, current_mana: 60 } as GameCharacter,
       })
 
       expect(useGameStore.getState().character?.level).toBe(2)
@@ -521,7 +564,7 @@ describe('GameStore', () => {
   describe('reset', () => {
     it('should reset store to initial state', () => {
       useGameStore.setState({
-        characters: [{ id: 1 }],
+        characters: [{ id: 1 } as GameCharacter],
         error: 'error',
         isLoading: true,
       })
@@ -560,7 +603,7 @@ describe('GameStore', () => {
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 },
+        character: { id: 1, copper: 1000 } as GameCharacter,
       })
 
       await useGameStore.getState().buyItem(1, 1)
@@ -581,8 +624,8 @@ describe('GameStore', () => {
 
       useGameStore.setState({
         selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 },
-        inventory: [{ id: 1, name: 'Item' }],
+        character: { id: 1, copper: 1000 } as GameCharacter,
+        inventory: [{ id: 1, name: 'Item' } as unknown as GameItem],
       })
 
       await useGameStore.getState().sellItemToShop(1, 1)
@@ -642,7 +685,14 @@ describe('GameStore', () => {
 
   describe('clearCompendiumMonsterDrops', () => {
     it('should clear monster drops', () => {
-      useGameStore.setState({ compendiumMonsterDrops: { monster: {} as any, drop_table: {}, drop_rates: {} as any, possible_items: [] } })
+      useGameStore.setState({
+        compendiumMonsterDrops: {
+          monster: {} as any,
+          drop_table: {},
+          drop_rates: {} as any,
+          possible_items: [],
+        },
+      })
       useGameStore.getState().clearCompendiumMonsterDrops()
       expect(useGameStore.getState().compendiumMonsterDrops).toBeNull()
     })
@@ -669,12 +719,10 @@ describe('GameStore', () => {
   describe('setCharacter', () => {
     it('should update character using updater function', () => {
       useGameStore.setState({
-        character: { id: 1, name: 'Old', level: 1 },
+        character: { id: 1, name: 'Old', level: 1 } as GameCharacter,
       })
 
-      useGameStore.getState().setCharacter((prev) =>
-        prev ? { ...prev, name: 'New' } : null
-      )
+      useGameStore.getState().setCharacter(prev => (prev ? { ...prev, name: 'New' } : null))
 
       expect(useGameStore.getState().character?.name).toBe('New')
     })
