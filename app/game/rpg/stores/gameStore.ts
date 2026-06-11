@@ -26,7 +26,7 @@ import {
   GameLootDroppedEvent,
   GameLevelUpEvent,
 } from '../types'
-import { apiGet, post, put, del } from '@/lib/api'
+import { apiGet, apiRequest, post, put, del } from '@/lib/api'
 import { soundManager } from '../utils/soundManager'
 
 // Imports from extracted helpers
@@ -205,7 +205,14 @@ function resolveEnabledSkillIds(
   currentEnabledIds: number[]
 ): number[] {
   if (currentEnabledIds.length > 0) return currentEnabledIds
-  return skills.filter(s => s.is_learned && s.type === 'active').map(s => s.id)
+  return skills
+    .filter(
+      s =>
+        s.is_learned &&
+        s.type === 'active' &&
+        (s.node_tier === 0 || s.node_tier === undefined || s.node_tier === null)
+    )
+    .map(s => s.id)
 }
 
 const initialState = {
@@ -807,23 +814,53 @@ const store: StateCreator<GameState> = (set, get) => ({
             isLoading: false,
           }
         }
-        const nextSkills = state.skills.map(s =>
-          s.id === cs.skill_id
-            ? {
-                ...s,
-                is_learned: true,
-                character_skill_id: cs.id,
-                level: cs.level ?? 1,
-                slot_index: cs.slot_index ?? null,
-              }
-            : s
-        )
-        // 查找刚学习的技能，如果是主动技能则自动启用
         const learnedSkill = state.skills.find(s => s.id === cs.skill_id)
-        const isNewActiveSkill = learnedSkill && learnedSkill.type === 'active'
-        const newEnabledSkillIds = isNewActiveSkill
-          ? [...state.enabledSkillIds, cs.skill_id]
-          : state.enabledSkillIds
+        const nextSkills = state.skills.map(s => {
+          if (s.id === cs.skill_id) {
+            return {
+              ...s,
+              is_learned: true,
+              character_skill_id: cs.id,
+              level: cs.level ?? 1,
+              slot_index: cs.slot_index ?? null,
+            }
+          }
+          if (
+            learnedSkill?.node_tier === 2 &&
+            learnedSkill.skill_line &&
+            s.skill_line === learnedSkill.skill_line &&
+            s.node_tier === 2
+          ) {
+            return {
+              ...s,
+              is_learned: false,
+              character_skill_id: undefined,
+              level: undefined,
+              slot_index: undefined,
+            }
+          }
+          return s
+        })
+        const isNewBaseActiveSkill =
+          learnedSkill &&
+          learnedSkill.type === 'active' &&
+          (learnedSkill.node_tier === 0 ||
+            learnedSkill.node_tier === undefined ||
+            learnedSkill.node_tier === null)
+        const clearedSiblingIds =
+          learnedSkill?.node_tier === 2 && learnedSkill.skill_line
+            ? state.skills
+                .filter(
+                  s =>
+                    s.skill_line === learnedSkill.skill_line &&
+                    s.node_tier === 2 &&
+                    s.id !== cs.skill_id
+                )
+                .map(s => s.id)
+            : []
+        const newEnabledSkillIds = isNewBaseActiveSkill
+          ? [...state.enabledSkillIds.filter(id => !clearedSiblingIds.includes(id)), cs.skill_id]
+          : state.enabledSkillIds.filter(id => !clearedSiblingIds.includes(id))
         return {
           ...state,
           skills: nextSkills,
@@ -1363,11 +1400,16 @@ const store: StateCreator<GameState> = (set, get) => ({
         warn: false,
       })
       if (!selectedId) return
-      const response = (await post('/rpg/shop/buy', {
-        item_id: itemId,
-        quantity,
-        character_id: selectedId,
-      })) as {
+      const response = (await apiRequest(
+        '/rpg/shop/buy',
+        'POST',
+        {
+          item_id: itemId,
+          quantity,
+          character_id: selectedId,
+        },
+        { handleError: false }
+      )) as {
         copper: number
         total_price: number
         quantity: number
@@ -1391,6 +1433,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       // 背包由 WebSocket inventory.update 推送
     } catch (error) {
       setRequestError(set, error)
+      throw error
     }
   },
 

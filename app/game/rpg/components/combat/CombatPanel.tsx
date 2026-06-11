@@ -156,7 +156,14 @@ export function CombatPanel() {
   }, [skills, character])
 
   const activeSkills = useMemo(
-    () => learnedSkills.filter(s => s.skill?.type === 'active'),
+    () =>
+      learnedSkills.filter(
+        s =>
+          s.skill?.type === 'active' &&
+          (s.skill?.node_tier === 0 ||
+            s.skill?.node_tier === undefined ||
+            s.skill?.node_tier === null)
+      ),
     [learnedSkills]
   )
   // skill_cooldowns 是技能冷却到期的回合号，需要减去当前回合数得到剩余冷却

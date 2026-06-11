@@ -22,6 +22,16 @@ function getAppearedMonsters(): Set<string> {
   }
 }
 
+/** 战斗栏 HP 紧凑显示，避免大数值撑宽导致换行 */
+function formatMonsterHp(hp: number | undefined, maxHp: number | undefined): string {
+  const format = (value: number) => {
+    if (value >= 100_000) return `${Math.round(value / 1000)}k`
+    if (value >= 10_000) return `${(value / 1000).toFixed(1)}k`
+    return String(value)
+  }
+  return `${format(hp ?? 0)}/${format(maxHp ?? 0)}`
+}
+
 /** 保存已显示过动画的怪物 ID */
 function saveAppearedMonsters(ids: Set<string>): void {
   if (typeof window === 'undefined') return
@@ -229,18 +239,19 @@ export function MonsterGroup({
   // 如果没有有效怪物则不渲染
   if (!hasValidMonsters) return null
 
+  const iconSize = validMonsters.length >= 4 ? 'sm' : 'md'
+
   return (
     <>
-      <div className="flex flex-wrap items-end justify-center gap-1 sm:gap-2">
+      <div className="grid w-full max-w-[20rem] grid-cols-5 items-end justify-items-center gap-0.5 sm:max-w-[22rem] sm:gap-1">
         {[0, 1, 2, 3, 4].map(pos => {
           // 优先使用数组索引对应的怪物，其次查找 position 字段
           const m = monsters[pos] ?? validMonsters.find(monster => monster.position === pos)
           if (!m) {
             // 空位置
-            return <div key={pos} className="w-14 sm:w-16" />
+            return <div key={pos} className="min-h-px w-full" aria-hidden />
           }
 
-          const key = `${m.id}-${pos}-${m.level}`
           // 使用后端提供的 is_new 字段判断是否是新的怪物
           // 通过 appearingMonsters state 判断是否需要显示出现动画
           const isNew = m.instance_id ? appearingMonsters.has(m.instance_id) : false
@@ -256,7 +267,7 @@ export function MonsterGroup({
               key={m.instance_id ?? monsterKey}
               type="button"
               onClick={() => handleMonsterClick(m)}
-              className={`relative flex cursor-pointer flex-col items-center gap-0.5 transition-opacity hover:opacity-80 ${isNew ? styles['monster-appear'] : ''} ${isDead ? styles['monster-death'] : ''} ${isHit ? styles['monster-hit'] : ''}`}
+              className={`relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-0.5 transition-opacity hover:opacity-80 ${isNew ? styles['monster-appear'] : ''} ${isDead ? styles['monster-death'] : ''} ${isHit ? styles['monster-hit'] : ''}`}
               title={`点击查看 ${m.name} 详情`}
             >
               {damage !== undefined && (
@@ -264,15 +275,15 @@ export function MonsterGroup({
                   -{damage}
                 </span>
               )}
-              <MonsterIcon icon={m.icon} name={m.name} size="md" monsterType={m.type} />
-              <div className="w-full max-w-[50px] sm:max-w-[60px]">
-                <div className="text-muted-foreground flex justify-between text-[8px] sm:text-[10px]">
-                  <span>HP</span>
-                  <span>
-                    {m.hp}/{m.max_hp}
+              <MonsterIcon icon={m.icon} name={m.name} size={iconSize} monsterType={m.type} />
+              <div className="w-full min-w-0 px-0.5">
+                <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-0.5 text-[7px] leading-none sm:text-[9px]">
+                  <span className="shrink-0">HP</span>
+                  <span className="truncate tabular-nums" title={`${m.hp ?? 0}/${m.max_hp ?? 0}`}>
+                    {formatMonsterHp(m.hp, m.max_hp)}
                   </span>
                 </div>
-                <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+                <div className="bg-muted mt-0.5 h-1.5 overflow-hidden rounded-full">
                   <div
                     className="h-full rounded-full bg-red-600 transition-all duration-300"
                     style={{
@@ -281,7 +292,7 @@ export function MonsterGroup({
                   />
                 </div>
               </div>
-              <p className="text-muted-foreground max-w-[50px] truncate text-[10px] sm:max-w-[60px] sm:text-xs">
+              <p className="text-muted-foreground w-full truncate px-0.5 text-center text-[9px] sm:text-[10px]">
                 {m.name}
               </p>
             </button>

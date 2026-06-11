@@ -11,6 +11,7 @@ import type {
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
   apiGet: vi.fn(),
+  apiRequest: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
   del: vi.fn(),
@@ -619,8 +620,8 @@ describe('GameStore', () => {
 
   describe('buyItem', () => {
     it('should buy an item', async () => {
-      const { post } = await import('@/lib/api')
-      vi.mocked(post).mockResolvedValueOnce({
+      const { apiRequest } = await import('@/lib/api')
+      vi.mocked(apiRequest).mockResolvedValueOnce({
         copper: 900,
         total_price: 100,
         quantity: 1,
@@ -638,8 +639,8 @@ describe('GameStore', () => {
     })
 
     it('should remove purchased equipment from shop items', async () => {
-      const { post } = await import('@/lib/api')
-      vi.mocked(post).mockResolvedValueOnce({
+      const { apiRequest } = await import('@/lib/api')
+      vi.mocked(apiRequest).mockResolvedValueOnce({
         copper: 800,
         total_price: 200,
         quantity: 1,
@@ -662,8 +663,8 @@ describe('GameStore', () => {
     })
 
     it('should remove purchased gem from shop items', async () => {
-      const { post } = await import('@/lib/api')
-      vi.mocked(post).mockResolvedValueOnce({
+      const { apiRequest } = await import('@/lib/api')
+      vi.mocked(apiRequest).mockResolvedValueOnce({
         copper: 900,
         total_price: 100,
         quantity: 1,
@@ -686,8 +687,8 @@ describe('GameStore', () => {
     })
 
     it('should keep potion listings after purchase', async () => {
-      const { post } = await import('@/lib/api')
-      vi.mocked(post).mockResolvedValueOnce({
+      const { apiRequest } = await import('@/lib/api')
+      vi.mocked(apiRequest).mockResolvedValueOnce({
         copper: 990,
         total_price: 10,
         quantity: 1,

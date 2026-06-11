@@ -94,7 +94,9 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   useCombatWebSocket(character?.id ?? selectedCharacterId ?? null)
 
   const isShopTab = activeTab === 'shop' && resolvedView === 'game' && character != null
-  useLockAppScroll(isShopTab)
+  const isSkillsTab = activeTab === 'skills' && resolvedView === 'game' && character != null
+  const usePanelInnerScroll = isShopTab || isSkillsTab
+  useLockAppScroll(usePanelInnerScroll)
 
   // 自动挂机战斗：用 subscribe 避免 HP/战斗推送触发整页重渲染
   useEffect(() => {
@@ -260,7 +262,9 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   return (
     <div
       className={`bg-background text-foreground flex flex-col [--rpg-content-inset:0.75rem] [--rpg-status-bar-block:2.25rem] sm:[--rpg-content-inset:1rem] sm:[--rpg-status-bar-block:3rem] ${
-        isShopTab ? 'h-full min-h-0 overflow-hidden overscroll-none' : 'min-h-screen'
+        usePanelInnerScroll
+          ? 'flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none'
+          : 'min-h-screen'
       }`}
     >
       {requireRegistration && <RpgRegistrationGate />}
@@ -281,7 +285,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
       {/* 主体内容/导航 */}
       <main
         className={`mx-auto flex w-full max-w-7xl flex-1 flex-col overflow-hidden px-[var(--rpg-content-inset)] pt-[calc(var(--rpg-status-bar-block)+var(--rpg-content-inset))] ${
-          isShopTab ? 'min-h-0 pb-0' : 'pb-[var(--rpg-content-inset)]'
+          usePanelInnerScroll ? 'min-h-0 pb-0' : 'pb-[var(--rpg-content-inset)]'
         }`}
       >
         <nav className="bg-muted mb-4 hidden gap-1 rounded-lg p-1 lg:flex">
@@ -309,13 +313,15 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
 
         <div
           className={`flex min-h-0 flex-1 flex-col ${
-            isShopTab
+            usePanelInnerScroll
               ? 'overflow-hidden overscroll-none pb-28 lg:pb-4'
               : 'overflow-y-auto pb-32 lg:pb-4'
           }`}
         >
           <div
-            className={isShopTab ? 'flex h-full min-h-0 w-full min-w-0 flex-col' : 'w-full min-w-0'}
+            className={
+              usePanelInnerScroll ? 'flex min-h-0 flex-1 w-full min-w-0 flex-col' : 'w-full min-w-0'
+            }
           >
             <ErrorBoundary>
               {activeTab === 'character' && <CharacterPanel />}

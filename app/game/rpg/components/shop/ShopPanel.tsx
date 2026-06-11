@@ -7,6 +7,7 @@ import { useGameStore } from '../../stores/gameStore'
 import { CopperDisplay } from '../shared/CopperDisplay'
 import { ShopItem, QUALITY_COLORS, formatCopper, GameItem, ItemType } from '../../types'
 import { getEquipmentSlot } from '../../utils/itemUtils'
+import { buildSlotArray } from '../inventory/inventoryUtils'
 import { ItemDetailModal, ShopItemIcon } from '@/components/game'
 
 /** 强制刷新费用：1 银 = 100 铜 */
@@ -108,6 +109,8 @@ export function ShopPanel() {
     isLoading,
     shopNextRefreshAt,
     equipment,
+    inventory,
+    inventorySize,
   } = useGameStore(
     useShallow(state => ({
       shopItems: state.shopItems,
@@ -118,6 +121,8 @@ export function ShopPanel() {
       isLoading: state.isLoading,
       shopNextRefreshAt: state.shopNextRefreshAt,
       equipment: state.equipment,
+      inventory: state.inventory,
+      inventorySize: state.inventorySize,
     }))
   )
   const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null)
@@ -134,13 +139,24 @@ export function ShopPanel() {
   const levelEnough =
     character && selectedShopItem ? character.level >= selectedShopItem.required_level : false
 
+  const usedInventorySlots = useMemo(() => {
+    const slots = buildSlotArray(inventory, inventorySize)
+    return slots.filter(slot => slot != null).length
+  }, [inventory, inventorySize])
+
+  const inventoryFull = usedInventorySlots >= inventorySize
+
   const handleBuy = useCallback(async () => {
     if (!selectedShopItem) return
-    if (!canAfford || !levelEnough || buyQuantity < 1) return
-    await buyItem(selectedShopItem.id, buyQuantity)
-    setSelectedShopItem(null)
-    setBuyQuantity(1)
-  }, [selectedShopItem, canAfford, levelEnough, buyItem, buyQuantity])
+    if (!canAfford || !levelEnough || buyQuantity < 1 || inventoryFull) return
+    try {
+      await buyItem(selectedShopItem.id, buyQuantity)
+      setSelectedShopItem(null)
+      setBuyQuantity(1)
+    } catch {
+      // 错误已由 store 写入 error，保持弹窗打开便于重试
+    }
+  }, [selectedShopItem, canAfford, levelEnough, buyQuantity, inventoryFull, buyItem])
 
   const handleSelectShopItem = useCallback((item: ShopItem) => {
     setSelectedShopItem(item)
@@ -177,7 +193,7 @@ export function ShopPanel() {
 
   return (
     <>
-      <div className="-ml-3 flex h-full min-h-0 flex-col overflow-hidden overscroll-none sm:-ml-4">
+      <div className="-ml-3 flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none sm:-ml-4">
         <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 sm:px-4">
           <h4 className="text-foreground text-sm font-medium">
             商店物品
@@ -252,10 +268,12 @@ export function ShopPanel() {
           !character ||
           !canAfford ||
           !levelEnough ||
+          inventoryFull ||
           (selectedShopItem?.type === 'potion' && buyQuantity < 1)
         }
         canAfford={!!canAfford}
         levelEnough={!!levelEnough}
+        inventoryFull={inventoryFull}
         equippedItem={selectedShopItem ? getEquippedItem(selectedShopItem) : null}
       />
     </>

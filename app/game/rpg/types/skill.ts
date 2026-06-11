@@ -1,6 +1,8 @@
 // Skill types for RPG game
 
 import type { CharacterClass } from './character'
+
+export type SkillStage = 'basic' | 'core' | 'defensive' | 'special' | 'ultimate' | 'key_passive'
 import type { SkillType, SkillTargetType } from './combat'
 
 /** 技能定义 */
@@ -10,10 +12,20 @@ export interface SkillDefinition {
   description?: string
   type: SkillType
   class_restriction: CharacterClass | 'all'
-  /** 技能分支/流派：fire火焰/ice冰霜/lightning闪电/warrior力量/ranger敏捷/passive被动 */
+  /** 技能分支/流派（兼容旧数据） */
   branch?: string
-  /** 技能层级：1基础/2中级/3高级 */
+  /** 技能层级（兼容旧数据）：1基础/2中级/3高级 */
   tier?: number
+  /** D4 阶段：basic/core/defensive/special/ultimate/key_passive */
+  skill_stage?: SkillStage | null
+  /** 技能线标识 */
+  skill_line?: string | null
+  /** 节点层级：0本体/1强化/2专精 */
+  node_tier?: number | null
+  /** 专精分支：a/b */
+  spec_branch?: 'a' | 'b' | null
+  /** 阶段解锁等级 */
+  unlock_level?: number
   /** 前置技能ID（学习此技能需要先学习前置技能） */
   prerequisite_skill_id?: number | null
   /** 前置技能效果键（根据 effect_key 判断前置条件） */

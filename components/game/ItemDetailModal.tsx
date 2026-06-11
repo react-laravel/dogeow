@@ -32,6 +32,7 @@ interface ShopItemDetailModalProps extends BaseItemDetailModalProps {
   disabledBuy?: boolean
   canAfford?: boolean
   levelEnough?: boolean
+  inventoryFull?: boolean
   equippedItem?: GameItem | null
 }
 
@@ -45,13 +46,26 @@ export type ItemDetailModalProps =
   | ShopItemDetailModalProps
   | EquipmentItemDetailModalProps
 
+function usesWideCompareLayout(props: ItemDetailModalProps): boolean {
+  if (!props.item) return false
+  if (props.type === 'shop') {
+    const shopItem = props.item as ShopItem
+    const isEquippableType = shopItem.type !== 'potion' && shopItem.type !== 'gem'
+    return isEquippableType && props.equippedItem != null
+  }
+  if (props.type === 'inventory') {
+    const gameItem = props.item as GameItem
+    return props.source === 'inventory' && props.equippedItem != null && isEquippable(gameItem)
+  }
+  return false
+}
+
 export function ItemDetailModal(props: ItemDetailModalProps) {
   const { isOpen, onClose, item } = props
 
   if (!isOpen || !item) return null
 
-  // 商店始终使用更宽的布局
-  const isShop = props.type === 'shop'
+  const isWideCompare = usesWideCompareLayout(props)
 
   return (
     <div
@@ -59,11 +73,15 @@ export function ItemDetailModal(props: ItemDetailModalProps) {
       onClick={onClose}
     >
       <div
-        className={`border-border bg-card w-[260px] rounded-xl border text-sm shadow-2xl`}
+        className={`border-border bg-card relative rounded-xl border text-sm shadow-2xl ${
+          isWideCompare
+            ? 'w-[356px] max-w-[calc(100vw-2rem)]'
+            : 'w-[280px] max-w-[calc(100vw-2rem)]'
+        }`}
         onClick={e => e.stopPropagation()}
       >
         {/* 关闭按钮 */}
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 z-20">
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
@@ -173,6 +191,7 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
     disabledBuy,
     canAfford = true,
     levelEnough = true,
+    inventoryFull = false,
     equippedItem,
   } = props
 
@@ -218,58 +237,70 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
     shop_buy_price: shopItem.buy_price,
   }
 
-  return (
-    <div className="flex flex-col">
-      {/* 有对比时：使用完整对比面板 */}
-      {hasEquipped && equippedItem && (
-        <FullComparePanel newItem={shopItemAsGameItem} equippedItem={equippedItem} isShop />
+  const buyFooter = (
+    <>
+      {setBuyQuantity && isPotion && (
+        <div className="flex items-center justify-between px-3 pt-2">
+          <span className="text-muted-foreground text-sm">数量: {buyQuantity}</span>
+          <div className="flex items-center gap-1">
+            {[1, 10, 100].map(qty => (
+              <button
+                key={qty}
+                type="button"
+                onClick={() => handleAddBuyQuantity(qty)}
+                disabled={buyQuantity >= maxBuyQuantity}
+                className="bg-muted text-muted-foreground hover:bg-muted/80 rounded px-3 py-1 text-xs transition-colors disabled:opacity-50"
+              >
+                +{qty}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* 无对比时：显示物品详情 */}
-      {!hasEquipped && <ItemDetailContent item={item} type="shop" />}
-
-      {/* 物品详情 - 右边（无对比时）或者购买按钮区域（有对比时） */}
-      <div className="flex flex-1 flex-col">
-        {setBuyQuantity && isPotion && (
-          <div className="flex items-center justify-between px-3 pt-2">
-            <span className="text-muted-foreground text-sm">数量: {buyQuantity}</span>
-            <div className="flex items-center gap-1">
-              {[1, 10, 100].map(qty => (
-                <button
-                  key={qty}
-                  type="button"
-                  onClick={() => handleAddBuyQuantity(qty)}
-                  disabled={buyQuantity >= maxBuyQuantity}
-                  className="bg-muted text-muted-foreground hover:bg-muted/80 rounded px-3 py-1 text-xs transition-colors disabled:opacity-50"
-                >
-                  +{qty}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 总价（仅药水可批量购买） */}
-        {isPotion && totalBuyPrice != null && totalBuyPrice > 0 && (
-          <div className="flex items-center justify-between px-3 pt-1">
-            <span className="text-foreground text-sm font-medium">总价:</span>
-            <span className={canAfford ? '' : 'text-red-500'}>
-              <CopperDisplay copper={totalBuyPrice} size="sm" />
-            </span>
-          </div>
-        )}
-
-        {/* 购买按钮 */}
-        <div className="p-3">
-          <button
-            onClick={onBuy}
-            disabled={disabledBuy}
-            className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-          >
-            {!canAfford ? '货币不足' : !levelEnough ? '等级不足' : '确认购买'}
-          </button>
+      {isPotion && totalBuyPrice != null && totalBuyPrice > 0 && (
+        <div className="flex items-center justify-between px-3 pt-1">
+          <span className="text-foreground text-sm font-medium">总价:</span>
+          <span className={canAfford ? '' : 'text-red-500'}>
+            <CopperDisplay copper={totalBuyPrice} size="sm" />
+          </span>
         </div>
+      )}
+
+      <div className="p-3">
+        <button
+          type="button"
+          onClick={onBuy}
+          disabled={disabledBuy}
+          className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+        >
+          {inventoryFull
+            ? shopItem.type === 'potion' || shopItem.type === 'gem'
+              ? '背包已满'
+              : '背包空间不足'
+            : !canAfford
+              ? '货币不足'
+              : !levelEnough
+                ? '等级不足'
+                : '确认购买'}
+        </button>
       </div>
+    </>
+  )
+
+  if (hasEquipped && equippedItem) {
+    return (
+      <div className="flex flex-col overflow-hidden rounded-xl">
+        <FullComparePanel newItem={shopItemAsGameItem} equippedItem={equippedItem} isShop />
+        {buyFooter}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col">
+      <ItemDetailContent item={item} type="shop" />
+      {buyFooter}
     </div>
   )
 }

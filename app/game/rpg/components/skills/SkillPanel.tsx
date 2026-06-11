@@ -1,315 +1,371 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '../../stores/gameStore'
-import type { SkillWithLearnedState, CharacterClass } from '../../types'
+import type { SkillWithLearnedState, SkillStage } from '../../types'
 import { SkillIcon } from '../shared/SkillIcon'
 
-/** 技能分支配置 */
-const BRANCH_CONFIG: Record<string, { name: string; color: string; icon: string }> = {
-  warrior: { name: '力量', color: 'text-orange-500', icon: '⚔️' },
-  defense: { name: '防御', color: 'text-gray-500', icon: '🛡️' },
-  berserker: { name: '狂暴', color: 'text-red-600', icon: '💢' },
-  fire: { name: '火焰', color: 'text-red-500', icon: '🔥' },
-  ice: { name: '冰霜', color: 'text-blue-500', icon: '❄️' },
-  lightning: { name: '闪电', color: 'text-yellow-500', icon: '⚡' },
-  arcane: { name: '奥术', color: 'text-pink-500', icon: '🔮' },
-  summon: { name: '召唤', color: 'text-purple-600', icon: '👻' },
-  ranger: { name: '敏捷', color: 'text-green-500', icon: '🏹' },
-  poison: { name: '毒系', color: 'text-green-600', icon: '☠️' },
-  trap: { name: '陷阱', color: 'text-amber-600', icon: '🪤' },
-  beast: { name: '野兽', color: 'text-amber-700', icon: '🐺' },
-  passive: { name: '被动', color: 'text-purple-500', icon: '✨' },
+const STAGE_TABS: { id: SkillStage; name: string; unlock: number }[] = [
+  { id: 'basic', name: '基础', unlock: 1 },
+  { id: 'core', name: '核心', unlock: 5 },
+  { id: 'defensive', name: '防御', unlock: 15 },
+  { id: 'special', name: '特殊', unlock: 25 },
+  { id: 'ultimate', name: '终极', unlock: 40 },
+  { id: 'key_passive', name: '关键被动', unlock: 50 },
+]
+
+/** 第 1/2 层：比专精单列宽，比整行窄 */
+const TIER12_CARD_WIDTH = 'w-[calc(60%+1rem)]'
+
+function isD4Skill(skill: SkillWithLearnedState): boolean {
+  return Boolean(skill.skill_line)
 }
 
-/** 单个技能卡片 */
-function SkillCard({
+function getNodeTier(skill: SkillWithLearnedState): number {
+  return Number(skill.node_tier ?? 0)
+}
+
+function getBaseSkillName(lineSkills: SkillWithLearnedState[]): string {
+  const base = lineSkills.find(s => getNodeTier(s) === 0)
+  return base?.name ?? lineSkills[0]?.name ?? '技能线'
+}
+
+/** 竖向连接线 */
+function TreeStem({ height = 'h-3' }: { height?: string }) {
+  return (
+    <div className="flex justify-center" aria-hidden>
+      <div className={`bg-border w-px ${height}`} />
+    </div>
+  )
+}
+
+/** 分叉到 A/B 专精（与下方 grid-cols-2 同宽，竖线对齐列中心） */
+function SpecBranchFork() {
+  return (
+    <div className="col-span-2 grid grid-cols-2 gap-2" aria-hidden>
+      <div className="col-span-2 flex justify-center">
+        <div className="bg-border h-3 w-px" />
+      </div>
+      <div className="relative h-4">
+        <div className="bg-border absolute top-0 right-[-0.25rem] left-1/2 h-px" />
+        <div className="bg-border absolute top-0 left-1/2 h-full w-px -translate-x-1/2" />
+      </div>
+      <div className="relative h-4">
+        <div className="bg-border absolute top-0 right-1/2 left-[-0.25rem] h-px" />
+        <div className="bg-border absolute top-0 left-1/2 h-full w-px -translate-x-1/2" />
+      </div>
+    </div>
+  )
+}
+
+function SkillNodeCard({
   skill,
   learnedSkillIds,
   canLearnSkill,
-  isSkillLocked,
+  lockReason,
   onLearn,
-  getPrerequisiteName,
-  prerequisiteSkill,
+  compact,
 }: {
   skill: SkillWithLearnedState
   learnedSkillIds: Set<number>
   canLearnSkill: (skill: SkillWithLearnedState) => boolean
-  isSkillLocked: (skill: SkillWithLearnedState) => boolean
+  lockReason: (skill: SkillWithLearnedState) => string | null
   onLearn: (skill: SkillWithLearnedState) => void
-  getPrerequisiteName: (skill: SkillWithLearnedState) => string | null
-  prerequisiteSkill?: SkillWithLearnedState | null
+  compact?: boolean
 }) {
   const isLearned = learnedSkillIds.has(skill.id)
   const canLearn = canLearnSkill(skill)
-  const isLocked = isSkillLocked(skill)
-  const prereqName = getPrerequisiteName(skill)
+  const reason = lockReason(skill)
+  const isLocked = !isLearned && reason !== null
+  const nodeTier = getNodeTier(skill)
 
-  let cardClass = 'flex items-center gap-2 rounded-lg p-2 transition-all '
+  const tierLabel =
+    nodeTier === 0
+      ? '本体'
+      : nodeTier === 1
+        ? '强化'
+        : `专精 ${(skill.spec_branch ?? '').toUpperCase()}`
+
+  let cardClass = 'flex items-start gap-1.5 rounded-lg border p-1.5 transition-all min-w-0 '
   if (isLearned) {
-    cardClass += 'bg-green-900/30 border-2 border-green-600'
+    cardClass += 'border-green-600 bg-green-900/30 shadow-[inset_0_0_0_1px_rgba(22,163,74,0.25)]'
   } else if (isLocked) {
-    cardClass += 'bg-muted/30 border border-dashed border-muted-foreground/30 opacity-60'
+    cardClass += 'border-dashed border-muted-foreground/40 bg-muted/15 opacity-70'
   } else if (canLearn) {
-    cardClass += 'bg-muted/50 border-2 border-primary/30 hover:border-primary cursor-pointer'
+    cardClass += 'border-primary/50 bg-muted/50 hover:border-primary cursor-pointer'
   } else {
-    cardClass += 'bg-muted/30 opacity-50'
+    cardClass += 'border-border/50 bg-muted/25 opacity-55'
+  }
+
+  if (nodeTier === 2 && isLearned) {
+    cardClass += ' ring-1 ring-amber-500/40'
   }
 
   return (
     <div
-      className={cardClass}
+      className={cardClass + (compact ? ' flex-1 flex-col items-stretch' : '')}
       onClick={() => !isLearned && !isLocked && canLearn && onLearn(skill)}
+      role={!isLearned && canLearn && !isLocked ? 'button' : undefined}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center">
+      <span
+        className={`flex shrink-0 items-center justify-center ${compact ? 'h-8 w-8' : 'h-9 w-9 sm:h-10 sm:w-10'}`}
+      >
         <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name || ''} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-foreground text-sm font-medium">{skill.name}</span>
-          {isLocked && prereqName && (
-            <span className="shrink-0 rounded bg-yellow-600/20 px-1.5 py-0.5 text-[10px] text-yellow-600">
-              需 {prereqName}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center gap-1">
+          <span
+            className={`text-foreground font-medium ${compact ? 'text-[11px] leading-tight' : 'text-xs sm:text-sm'}`}
+          >
+            {skill.name}
+          </span>
+          <span
+            className={`rounded px-1 py-0.5 text-[10px] ${
+              nodeTier === 2
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                : nodeTier === 1
+                  ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                  : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {tierLabel}
+          </span>
           {isLearned && (
-            <span className="shrink-0 rounded bg-green-600/20 px-1.5 py-0.5 text-[10px] text-green-600">
+            <span className="rounded bg-green-600/20 px-1 py-0.5 text-[10px] text-green-600">
               已学
             </span>
           )}
         </div>
-        <p className="text-muted-foreground truncate text-xs">{skill.description}</p>
-
-        {/* 显示前置依赖 */}
-        {prerequisiteSkill && !isLearned && (
-          <div className="mt-1 flex items-center gap-1 text-xs">
-            <span className="text-muted-foreground">前置:</span>
-            {learnedSkillIds.has(prerequisiteSkill.id) ? (
-              <span className="text-green-500">✓ {prerequisiteSkill.name}</span>
-            ) : (
-              <span className="text-red-500">✗ {prerequisiteSkill.name}</span>
-            )}
-          </div>
+        {!compact && (
+          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[11px]">
+            {skill.description}
+          </p>
         )}
-
-        <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
-          <span className="text-muted-foreground">
-            {skill.type === 'passive' ? '被动' : '主动'}
+        {compact && (
+          <p className="text-muted-foreground mt-0.5 line-clamp-3 text-[10px]">
+            {skill.description}
+          </p>
+        )}
+        {isLocked && reason && <p className="mt-1 text-[10px] text-yellow-600">{reason}</p>}
+        {!isLearned && !isLocked && (
+          <span className="mt-1 inline-block text-[10px] text-yellow-600">
+            {skill.skill_points_cost ?? 1} 点
           </span>
-          {skill.type !== 'passive' && (
-            <span className="text-purple-500">{skill.target_type === 'all' ? '群体' : '单体'}</span>
-          )}
-          {skill.type !== 'passive' && skill.cooldown != null && skill.cooldown > 0 && (
-            <span className="text-red-500">CD {skill.cooldown}s</span>
-          )}
-          {!isLearned && !isLocked && (
-            <span className="text-yellow-600">{skill.skill_points_cost || 1}点</span>
-          )}
-        </div>
+        )}
       </div>
-      {!isLearned && !isLocked && (
-        <button
-          onClick={e => {
-            e.stopPropagation()
-            canLearn && onLearn(skill)
-          }}
-          disabled={!canLearn}
-          className={`shrink-0 rounded px-2 py-1 text-xs text-white ${canLearn ? 'bg-green-600 hover:bg-green-700' : 'bg-muted cursor-not-allowed'}`}
-        >
-          学习
-        </button>
-      )}
     </div>
   )
 }
 
-/** 技能分支视图 - 简单列表 */
-function BranchView({
-  branch,
-  skills,
+function SkillLineTree({
+  lineSkills,
   learnedSkillIds,
   canLearnSkill,
-  isSkillLocked,
+  lockReason,
   onLearn,
-  getPrerequisiteName,
-  getPrerequisiteSkill,
 }: {
-  branch: string
-  skills: SkillWithLearnedState[]
+  lineSkills: SkillWithLearnedState[]
   learnedSkillIds: Set<number>
   canLearnSkill: (skill: SkillWithLearnedState) => boolean
-  isSkillLocked: (skill: SkillWithLearnedState) => boolean
+  lockReason: (skill: SkillWithLearnedState) => string | null
   onLearn: (skill: SkillWithLearnedState) => void
-  getPrerequisiteName: (skill: SkillWithLearnedState) => string | null
-  getPrerequisiteSkill: (skillId: number) => SkillWithLearnedState | null
 }) {
-  const config = BRANCH_CONFIG[branch]
+  const base = lineSkills.find(s => getNodeTier(s) === 0)
+  const enhanced = lineSkills.find(s => getNodeTier(s) === 1)
+  const specA = lineSkills.find(s => getNodeTier(s) === 2 && s.spec_branch === 'a')
+  const specB = lineSkills.find(s => getNodeTier(s) === 2 && s.spec_branch === 'b')
+  const isKeyPassive = base?.skill_stage === 'key_passive'
 
-  // 按层级分组
-  const tierGroups = useMemo(() => {
-    const groups: Record<number, SkillWithLearnedState[]> = {}
-    for (const skill of skills) {
-      const tier = skill.tier || 1
-      if (!groups[tier]) groups[tier] = []
-      groups[tier].push(skill)
-    }
-    return Object.entries(groups)
-      .map(([tier, list]) => ({ tier: Number(tier), list }))
-      .sort((a, b) => a.tier - b.tier)
-  }, [skills])
+  if (!base) return null
+
+  const learnedInLine = lineSkills.filter(s => learnedSkillIds.has(s.id)).length
 
   return (
-    <div className="border-border bg-card rounded-lg border p-4">
-      <div className="border-border mb-4 flex items-center gap-2 border-b pb-2">
-        <span className="text-xl">{config?.icon}</span>
-        <span className="text-lg font-bold">{config?.name || branch}</span>
+    <div className="border-border bg-card rounded-xl border p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h4 className="text-foreground text-sm font-bold">{getBaseSkillName(lineSkills)}</h4>
+        <span className="text-muted-foreground shrink-0 text-[10px]">
+          {learnedInLine}/{lineSkills.length} 节点
+        </span>
       </div>
-      <div className="space-y-4">
-        {tierGroups.map(({ tier, list }) => (
-          <div key={tier}>
-            <div className="mb-2 flex items-center gap-2">
-              <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs">
-                Tier {tier}
-              </span>
-              <div className="bg-border h-px flex-1" />
+
+      <div className="grid grid-cols-2 gap-2">
+        <p className="text-muted-foreground col-span-2 mb-0.5 text-center text-[10px] font-medium tracking-wide uppercase">
+          第 1 层 · 本体
+        </p>
+        <div className="col-span-2 flex justify-center">
+          <div className={`min-w-0 ${TIER12_CARD_WIDTH}`}>
+            <SkillNodeCard
+              skill={base}
+              learnedSkillIds={learnedSkillIds}
+              canLearnSkill={canLearnSkill}
+              lockReason={lockReason}
+              onLearn={onLearn}
+            />
+          </div>
+        </div>
+
+        {!isKeyPassive && enhanced && (
+          <>
+            <div className="col-span-2">
+              <TreeStem />
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {list.map(skill => (
-                <SkillCard
-                  key={skill.id}
-                  skill={skill}
+            <p className="text-muted-foreground col-span-2 mb-0.5 text-center text-[10px] font-medium tracking-wide uppercase">
+              第 2 层 · 强化
+            </p>
+            <div className="col-span-2 flex justify-center">
+              <div className={`min-w-0 ${TIER12_CARD_WIDTH}`}>
+                <SkillNodeCard
+                  skill={enhanced}
                   learnedSkillIds={learnedSkillIds}
                   canLearnSkill={canLearnSkill}
-                  isSkillLocked={isSkillLocked}
+                  lockReason={lockReason}
                   onLearn={onLearn}
-                  getPrerequisiteName={getPrerequisiteName}
-                  prerequisiteSkill={
-                    skill.prerequisite_skill_id
-                      ? getPrerequisiteSkill(skill.prerequisite_skill_id)
-                      : null
-                  }
                 />
-              ))}
+              </div>
             </div>
-          </div>
-        ))}
+          </>
+        )}
+
+        {!isKeyPassive && specA && specB && (
+          <>
+            <SpecBranchFork />
+            <p className="text-muted-foreground col-span-2 mb-0.5 text-center text-[10px] font-medium">
+              第 3 层 · 专精（二选一）
+            </p>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-center text-[10px] text-amber-600/80">分支 A</span>
+              <SkillNodeCard
+                skill={specA}
+                learnedSkillIds={learnedSkillIds}
+                canLearnSkill={canLearnSkill}
+                lockReason={lockReason}
+                onLearn={onLearn}
+                compact
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-center text-[10px] text-amber-600/80">分支 B</span>
+              <SkillNodeCard
+                skill={specB}
+                learnedSkillIds={learnedSkillIds}
+                canLearnSkill={canLearnSkill}
+                lockReason={lockReason}
+                onLearn={onLearn}
+                compact
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
+  )
+}
+
+type StageSection = {
+  id: SkillStage
+  name: string
+  unlock: number
+  lines: SkillWithLearnedState[][]
+  learnedLineCount: number
+}
+
+function groupSkillsByLines(skillsInStage: SkillWithLearnedState[]): SkillWithLearnedState[][] {
+  const lineMap = new Map<string, SkillWithLearnedState[]>()
+  for (const skill of skillsInStage) {
+    const line = skill.skill_line as string
+    const list = lineMap.get(line) ?? []
+    list.push(skill)
+    lineMap.set(line, list)
+  }
+  return Array.from(lineMap.values()).map(list =>
+    [...list].sort((a, b) => getNodeTier(a) - getNodeTier(b))
   )
 }
 
 export function SkillPanel() {
-  const { character, skills, learnSkill, isLoading } = useGameStore(
+  const { character, skills, learnSkill, isLoading, fetchSkills } = useGameStore(
     useShallow(s => ({
       character: s.character,
       skills: s.skills,
       learnSkill: s.learnSkill,
       isLoading: s.isLoading,
+      fetchSkills: s.fetchSkills,
     }))
   )
   const [learningSkill, setLearningSkill] = useState<SkillWithLearnedState | null>(null)
-  const [selectedBranch, setSelectedBranch] = useState<string>('all')
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  const characterClass = character?.class as CharacterClass | undefined
+  useEffect(() => {
+    void fetchSkills()
+  }, [fetchSkills])
 
-  // 已学习的技能ID集合
-  const learnedSkillIds = useMemo(() => {
-    return new Set(skills.filter(s => s.is_learned).map(s => s.id))
-  }, [skills])
+  const treeSkills = useMemo(() => skills.filter(isD4Skill), [skills])
 
-  // 获取可用分支
-  const availableBranches = useMemo(() => {
-    const branches = new Set<string>()
-    for (const skill of skills) {
-      if (skill.branch === 'passive') {
-        branches.add('passive')
-        continue
+  const learnedSkillIds = useMemo(
+    () => new Set(treeSkills.filter(s => s.is_learned).map(s => s.id)),
+    [treeSkills]
+  )
+
+  const stageSections = useMemo((): StageSection[] => {
+    return STAGE_TABS.map(tab => {
+      const stageSkills = treeSkills.filter(s => s.skill_stage === tab.id)
+      const lines = groupSkillsByLines(stageSkills)
+      const learnedLineCount = lines.filter(line =>
+        line.some(s => learnedSkillIds.has(s.id))
+      ).length
+      return { ...tab, lines, learnedLineCount }
+    }).filter(section => section.lines.length > 0)
+  }, [treeSkills, learnedSkillIds])
+
+  const getSiblingSpecLearned = useCallback(
+    (skill: SkillWithLearnedState): SkillWithLearnedState | null => {
+      if (getNodeTier(skill) !== 2 || !skill.skill_line || !skill.spec_branch) return null
+      return (
+        treeSkills.find(
+          s =>
+            s.skill_line === skill.skill_line &&
+            getNodeTier(s) === 2 &&
+            s.spec_branch !== skill.spec_branch &&
+            learnedSkillIds.has(s.id)
+        ) ?? null
+      )
+    },
+    [learnedSkillIds, treeSkills]
+  )
+
+  const lockReason = useCallback(
+    (skill: SkillWithLearnedState): string | null => {
+      if (skill.is_learned) return null
+      if (!character) return '无角色'
+      if (character.level < (skill.unlock_level ?? 1)) {
+        return `${skill.unlock_level ?? 1} 级解锁`
       }
-      if (skill.class_restriction === 'all' || skill.class_restriction === characterClass) {
-        branches.add(skill.branch || 'other')
+      if (skill.prerequisite_skill_id && !learnedSkillIds.has(skill.prerequisite_skill_id)) {
+        const prereq = treeSkills.find(s => s.id === skill.prerequisite_skill_id)
+        return prereq ? `需先学「${prereq.name}」` : '需先学前置节点'
       }
-    }
-    return Array.from(branches).sort()
-  }, [skills, characterClass])
-
-  // 按分支分组技能
-  const skillsByBranch = useMemo(() => {
-    const groups: Record<string, SkillWithLearnedState[]> = {}
-    for (const skill of skills) {
-      const branch = skill.branch || 'other'
-      if (!groups[branch]) groups[branch] = []
-      groups[branch].push(skill)
-    }
-    return groups
-  }, [skills])
+      return null
+    },
+    [character, learnedSkillIds, treeSkills]
+  )
 
   const canLearnSkill = useCallback(
     (skill: SkillWithLearnedState): boolean => {
       if (skill.is_learned) return false
-      if (!character || character.skill_points < (skill.skill_points_cost || 1)) return false
-
-      // 优先使用 effect_key 判断前置条件
-      if (skill.prerequisite_effect_key) {
-        const learnedEffectKeys = skills
-          .filter(s => learnedSkillIds.has(s.id) && s.effect_key)
-          .map(s => s.effect_key as string)
-        if (!learnedEffectKeys.includes(skill.prerequisite_effect_key)) {
-          return false
-        }
-      } else if (skill.prerequisite_skill_id && !learnedSkillIds.has(skill.prerequisite_skill_id)) {
-        return false
-      }
-      return true
+      if (lockReason(skill)) return false
+      if (!character) return false
+      const isRespec = getSiblingSpecLearned(skill) !== null
+      const cost = isRespec ? 0 : (skill.skill_points_cost ?? 1)
+      return character.skill_points >= cost
     },
-    [character, learnedSkillIds, skills]
-  )
-
-  const isSkillLocked = useCallback(
-    (skill: SkillWithLearnedState): boolean => {
-      if (skill.is_learned) return false
-      // 优先使用 effect_key 判断前置条件
-      if (skill.prerequisite_effect_key) {
-        const learnedEffectKeys = skills
-          .filter(s => learnedSkillIds.has(s.id) && s.effect_key)
-          .map(s => s.effect_key as string)
-        if (!learnedEffectKeys.includes(skill.prerequisite_effect_key)) {
-          return true
-        }
-      } else if (skill.prerequisite_skill_id && !learnedSkillIds.has(skill.prerequisite_skill_id)) {
-        return true
-      }
-      return false
-    },
-    [learnedSkillIds, skills]
-  )
-
-  const getPrerequisiteName = useCallback(
-    (skill: SkillWithLearnedState): string | null => {
-      // 优先使用 effect_key
-      if (skill.prerequisite_effect_key) {
-        const prereq = skills.find(s => s.effect_key === skill.prerequisite_effect_key)
-        return prereq?.name || null
-      }
-      if (!skill.prerequisite_skill_id) return null
-      const prereq = skills.find(s => s.id === skill.prerequisite_skill_id)
-      return prereq?.name || null
-    },
-    [skills]
-  )
-
-  const getPrerequisiteSkill = useCallback(
-    (skillId: number): SkillWithLearnedState | null => {
-      return skills.find(s => s.id === skillId) ?? null
-    },
-    [skills]
+    [character, getSiblingSpecLearned, lockReason]
   )
 
   const handleLearnClick = useCallback(
     (skill: SkillWithLearnedState) => {
-      if (!skill.is_learned && canLearnSkill(skill)) {
-        setLearningSkill(skill)
-      }
+      if (!skill.is_learned && canLearnSkill(skill)) setLearningSkill(skill)
     },
     [canLearnSkill]
   )
@@ -320,118 +376,159 @@ export function SkillPanel() {
     setLearningSkill(null)
   }, [learningSkill, learnSkill])
 
-  const handleCancelLearn = useCallback(() => {
-    setLearningSkill(null)
+  const siblingForConfirm = learningSkill ? getSiblingSpecLearned(learningSkill) : null
+  const confirmCost = siblingForConfirm ? 0 : (learningSkill?.skill_points_cost ?? 1)
+  const needsReseed = skills.length > 0 && treeSkills.length === 0
+
+  const scrollToStage = useCallback((stageId: SkillStage) => {
+    const container = scrollContainerRef.current
+    const target = document.getElementById(`skill-stage-${stageId}`)
+    if (!container || !target) return
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const top = container.scrollTop + (targetRect.top - containerRect.top)
+    container.scrollTo({ top, behavior: 'smooth' })
   }, [])
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {/* 技能点 */}
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none">
+      {needsReseed && (
+        <div className="mb-2 shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+          技能数据尚未更新，请在后端执行{' '}
+          <code className="text-xs">
+            php artisan db:seed --class=Database\Seeders\Game\GameSeeder
+          </code>
+          ，然后
+          <button
+            type="button"
+            className="text-primary mx-1 underline"
+            onClick={() => void fetchSkills()}
+          >
+            点击刷新
+          </button>
+        </div>
+      )}
+
       {character != null && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedBranch('all')}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                selectedBranch === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              全部
-            </button>
-            {availableBranches.map(branch => {
-              const config = BRANCH_CONFIG[branch]
-              const count = skillsByBranch[branch]?.length ?? 0
+        <div className="border-border bg-background shrink-0 space-y-2 border-b pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground text-sm">技能树</span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">技能点</span>
+              <span className="text-primary text-lg font-bold">{character.skill_points}</span>
+            </div>
+          </div>
+          <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {stageSections.map(section => {
+              const locked = character.level < section.unlock
               return (
                 <button
-                  key={branch}
-                  onClick={() => setSelectedBranch(branch)}
-                  className={`flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                    selectedBranch === branch
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  key={section.id}
+                  type="button"
+                  onClick={() => scrollToStage(section.id)}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                    locked
+                      ? 'border-border/60 bg-muted/30 text-muted-foreground'
+                      : 'border-border bg-muted/50 text-foreground hover:bg-muted'
                   }`}
                 >
-                  <span>{config?.icon}</span>
-                  <span>{config?.name || branch}</span>
-                  <span className="text-xs opacity-60">({count})</span>
+                  {section.name}
+                  <span className="ml-1 opacity-60">
+                    {section.learnedLineCount}/{section.lines.length}
+                  </span>
+                  {locked && (
+                    <span className="ml-1 text-[10px] opacity-70">Lv{section.unlock}</span>
+                  )}
                 </button>
               )
             })}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm sm:text-base">技能点</span>
-            <span className="text-primary text-lg font-bold sm:text-xl">
-              {character.skill_points}
-            </span>
-          </div>
         </div>
       )}
 
-      {/* 技能列表 */}
-      <div className="max-h-[500px] space-y-4 overflow-y-auto pr-2">
-        {selectedBranch === 'all' ? (
-          // 显示所有分支
-          availableBranches.map(branch => (
-            <BranchView
-              key={branch}
-              branch={branch}
-              skills={skillsByBranch[branch] || []}
-              learnedSkillIds={learnedSkillIds}
-              canLearnSkill={canLearnSkill}
-              isSkillLocked={isSkillLocked}
-              onLearn={handleLearnClick}
-              getPrerequisiteName={getPrerequisiteName}
-              getPrerequisiteSkill={getPrerequisiteSkill}
-            />
-          ))
-        ) : (
-          // 只显示选中的分支
-          <BranchView
-            branch={selectedBranch}
-            skills={skillsByBranch[selectedBranch] || []}
-            learnedSkillIds={learnedSkillIds}
-            canLearnSkill={canLearnSkill}
-            isSkillLocked={isSkillLocked}
-            onLearn={handleLearnClick}
-            getPrerequisiteName={getPrerequisiteName}
-            getPrerequisiteSkill={getPrerequisiteSkill}
-          />
-        )}
+      <div
+        ref={scrollContainerRef}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-2 touch-pan-y"
+      >
+        <div className="space-y-5">
+          {stageSections.length === 0 ? (
+            <p className="text-muted-foreground py-8 text-center text-sm">暂无技能线</p>
+          ) : (
+            stageSections.map(section => {
+              const locked = character != null && character.level < section.unlock
+              return (
+                <section key={section.id} id={`skill-stage-${section.id}`} className="space-y-3">
+                  <div className="border-border flex items-center gap-2 border-b pb-2">
+                    <h3 className="text-foreground text-sm font-bold">{section.name}</h3>
+                    <span className="text-muted-foreground text-xs">
+                      {section.learnedLineCount}/{section.lines.length} 线
+                    </span>
+                    {locked ? (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-yellow-600">
+                        {section.unlock} 级解锁
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-[10px]">Lv{section.unlock}+</span>
+                    )}
+                  </div>
+                  <div
+                    className={`grid grid-cols-1 gap-3 xl:grid-cols-2 ${locked ? 'opacity-80' : ''}`}
+                  >
+                    {section.lines.map(lineSkills => (
+                      <SkillLineTree
+                        key={lineSkills[0]?.skill_line ?? lineSkills[0]?.id}
+                        lineSkills={lineSkills}
+                        learnedSkillIds={learnedSkillIds}
+                        canLearnSkill={canLearnSkill}
+                        lockReason={lockReason}
+                        onLearn={handleLearnClick}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )
+            })
+          )}
+        </div>
       </div>
 
-      {/* 学习确认弹窗 */}
       {learningSkill && !learningSkill.is_learned && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-card border-border w-full max-w-sm rounded-lg border p-4 sm:p-6">
-            <h4 className="text-foreground mb-3 text-base font-bold sm:mb-4 sm:text-lg">
-              学习技能
+            <h4 className="text-foreground mb-3 text-base font-bold sm:text-lg">
+              {siblingForConfirm ? '切换专精分支' : '学习技能'}
             </h4>
-            <p className="text-muted-foreground mb-2 text-sm sm:text-base">
-              确定要学习 <span className="text-primary mx-1">{learningSkill.name}</span> 吗？
+            <p className="text-muted-foreground mb-2 text-sm">
+              {siblingForConfirm ? (
+                <>
+                  将专精从 <span className="text-primary">{siblingForConfirm.name}</span> 切换为{' '}
+                  <span className="text-primary">{learningSkill.name}</span>？
+                </>
+              ) : (
+                <>
+                  确定要学习 <span className="text-primary">{learningSkill.name}</span> 吗？
+                </>
+              )}
             </p>
             <p className="text-muted-foreground mb-4 text-xs sm:text-sm">
-              将消耗{' '}
-              <span className="font-medium text-yellow-600 dark:text-yellow-400">
-                {learningSkill.skill_points_cost ?? 1}
-              </span>{' '}
-              技能点
+              {confirmCost === 0 ? '专精切换免费，不消耗技能点' : `将消耗 ${confirmCost} 技能点`}
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={handleCancelLearn}
-                className="bg-muted text-foreground hover:bg-secondary rounded px-3 py-2 text-sm sm:px-4"
+                type="button"
+                onClick={() => setLearningSkill(null)}
+                className="bg-muted text-foreground hover:bg-secondary rounded px-3 py-2 text-sm"
                 disabled={isLoading}
               >
                 取消
               </button>
               <button
+                type="button"
                 onClick={handleConfirmLearn}
-                className="bg-primary hover:bg-primary/90 rounded px-3 py-2 text-sm text-white sm:px-4"
+                className="bg-primary hover:bg-primary/90 rounded px-3 py-2 text-sm text-white"
                 disabled={isLoading}
               >
-                {isLoading ? '学习中...' : '确认学习'}
+                {isLoading ? '处理中...' : '确认'}
               </button>
             </div>
           </div>

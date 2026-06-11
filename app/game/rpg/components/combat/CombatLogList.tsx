@@ -386,43 +386,47 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                   }
                 }
               }}
-              className="hover:bg-muted/50 flex w-full cursor-pointer flex-wrap items-center gap-1 rounded px-2 py-1 text-xs sm:gap-2 sm:px-3 sm:py-2 sm:text-sm"
+              className="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm"
             >
-              <span
-                className={`font-semibold ${
-                  isVictory
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-orange-500 dark:text-orange-400'
-                }`}
-              >
-                {isVictory ? '✅' : '⚔️'}
-              </span>
-              <span className="text-foreground">{log.monster?.name ?? '?'}</span>
-              {log.skills_used && log.skills_used.length > 0 && (
-                <CombatLogSkillIcons skills={log.skills_used} />
-              )}
-              {(log.experience_gained ?? 0) > 0 && (
-                <span className="text-purple-500 dark:text-purple-400">
-                  +{log.experience_gained}
+              <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden sm:gap-2">
+                <span
+                  className={`shrink-0 font-semibold ${
+                    isVictory
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-orange-500 dark:text-orange-400'
+                  }`}
+                >
+                  {isVictory ? '✅' : '⚔️'}
                 </span>
-              )}
-              {(log.copper_gained ?? 0) > 0 && (
-                <span className="inline-flex items-center text-yellow-600 dark:text-yellow-400">
-                  +<CopperDisplay copper={log.copper_gained} size="sm" />
-                </span>
-              )}
-              {log.loot?.item && (
-                <CombatLogLootIcon
-                  item={log.loot.item}
-                  onClick={() => setSelectedItem(log.loot!.item!)}
-                />
-              )}
-              {log.loot?.potion && (
-                <CombatLogLootIcon
-                  item={log.loot.potion}
-                  onClick={() => setSelectedItem(log.loot!.potion!)}
-                />
-              )}
+                <span className="text-foreground truncate">{log.monster?.name ?? '?'}</span>
+                {log.skills_used && log.skills_used.length > 0 && (
+                  <CombatLogSkillIcons skills={log.skills_used} />
+                )}
+              </div>
+              <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
+                {(log.experience_gained ?? 0) > 0 && (
+                  <span className="text-purple-500 dark:text-purple-400">
+                    +{log.experience_gained}
+                  </span>
+                )}
+                {(log.copper_gained ?? 0) > 0 && (
+                  <span className="inline-flex items-center text-yellow-600 dark:text-yellow-400">
+                    +<CopperDisplay copper={log.copper_gained} size="sm" />
+                  </span>
+                )}
+                {log.loot?.item && (
+                  <CombatLogLootIcon
+                    item={log.loot.item}
+                    onClick={() => setSelectedItem(log.loot!.item!)}
+                  />
+                )}
+                {log.loot?.potion && (
+                  <CombatLogLootIcon
+                    item={log.loot.potion}
+                    onClick={() => setSelectedItem(log.loot!.potion!)}
+                  />
+                )}
+              </div>
             </div>
             {/* 战后药水：单独一行 */}
             {hasPotionAfter && (

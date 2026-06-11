@@ -18,7 +18,7 @@ export { QUALITY_COLORS, QUALITY_NAMES, SLOT_NAMES } from './item'
 
 // Skill types
 export type { SkillType, SkillTargetType } from './combat'
-export type { SkillDefinition, SkillWithLearnedState, CharacterSkill } from './skill'
+export type { SkillDefinition, SkillWithLearnedState, CharacterSkill, SkillStage } from './skill'
 
 // Map types
 export type { MonsterDefinition, MapDefinition, CharacterMap } from './map'
