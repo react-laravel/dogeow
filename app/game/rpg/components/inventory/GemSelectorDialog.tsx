@@ -1,6 +1,7 @@
 'use client'
 
 import type { GameItem } from '../../types'
+import { getEffectiveSocketCount } from '../../utils/itemUtils'
 
 interface GemSelectorDialogProps {
   isOpen: boolean
@@ -12,8 +13,9 @@ interface GemSelectorDialogProps {
 
 const getFirstEmptySocketIndex = (item: GameItem) => {
   const usedIndices = new Set(item.gems?.map(gem => gem.socket_index) ?? [])
+  const socketCount = getEffectiveSocketCount(item.sockets)
 
-  for (let i = 0; i < (item.sockets ?? 0); i += 1) {
+  for (let i = 0; i < socketCount; i += 1) {
     if (!usedIndices.has(i)) return i
   }
 
@@ -29,7 +31,8 @@ export function GemSelectorDialog({
 }: GemSelectorDialogProps) {
   if (!isOpen || !socketItem) return null
 
-  const availableSocketCount = (socketItem.sockets ?? 0) - (socketItem.gems?.length ?? 0)
+  const availableSocketCount =
+    getEffectiveSocketCount(socketItem.sockets) - (socketItem.gems?.length ?? 0)
 
   return (
     <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 p-4">

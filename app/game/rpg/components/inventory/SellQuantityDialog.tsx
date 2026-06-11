@@ -33,33 +33,21 @@ export function SellQuantityDialog({
         <p className="text-muted-foreground mb-4 text-sm">
           {getItemDisplayName(item)} 可出售 {maxQuantity} 个
         </p>
-        <div className="mb-4 flex items-center gap-3">
-          <button
-            onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-            disabled={isLoading || quantity <= 1}
-            className="bg-muted text-foreground hover:bg-secondary h-8 w-8 rounded disabled:opacity-50"
-          >
-            -
-          </button>
-          <input
-            type="number"
-            min={1}
-            max={maxQuantity}
-            value={quantity}
-            onChange={event => {
-              const nextQuantity = Number(event.target.value)
-              if (Number.isNaN(nextQuantity)) return
-              onQuantityChange(Math.min(maxQuantity, Math.max(1, nextQuantity)))
-            }}
-            className="bg-background border-border text-foreground w-20 rounded border px-3 py-2 text-center"
-          />
-          <button
-            onClick={() => onQuantityChange(Math.min(maxQuantity, quantity + 1))}
-            disabled={isLoading || quantity >= maxQuantity}
-            className="bg-muted text-foreground hover:bg-secondary h-8 w-8 rounded disabled:opacity-50"
-          >
-            +
-          </button>
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-muted-foreground text-sm">数量: {quantity}</span>
+          <div className="flex items-center gap-1">
+            {[1, 10, 100].map(amount => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => onQuantityChange(Math.min(maxQuantity, quantity + amount))}
+                disabled={isLoading || quantity >= maxQuantity}
+                className="bg-muted text-muted-foreground hover:bg-muted/80 rounded px-3 py-1 text-xs transition-colors disabled:opacity-50"
+              >
+                +{amount}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex justify-end gap-2">
           <button

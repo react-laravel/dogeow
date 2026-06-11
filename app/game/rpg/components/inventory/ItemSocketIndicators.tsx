@@ -1,6 +1,7 @@
 'use client'
 
 import type { GameItem } from '../../types'
+import { getEffectiveSocketCount } from '../../utils/itemUtils'
 
 type SocketVariant = 'compact' | 'detail'
 type SocketSize = 'sm' | 'md'
@@ -28,15 +29,16 @@ export function ItemSocketIndicators({
   size = 'sm',
   variant = 'compact',
 }: ItemSocketIndicatorsProps) {
-  if (!item.sockets || item.sockets <= 0) return null
+  const socketCount = getEffectiveSocketCount(item.sockets)
+  if (socketCount <= 0) return null
 
-  const gemCount = item.gems?.length ?? 0
+  const filledIndices = new Set(item.gems?.map(gem => gem.socket_index) ?? [])
   const classes = ['flex -space-x-1', className].filter(Boolean).join(' ')
 
   return (
     <div className={classes}>
-      {Array.from({ length: item.sockets }).map((_, idx) => {
-        const isFilled = idx < gemCount
+      {Array.from({ length: socketCount }).map((_, idx) => {
+        const isFilled = filledIndices.has(idx)
 
         return (
           <span

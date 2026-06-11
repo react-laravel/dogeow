@@ -2,6 +2,12 @@
 
 import type { GameItem, ItemDefinition, ItemType, EquipmentSlot } from '../types'
 
+/** 装备宝石孔位上限 */
+export const MAX_ITEM_SOCKETS = 3
+
+export const getEffectiveSocketCount = (sockets?: number): number =>
+  Math.min(Math.max(sockets ?? 0, 0), MAX_ITEM_SOCKETS)
+
 /** 适用于 getItemIconFallback 的物品形态：GameItem 或仅含 definition 的对象（如图鉴 CompendiumItem） */
 type ItemWithDefinition =
   | GameItem

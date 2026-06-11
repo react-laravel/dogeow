@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import type { GameItem } from '../../types'
+import { getEffectiveSocketCount } from '../../utils/itemUtils'
 
 interface UseGemManagementParams {
   inventory: GameItem[]
@@ -15,9 +16,10 @@ export const getGemsInInventory = (items: GameItem[]) =>
   items.filter(item => item.definition?.type === 'gem')
 
 export const canSocketItem = (item: GameItem): boolean => {
-  if (!item.sockets || item.sockets <= 0) return false
+  const socketCount = getEffectiveSocketCount(item.sockets)
+  if (socketCount <= 0) return false
   const gemCount = item.gems?.length ?? 0
-  return gemCount < item.sockets
+  return gemCount < socketCount
 }
 
 export function useGemManagement({

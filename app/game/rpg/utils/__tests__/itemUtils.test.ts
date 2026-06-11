@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { formatItemStatValue, getItemTotalStats } from '../itemUtils'
+import {
+  formatItemStatValue,
+  getEffectiveSocketCount,
+  getItemTotalStats,
+  MAX_ITEM_SOCKETS,
+} from '../itemUtils'
 import type { GameItem } from '../../types'
 
 describe('itemUtils', () => {
+  it('caps effective socket count at MAX_ITEM_SOCKETS', () => {
+    expect(MAX_ITEM_SOCKETS).toBe(3)
+    expect(getEffectiveSocketCount(4)).toBe(3)
+    expect(getEffectiveSocketCount(2)).toBe(2)
+    expect(getEffectiveSocketCount(undefined)).toBe(0)
+  })
+
   it('returns gem_stats for gem items', () => {
     const gem: GameItem = {
       id: 1,
