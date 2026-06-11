@@ -26,7 +26,7 @@ export const isHigherValueThanEquipped = (
   item: GameItem,
   equippedItem: GameItem | null
 ): boolean => {
-  if (!equippedItem) return false
+  if (!equippedItem) return true
 
   return getItemSellUnitPrice(item) > getItemSellUnitPrice(equippedItem)
 }

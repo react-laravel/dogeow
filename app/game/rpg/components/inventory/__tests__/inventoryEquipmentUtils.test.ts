@@ -80,7 +80,7 @@ describe('inventoryEquipmentUtils', () => {
 
     expect(isHigherValueThanEquipped(better, equipped)).toBe(true)
     expect(isHigherValueThanEquipped(worse, equipped)).toBe(false)
-    expect(isHigherValueThanEquipped(better, null)).toBe(false)
+    expect(isHigherValueThanEquipped(better, null)).toBe(true)
   })
 
   it('returns ring items as an array for compare rendering', () => {
