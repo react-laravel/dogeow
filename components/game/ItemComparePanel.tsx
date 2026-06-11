@@ -37,13 +37,13 @@ function getComparedStatClass(value: number, compareValue: number): string {
   return 'font-medium'
 }
 
-function getComparableStatKeys(
-  leftStats: Record<string, number>,
-  rightStats: Record<string, number>
-): string[] {
-  return Array.from(new Set([...Object.keys(leftStats), ...Object.keys(rightStats)])).filter(
-    stat => (leftStats[stat] || 0) !== 0 || (rightStats[stat] || 0) !== 0
-  )
+function hasStatValue(stats: Record<string, number>, stat: string): boolean {
+  const value = stats[stat]
+  return value != null && value !== 0
+}
+
+function getNonZeroStatKeys(stats: Record<string, number>): string[] {
+  return Object.keys(stats).filter(stat => hasStatValue(stats, stat))
 }
 
 interface ItemComparePanelProps {
@@ -69,11 +69,11 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
     new Set([...Object.keys(newStats || {}), ...Object.keys(equippedStats)])
   )
 
-  // 过滤出有差异的属性
+  // 过滤出有差异且至少一侧非零的属性
   const diffStats = allStatKeys.filter(stat => {
     const newValue = newStats[stat] || 0
     const equippedValue = equippedStats[stat] || 0
-    return newValue !== equippedValue
+    return newValue !== equippedValue && (newValue !== 0 || equippedValue !== 0)
   })
 
   const hasComparison = diffStats.length > 0
@@ -110,8 +110,9 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           {/* 对比属性 */}
           <div className="space-y-1">
             {diffStats.map(stat => {
-              const newValue = newStats[stat] || 0
               const equippedValue = equippedStats[stat] || 0
+              if (equippedValue === 0) return null
+
               return (
                 <div key={stat} className="flex items-center justify-between">
                   <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
@@ -161,6 +162,8 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
             {diffStats.map(stat => {
               const newValue = newStats[stat] || 0
               const equippedValue = equippedStats[stat] || 0
+              if (newValue === 0) return null
+
               const diff = newValue - equippedValue
               return (
                 <div key={stat} className="flex items-center justify-between">
@@ -199,7 +202,7 @@ export function EquipmentComparePanel({
   const diffStats = allStatKeys.filter(stat => {
     const newValue = newStats[stat] || 0
     const equippedValue = equippedStats[stat] || 0
-    return newValue !== equippedValue
+    return newValue !== equippedValue && (newValue !== 0 || equippedValue !== 0)
   })
 
   return (
@@ -238,6 +241,8 @@ export function EquipmentComparePanel({
             const newValue = newStats[stat] || 0
             const equippedValue = equippedStats[stat] || 0
             const diff = newValue - equippedValue
+            if (diff === 0) return null
+
             return (
               <div key={stat} className="flex items-center justify-between">
                 <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
@@ -279,7 +284,8 @@ export function FullComparePanel({
 }) {
   const newStats = getItemTotalStats(newItem)
   const equippedStats = getItemTotalStats(equippedItem)
-  const comparableStatKeys = getComparableStatKeys(equippedStats, newStats)
+  const equippedStatKeys = getNonZeroStatKeys(equippedStats)
+  const newStatKeys = getNonZeroStatKeys(newStats)
 
   // 商店对比显示购入价（来自商店列表 buy_price）；背包对比显示卖出价
   const shopBuyPrice =
@@ -315,7 +321,7 @@ export function FullComparePanel({
           </div>
           {/* 当前装备属性 */}
           <div className="flex-1 space-y-0.5">
-            {comparableStatKeys.map(stat => {
+            {equippedStatKeys.map(stat => {
               const equippedValue = equippedStats[stat] || 0
               const newValue = newStats[stat] || 0
               return (
@@ -364,7 +370,7 @@ export function FullComparePanel({
           </div>
           {/* 新物品属性 */}
           <div className="flex-1 space-y-0.5">
-            {comparableStatKeys.map(stat => {
+            {newStatKeys.map(stat => {
               const equippedValue = equippedStats[stat] || 0
               const newValue = newStats[stat] || 0
               return (
