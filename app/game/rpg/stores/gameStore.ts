@@ -198,6 +198,15 @@ interface GameState {
   reset: () => void
 }
 
+/** 若当前无启用技能，则默认启用所有已学习的主动技能 */
+function resolveEnabledSkillIds(
+  skills: SkillWithLearnedState[],
+  currentEnabledIds: number[]
+): number[] {
+  if (currentEnabledIds.length > 0) return currentEnabledIds
+  return skills.filter(s => s.is_learned && s.type === 'active').map(s => s.id)
+}
+
 const initialState = {
   characters: [],
   character: null,
@@ -762,15 +771,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       }
       const skills = response.skills ?? []
 
-      // 获取所有已学习的主动技能 ID，用于默认启用
-      const learnedActiveSkillIds = skills
-        .filter(s => s.is_learned && s.type === 'active')
-        .map(s => s.id)
-
-      // 获取当前已启用的技能 ID，如果是首次加载则默认启用所有主动技能
-      const currentEnabledIds = get().enabledSkillIds
-      const enabledSkillIds =
-        currentEnabledIds.length > 0 ? currentEnabledIds : learnedActiveSkillIds
+      const enabledSkillIds = resolveEnabledSkillIds(skills, get().enabledSkillIds)
 
       set(state => ({
         ...state,
@@ -914,6 +915,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         isFighting: true, // 后端已自动开始战斗
         shouldAutoCombat: true,
         isLoading: false,
+        enabledSkillIds: resolveEnabledSkillIds(state.skills, state.enabledSkillIds),
         // 复活时后端只恢复基础生命/法力，用返回的 character 更新当前 HP/MP 显示
         currentHp: char?.current_hp ?? state.currentHp,
         currentMana: char?.current_mana ?? state.currentMana,
@@ -1095,6 +1097,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         shouldAutoCombat: false,
         combatResult: null,
         statusCombatMonsters: null,
+        enabledSkillIds: resolveEnabledSkillIds(state.skills, state.enabledSkillIds),
         isLoading: false,
       }))
     } catch (error) {
@@ -1243,11 +1246,10 @@ const store: StateCreator<GameState> = (set, get) => ({
           : typedData.loot?.item
             ? [...state.inventory, typedData.loot.item as GameItem]
             : state.inventory,
-        // 战败时自动停止战斗
+        // 战败时自动停止战斗（保留技能启用状态，复活后无需重新勾选）
         ...(typedData.auto_stopped && {
           isFighting: false,
           shouldAutoCombat: false,
-          enabledSkillIds: [],
         }),
       }
     })

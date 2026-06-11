@@ -178,6 +178,7 @@ export function CombatPanel() {
   // 角色死亡时，点击只是复活，不自动开始战斗
   const handleRevive = async () => {
     await revive()
+    setShowDeathDialog(false)
   }
 
   const handleStopCombat = async () => {

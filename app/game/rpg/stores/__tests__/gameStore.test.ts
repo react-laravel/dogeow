@@ -515,6 +515,19 @@ describe('GameStore', () => {
 
       expect(useGameStore.getState().combatResult).toBeDefined()
     })
+
+    it('should preserve enabled skills when auto stopped after defeat', () => {
+      useGameStore.setState({ isFighting: true, enabledSkillIds: [1, 2, 3] })
+
+      useGameStore.getState().handleCombatUpdate({
+        auto_stopped: true,
+        defeat: true,
+        character: { id: 1, name: 'Test' },
+      })
+
+      expect(useGameStore.getState().isFighting).toBe(false)
+      expect(useGameStore.getState().enabledSkillIds).toEqual([1, 2, 3])
+    })
   })
 
   describe('handleInventoryUpdate', () => {
@@ -764,6 +777,25 @@ describe('GameStore', () => {
 
       expect(useGameStore.getState().isFighting).toBe(false)
       expect(useGameStore.getState().shouldAutoCombat).toBe(false)
+    })
+
+    it('should restore enabled active skills after revive when cleared', async () => {
+      const { post } = await import('@/lib/api')
+      vi.mocked(post).mockResolvedValueOnce({})
+
+      useGameStore.setState({
+        selectedCharacterId: 1,
+        enabledSkillIds: [],
+        skills: [
+          { id: 1, is_learned: true, type: 'active' },
+          { id: 2, is_learned: true, type: 'passive' },
+          { id: 3, is_learned: false, type: 'active' },
+        ] as any,
+      })
+
+      await useGameStore.getState().revive()
+
+      expect(useGameStore.getState().enabledSkillIds).toEqual([1])
     })
   })
 
