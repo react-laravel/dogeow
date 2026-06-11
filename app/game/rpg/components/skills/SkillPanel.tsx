@@ -383,11 +383,17 @@ export function SkillPanel() {
   const scrollToStage = useCallback((stageId: SkillStage) => {
     const container = scrollContainerRef.current
     const target = document.getElementById(`skill-stage-${stageId}`)
-    if (!container || !target) return
+    if (!target) return
+
+    if (!container || container.scrollHeight <= container.clientHeight + 1) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
     const containerRect = container.getBoundingClientRect()
     const targetRect = target.getBoundingClientRect()
     const top = container.scrollTop + (targetRect.top - containerRect.top)
-    container.scrollTo({ top, behavior: 'smooth' })
+    container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
   }, [])
 
   return (
