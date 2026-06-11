@@ -12,17 +12,17 @@ import { ItemDetailModal, ShopItemIcon } from '@/components/game'
 /** 强制刷新费用：1 银 = 100 铜 */
 const SHOP_REFRESH_COST_COPPER = 100
 
-/** 商店物品类型筛选选项 */
-const SHOP_TYPE_FILTERS: { id: string; label: string; types: ItemType[] }[] = [
-  { id: 'weapon', label: '⚔️', types: ['weapon'] },
-  { id: 'helmet', label: '🪖', types: ['helmet'] },
-  { id: 'armor', label: '🛡️', types: ['armor'] },
-  { id: 'gloves', label: '🧤', types: ['gloves'] },
-  { id: 'boots', label: '👢', types: ['boots'] },
-  { id: 'belt', label: '🥋', types: ['belt'] },
-  { id: 'ring', label: '💍', types: ['ring'] },
-  { id: 'potion', label: '🧪', types: ['potion'] },
-  { id: 'gem', label: '💎', types: ['gem'] },
+/** 商店分类行（顺序与左侧图标一致） */
+const SHOP_TYPE_FILTERS: { id: string; label: string; name: string; types: ItemType[] }[] = [
+  { id: 'weapon', label: '⚔️', name: '武器', types: ['weapon'] },
+  { id: 'helmet', label: '🪖', name: '头盔', types: ['helmet'] },
+  { id: 'armor', label: '🛡️', name: '护甲', types: ['armor'] },
+  { id: 'gloves', label: '🧤', name: '手套', types: ['gloves'] },
+  { id: 'boots', label: '👢', name: '靴子', types: ['boots'] },
+  { id: 'belt', label: '🥋', name: '腰带', types: ['belt'] },
+  { id: 'ring', label: '💍', name: '戒指', types: ['ring'] },
+  { id: 'potion', label: '🧪', name: '药水', types: ['potion'] },
+  { id: 'gem', label: '💎', name: '宝石', types: ['gem'] },
 ]
 
 function ShopRefreshCountdown({ nextRefreshAt }: { nextRefreshAt: number | null }) {
@@ -113,7 +113,6 @@ export function ShopPanel() {
   )
   const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null)
   const [buyQuantity, setBuyQuantity] = useState(1)
-  const [typeFilter, setTypeFilter] = useState<string | null>(null)
 
   const canAffordRefresh = character != null && character.copper >= SHOP_REFRESH_COST_COPPER
 
@@ -139,14 +138,16 @@ export function ShopPanel() {
     setBuyQuantity(item.type === 'potion' ? 0 : 1)
   }, [])
 
-  const filteredItems = useMemo(() => {
-    if (!typeFilter) {
-      return [...shopItems].sort((a, b) => b.buy_price - a.buy_price)
-    }
-    const filter = SHOP_TYPE_FILTERS.find(f => f.id === typeFilter)
-    const items = filter ? shopItems.filter(item => filter.types.includes(item.type)) : shopItems
-    return [...items].sort((a, b) => b.buy_price - a.buy_price)
-  }, [shopItems, typeFilter])
+  const itemsByCategory = useMemo(
+    () =>
+      SHOP_TYPE_FILTERS.map(filter => ({
+        ...filter,
+        items: shopItems
+          .filter(item => filter.types.includes(item.type))
+          .sort((a, b) => b.buy_price - a.buy_price),
+      })).filter(group => group.items.length > 0),
+    [shopItems]
+  )
 
   const selectedItemId = selectedShopItem?.id ?? null
 
@@ -162,70 +163,63 @@ export function ShopPanel() {
   return (
     <>
       <div className="-ml-3 flex h-full min-h-0 flex-col overflow-hidden overscroll-none sm:-ml-4">
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="flex w-[3.75rem] shrink-0 flex-col justify-center gap-2.5 py-3 sm:w-16 sm:gap-3">
-            {SHOP_TYPE_FILTERS.map(filter => {
-              const isActive = typeFilter === filter.id
-              return (
-                <button
-                  key={filter.id}
-                  onClick={() => setTypeFilter(isActive ? null : filter.id)}
-                  className={`flex h-11 w-full shrink-0 items-center justify-center rounded-r-xl text-[1.4rem] transition-colors sm:h-12 sm:text-2xl ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted active:bg-muted/80'
-                  }`}
-                  title={filter.id}
+        <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 sm:px-4">
+          <h4 className="text-foreground text-sm font-medium">
+            商店物品
+            <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+              {shopItems.length}
+            </span>
+          </h4>
+          <ShopRefreshCountdown nextRefreshAt={shopNextRefreshAt} />
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 sm:px-4">
+          {itemsByCategory.length > 0 ? (
+            itemsByCategory.map(group => (
+              <div
+                key={group.id}
+                className="border-border/40 flex shrink-0 items-stretch gap-2 border-b py-2 last:border-b-0"
+              >
+                <div
+                  className="bg-muted/60 flex h-11 w-[3.75rem] shrink-0 items-center justify-center rounded-xl text-[1.4rem] sm:h-12 sm:w-16 sm:text-2xl"
+                  title={group.name}
+                  aria-label={group.name}
                 >
-                  {filter.label}
-                </button>
-              )
-            })}
-          </aside>
-
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 sm:px-4">
-              <h4 className="text-foreground text-sm font-medium">
-                商店物品
-                <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                  {filteredItems.length}/{shopItems.length}
-                </span>
-              </h4>
-              <ShopRefreshCountdown nextRefreshAt={shopNextRefreshAt} />
-            </div>
-
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-3 sm:px-4">
-              {filteredItems.length > 0 ? (
-                <div className="grid w-full max-w-[20rem] grid-cols-5 gap-x-2 gap-y-2.5 sm:max-w-[22rem] sm:gap-x-2.5 sm:gap-y-3">
-                  {filteredItems.map(item => (
-                    <ShopItemCell
-                      key={item.id}
-                      item={item}
-                      isSelected={selectedItemId === item.id}
-                      isLoading={isLoading}
-                      onSelect={handleSelectShopItem}
-                    />
+                  {group.label}
+                </div>
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5">
+                  {group.items.map(item => (
+                    <div key={item.id} className="w-14 shrink-0 sm:w-16">
+                      <ShopItemCell
+                        item={item}
+                        isSelected={selectedItemId === item.id}
+                        isLoading={isLoading}
+                        onSelect={handleSelectShopItem}
+                      />
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">暂无该分类物品</p>
-              )}
-            </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+              暂无商店物品
+            </p>
+          )}
+        </div>
 
-            <div className="flex shrink-0 justify-center px-3 py-2 sm:px-4">
-              <button
-                type="button"
-                onClick={() => refreshShopItems()}
-                disabled={isLoading || !canAffordRefresh}
-                className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2 rounded-full px-4 py-2 text-xs transition-colors disabled:opacity-50"
-                title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>刷新商店</span>
-                <CopperDisplay copper={SHOP_REFRESH_COST_COPPER} size="xs" nowrap maxParts={1} />
-              </button>
-            </div>
-          </div>
+        <div className="flex shrink-0 justify-center px-3 py-2 sm:px-4">
+          <button
+            type="button"
+            onClick={() => refreshShopItems()}
+            disabled={isLoading || !canAffordRefresh}
+            className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2 rounded-full px-4 py-2 text-xs transition-colors disabled:opacity-50"
+            title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>刷新商店</span>
+            <CopperDisplay copper={SHOP_REFRESH_COST_COPPER} size="xs" nowrap maxParts={1} />
+          </button>
         </div>
       </div>
 
