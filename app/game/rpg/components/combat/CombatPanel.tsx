@@ -13,13 +13,19 @@ import type { CharacterSkill, SkillWithLearnedState } from '../../types'
 import type { MapDefinition } from '../../types'
 import { getMapBackgroundStyle } from '../../utils/mapBackground'
 import { BattleArena } from './BattleArena'
-import { BattleSkillBar } from './BattleSkillBar'
+import { BattleSkillBar, type SkillBarLayout } from './BattleSkillBar'
 import { CombatLogList } from './CombatLogList'
 import { getActName } from '../../utils/combat'
 import { getPrimaryCombatMonster, getPrimaryCombatMonsterId } from '../../utils/combatUtils'
 import { MapCardMonsterAvatar } from './MapCardMonsterAvatar'
-import { LogIn, Heart, Droplet } from 'lucide-react'
+import { GalleryHorizontal, LayoutGrid, Heart, Droplet } from 'lucide-react'
 import { DIFFICULTY_OPTIONS, DIFFICULTY_COLORS } from '../character/CharacterSelect'
+const SKILL_BAR_LAYOUT_KEY = 'rpg-skill-bar-layout'
+
+function readSkillBarLayout(): SkillBarLayout {
+  if (typeof window === 'undefined') return 'row'
+  return localStorage.getItem(SKILL_BAR_LAYOUT_KEY) === 'wrap' ? 'wrap' : 'row'
+}
 
 export function CombatPanel() {
   const currentMap = useGameStore(state => state.currentMap)
@@ -49,6 +55,7 @@ export function CombatPanel() {
   const [dropdownAct, setDropdownAct] = useState(1)
   const mapDropdownRef = useRef<HTMLDivElement>(null)
   const [showDeathDialog, setShowDeathDialog] = useState(false)
+  const [skillBarLayout, setSkillBarLayout] = useState<SkillBarLayout>(() => readSkillBarLayout())
   const lastAutoStoppedRef = useRef<boolean | undefined>(undefined)
 
   // 监听战斗结果，检测角色死亡
@@ -179,113 +186,110 @@ export function CombatPanel() {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* 地图选择器 */}
-      {currentMap && (
-        <div className="relative w-full" ref={mapDropdownRef}>
-          <div className="flex items-center justify-between rounded-lg bg-black/70 px-3 py-2">
-            <button
-              type="button"
-              onClick={() => setMapDropdownOpen(prev => !prev)}
-              className="flex items-center gap-2 text-sm font-medium text-white"
-            >
-              <span>{currentMap?.name ?? '选择地图'}</span>
-              {character && character.difficulty_tier != null && character.difficulty_tier >= 0 && (
-                <span
-                  className={`rounded ${DIFFICULTY_COLORS[character.difficulty_tier] || 'bg-green-600'} px-1.5 py-0.5 text-xs`}
-                >
-                  {DIFFICULTY_OPTIONS.find(o => o.tier === character.difficulty_tier)?.label ??
-                    '普通'}
-                </span>
-              )}
-              <span className="text-xs">{mapDropdownOpen ? '▲' : '▼'}</span>
-            </button>
-          </div>
-          {/* 下拉内容 */}
-          {mapDropdownOpen && (
-            <div className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-[70vh] min-h-64 w-full rounded-lg bg-black/90">
-              {/* 左侧：幕数列表 */}
-              <div className="flex w-16 shrink-0 flex-col overflow-y-auto border-r border-white/10">
-                {actOrder.map(actNum => (
-                  <button
-                    key={actNum}
-                    type="button"
-                    onClick={() => setDropdownAct(actNum)}
-                    className={`flex h-12 shrink-0 items-center justify-center border-b border-white/10 text-xs ${
-                      effectiveAct === actNum
-                        ? 'bg-primary text-white'
-                        : 'text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    {getActName(actNum)}
-                  </button>
-                ))}
-              </div>
-              {/* 右侧：地图列表 */}
-              <div className="flex-1 overflow-y-auto p-2">
-                {displayActMaps.map(map => {
-                  const isCurrentMap = currentMap?.id === map.id
-
-                  // 计算怪物等级范围（仅从怪物定义取，无等级限制）
-                  const monsterLevels = map.monsters?.map(m => m.level) ?? []
-                  const minMonsterLevel =
-                    monsterLevels.length > 0 ? Math.min(...monsterLevels) : null
-                  const maxMonsterLevel =
-                    monsterLevels.length > 0 ? Math.max(...monsterLevels) : null
-                  const levelText =
-                    minMonsterLevel != null && maxMonsterLevel != null
-                      ? `Lv.${minMonsterLevel}-${maxMonsterLevel}`
-                      : '—'
-
-                  return (
-                    <button
-                      key={map.id}
-                      type="button"
-                      onClick={() => {
-                        if (!isCurrentMap) {
-                          handleSelectMap(map.id)
-                          setMapDropdownOpen(false)
-                        }
-                      }}
-                      disabled={isCurrentMap}
-                      className={`mb-2 flex w-full items-center gap-3 rounded-lg p-2 text-left transition-all ${
-                        isCurrentMap ? 'ring-primary ring-2' : 'hover:bg-white/10'
-                      }`}
-                      style={getMapBackgroundStyle(map, { fill: true })}
+      {/* 战斗区域：有地图时显示，VS 处点击开始/停止挂机 */}
+      <div
+        className={`bg-card rounded-lg ${mapDropdownOpen ? 'overflow-visible' : 'overflow-hidden'}`}
+      >
+        {/* 地图选择器 */}
+        {currentMap && (
+          <div className="relative mb-2 w-full px-2 sm:mb-3 sm:px-3" ref={mapDropdownRef}>
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setMapDropdownOpen(prev => !prev)}
+                className="text-foreground flex min-h-0 items-center gap-1.5 text-base font-medium"
+              >
+                <span>{currentMap?.name ?? '选择地图'}</span>
+                {character &&
+                  character.difficulty_tier != null &&
+                  character.difficulty_tier >= 0 && (
+                    <span
+                      className={`rounded ${DIFFICULTY_COLORS[character.difficulty_tier] || 'bg-green-600'} px-1.5 py-px text-xs leading-tight`}
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-white">{map.name}</span>
-                          {isCurrentMap && <span className="text-primary text-xs">(当前)</span>}
+                      {DIFFICULTY_OPTIONS.find(o => o.tier === character.difficulty_tier)?.label ??
+                        '普通'}
+                    </span>
+                  )}
+                <span className="text-xs leading-none">{mapDropdownOpen ? '▲' : '▼'}</span>
+              </button>
+            </div>
+            {/* 下拉内容 */}
+            {mapDropdownOpen && (
+              <div className="absolute top-full right-0 left-0 z-20 mt-1 flex h-[min(80vh,32rem)] w-full overflow-hidden rounded-lg bg-black/90 shadow-lg">
+                {/* 左侧：幕数列表 */}
+                <div className="flex min-h-0 w-16 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/10">
+                  {actOrder.map(actNum => (
+                    <button
+                      key={actNum}
+                      type="button"
+                      onClick={() => setDropdownAct(actNum)}
+                      className={`flex h-12 shrink-0 items-center justify-center border-b border-white/10 text-xs ${
+                        effectiveAct === actNum
+                          ? 'bg-primary text-white'
+                          : 'text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {getActName(actNum)}
+                    </button>
+                  ))}
+                </div>
+                {/* 右侧：地图列表 */}
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+                  {displayActMaps.map(map => {
+                    const isCurrentMap = currentMap?.id === map.id
+
+                    // 计算怪物等级范围（仅从怪物定义取，无等级限制）
+                    const monsterLevels = map.monsters?.map(m => m.level) ?? []
+                    const minMonsterLevel =
+                      monsterLevels.length > 0 ? Math.min(...monsterLevels) : null
+                    const maxMonsterLevel =
+                      monsterLevels.length > 0 ? Math.max(...monsterLevels) : null
+                    const levelText =
+                      minMonsterLevel != null && maxMonsterLevel != null
+                        ? `Lv.${minMonsterLevel}-${maxMonsterLevel}`
+                        : '—'
+
+                    return (
+                      <button
+                        key={map.id}
+                        type="button"
+                        aria-current={isCurrentMap ? 'true' : undefined}
+                        onClick={() => {
+                          if (!isCurrentMap) {
+                            handleSelectMap(map.id)
+                            setMapDropdownOpen(false)
+                          }
+                        }}
+                        className={`mb-3 flex min-h-24 w-full items-center justify-between gap-4 rounded-lg p-3 text-left transition-all enabled:cursor-pointer sm:min-h-28 sm:p-4 ${
+                          isCurrentMap ? 'ring-primary ring-2' : 'hover:bg-white/10'
+                        }`}
+                        style={getMapBackgroundStyle(map, { fill: true })}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-base font-medium text-white sm:text-lg">
+                            {map.name}
+                          </div>
+                          <div className="mt-1 text-sm text-gray-300">怪物 {levelText}</div>
                         </div>
-                        <div className="text-xs text-gray-400">怪物 {levelText}</div>
                         {map.monsters?.length ? (
-                          <div className="mt-1 flex gap-1">
+                          <div className="flex shrink-0 items-center gap-1.5">
                             {map.monsters.slice(0, 4).map(m => (
-                              <MapCardMonsterAvatar key={m.id} icon={m.icon} name={m.name} />
+                              <MapCardMonsterAvatar key={m.id} icon={m.icon} name={m.name} large />
                             ))}
                           </div>
                         ) : null}
-                      </div>
-                      {/* 进入按钮 */}
-                      {!isCurrentMap && (
-                        <div className="flex shrink-0 items-center justify-center rounded-full bg-green-600/80 p-2 hover:bg-green-500">
-                          <LogIn className="h-4 w-4 text-white" />
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {/* 战斗区域：有地图时显示，VS 处点击开始/停止挂机 */}
-      <div className="border-border bg-card rounded-lg border p-2 sm:p-3">
         {/* 用户 vs 怪物（仅此区域显示地图背景，区域 1:1 比例） */}
         {currentMap && (
-          <div className="border-border">
+          <div>
             <div
               className="relative aspect-square w-full overflow-hidden rounded-lg"
               style={
@@ -297,7 +301,7 @@ export function CombatPanel() {
               {currentMap && (
                 <div className="absolute inset-0 rounded-lg bg-black/15" aria-hidden />
               )}
-              <div className="relative flex h-full w-full items-center justify-center p-3 sm:p-4">
+              <div className="relative flex h-full w-full items-center justify-center">
                 <div className="absolute inset-0">
                   <BattleArena
                     character={
@@ -345,9 +349,30 @@ export function CombatPanel() {
         )}
         {/* 技能栏（有地图时显示） */}
         {currentMap && activeSkills.length > 0 && (
-          <div className="mt-3 overflow-visible pt-3">
+          <div className="overflow-visible">
             <div className="min-w-0">
-              <p className="text-muted-foreground mb-2 text-xs font-medium sm:text-sm">技能</p>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <p className="text-muted-foreground text-xs font-medium sm:text-sm">技能</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSkillBarLayout(prev => {
+                      const next: SkillBarLayout = prev === 'row' ? 'wrap' : 'row'
+                      localStorage.setItem(SKILL_BAR_LAYOUT_KEY, next)
+                      return next
+                    })
+                  }}
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+                  title={skillBarLayout === 'row' ? '切换为多行显示' : '切换为单行滚动'}
+                  aria-label={skillBarLayout === 'row' ? '切换为多行显示' : '切换为单行滚动'}
+                >
+                  {skillBarLayout === 'row' ? (
+                    <LayoutGrid className="h-4 w-4" />
+                  ) : (
+                    <GalleryHorizontal className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               <div className="overflow-visible">
                 <BattleSkillBar
                   activeSkills={activeSkills}
@@ -356,6 +381,7 @@ export function CombatPanel() {
                   enabledSkillIds={enabledSkillIds}
                   onSkillToggle={toggleEnabledSkill}
                   disabled={showDeathDialog}
+                  layout={skillBarLayout}
                 />
               </div>
             </div>
@@ -365,7 +391,7 @@ export function CombatPanel() {
 
       {/* 战斗日志 */}
       <div className="bg-card border-border rounded-lg border p-3 sm:p-4">
-        <h4 className="text-foreground mb-3 text-base font-medium sm:mb-4 sm:text-lg">战斗日志</h4>
+        <h4 className="text-foreground mb-3 text-base font-medium sm:mb-4">战斗日志</h4>
         <div className="max-h-64 space-y-1 overflow-y-auto sm:max-h-80 sm:space-y-1.5">
           <CombatLogList logs={combatLogs} />
         </div>

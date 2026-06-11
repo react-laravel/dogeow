@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useGameStore } from '../gameStore'
-import type { GameCharacter, GameItem, MapDefinition, SkillWithLearnedState } from '../../types'
+import type {
+  GameCharacter,
+  GameItem,
+  MapDefinition,
+  ShopItem,
+  SkillWithLearnedState,
+} from '../../types'
 
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
@@ -609,6 +615,51 @@ describe('GameStore', () => {
       await useGameStore.getState().buyItem(1, 1)
 
       expect(useGameStore.getState().character?.copper).toBe(900)
+    })
+
+    it('should remove purchased equipment from shop items', async () => {
+      const { post } = await import('@/lib/api')
+      vi.mocked(post).mockResolvedValueOnce({
+        copper: 800,
+        total_price: 200,
+        quantity: 1,
+        item_name: 'Iron Sword',
+      })
+
+      useGameStore.setState({
+        selectedCharacterId: 1,
+        character: { id: 1, copper: 1000 } as GameCharacter,
+        shopItems: [
+          { id: 1, name: 'Iron Sword', type: 'weapon', buy_price: 200 } as ShopItem,
+          { id: 2, name: 'HP Potion', type: 'potion', buy_price: 10 } as ShopItem,
+        ],
+      })
+
+      await useGameStore.getState().buyItem(1, 1)
+
+      expect(useGameStore.getState().shopItems).toHaveLength(1)
+      expect(useGameStore.getState().shopItems[0]?.id).toBe(2)
+    })
+
+    it('should keep potion listings after purchase', async () => {
+      const { post } = await import('@/lib/api')
+      vi.mocked(post).mockResolvedValueOnce({
+        copper: 990,
+        total_price: 10,
+        quantity: 1,
+        item_name: 'HP Potion',
+      })
+
+      useGameStore.setState({
+        selectedCharacterId: 1,
+        character: { id: 1, copper: 1000 } as GameCharacter,
+        shopItems: [{ id: 2, name: 'HP Potion', type: 'potion', buy_price: 10 } as ShopItem],
+      })
+
+      await useGameStore.getState().buyItem(2, 1)
+
+      expect(useGameStore.getState().shopItems).toHaveLength(1)
+      expect(useGameStore.getState().shopItems[0]?.id).toBe(2)
     })
   })
 

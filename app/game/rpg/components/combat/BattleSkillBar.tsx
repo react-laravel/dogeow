@@ -3,6 +3,8 @@
 import type { CharacterSkill, SkillUsedEntry } from '../../types'
 import { SkillIcon } from '../shared/SkillIcon'
 
+export type SkillBarLayout = 'row' | 'wrap'
+
 /** 战斗技能栏：显示主动技能图标、回合冷却、点击启用/关闭 */
 export function BattleSkillBar({
   activeSkills,
@@ -11,6 +13,7 @@ export function BattleSkillBar({
   enabledSkillIds,
   onSkillToggle,
   disabled,
+  layout = 'row',
 }: {
   activeSkills: CharacterSkill[]
   skillsUsed: SkillUsedEntry[] | undefined
@@ -18,11 +21,18 @@ export function BattleSkillBar({
   enabledSkillIds: number[]
   onSkillToggle: (skillId: number) => void
   disabled?: boolean
+  layout?: SkillBarLayout
 }) {
   if (activeSkills.length === 0) return null
 
   return (
-    <div className="flex flex-wrap items-start gap-2">
+    <div
+      className={
+        layout === 'row'
+          ? 'flex flex-nowrap items-start gap-2 overflow-x-auto overscroll-x-contain pb-1'
+          : 'flex flex-wrap items-start gap-2'
+      }
+    >
       {activeSkills.map(cs => {
         const def = cs.skill
         // 剩余冷却回合数
@@ -50,7 +60,7 @@ export function BattleSkillBar({
           </>
         )
         const btnClass = [
-          'focus-visible:ring-ring relative flex flex-col items-center gap-0.5 rounded-md border px-1 py-1 transition-[background-color,border-color,filter,opacity] duration-150 focus:outline-none focus-visible:ring-2 outline-offset-0',
+          'focus-visible:ring-ring relative flex shrink-0 flex-col items-center gap-0.5 rounded-md border px-1 py-1 transition-[background-color,border-color,filter,opacity] duration-150 focus:outline-none focus-visible:ring-2 outline-offset-0',
           enabled
             ? 'border-primary/60 bg-muted/60 hover:bg-muted/80'
             : 'border-border/50 bg-muted/20 grayscale opacity-80 hover:bg-muted/35',

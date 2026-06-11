@@ -29,6 +29,7 @@ export function CharacterPanel() {
     unequipItem,
     allocateStats,
     isLoading,
+    experienceTable,
   } = useGameStore()
 
   const [allocating, setAllocating] = useState<Record<(typeof CHARACTER_STATS)[number], number>>({
@@ -60,6 +61,8 @@ export function CharacterPanel() {
   // 优化: 仅在没有角色信息时再渲染 null
   if (!character) return null
 
+  const expToNext = experienceTable?.[character.level + 1] ?? (character.level + 1) * 5000
+
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* 角色基本信息 - 移动端优化 */}
@@ -74,6 +77,9 @@ export function CharacterPanel() {
             </h3>
             <p className="text-muted-foreground text-sm">
               Lv.{character.level} {CLASS_NAMES[character.class]}
+            </p>
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              经验 {character.experience.toLocaleString()} / {expToNext.toLocaleString()}
             </p>
           </div>
         </div>

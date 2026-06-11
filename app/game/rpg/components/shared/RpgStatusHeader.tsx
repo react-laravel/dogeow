@@ -27,6 +27,9 @@ export function RpgStatusHeader() {
     <>
       <div className="flex w-full items-center gap-2 text-xs sm:gap-3 sm:text-sm">
         <div className="flex shrink-0 items-center gap-2">
+          <span className="text-foreground text-xs font-medium sm:text-sm">
+            Lv.{character.level}
+          </span>
           <span className="self-center text-yellow-600 dark:text-yellow-400">
             <CopperDisplay copper={character.copper} size="sm" maxParts={3} />
           </span>
@@ -60,8 +63,8 @@ export function RpgStatusHeader() {
           </div>
         </div>
         <div className="flex shrink-0">
-          <span className="text-muted-foreground text-xs sm:text-sm">
-            {character.experience.toLocaleString()} / {expToNext.toLocaleString()}
+          <span className="text-xs text-amber-500 tabular-nums sm:text-sm dark:text-amber-400">
+            {expPercent.toFixed(2)}%
           </span>
         </div>
       </div>

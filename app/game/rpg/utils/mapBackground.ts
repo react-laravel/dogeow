@@ -19,16 +19,40 @@ function getActGradient(act: number): string {
   return ACT_GRADIENTS[act] ?? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
 }
 
+function toOriginFilename(filename: string): string | null {
+  if (!filename.includes('.')) return null
+  return filename.replace(/\.([^.]+)$/, '_origin.$1')
+}
+
+/**
+ * 解析地图背景图 URL 列表（由近到远叠放）。
+ * 非原图模式会同时返回缩略图与原图，缩略图缺失时仍可由原图显示（如 safe-training-camp）。
+ */
+export function getMapBackgroundUrls(map: MapDefinition | null, useOrigin = false): string[] {
+  if (!map?.background) return []
+  const bg = map.background.trim()
+  if (bg.startsWith('http://') || bg.startsWith('https://')) return [bg]
+
+  if (useOrigin) {
+    const origin = toOriginFilename(bg) ?? bg
+    return [`${BG_BASE}/${origin}`]
+  }
+
+  const origin = toOriginFilename(bg)
+  const urls = [`${BG_BASE}/${bg}`]
+  if (origin && origin !== bg) {
+    urls.push(`${BG_BASE}/${origin}`)
+  }
+  return urls
+}
+
 /**
  * 解析地图背景图 URL。后端可能返回英文文件名（如 safe-training-camp.jpg）或完整 URL。
  * @param useOrigin 为 true 时使用原图文件名（如 safe-training-camp.jpg → safe-training-camp_origin.jpg），用于战斗等场景
  */
 export function getMapBackgroundUrl(map: MapDefinition | null, useOrigin = false): string | null {
-  if (!map?.background) return null
-  const bg = map.background.trim()
-  if (bg.startsWith('http://') || bg.startsWith('https://')) return bg
-  const filename = useOrigin && bg.includes('.') ? bg.replace(/\.([^.]+)$/, '_origin.$1') : bg
-  return `${BG_BASE}/${filename}`
+  const urls = getMapBackgroundUrls(map, useOrigin)
+  return urls[0] ?? null
 }
 
 export type MapBackgroundStyleOptions = {
@@ -49,11 +73,23 @@ export function getMapBackgroundStyle(
   const useOrigin = options?.useOrigin ?? false
   const fill = options?.fill ?? false
   const gradient = getActGradient(map?.act ?? 1)
-  const imageUrl = getMapBackgroundUrl(map, useOrigin)
-  const size = imageUrl ? (fill ? 'cover' : 'contain') : 'cover'
+  const imageUrls = getMapBackgroundUrls(map, useOrigin)
+  const imageSize = fill ? 'cover' : 'contain'
+  if (imageUrls.length === 0) {
+    return {
+      backgroundImage: gradient,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    }
+  }
+
+  const layers = [...imageUrls.map(url => `url(${url})`), gradient]
+  const sizes = [...imageUrls.map(() => imageSize), 'auto']
+
   return {
-    backgroundImage: imageUrl ? `url(${imageUrl}), ${gradient}` : gradient,
-    backgroundSize: size,
+    backgroundImage: layers.join(', '),
+    backgroundSize: sizes.join(', '),
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
   }

@@ -1369,12 +1369,21 @@ const store: StateCreator<GameState> = (set, get) => ({
         item_name: string
       }
       soundManager.play('gold')
-      // 更新金币和重新获取背包
-      set(state => ({
-        ...state,
-        character: withUpdatedCopper(state.character, response.copper),
-        isLoading: false,
-      }))
+      set(state => {
+        const purchasedItem = state.shopItems.find(item => item.id === itemId)
+        const isRepeatableShopItem =
+          purchasedItem?.type === 'potion' || purchasedItem?.type === 'gem'
+
+        return {
+          ...state,
+          character: withUpdatedCopper(state.character, response.copper),
+          shopItems:
+            purchasedItem && !isRepeatableShopItem
+              ? state.shopItems.filter(item => item.id !== itemId)
+              : state.shopItems,
+          isLoading: false,
+        }
+      })
       // 背包由 WebSocket inventory.update 推送
     } catch (error) {
       setRequestError(set, error)
