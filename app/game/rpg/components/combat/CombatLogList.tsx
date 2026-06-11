@@ -12,9 +12,56 @@ import {
 import { useMemo, useState, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { CopperDisplay } from '../shared/CopperDisplay'
-import { ItemDetailModal } from '@/components/game'
+import { ItemDetailModal, ItemIcon } from '@/components/game'
+import { SkillIcon } from '../shared/SkillIcon'
 import { useGameStore } from '../../stores/gameStore'
 import { X, Swords, Shield, Zap, Target, Skull, Award, Coins } from 'lucide-react'
+import type { SkillUsedEntry } from '../../types'
+
+function CombatLogSkillIcons({ skills }: { skills: SkillUsedEntry[] }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-0.5">
+      {skills.map((skill, idx) => {
+        const useCount = skill.use_count ?? 1
+        return (
+          <span
+            key={`${skill.skill_id}-${idx}`}
+            className="relative inline-flex"
+            title={useCount > 1 ? `${skill.name} ×${useCount}` : skill.name}
+          >
+            <SkillIcon icon={skill.icon} effectKey={skill.effect_key} name={skill.name} />
+            {useCount > 1 && (
+              <span className="bg-background text-foreground absolute -right-0.5 -bottom-0.5 rounded px-0.5 text-[9px] leading-none font-semibold shadow-sm">
+                ×{useCount}
+              </span>
+            )}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
+function CombatLogLootIcon({ item, onClick }: { item: GameItem; onClick: () => void }) {
+  const qualityColor = QUALITY_COLORS[item.quality]
+  return (
+    <button
+      type="button"
+      className="border-border relative inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded border-2 p-0.5 transition-shadow hover:shadow-md"
+      style={{
+        borderColor: qualityColor,
+        background: `linear-gradient(135deg, ${qualityColor}15 0%, ${qualityColor}08 100%)`,
+      }}
+      title={item.definition.name}
+      onClick={e => {
+        e.stopPropagation()
+        onClick()
+      }}
+    >
+      <ItemIcon item={item} className="drop-shadow-sm" />
+    </button>
+  )
+}
 
 function ItemDetailDialog({ item, onClose }: { item: GameItem; onClose: () => void }) {
   return (
@@ -211,14 +258,7 @@ function CombatLogDetailDialog({ logId, onClose }: { logId: number; onClose: () 
           <div className="bg-muted/50 mb-4 rounded-lg p-3">
             <h4 className="text-muted-foreground mb-2 text-sm font-medium">使用的技能</h4>
             <div className="flex flex-wrap gap-2">
-              {d.skills_used.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="bg-primary/20 text-primary rounded-full px-2 py-1 text-xs"
-                >
-                  {skill.name} ×{skill.use_count || 1}
-                </span>
-              ))}
+              <CombatLogSkillIcons skills={d.skills_used} />
             </div>
           </div>
         )}
@@ -311,31 +351,19 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                 </span>
               )}
               {log.skills_used && log.skills_used.length > 0 && (
-                <span className="text-cyan-600 dark:text-cyan-400">
-                  释放:{' '}
-                  {log.skills_used
-                    .map(s => ((s.use_count ?? 1) > 1 ? `${s.name}×${s.use_count}` : s.name))
-                    .join(' ')}
-                </span>
+                <CombatLogSkillIcons skills={log.skills_used} />
               )}
               {log.loot?.item && (
-                <button
-                  type="button"
-                  style={{ color: QUALITY_COLORS[log.loot.item.quality] }}
-                  className="cursor-pointer font-semibold hover:underline"
+                <CombatLogLootIcon
+                  item={log.loot.item}
                   onClick={() => setSelectedItem(log.loot!.item!)}
-                >
-                  🎁 {log.loot.item.definition.name}
-                </button>
+                />
               )}
               {log.loot?.potion && (
-                <button
-                  type="button"
-                  className="cursor-pointer font-semibold text-rose-500 hover:underline dark:text-rose-400"
+                <CombatLogLootIcon
+                  item={log.loot.potion}
                   onClick={() => setSelectedItem(log.loot!.potion!)}
-                >
-                  🧪 {log.loot.potion.definition.name}
-                </button>
+                />
               )}
             </div>
             {/* 战后药水：单独一行 */}
