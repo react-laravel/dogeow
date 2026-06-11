@@ -6,6 +6,7 @@ import {
   handleInventoryCompareAction,
   hasEquippedItemFor,
   isHigherValueThanEquipped,
+  shouldShowUpgradeIndicator,
 } from '../inventoryEquipmentUtils'
 import { createItem } from './testUtils'
 
@@ -81,6 +82,28 @@ describe('inventoryEquipmentUtils', () => {
     expect(isHigherValueThanEquipped(better, equipped)).toBe(true)
     expect(isHigherValueThanEquipped(worse, equipped)).toBe(false)
     expect(isHigherValueThanEquipped(better, null)).toBe(true)
+  })
+
+  it('does not show upgrade indicator for potions or gems', () => {
+    const potion = createItem({
+      id: 38,
+      sell_price: 999,
+      definition: { id: 38, name: 'HP Potion', type: 'potion', base_stats: {}, required_level: 1 },
+    })
+    const gem = createItem({
+      id: 39,
+      sell_price: 999,
+      definition: { id: 39, name: 'Ruby', type: 'gem', base_stats: {}, required_level: 1 },
+    })
+    const weapon = createItem({
+      id: 40,
+      sell_price: 150,
+      definition: { id: 40, name: 'Sword', type: 'weapon', base_stats: {}, required_level: 1 },
+    })
+
+    expect(shouldShowUpgradeIndicator(potion, null)).toBe(false)
+    expect(shouldShowUpgradeIndicator(gem, null)).toBe(false)
+    expect(shouldShowUpgradeIndicator(weapon, null)).toBe(true)
   })
 
   it('returns ring items as an array for compare rendering', () => {

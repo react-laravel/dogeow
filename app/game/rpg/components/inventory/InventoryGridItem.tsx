@@ -6,7 +6,7 @@ import { type ItemActionType } from '@/components/game'
 import type { GameItem } from '../../types'
 import { getItemDisplayName, isEquippable } from '../../utils/itemUtils'
 import { GameItemSlot } from './GameItemSlot'
-import { isHigherValueThanEquipped } from './inventoryEquipmentUtils'
+import { shouldShowUpgradeIndicator } from './inventoryEquipmentUtils'
 import {
   getInventoryDetailPopoverWidth,
   InventoryItemDetailContent,
@@ -62,7 +62,7 @@ export const InventoryGridItem = memo(function InventoryGridItem({
   const showCompare = isEquippable(item) && cell.source === 'inventory' && hasEquippedItem(item)
   const equippedItem =
     cell.source === 'inventory' && isEquippable(item) ? getEquippedItem(item) : null
-  const showUpgradeIndicator = isHigherValueThanEquipped(item, equippedItem)
+  const showUpgradeIndicator = shouldShowUpgradeIndicator(item, equippedItem)
   const equippedRings = item.definition?.type === 'ring' ? getEquippedRings() : []
   const popoverWidth = getInventoryDetailPopoverWidth(item, showCompare, equippedRings.length)
 
