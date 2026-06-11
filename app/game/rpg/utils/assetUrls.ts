@@ -42,6 +42,9 @@ const LEGACY_SKILL_ICON_FILES = [
 ] as const
 
 const LEGACY_MONSTER_ICON_FILES = [
+  'training-pig.png',
+  'training-deer.png',
+  'training-rabbit.png',
   'wild-boar.png',
   'wild-wolf.png',
   'forest-goblin.png',

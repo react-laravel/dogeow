@@ -7,11 +7,11 @@ describe('RPG asset URL compatibility', () => {
   })
 
   it('maps legacy monster icon names to the current asset files', () => {
-    expect(getRpgMonsterImageUrl('monster_10.png')).toBe('/game/rpg/monsters/skeleton-mage.png')
+    expect(getRpgMonsterImageUrl('monster_13.png')).toBe('/game/rpg/monsters/skeleton-mage.png')
   })
 
   it('maps legacy remote monster urls to the current asset files', () => {
-    expect(getRpgMonsterImageUrl('https://upyun.dogeow.com/game/rpg/monsters/monster_11.png')).toBe(
+    expect(getRpgMonsterImageUrl('https://upyun.dogeow.com/game/rpg/monsters/monster_14.png')).toBe(
       'https://upyun.dogeow.com/game/rpg/monsters/bone-king.png'
     )
   })
