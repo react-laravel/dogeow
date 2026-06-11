@@ -21,7 +21,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
-  const { login, loading, isAuthenticated, user, logout } = useAuthStore()
+  const { login, isAuthenticated, user, logout } = useAuthStore()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +69,6 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     <LoginForm
       email={email}
       password={password}
-      loading={loading}
       onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onSubmit={handleSubmit}
@@ -111,7 +110,7 @@ export function AuthPanel({ toggleDisplayMode }: AuthPanelProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
-  const { login, loading, isAuthenticated, user, logout } = useAuthStore()
+  const { login, isAuthenticated, user, logout } = useAuthStore()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,7 +164,6 @@ export function AuthPanel({ toggleDisplayMode }: AuthPanelProps) {
         <LoginForm
           email={email}
           password={password}
-          loading={loading}
           onEmailChange={setEmail}
           onPasswordChange={setPassword}
           onSubmit={handleSubmit}

@@ -10,7 +10,7 @@ import useAuthStore from '@/stores/authStore'
 export function RpgRegistrationGate() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { login, loading, isAuthenticated } = useAuthStore()
+  const { login, isAuthenticated } = useAuthStore()
 
   if (isAuthenticated) {
     return null
@@ -50,7 +50,6 @@ export function RpgRegistrationGate() {
           <LoginForm
             email={email}
             password={password}
-            loading={loading}
             onEmailChange={setEmail}
             onPasswordChange={setPassword}
             onSubmit={handleSubmit}

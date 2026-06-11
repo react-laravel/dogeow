@@ -11,26 +11,18 @@ import { Github } from 'lucide-react'
 interface LoginFormProps {
   email: string
   password: string
-  loading: boolean
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
+  onSubmit: (e: React.FormEvent) => void | Promise<void>
   initialMode?: 'login' | 'register'
 }
 
 export const LoginForm = memo<LoginFormProps>(
-  ({
-    email,
-    password,
-    loading,
-    onEmailChange,
-    onPasswordChange,
-    onSubmit,
-    initialMode = 'login',
-  }) => {
+  ({ email, password, onEmailChange, onPasswordChange, onSubmit, initialMode = 'login' }) => {
     const [isRegister, setIsRegister] = useState(initialMode === 'register')
     const [name, setName] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+    const [loginLoading, setLoginLoading] = useState(false)
     const [localLoading, setLocalLoading] = useState(false)
     const [githubLoading, setGithubLoading] = useState(false)
     const { register, loginWithGithub } = useAuthStore()
@@ -87,6 +79,16 @@ export const LoginForm = memo<LoginFormProps>(
       setIsRegister(!isRegister)
       setName('')
       setConfirmPassword('')
+    }
+
+    const handleLoginSubmit = async (e: React.FormEvent) => {
+      e.preventDefault()
+      setLoginLoading(true)
+      try {
+        await onSubmit(e)
+      } finally {
+        setLoginLoading(false)
+      }
     }
 
     if (isRegister) {
@@ -167,7 +169,7 @@ export const LoginForm = memo<LoginFormProps>(
     }
 
     return (
-      <form onSubmit={onSubmit} className="flex w-full flex-col gap-4">
+      <form onSubmit={handleLoginSubmit} className="flex w-full flex-col gap-4">
         <Button
           type="button"
           variant="outline"
@@ -217,8 +219,8 @@ export const LoginForm = memo<LoginFormProps>(
             required
           />
         </div>
-        <Button type="submit" className="h-10 w-full" disabled={loading}>
-          {loading ? '登录中...' : '登录'}
+        <Button type="submit" className="h-10 w-full" disabled={loginLoading}>
+          {loginLoading ? '登录中...' : '登录'}
         </Button>
 
         <div className="text-muted-foreground flex items-center justify-center gap-1 text-sm">
