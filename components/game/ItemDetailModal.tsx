@@ -194,7 +194,7 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
 
   // 转换为 GameItem 用于对比计算
   // 使用 shopItem.id 作为 definition_id，用于显示物品图片
-  const shopItemAsGameItem: GameItem = {
+  const shopItemAsGameItem: GameItem & { shop_buy_price: number } = {
     id: 0,
     character_id: 0,
     definition_id: shopItem.id,
@@ -215,6 +215,7 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
     quantity: 1,
     slot_index: null,
     sell_price: shopItem.sell_price,
+    shop_buy_price: shopItem.buy_price,
   }
 
   return (

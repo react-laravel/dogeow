@@ -281,9 +281,13 @@ export function FullComparePanel({
   const equippedStats = getItemTotalStats(equippedItem)
   const comparableStatKeys = getComparableStatKeys(equippedStats, newStats)
 
-  // 商店对比显示买入价；背包对比显示卖出价（与背包槽位一致）
+  // 商店对比显示购入价（来自商店列表 buy_price）；背包对比显示卖出价
+  const shopBuyPrice =
+    (newItem as GameItem & { shop_buy_price?: number }).shop_buy_price ??
+    newItem.definition?.buy_price ??
+    0
   const newItemDisplayPrice = isShop
-    ? (newItem.definition?.buy_price ?? 0)
+    ? shopBuyPrice
     : (newItem.sell_price ?? Math.floor((newItem.definition?.buy_price ?? 0) / 2))
   const newItemRequiredLevel = newItem.definition?.required_level ?? 0
 
