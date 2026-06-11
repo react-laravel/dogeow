@@ -47,10 +47,11 @@ import {
   withCombatFlag,
 } from './gameStateHelpers'
 
-/** 进入地图接口响应 */
+/** 进入/传送地图接口响应 */
 interface EnterMapResponse {
   character: GameCharacter
-  map: MapDefinition
+  map?: MapDefinition
+  monsters?: CombatMonster[]
 }
 
 interface GameState {
@@ -885,6 +886,8 @@ const store: StateCreator<GameState> = (set, get) => ({
         isFighting: true, // 后端已自动开始战斗
         shouldAutoCombat: true,
         isLoading: false,
+        combatResult: null,
+        statusCombatMonsters: response.monsters ?? null,
       }))
     } catch (error) {
       setRequestError(set, error)
@@ -901,9 +904,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       if (!selectedId) return
       const response = (await post('/rpg/maps/' + mapId + '/teleport', {
         character_id: selectedId,
-      })) as {
-        character: GameCharacter
-      }
+      })) as EnterMapResponse
       soundManager.play('skill_use')
       const maps = get().maps
       const currentMap = maps.find(m => m.id === mapId) ?? null
@@ -916,6 +917,8 @@ const store: StateCreator<GameState> = (set, get) => ({
         shouldAutoCombat: true,
         isLoading: false,
         enabledSkillIds: resolveEnabledSkillIds(state.skills, state.enabledSkillIds),
+        combatResult: null,
+        statusCombatMonsters: response.monsters ?? null,
         // 复活时后端只恢复基础生命/法力，用返回的 character 更新当前 HP/MP 显示
         currentHp: char?.current_hp ?? state.currentHp,
         currentMana: char?.current_mana ?? state.currentMana,

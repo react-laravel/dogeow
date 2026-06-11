@@ -322,17 +322,24 @@ describe('GameStore', () => {
       vi.mocked(post).mockResolvedValueOnce({
         character: { id: 1, name: 'Test', is_fighting: true },
         map: { id: 1, name: 'Map1' },
+        monsters: [{ id: 10, name: 'Goblin', type: 'normal', level: 1, hp: 20, max_hp: 20 }],
       })
 
       useGameStore.setState({
         selectedCharacterId: 1,
         maps: [{ id: 1, name: 'Map1', act: 1, monster_ids: [] } as MapDefinition],
+        combatResult: { victory: false } as any,
+        statusCombatMonsters: [
+          { id: 1, name: 'Deer', type: 'normal', level: 1, hp: 20, max_hp: 20 },
+        ],
       })
 
       await useGameStore.getState().enterMap(1)
 
       expect(useGameStore.getState().isFighting).toBe(true)
       expect(useGameStore.getState().shouldAutoCombat).toBe(true)
+      expect(useGameStore.getState().combatResult).toBeNull()
+      expect(useGameStore.getState().statusCombatMonsters?.[0]?.name).toBe('Goblin')
     })
   })
 
