@@ -123,8 +123,8 @@ describe('InventoryPanel', () => {
 
     await user.click(view.getByRole('button', { name: 'Potion' }))
     await user.click(view.getByRole('button', { name: '出售' }))
-    await user.click(view.getByRole('button', { name: '+' }))
-    await user.click(view.getByRole('button', { name: '+' }))
+    await user.click(view.getByRole('button', { name: '+1' }))
+    await user.click(view.getByRole('button', { name: '+1' }))
     await user.click(view.getByRole('button', { name: '确认出售' }))
 
     await waitFor(() => {

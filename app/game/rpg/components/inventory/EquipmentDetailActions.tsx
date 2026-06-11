@@ -46,7 +46,7 @@ export function EquipmentDetailActions({
               取下 ▾
             </ItemActionButton>
           </PopoverTrigger>
-          <PopoverContent className="w-32 p-1" align="start">
+          <PopoverContent className="z-[10060] w-32 p-1" align="start">
             {item.gems?.map(gem => (
               <button
                 key={gem.id}

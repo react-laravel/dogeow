@@ -14,6 +14,7 @@ import {
 } from '@/app/game/rpg/utils/itemUtils'
 import { CopperDisplay } from '@/app/game/rpg/components/shared/CopperDisplay'
 import { ItemSocketIndicators } from '@/app/game/rpg/components/inventory/ItemSocketIndicators'
+import { EquipmentGemSockets } from '@/app/game/rpg/components/inventory/InventoryItemDetailCard'
 
 function CompareItemIconSlot({
   item,
@@ -301,12 +302,14 @@ export function FullComparePanel({
   isShop = false,
   actions,
   onAction,
+  onUnsocketGem,
 }: {
   newItem: GameItem
   equippedItem: GameItem
   isShop?: boolean
   actions?: ItemActionType[]
   onAction?: (action: ItemActionType) => void
+  onUnsocketGem?: (socketIndex: number) => void
 }) {
   const newStats = getItemTotalStats(newItem)
   const equippedStats = getItemTotalStats(equippedItem)
@@ -335,6 +338,7 @@ export function FullComparePanel({
           name={getItemDisplayName(equippedItem)}
           nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
         />
+        <EquipmentGemSockets item={equippedItem} />
         <CompareStatList statKeys={compareStatKeys} stats={equippedStats} compareStats={newStats} />
         <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
           <div className="text-muted-foreground flex justify-between gap-1 text-xs">
@@ -361,6 +365,7 @@ export function FullComparePanel({
           name={getItemDisplayName(newItem)}
           nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
         />
+        <EquipmentGemSockets item={newItem} onUnsocketGem={onUnsocketGem} />
         <CompareStatList statKeys={compareStatKeys} stats={newStats} compareStats={equippedStats} />
         <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
           <div className="text-muted-foreground flex justify-between gap-1 text-xs">
@@ -369,48 +374,8 @@ export function FullComparePanel({
           </div>
         </div>
         {actions && actions.length > 0 && onAction && (
-          <div className="mt-2 flex justify-end">
-            <div className="flex flex-wrap justify-end gap-1">
-              {actions.map(action => (
-                <button
-                  key={action}
-                  onClick={() => onAction(action)}
-                  className={`rounded px-2 py-1 text-xs text-white transition-colors disabled:opacity-50 ${
-                    action === 'equip' || action === 'buy'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : action === 'use'
-                        ? 'bg-violet-600 hover:bg-violet-700'
-                        : action === 'unequip'
-                          ? 'bg-red-600 hover:bg-red-700'
-                          : action === 'store' || action === 'retrieve'
-                            ? 'bg-blue-600 hover:bg-blue-700'
-                            : action === 'socket'
-                              ? 'bg-cyan-600 hover:bg-cyan-700'
-                              : action === 'unsocket'
-                                ? 'bg-orange-600 hover:bg-orange-700'
-                                : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {action === 'equip'
-                    ? '装备'
-                    : action === 'use'
-                      ? '使用'
-                      : action === 'unequip'
-                        ? '卸下'
-                        : action === 'store'
-                          ? '存入'
-                          : action === 'retrieve'
-                            ? '取回'
-                            : action === 'sell'
-                              ? '出售'
-                              : action === 'socket'
-                                ? '镶嵌'
-                                : action === 'unsocket'
-                                  ? '取下'
-                                  : '购买'}
-                </button>
-              ))}
-            </div>
+          <div className="-mx-2 -mb-2 mt-2">
+            <ItemActions actions={actions} onAction={onAction} />
           </div>
         )}
       </div>

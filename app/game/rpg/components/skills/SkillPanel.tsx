@@ -391,7 +391,7 @@ export function SkillPanel() {
   }, [])
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden overscroll-none">
       {needsReseed && (
         <div className="mb-2 shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
           技能数据尚未更新，请在后端执行{' '}

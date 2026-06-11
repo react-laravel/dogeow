@@ -156,9 +156,6 @@ export function getEquipmentSlot(item: GameItem): EquipmentSlot | null {
   return slotMap[type] ?? null
 }
 
-/**
- * 计算物品的总属性（包括基础属性 + 词缀）
- */
 export function getItemSellUnitPrice(item: GameItem): number {
   return item.sell_price ?? Math.floor((item.definition?.buy_price ?? 0) / 2)
 }
@@ -185,6 +182,9 @@ export function getCompareStatKeys(
   return [...ordered, ...extras]
 }
 
+/**
+ * 计算物品的总属性（包括基础属性 + 词缀 + 已镶嵌宝石）
+ */
 export function getItemTotalStats(item: GameItem): Record<string, number> {
   if (item.definition?.type === 'gem') {
     return { ...(item.definition.gem_stats ?? {}) }
@@ -197,6 +197,13 @@ export function getItemTotalStats(item: GameItem): Record<string, number> {
       total[key] = (total[key] || 0) + value
     })
   })
+
+  item.gems?.forEach(gem => {
+    Object.entries(gem.gemDefinition?.gem_stats ?? {}).forEach(([key, value]) => {
+      total[key] = (total[key] || 0) + value
+    })
+  })
+
   return total
 }
 

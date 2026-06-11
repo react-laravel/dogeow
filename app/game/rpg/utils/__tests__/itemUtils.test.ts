@@ -46,6 +46,44 @@ describe('itemUtils', () => {
     expect(getItemTotalStats(gem)).toEqual({ defense: 8 })
   })
 
+  it('includes socketed gem stats for equipment items', () => {
+    const sword: GameItem = {
+      id: 2,
+      character_id: 1,
+      definition_id: 1,
+      definition: {
+        id: 1,
+        name: 'Sword',
+        type: 'weapon',
+        base_stats: {},
+        required_level: 1,
+      },
+      quality: 'common',
+      stats: { attack: 10 },
+      affixes: [{ defense: 2 }],
+      is_in_storage: false,
+      quantity: 1,
+      slot_index: null,
+      sockets: 1,
+      gems: [
+        {
+          id: 10,
+          socket_index: 0,
+          gemDefinition: {
+            id: 147,
+            name: 'Ruby',
+            type: 'gem',
+            base_stats: {},
+            gem_stats: { attack: 5 },
+            required_level: 1,
+          },
+        },
+      ],
+    }
+
+    expect(getItemTotalStats(sword)).toEqual({ attack: 15, defense: 2 })
+  })
+
   it('formats crit stats for display', () => {
     expect(formatItemStatValue(0.05, 'crit_rate')).toBe('5%')
     expect(formatItemStatValue(0.15, 'crit_damage')).toBe('15%')

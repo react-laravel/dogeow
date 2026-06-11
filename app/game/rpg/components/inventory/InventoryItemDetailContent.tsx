@@ -79,6 +79,7 @@ export function InventoryItemDetailContent({
                 equippedItem={equippedRing}
                 actions={compareActions}
                 onAction={action => handleCompareAction(action, item)}
+                onUnsocketGem={socketIndex => onUnsocketGem(socketIndex)}
               />
             ))}
           {(item.definition?.type !== 'ring' || equippedRings.length !== 2) && (
@@ -87,6 +88,7 @@ export function InventoryItemDetailContent({
               equippedItem={getEquippedItem(item)!}
               actions={compareActions}
               onAction={action => handleCompareAction(action, item)}
+              onUnsocketGem={socketIndex => onUnsocketGem(socketIndex)}
             />
           )}
         </div>

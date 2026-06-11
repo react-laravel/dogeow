@@ -263,7 +263,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     <div
       className={`bg-background text-foreground flex flex-col [--rpg-content-inset:0.75rem] [--rpg-status-bar-block:2.25rem] sm:[--rpg-content-inset:1rem] sm:[--rpg-status-bar-block:3rem] ${
         usePanelInnerScroll
-          ? 'flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none'
+          ? 'flex h-full min-h-0 flex-col overflow-hidden overscroll-none'
           : 'min-h-screen'
       }`}
     >

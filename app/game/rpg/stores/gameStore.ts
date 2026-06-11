@@ -54,6 +54,21 @@ interface EnterMapResponse {
   monsters?: CombatMonster[]
 }
 
+const replaceItemById = (items: GameItem[], itemId: number, replacement: GameItem): GameItem[] =>
+  items.map(item => (item.id === itemId ? replacement : item))
+
+const replaceEquipmentItemById = (
+  equipment: Record<string, GameItem | null>,
+  itemId: number,
+  replacement: GameItem
+): Record<string, GameItem | null> =>
+  Object.fromEntries(
+    Object.entries(equipment).map(([slot, item]) => [
+      slot,
+      item?.id === itemId ? replacement : item,
+    ])
+  ) as Record<string, GameItem | null>
+
 interface GameState {
   // 角色数据
   characters: GameCharacter[]
@@ -588,19 +603,24 @@ const store: StateCreator<GameState> = (set, get) => ({
         character_id: selectedId,
       })) as {
         equipment: GameItem
+        combat_stats?: CombatStats
+        stats_breakdown?: CombatStatsBreakdown
         message: string
       }
 
-      // 更新背包中的装备
       set(state => {
-        const newInventory = state.inventory.map(item =>
-          item.id === itemId ? response.equipment : item
-        )
-        // 移除已使用的宝石
-        const newInv = newInventory.filter(item => item.id !== gemItemId)
+        const updatedInventory = replaceItemById(
+          state.inventory,
+          itemId,
+          response.equipment
+        ).filter(item => item.id !== gemItemId)
+
         return {
           ...state,
-          inventory: newInv,
+          inventory: updatedInventory,
+          equipment: replaceEquipmentItemById(state.equipment, itemId, response.equipment),
+          combatStats: response.combat_stats ?? state.combatStats,
+          statsBreakdown: response.stats_breakdown ?? state.statsBreakdown,
           isLoading: false,
         }
       })
@@ -623,17 +643,25 @@ const store: StateCreator<GameState> = (set, get) => ({
         character_id: selectedId,
       })) as {
         equipment: GameItem
+        gem_item?: GameItem
+        combat_stats?: CombatStats
+        stats_breakdown?: CombatStatsBreakdown
         message: string
       }
 
-      // 更新背包中的装备
       set(state => {
-        const newInventory = state.inventory.map(item =>
-          item.id === itemId ? response.equipment : item
-        )
+        const updatedInventory = replaceItemById(state.inventory, itemId, response.equipment)
+        const returnedGem = response.gem_item
+        const hasReturnedGem =
+          returnedGem != null && updatedInventory.some(item => item.id === returnedGem.id)
+
         return {
           ...state,
-          inventory: newInventory,
+          inventory:
+            returnedGem && !hasReturnedGem ? [...updatedInventory, returnedGem] : updatedInventory,
+          equipment: replaceEquipmentItemById(state.equipment, itemId, response.equipment),
+          combatStats: response.combat_stats ?? state.combatStats,
+          statsBreakdown: response.stats_breakdown ?? state.statsBreakdown,
           isLoading: false,
         }
       })
