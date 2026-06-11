@@ -55,7 +55,7 @@ export const GameItemSlot = memo(
             type="button"
             onClick={onClick}
             disabled={disabled}
-            className="relative flex h-10 w-full items-center justify-center text-lg disabled:opacity-50"
+            className="relative flex h-10 w-full items-center justify-center overflow-hidden text-lg disabled:opacity-50"
           >
             <FilledSlotContent
               item={item}
@@ -109,7 +109,7 @@ function FilledSlotContent({
       <ItemIcon item={item} className="drop-shadow-sm" />
       {showUpgradeIndicator && <ItemUpgradeIndicator />}
       {showQuantityBadge && item.quantity > 1 && (
-        <span className="absolute top-0 -right-1 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black/70 text-[9px] font-bold text-white">
+        <span className="absolute top-0 right-0 z-10 max-w-full truncate rounded-bl bg-black/70 px-0.5 text-[8px] leading-none font-bold text-white tabular-nums">
           {item.quantity}
         </span>
       )}

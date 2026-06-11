@@ -5,6 +5,8 @@ import { QUALITY_COLORS, STAT_NAMES } from '@/app/game/rpg/types'
 import { ItemIcon } from './ItemIcon'
 import { ItemActions, type ItemActionType } from './ItemActions'
 import {
+  formatItemStatValue,
+  getCompareStatKeys,
   getItemDisplayName,
   getItemTotalStats,
   getShopItemIcon,
@@ -68,13 +70,36 @@ function getComparedStatClass(value: number, compareValue: number): string {
   return 'font-medium'
 }
 
-function hasStatValue(stats: Record<string, number>, stat: string): boolean {
-  const value = stats[stat]
-  return value != null && value !== 0
-}
+function CompareStatList({
+  statKeys,
+  stats,
+  compareStats,
+}: {
+  statKeys: string[]
+  stats: Record<string, number>
+  compareStats: Record<string, number>
+}) {
+  return (
+    <div className="space-y-0.5">
+      {statKeys.map(stat => {
+        const value = stats[stat] || 0
+        const compareValue = compareStats[stat] || 0
 
-function getNonZeroStatKeys(stats: Record<string, number>): string[] {
-  return Object.keys(stats).filter(stat => hasStatValue(stats, stat))
+        return (
+          <div key={stat} className="flex min-h-5 justify-between gap-1">
+            <span className="text-muted-foreground shrink-0">{STAT_NAMES[stat] || stat}</span>
+            {value !== 0 ? (
+              <span className={getComparedStatClass(value, compareValue)}>
+                {formatItemStatValue(value, stat)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground/40 font-medium">—</span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 interface ItemComparePanelProps {
@@ -95,16 +120,13 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
   // 计算已装备物品属性
   const equippedStats = getItemTotalStats(equippedItem)
 
-  // 合并所有属性键
-  const allStatKeys = Array.from(
-    new Set([...Object.keys(newStats || {}), ...Object.keys(equippedStats)])
-  )
+  const compareStatKeys = getCompareStatKeys(newStats, equippedStats)
 
-  // 过滤出有差异且至少一侧非零的属性
-  const diffStats = allStatKeys.filter(stat => {
+  // 过滤出有差异的属性（保持统一顺序，便于左右对齐）
+  const diffStats = compareStatKeys.filter(stat => {
     const newValue = newStats[stat] || 0
     const equippedValue = equippedStats[stat] || 0
-    return newValue !== equippedValue && (newValue !== 0 || equippedValue !== 0)
+    return newValue !== equippedValue
   })
 
   const hasComparison = diffStats.length > 0
@@ -131,20 +153,7 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
             nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
             sizeClass="h-12 w-12"
           />
-          {/* 对比属性 */}
-          <div className="space-y-1">
-            {diffStats.map(stat => {
-              const equippedValue = equippedStats[stat] || 0
-              if (equippedValue === 0) return null
-
-              return (
-                <div key={stat} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                  <span className="font-medium">{equippedValue}</span>
-                </div>
-              )
-            })}
-          </div>
+          <CompareStatList statKeys={diffStats} stats={equippedStats} compareStats={newStats} />
           {/* 当前装备价格 */}
           {equippedItem.sell_price != null && equippedItem.sell_price > 0 && (
             <div className="text-muted-foreground mt-1 flex justify-between text-xs">
@@ -195,27 +204,7 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
               sizeClass="h-12 w-12"
             />
           )}
-          {/* 对比属性 */}
-          <div className="space-y-1">
-            {diffStats.map(stat => {
-              const newValue = newStats[stat] || 0
-              const equippedValue = equippedStats[stat] || 0
-              if (newValue === 0) return null
-
-              const diff = newValue - equippedValue
-              return (
-                <div key={stat} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                  <span
-                    className={diff > 0 ? 'font-medium text-green-500' : 'font-medium text-red-500'}
-                  >
-                    {newValue} ({diff > 0 ? '+' : ''}
-                    {diff})
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+          <CompareStatList statKeys={diffStats} stats={newStats} compareStats={equippedStats} />
         </div>
       </div>
     </div>
@@ -321,8 +310,7 @@ export function FullComparePanel({
 }) {
   const newStats = getItemTotalStats(newItem)
   const equippedStats = getItemTotalStats(equippedItem)
-  const equippedStatKeys = getNonZeroStatKeys(equippedStats)
-  const newStatKeys = getNonZeroStatKeys(newStats)
+  const compareStatKeys = getCompareStatKeys(equippedStats, newStats)
 
   // 商店对比显示购入价（来自商店列表 buy_price）；背包对比显示卖出价
   const shopBuyPrice =
@@ -339,130 +327,93 @@ export function FullComparePanel({
     equippedItem.sell_price ?? Math.floor((equippedItem.definition?.buy_price ?? 0) / 2)
 
   return (
-    <div className="border-border flex flex-col border-r">
-      {/* 第一个div：左右装备+各自属性 */}
-      <div className="grid grid-cols-[2fr_3fr]">
-        {/* 左边：已装备物品 */}
-        <div className="border-border flex flex-col border-r p-2">
-          <CompareItemHeader
-            item={equippedItem}
-            name={getItemDisplayName(equippedItem)}
-            nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
-          />
-          {/* 当前装备属性 */}
-          <div className="flex-1 space-y-0.5">
-            {equippedStatKeys.map(stat => {
-              const equippedValue = equippedStats[stat] || 0
-              const newValue = newStats[stat] || 0
-              return (
-                <div key={stat} className="flex justify-between">
-                  <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                  <span className={getComparedStatClass(equippedValue, newValue)}>
-                    {equippedValue}
-                  </span>
-                </div>
-              )
-            })}
+    <div className="relative w-[356px] max-w-full">
+      {/* 已装备：绝对定位，高度仅到卖出价，不占下方按钮区域 */}
+      <aside className="bg-card border-border absolute top-0 left-0 z-10 w-[156px] rounded-l-lg border border-r-0 p-2 shadow-md">
+        <CompareItemHeader
+          item={equippedItem}
+          name={getItemDisplayName(equippedItem)}
+          nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
+        />
+        <CompareStatList statKeys={compareStatKeys} stats={equippedStats} compareStats={newStats} />
+        <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
+          <div className="text-muted-foreground flex justify-between gap-1 text-xs">
+            <span className="shrink-0">卖出</span>
+            <CopperDisplay
+              copper={equippedItemSellPrice}
+              size="sm"
+              nowrap
+              className="font-medium"
+            />
           </div>
-          {/* 价格信息 - 底部 */}
-          <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
-            <div className="text-muted-foreground flex justify-between">
-              <span>卖出</span>
-              <CopperDisplay
-                copper={equippedItemSellPrice}
-                size="sm"
-                nowrap
-                className="font-medium"
-              />
+          {equippedItemBuyPrice > 0 && (
+            <div className="flex justify-between gap-1 text-xs text-purple-600 dark:text-purple-400">
+              <span className="shrink-0">买价</span>
+              <span>{equippedItemBuyPrice}</span>
             </div>
-            {equippedItemBuyPrice > 0 && (
-              <div className="flex justify-between text-purple-600 dark:text-purple-400">
-                <span>买价</span>
-                <span>{equippedItemBuyPrice}</span>
-              </div>
-            )}
+          )}
+        </div>
+      </aside>
+      {/* 背包物品：撑开容器高度 */}
+      <div className="bg-card border-border ml-[156px] flex w-[200px] flex-col rounded-r-lg rounded-bl-lg border p-2 shadow-md">
+        <CompareItemHeader
+          item={newItem}
+          name={getItemDisplayName(newItem)}
+          nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
+        />
+        <CompareStatList statKeys={compareStatKeys} stats={newStats} compareStats={equippedStats} />
+        <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
+          <div className="text-muted-foreground flex justify-between gap-1 text-xs">
+            <span className="shrink-0">{isShop ? '价格' : '卖出'}</span>
+            <CopperDisplay copper={newItemDisplayPrice} size="sm" nowrap className="font-medium" />
           </div>
         </div>
-        {/* 右边：背包物品 */}
-        <div className="flex flex-col p-2">
-          <CompareItemHeader
-            item={newItem}
-            name={getItemDisplayName(newItem)}
-            nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
-          />
-          {/* 新物品属性 */}
-          <div className="flex-1 space-y-0.5">
-            {newStatKeys.map(stat => {
-              const equippedValue = equippedStats[stat] || 0
-              const newValue = newStats[stat] || 0
-              return (
-                <div key={stat} className="flex justify-between">
-                  <span className="text-muted-foreground">{STAT_NAMES[stat] || stat}</span>
-                  <span className={getComparedStatClass(newValue, equippedValue)}>{newValue}</span>
-                </div>
-              )
-            })}
-          </div>
-          {/* 价格 - 底部 */}
-          <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
-            <div className="text-muted-foreground flex justify-between">
-              <span>{isShop ? '价格' : '卖出'}</span>
-              <CopperDisplay
-                copper={newItemDisplayPrice}
-                size="sm"
-                nowrap
-                className="font-medium"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* 第二个div：操作按钮 - 只靠右对齐 */}
-      {actions && actions.length > 0 && onAction && (
-        <div className="flex justify-end p-2">
-          <div className="flex flex-wrap gap-1.5">
-            {actions.map(action => (
-              <button
-                key={action}
-                onClick={() => onAction(action)}
-                className={`rounded px-3 py-1.5 text-xs text-white transition-colors disabled:opacity-50 ${
-                  action === 'equip' || action === 'buy'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : action === 'use'
-                      ? 'bg-violet-600 hover:bg-violet-700'
-                      : action === 'unequip'
-                        ? 'bg-red-600 hover:bg-red-700'
-                        : action === 'store' || action === 'retrieve'
-                          ? 'bg-blue-600 hover:bg-blue-700'
-                          : action === 'socket'
-                            ? 'bg-cyan-600 hover:bg-cyan-700'
-                            : action === 'unsocket'
-                              ? 'bg-orange-600 hover:bg-orange-700'
-                              : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                {action === 'equip'
-                  ? '装备'
-                  : action === 'use'
-                    ? '使用'
-                    : action === 'unequip'
-                      ? '卸下'
-                      : action === 'store'
-                        ? '存入'
-                        : action === 'retrieve'
-                          ? '取回'
-                          : action === 'sell'
-                            ? '出售'
+        {actions && actions.length > 0 && onAction && (
+          <div className="mt-2 flex justify-end">
+            <div className="flex flex-wrap justify-end gap-1">
+              {actions.map(action => (
+                <button
+                  key={action}
+                  onClick={() => onAction(action)}
+                  className={`rounded px-2 py-1 text-xs text-white transition-colors disabled:opacity-50 ${
+                    action === 'equip' || action === 'buy'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : action === 'use'
+                        ? 'bg-violet-600 hover:bg-violet-700'
+                        : action === 'unequip'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : action === 'store' || action === 'retrieve'
+                            ? 'bg-blue-600 hover:bg-blue-700'
                             : action === 'socket'
-                              ? '镶嵌'
+                              ? 'bg-cyan-600 hover:bg-cyan-700'
                               : action === 'unsocket'
-                                ? '取下'
-                                : '购买'}
-              </button>
-            ))}
+                                ? 'bg-orange-600 hover:bg-orange-700'
+                                : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {action === 'equip'
+                    ? '装备'
+                    : action === 'use'
+                      ? '使用'
+                      : action === 'unequip'
+                        ? '卸下'
+                        : action === 'store'
+                          ? '存入'
+                          : action === 'retrieve'
+                            ? '取回'
+                            : action === 'sell'
+                              ? '出售'
+                              : action === 'socket'
+                                ? '镶嵌'
+                                : action === 'unsocket'
+                                  ? '取下'
+                                  : '购买'}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatItemStatValue,
+  getCompareStatKeys,
   getEffectiveSocketCount,
   getItemTotalStats,
   MAX_ITEM_SOCKETS,
@@ -8,6 +9,12 @@ import {
 import type { GameItem } from '../../types'
 
 describe('itemUtils', () => {
+  it('merges compare stat keys in STAT_NAMES order', () => {
+    expect(
+      getCompareStatKeys({ attack: 10, max_hp: 100 }, { defense: 5, crit_rate: 0.05 })
+    ).toEqual(['attack', 'defense', 'max_hp', 'crit_rate'])
+  })
+
   it('caps effective socket count at MAX_ITEM_SOCKETS', () => {
     expect(MAX_ITEM_SOCKETS).toBe(3)
     expect(getEffectiveSocketCount(4)).toBe(3)

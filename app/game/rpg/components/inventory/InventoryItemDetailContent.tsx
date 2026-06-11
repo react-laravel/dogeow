@@ -34,10 +34,10 @@ export function getInventoryDetailPopoverWidth(
   ringCount: number
 ) {
   if (showCompare && item.definition?.type === 'ring' && ringCount === 2) {
-    return 'w-[840px]'
+    return 'w-[356px]'
   }
   if (showCompare) {
-    return 'w-[420px]'
+    return 'w-[356px]'
   }
   return 'w-[280px]'
 }
@@ -69,7 +69,7 @@ export function InventoryItemDetailContent({
   return (
     <div className="flex flex-col">
       {showCompare && (
-        <>
+        <div className="space-y-3">
           {item.definition?.type === 'ring' &&
             equippedRings.length === 2 &&
             equippedRings.map(equippedRing => (
@@ -89,7 +89,7 @@ export function InventoryItemDetailContent({
               onAction={action => handleCompareAction(action, item)}
             />
           )}
-        </>
+        </div>
       )}
       {!showCompare && (
         <InventoryItemDetailCard

@@ -1,6 +1,9 @@
 // 物品相关的通用工具函数
 
 import type { GameItem, ItemDefinition, ItemType, EquipmentSlot } from '../types'
+import { STAT_NAMES } from '../types'
+
+const STAT_DISPLAY_ORDER = Object.keys(STAT_NAMES)
 
 /** 装备宝石孔位上限 */
 export const MAX_ITEM_SOCKETS = 3
@@ -162,6 +165,24 @@ export function getItemSellUnitPrice(item: GameItem): number {
 
 export function getItemSellTotalValue(item: GameItem): number {
   return getItemSellUnitPrice(item) * (item.quantity ?? 1)
+}
+
+/** 对比面板用：合并两侧非零属性，并按 STAT_NAMES 顺序排列 */
+export function getCompareStatKeys(
+  ...statRecords: Array<Record<string, number> | undefined>
+): string[] {
+  const keys = new Set<string>()
+
+  for (const stats of statRecords) {
+    if (!stats) continue
+    for (const [key, value] of Object.entries(stats)) {
+      if (value != null && value !== 0) keys.add(key)
+    }
+  }
+
+  const ordered = STAT_DISPLAY_ORDER.filter(key => keys.has(key))
+  const extras = [...keys].filter(key => !STAT_DISPLAY_ORDER.includes(key)).sort()
+  return [...ordered, ...extras]
 }
 
 export function getItemTotalStats(item: GameItem): Record<string, number> {

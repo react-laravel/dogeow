@@ -66,32 +66,34 @@ export function InventoryToolbar({
   }
 
   return (
-    <div className="mb-3 flex shrink-0 flex-wrap items-center gap-1.5 sm:mb-4 sm:gap-2">
-      <button
-        type="button"
-        onClick={() => onShowStorageChange(false)}
-        className={`flex flex-col items-center rounded px-2.5 py-1 text-xs sm:px-3 sm:text-sm ${
-          !showStorage ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-        }`}
-      >
-        <span>背包</span>
-        <span className="text-[10px] opacity-90 sm:text-xs">
-          {inventoryCount}/{inventorySize}
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={() => onShowStorageChange(true)}
-        className={`flex flex-col items-center rounded px-2.5 py-1 text-xs sm:px-3 sm:text-sm ${
-          showStorage ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-        }`}
-      >
-        <span>仓库</span>
-        <span className="text-[10px] opacity-90 sm:text-xs">
-          {storageCount}/{storageSize}
-        </span>
-      </button>
-      <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+    <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 sm:mb-4 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => onShowStorageChange(false)}
+          className={`flex flex-col items-center rounded px-2.5 py-1 text-xs sm:px-3 sm:text-sm ${
+            !showStorage ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          <span>背包</span>
+          <span className="text-[10px] opacity-90 sm:text-xs">
+            {inventoryCount}/{inventorySize}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onShowStorageChange(true)}
+          className={`flex flex-col items-center rounded px-2.5 py-1 text-xs sm:px-3 sm:text-sm ${
+            showStorage ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          <span>仓库</span>
+          <span className="text-[10px] opacity-90 sm:text-xs">
+            {storageCount}/{storageSize}
+          </span>
+        </button>
+      </div>
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -111,7 +113,7 @@ export function InventoryToolbar({
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-32 p-1" align="end">
+          <PopoverContent className="w-32 p-2" align="end">
             <button
               type="button"
               onClick={() => onCategoryChange('')}
@@ -247,7 +249,7 @@ export function InventoryToolbar({
               <span>排序</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-24 p-1" align="end">
+          <PopoverContent className="w-24 p-2" align="end">
             <button
               type="button"
               onClick={() => {

@@ -96,7 +96,9 @@ export const InventoryGridItem = memo(function InventoryGridItem({
         />
       </PopoverAnchor>
       <PopoverContent
-        className={`${popoverWidth} max-w-[95vw] p-0`}
+        className={`${popoverWidth} max-w-[95vw] p-0 ${
+          showCompare ? 'border-0 !bg-transparent shadow-none' : ''
+        }`}
         side="bottom"
         align="center"
         sideOffset={8}
