@@ -19,41 +19,12 @@ import { ItemUpgradeIndicator } from '@/app/game/rpg/components/inventory/ItemUp
 import { isHigherValueThanEquipped } from '@/app/game/rpg/components/inventory/inventoryEquipmentUtils'
 import { useGameStore } from '@/app/game/rpg/stores/gameStore'
 import { useShallow } from 'zustand/react/shallow'
-import {
-  getFullComparePanelWidthClass,
-  COMPARE_TOGGLE_STRIP_WIDTH,
-} from '@/app/game/rpg/utils/comparePanelUtils'
+import { getFullComparePanelWidthClass } from '@/app/game/rpg/utils/comparePanelUtils'
 
 export {
   getFullComparePanelWidth,
   getFullComparePanelWidthClass,
 } from '@/app/game/rpg/utils/comparePanelUtils'
-
-function CompareEquippedToggle({
-  collapsed,
-  onToggle,
-  position,
-}: {
-  collapsed: boolean
-  onToggle: () => void
-  position: 'leading' | 'between'
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      style={{ width: COMPARE_TOGGLE_STRIP_WIDTH }}
-      className={`text-muted-foreground hover:text-foreground bg-card border-border flex shrink-0 flex-col items-center justify-center self-stretch border text-[10px] leading-none transition-colors hover:bg-muted/50 ${
-        position === 'leading'
-          ? 'absolute top-0 bottom-0 left-0 -translate-x-full rounded-l-lg border-r-0'
-          : 'border-y border-r-0'
-      }`}
-      aria-label={collapsed ? '展开已装备对比' : '收起已装备对比'}
-    >
-      {collapsed ? '<<' : '>>'}
-    </button>
-  )
-}
 
 function CompareItemIconSlot({
   item,
@@ -125,10 +96,12 @@ function CompareStatList({
   statKeys,
   stats,
   compareStats,
+  mirrored = false,
 }: {
   statKeys: string[]
   stats: Record<string, number>
   compareStats: Record<string, number>
+  mirrored?: boolean
 }) {
   return (
     <div className="space-y-0.5 text-xs">
@@ -136,16 +109,22 @@ function CompareStatList({
         const value = stats[stat] || 0
         const compareValue = compareStats[stat] || 0
 
+        const statName = (
+          <span className="text-muted-foreground shrink-0">{STAT_NAMES[stat] || stat}</span>
+        )
+        const statValue =
+          value !== 0 ? (
+            <span className={getComparedStatClass(value, compareValue)}>
+              {formatItemStatValue(value, stat)}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/40 font-medium">—</span>
+          )
+
         return (
           <div key={stat} className="flex min-h-[1.125rem] justify-between gap-1">
-            <span className="text-muted-foreground shrink-0">{STAT_NAMES[stat] || stat}</span>
-            {value !== 0 ? (
-              <span className={getComparedStatClass(value, compareValue)}>
-                {formatItemStatValue(value, stat)}
-              </span>
-            ) : (
-              <span className="text-muted-foreground/40 font-medium">—</span>
-            )}
+            {mirrored ? statValue : statName}
+            {mirrored ? statName : statValue}
           </div>
         )
       })}
@@ -255,7 +234,12 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
               sizeClass="h-12 w-12"
             />
           )}
-          <CompareStatList statKeys={diffStats} stats={newStats} compareStats={equippedStats} />
+          <CompareStatList
+            statKeys={diffStats}
+            stats={newStats}
+            compareStats={equippedStats}
+            mirrored
+          />
         </div>
       </div>
     </div>
@@ -426,11 +410,6 @@ export function FullComparePanel({
           </div>
         </aside>
       )}
-      <CompareEquippedToggle
-        collapsed={compareEquippedCollapsed}
-        onToggle={toggleCompareEquippedCollapsed}
-        position={compareEquippedCollapsed ? 'leading' : 'between'}
-      />
       <div
         className={`bg-card border-border flex min-w-0 flex-col border p-2 shadow-md ${
           compareEquippedCollapsed ? 'w-[200px] rounded-lg' : 'flex-[1_1_200px] rounded-r-lg'
@@ -442,7 +421,12 @@ export function FullComparePanel({
           nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
           showUpgradeIndicator={showUpgradeIndicator}
         />
-        <CompareStatList statKeys={compareStatKeys} stats={newStats} compareStats={equippedStats} />
+        <CompareStatList
+          statKeys={compareStatKeys}
+          stats={newStats}
+          compareStats={equippedStats}
+          mirrored={!compareEquippedCollapsed}
+        />
         <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
           <div className="text-muted-foreground flex justify-between gap-1 text-xs">
             <span className="shrink-0">{isShop ? '价格' : '卖出'}</span>
@@ -450,11 +434,24 @@ export function FullComparePanel({
           </div>
         </div>
         {footer}
-        {actions && actions.length > 0 && onAction && (
-          <div className="-mx-2 -mb-2 mt-2">
-            <ItemActions actions={actions} onAction={onAction} />
-          </div>
-        )}
+        <div className="-mx-2 -mb-2 mt-2">
+          <ItemActions
+            actions={actions ?? []}
+            onAction={action => onAction?.(action)}
+            compact
+            leadingAction={
+              <button
+                type="button"
+                onClick={toggleCompareEquippedCollapsed}
+                className="bg-muted hover:bg-muted/80 text-foreground border-border inline-flex min-w-12 items-center justify-center rounded border px-2.5 py-1.5 text-xs transition-colors"
+                aria-label={compareEquippedCollapsed ? '展开对比' : '收起对比'}
+                title={compareEquippedCollapsed ? '展开对比' : '收起对比'}
+              >
+                {compareEquippedCollapsed ? '对比' : '收起'}
+              </button>
+            }
+          />
+        </div>
       </div>
     </div>
   )

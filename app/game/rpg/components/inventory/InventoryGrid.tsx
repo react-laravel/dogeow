@@ -48,7 +48,7 @@ export function InventoryGrid({
 }: InventoryGridProps) {
   return (
     <div className="mx-auto min-h-0 flex-1 overflow-auto p-1">
-      <div className="flex w-[20.5rem] flex-wrap gap-x-2 gap-y-2 sm:w-[26.5rem]">
+      <div className="mx-auto flex w-full max-w-[20.5rem] flex-wrap justify-center gap-x-1.5 gap-y-2 min-[380px]:gap-x-2 sm:max-w-[26.5rem]">
         {displaySlots.map((cell, index) => {
           if (!cell.item) return <EmptySlot key={`empty-${index}`} />
 

@@ -1,7 +1,7 @@
 'use client'
 
-import { memo, useCallback } from 'react'
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { type ItemActionType } from '@/components/game'
 import type { GameItem } from '../../types'
 import { getItemDisplayName, isEquippable } from '../../utils/itemUtils'
@@ -15,7 +15,8 @@ import { ItemSlotSellPriceBadge } from './ItemSlotSellPriceBadge'
 import type { InventorySlotCell } from './inventoryUtils'
 import { useGameStore } from '../../stores/gameStore'
 
-const POPOVER_COLLISION_PADDING = { top: 12, right: 12, left: 12, bottom: 72 }
+const DETAIL_PANEL_ESTIMATED_HEIGHT = 280
+const DETAIL_PANEL_BOTTOM_PADDING = 88
 
 interface InventoryGridItemProps {
   canSocket: (item: GameItem) => boolean
@@ -59,6 +60,8 @@ export const InventoryGridItem = memo(function InventoryGridItem({
   selectedItemId,
 }: InventoryGridItemProps) {
   const item = cell.item
+  const slotRef = useRef<HTMLDivElement | null>(null)
+  const [detailPanelTop, setDetailPanelTop] = useState(0)
   const isSelected = selectedItemId === item.id
   const showCompare = isEquippable(item) && cell.source === 'inventory' && hasEquippedItem(item)
   const equippedItem =
@@ -67,14 +70,10 @@ export const InventoryGridItem = memo(function InventoryGridItem({
   const compareEquippedCollapsed = useGameStore(state => state.compareEquippedCollapsed)
   const popoverWidth = getInventoryDetailPopoverWidth(showCompare, compareEquippedCollapsed)
 
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) onSelectedItemChange(null)
-    },
-    [onSelectedItemChange]
-  )
-
   const handleClick = useCallback(() => {
+    if (!isSelected) {
+      setDetailPanelTop(getCenteredDetailTop(slotRef.current))
+    }
     onSelectedItemChange(isSelected ? null : item)
   }, [isSelected, item, onSelectedItemChange])
 
@@ -82,51 +81,75 @@ export const InventoryGridItem = memo(function InventoryGridItem({
     onSelectedItemChange(null)
   }, [onSelectedItemChange])
 
+  useEffect(() => {
+    if (!isSelected) return
+
+    const updateTop = () => setDetailPanelTop(getCenteredDetailTop(slotRef.current))
+
+    window.addEventListener('resize', updateTop)
+    return () => window.removeEventListener('resize', updateTop)
+  }, [isSelected])
+
   return (
-    <Popover open={isSelected} onOpenChange={handleOpenChange}>
-      <PopoverAnchor asChild>
-        <GameItemSlot
-          item={item}
-          onClick={handleClick}
-          title={getItemDisplayName(item)}
-          variant="inventory"
-          isSelected={isSelected}
-          disabled={isLoading}
-          showUpgradeIndicator={showUpgradeIndicator}
-          footer={<ItemSlotSellPriceBadge item={item} />}
-        />
-      </PopoverAnchor>
-      <PopoverContent
-        className={`${popoverWidth} max-w-[95vw] p-0 ${
-          showCompare ? 'border-0 !bg-transparent shadow-none' : ''
-        }`}
-        side="bottom"
-        align="center"
-        sideOffset={8}
-        collisionPadding={POPOVER_COLLISION_PADDING}
-        onOpenAutoFocus={event => event.preventDefault()}
-      >
-        <InventoryItemDetailContent
-          canSocket={canSocket}
-          canUnsocket={canUnsocket}
-          gemsInInventoryCount={gemsInInventoryCount}
-          getCompareActions={getCompareActions}
-          getEquippedItem={getEquippedItem}
-          getEquippedRings={getEquippedRings}
-          handleCompareAction={handleCompareAction}
-          hasEquippedItem={hasEquippedItem}
-          isLoading={isLoading}
-          item={item}
-          onClose={handleClose}
-          onEquip={onEquip}
-          onMove={onMove}
-          onOpenGemSelector={onOpenGemSelector}
-          onSell={onSell}
-          onUnsocketGem={onUnsocketGem}
-          onUsePotion={onUsePotion}
-          source={cell.source}
-        />
-      </PopoverContent>
-    </Popover>
+    <>
+      <GameItemSlot
+        ref={slotRef}
+        item={item}
+        onClick={handleClick}
+        title={getItemDisplayName(item)}
+        variant="inventory"
+        isSelected={isSelected}
+        disabled={isLoading}
+        showUpgradeIndicator={showUpgradeIndicator}
+        footer={<ItemSlotSellPriceBadge item={item} />}
+      />
+      {isSelected &&
+        createPortal(
+          <div
+            className={`fixed left-1/2 z-[150] max-w-[calc(100vw-24px)] -translate-x-1/2 overflow-visible ${
+              showCompare
+                ? 'border-0 !bg-transparent p-0 shadow-none'
+                : 'w-[280px] rounded-md border bg-background text-foreground shadow-md'
+            } ${showCompare ? popoverWidth : ''}`}
+            style={{ top: detailPanelTop }}
+          >
+            <InventoryItemDetailContent
+              canSocket={canSocket}
+              canUnsocket={canUnsocket}
+              gemsInInventoryCount={gemsInInventoryCount}
+              getCompareActions={getCompareActions}
+              getEquippedItem={getEquippedItem}
+              getEquippedRings={getEquippedRings}
+              handleCompareAction={handleCompareAction}
+              hasEquippedItem={hasEquippedItem}
+              isLoading={isLoading}
+              item={item}
+              onClose={handleClose}
+              onEquip={onEquip}
+              onMove={onMove}
+              onOpenGemSelector={onOpenGemSelector}
+              onSell={onSell}
+              onUnsocketGem={onUnsocketGem}
+              onUsePotion={onUsePotion}
+              source={cell.source}
+            />
+          </div>,
+          document.body
+        )}
+    </>
   )
 })
+
+function getCenteredDetailTop(slot: HTMLDivElement | null): number {
+  if (!slot) return 12
+
+  const rect = slot.getBoundingClientRect()
+  const belowTop = rect.bottom + 8
+  const maxBottom = window.innerHeight - DETAIL_PANEL_BOTTOM_PADDING
+
+  if (belowTop + DETAIL_PANEL_ESTIMATED_HEIGHT <= maxBottom) {
+    return Math.max(12, belowTop)
+  }
+
+  return Math.max(12, rect.top - DETAIL_PANEL_ESTIMATED_HEIGHT - 8)
+}
