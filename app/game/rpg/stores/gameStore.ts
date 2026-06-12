@@ -25,6 +25,10 @@ import {
   GameCombatUpdateEvent,
   GameLootDroppedEvent,
   GameLevelUpEvent,
+  Mercenary,
+  MercenaryRole,
+  createMercenaryForCharacter,
+  syncMercenaryLevel,
 } from '../types'
 import { apiGet, apiRequest, post, put, del } from '@/lib/api'
 import { soundManager } from '../utils/soundManager'
@@ -72,6 +76,8 @@ interface GameState {
   /** 仓库格位数（由后端 /rpg/inventory 返回） */
   storageSize: number
   equipment: Record<string, GameItem | null>
+  mercenariesByCharacter: Record<number, Mercenary | null>
+  mercenary: Mercenary | null
   skills: SkillWithLearnedState[]
   maps: MapDefinition[]
   currentMap: MapDefinition | null
@@ -140,6 +146,8 @@ interface GameState {
   setDifficulty: (difficultyTier: number) => Promise<void>
   setDifficultyForCharacter: (characterId: number, difficultyTier: number) => Promise<void>
   setCharacter: (updater: (prev: GameCharacter | null) => GameCharacter | null) => void
+  hireMercenary: (role: MercenaryRole) => void
+  dismissMercenary: () => void
 
   // 背包操作
   fetchInventory: () => Promise<void>
@@ -237,6 +245,8 @@ const initialState = {
   inventorySize: 100,
   storageSize: 100,
   equipment: {},
+  mercenariesByCharacter: {} as Record<number, Mercenary | null>,
+  mercenary: null,
   skills: [],
   availableSkills: [],
   maps: [],
@@ -322,16 +332,28 @@ const store: StateCreator<GameState> = (set, get) => ({
         current_hp?: number
         current_mana?: number
       }
-      set(state => ({
-        ...state,
-        character: response.character,
-        experienceTable: response.experience_table ?? state.experienceTable,
-        combatStats: response.combat_stats || null,
-        statsBreakdown: response.stats_breakdown ?? null,
-        currentHp: response.current_hp ?? null,
-        currentMana: response.current_mana ?? null,
-        isLoading: false,
-      }))
+      set(state => {
+        const character = response.character
+        const storedMercenary = character ? state.mercenariesByCharacter[character.id] : null
+        const mercenary =
+          character && storedMercenary ? syncMercenaryLevel(storedMercenary, character) : null
+
+        return {
+          ...state,
+          character,
+          mercenariesByCharacter:
+            character && storedMercenary && mercenary
+              ? { ...state.mercenariesByCharacter, [character.id]: mercenary }
+              : state.mercenariesByCharacter,
+          mercenary,
+          experienceTable: response.experience_table ?? state.experienceTable,
+          combatStats: response.combat_stats || null,
+          statsBreakdown: response.stats_breakdown ?? null,
+          currentHp: response.current_hp ?? null,
+          currentMana: response.current_mana ?? null,
+          isLoading: false,
+        }
+      })
     } catch (error) {
       console.error('[GameStore] Fetch character error:', error)
       setRequestError(set, error)
@@ -353,6 +375,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       set(state => ({
         ...state,
         characters: [...(state.characters || []), response.character],
+        mercenary: null,
         combatStats: response.combat_stats,
         statsBreakdown: response.stats_breakdown ?? null,
         isLoading: false,
@@ -382,6 +405,7 @@ const store: StateCreator<GameState> = (set, get) => ({
                 currentMana: null,
                 inventory: [],
                 equipment: {},
+                mercenary: null,
                 skills: [],
                 currentMap: null,
                 combatResult: null,
@@ -390,6 +414,11 @@ const store: StateCreator<GameState> = (set, get) => ({
                 shouldAutoCombat: false,
               }
             : {}),
+          mercenariesByCharacter: Object.fromEntries(
+            Object.entries(state.mercenariesByCharacter).filter(
+              ([id]) => Number(id) !== characterId
+            )
+          ),
           isLoading: false,
         }
       })
@@ -421,6 +450,13 @@ const store: StateCreator<GameState> = (set, get) => ({
       set(state => ({
         ...state,
         character: response.character,
+        mercenary: state.mercenary ? syncMercenaryLevel(state.mercenary, response.character) : null,
+        mercenariesByCharacter: state.mercenary
+          ? {
+              ...state.mercenariesByCharacter,
+              [response.character.id]: syncMercenaryLevel(state.mercenary, response.character),
+            }
+          : state.mercenariesByCharacter,
         combatStats: response.combat_stats,
         statsBreakdown: response.stats_breakdown ?? null,
         currentHp: response.current_hp,
@@ -480,6 +516,35 @@ const store: StateCreator<GameState> = (set, get) => ({
       ...state,
       character: updater(state.character),
     }))
+  },
+
+  hireMercenary: role => {
+    set(state => {
+      if (!state.character) return state
+      const mercenary = createMercenaryForCharacter(state.character, role)
+      return {
+        ...state,
+        mercenary,
+        mercenariesByCharacter: {
+          ...state.mercenariesByCharacter,
+          [state.character.id]: mercenary,
+        },
+      }
+    })
+  },
+
+  dismissMercenary: () => {
+    set(state => {
+      if (!state.character) return state
+      return {
+        ...state,
+        mercenary: null,
+        mercenariesByCharacter: {
+          ...state.mercenariesByCharacter,
+          [state.character.id]: null,
+        },
+      }
+    })
   },
 
   fetchInventory: async () => {
@@ -1319,6 +1384,15 @@ const store: StateCreator<GameState> = (set, get) => ({
         combatResult: typedData,
         combatLogs: newLogs,
         character: typedData.character,
+        mercenary: state.mercenary
+          ? syncMercenaryLevel(state.mercenary, typedData.character)
+          : state.mercenary,
+        mercenariesByCharacter: state.mercenary
+          ? {
+              ...state.mercenariesByCharacter,
+              [typedData.character.id]: syncMercenaryLevel(state.mercenary, typedData.character),
+            }
+          : state.mercenariesByCharacter,
         // 只有当新值存在且不为 undefined 时才更新
         ...(newCurrentHp !== undefined && { currentHp: newCurrentHp }),
         ...(newCurrentMana !== undefined && { currentMana: newCurrentMana }),
@@ -1375,6 +1449,13 @@ const store: StateCreator<GameState> = (set, get) => ({
     set(state => ({
       ...state,
       character: typedData.character,
+      mercenary: state.mercenary ? syncMercenaryLevel(state.mercenary, typedData.character) : null,
+      mercenariesByCharacter: state.mercenary
+        ? {
+            ...state.mercenariesByCharacter,
+            [typedData.character.id]: syncMercenaryLevel(state.mercenary, typedData.character),
+          }
+        : state.mercenariesByCharacter,
       currentHp: typedData.character?.current_hp ?? state.currentHp,
       currentMana: typedData.character?.current_mana ?? state.currentMana,
     }))
@@ -1592,6 +1673,7 @@ export const useGameStore = create<GameState>()(
       selectedCharacterId: state.selectedCharacterId,
       activeTab: state.activeTab,
       compareEquippedCollapsed: state.compareEquippedCollapsed,
+      mercenariesByCharacter: state.mercenariesByCharacter,
     }),
     skipHydration: true, // 跳过自动 hydration，手动控制
   })

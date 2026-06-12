@@ -51,12 +51,22 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   const { isAuthenticated, loading: authLoading } = useAuthStore()
   const [showCreateView, setShowCreateView] = useState(false)
   const [initialFetchDone, setInitialFetchDone] = useState(false)
+  const contentScrollRef = useRef<HTMLDivElement | null>(null)
+  const resetContentScroll = useCallback(() => {
+    const scrollContainer = contentScrollRef.current
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0
+      scrollContainer.scrollLeft = 0
+    }
+    window.scrollTo(0, 0)
+  }, [])
   const handleTabChange = useCallback(
     (tabId: typeof activeTab) => {
-      window.scrollTo(0, 0)
+      resetContentScroll()
       setActiveTab(tabId)
+      requestAnimationFrame(resetContentScroll)
     },
-    [setActiveTab]
+    [resetContentScroll, setActiveTab]
   )
   // 视图由数据派生，避免在 effect 中 setState；首次拉取完成前固定为 select 避免闪屏
   let resolvedView: GameView
@@ -89,6 +99,10 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     soundManager.setCombatTabActive(activeTab === 'combat')
     return () => soundManager.setCombatTabActive(false)
   }, [activeTab])
+
+  useEffect(() => {
+    resetContentScroll()
+  }, [activeTab, resetContentScroll])
 
   // 战斗WebSocket注册：character 未加载时用 selectedCharacterId 订阅，确保一开始就能收战斗推送
   useCombatWebSocket(character?.id ?? selectedCharacterId ?? null)
@@ -315,6 +329,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
         )}
 
         <div
+          ref={contentScrollRef}
           className={`flex min-h-0 flex-1 flex-col ${
             usePanelInnerScroll
               ? isShopTab

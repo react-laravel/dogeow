@@ -11,6 +11,10 @@ export type {
 } from './character'
 export { CLASS_NAMES } from './character'
 
+// Mercenary types
+export type { Mercenary, MercenaryDefinition, MercenaryRole } from './mercenary'
+export { MERCENARY_DEFINITIONS, createMercenaryForCharacter, syncMercenaryLevel } from './mercenary'
+
 // Item and equipment types
 export type { ItemQuality, ItemType, EquipmentSlot } from './item'
 export type { ItemDefinition, GameItem, Equipment } from './item'

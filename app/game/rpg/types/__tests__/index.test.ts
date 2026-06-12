@@ -7,6 +7,8 @@ import {
   SLOT_NAMES,
   STAT_NAMES,
   STAT_DESCRIPTIONS,
+  MERCENARY_DEFINITIONS,
+  createMercenaryForCharacter,
 } from '../index'
 import type {
   CharacterClass,
@@ -26,6 +28,8 @@ import type {
   MapDefinition,
   MonsterDefinition,
   MonsterType,
+  Mercenary,
+  MercenaryRole,
   ShopItem,
   SkillDefinition,
   SkillType,
@@ -54,6 +58,8 @@ type ExpectedTypeExports = [
   ShopItem,
   CompendiumItem,
   CompendiumMonster,
+  Mercenary,
+  MercenaryRole,
 ]
 
 describe('RPG Types', () => {
@@ -178,6 +184,23 @@ describe('RPG Types', () => {
     it('should describe energy correctly for mages', () => {
       expect(STAT_DESCRIPTIONS.energy).toContain('法师主属性')
       expect(STAT_DESCRIPTIONS.energy).toContain('法术攻击力')
+    })
+  })
+
+  describe('MERCENARY_DEFINITIONS', () => {
+    it('should define all starter mercenary roles', () => {
+      expect(MERCENARY_DEFINITIONS.guard.name).toBe('铁卫')
+      expect(MERCENARY_DEFINITIONS.marksman.name).toBe('猎弩手')
+      expect(MERCENARY_DEFINITIONS.mystic.name).toBe('秘术师')
+    })
+
+    it('should create mercenary stats from character level', () => {
+      const mercenary = createMercenaryForCharacter({ id: 1, level: 10 }, 'marksman')
+
+      expect(mercenary.character_id).toBe(1)
+      expect(mercenary.role).toBe('marksman')
+      expect(mercenary.level).toBe(10)
+      expect(mercenary.attack).toBeGreaterThan(mercenary.defense)
     })
   })
 })

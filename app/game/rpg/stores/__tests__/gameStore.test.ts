@@ -56,6 +56,8 @@ describe('GameStore', () => {
       inventorySize: 100,
       storageSize: 100,
       equipment: {},
+      mercenariesByCharacter: {},
+      mercenary: null,
       skills: [],
       maps: [],
       currentMap: null,
@@ -86,6 +88,43 @@ describe('GameStore', () => {
     it('should set activeTab to combat', () => {
       useGameStore.getState().setActiveTab('combat')
       expect(useGameStore.getState().activeTab).toBe('combat')
+    })
+  })
+
+  describe('mercenaries', () => {
+    it('should hire and dismiss a mercenary for the active character', () => {
+      useGameStore.setState({
+        character: { id: 1, level: 12 } as GameCharacter,
+      })
+
+      useGameStore.getState().hireMercenary('guard')
+
+      expect(useGameStore.getState().mercenary?.role).toBe('guard')
+      expect(useGameStore.getState().mercenary?.level).toBe(12)
+      expect(useGameStore.getState().mercenariesByCharacter[1]?.name).toBe('铁卫')
+
+      useGameStore.getState().dismissMercenary()
+
+      expect(useGameStore.getState().mercenary).toBeNull()
+      expect(useGameStore.getState().mercenariesByCharacter[1]).toBeNull()
+    })
+
+    it('should sync mercenary level when character data refreshes', async () => {
+      const { apiGet } = await import('@/lib/api')
+      useGameStore.setState({
+        selectedCharacterId: 1,
+        character: { id: 1, level: 5 } as GameCharacter,
+      })
+      useGameStore.getState().hireMercenary('marksman')
+
+      vi.mocked(apiGet).mockResolvedValueOnce({
+        character: { id: 1, name: 'Test', class: 'warrior', level: 8 },
+      })
+
+      await useGameStore.getState().fetchCharacter()
+
+      expect(useGameStore.getState().mercenary?.level).toBe(8)
+      expect(useGameStore.getState().mercenariesByCharacter[1]?.level).toBe(8)
     })
   })
 
