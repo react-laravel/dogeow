@@ -44,7 +44,9 @@ function CompareEquippedToggle({
       onClick={onToggle}
       style={{ width: COMPARE_TOGGLE_STRIP_WIDTH }}
       className={`text-muted-foreground hover:text-foreground bg-card border-border flex shrink-0 flex-col items-center justify-center self-stretch border text-[10px] leading-none transition-colors hover:bg-muted/50 ${
-        position === 'leading' ? 'rounded-l-lg border-r-0' : 'border-y border-r-0'
+        position === 'leading'
+          ? 'absolute top-0 bottom-0 left-0 -translate-x-full rounded-l-lg border-r-0'
+          : 'border-y border-r-0'
       }`}
       aria-label={collapsed ? '展开已装备对比' : '收起已装备对比'}
     >
@@ -391,10 +393,10 @@ export function FullComparePanel({
 
   return (
     <div
-      className={`flex max-w-full items-stretch ${getFullComparePanelWidthClass(compareEquippedCollapsed)}`}
+      className={`relative flex max-w-full items-stretch ${getFullComparePanelWidthClass(compareEquippedCollapsed)}`}
     >
       {!compareEquippedCollapsed && (
-        <aside className="bg-card border-border w-[156px] shrink-0 rounded-l-lg border border-r-0 p-2 shadow-md">
+        <aside className="bg-card border-border min-w-0 flex-[0_1_156px] rounded-l-lg border border-r-0 p-2 shadow-md">
           <CompareItemHeader
             item={equippedItem}
             name={getItemDisplayName(equippedItem)}
@@ -429,7 +431,11 @@ export function FullComparePanel({
         onToggle={toggleCompareEquippedCollapsed}
         position={compareEquippedCollapsed ? 'leading' : 'between'}
       />
-      <div className="bg-card border-border flex w-[200px] shrink-0 flex-col rounded-r-lg border p-2 shadow-md">
+      <div
+        className={`bg-card border-border flex min-w-0 flex-col border p-2 shadow-md ${
+          compareEquippedCollapsed ? 'w-[200px] rounded-lg' : 'flex-[1_1_200px] rounded-r-lg'
+        }`}
+      >
         <CompareItemHeader
           item={newItem}
           name={getItemDisplayName(newItem)}
