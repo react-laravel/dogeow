@@ -148,4 +148,40 @@ describe('useInventoryPanelView', () => {
 
     expect(result.current.recyclingQuality).toBeNull()
   })
+
+  it('recycles all non-potion and non-gem qualities with items', async () => {
+    const sellItemsByQuality = vi.fn(async () => undefined)
+    const inventory = [
+      createItem({ id: 31, quality: 'common' }),
+      createItem({ id: 32, quality: 'rare' }),
+      createItem({
+        id: 33,
+        quality: 'magic',
+        definition: { id: 33, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+      }),
+      createItem({
+        id: 34,
+        quality: 'legendary',
+        definition: { id: 34, name: 'Gem', type: 'gem', base_stats: {}, required_level: 1 },
+      }),
+    ]
+
+    const { result } = renderHook(() =>
+      useInventoryPanelView({
+        inventory,
+        inventorySize: 4,
+        sellItemsByQuality,
+        storage: [],
+        storageSize: 1,
+      })
+    )
+
+    await act(async () => {
+      await result.current.handleRecycleQuality('all')
+    })
+
+    expect(sellItemsByQuality).toHaveBeenCalledTimes(2)
+    expect(sellItemsByQuality).toHaveBeenNthCalledWith(1, 'common')
+    expect(sellItemsByQuality).toHaveBeenNthCalledWith(2, 'rare')
+  })
 })

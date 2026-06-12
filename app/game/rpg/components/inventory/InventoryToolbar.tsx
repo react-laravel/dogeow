@@ -54,6 +54,14 @@ export function InventoryToolbar({
   storageSize,
 }: InventoryToolbarProps) {
   const [sortOpen, setSortOpen] = useState(false)
+  const recycleAllStats = Object.values(qualityStats).reduce(
+    (total, stats) => ({
+      count: total.count + stats.count,
+      totalPrice: total.totalPrice + stats.totalPrice,
+    }),
+    { count: 0, totalPrice: 0 }
+  )
+  const isRecycling = recyclingQuality != null
 
   const handleAdjustAutoRecycleValue = (delta: number) => {
     const current = autoRecycleMaxValue ?? 0
@@ -150,6 +158,21 @@ export function InventoryToolbar({
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56 space-y-1 p-2" align="end">
+              <button
+                type="button"
+                onClick={() => onRecycleQuality('all')}
+                disabled={isLoading || isRecycling || recycleAllStats.count === 0}
+                className="bg-destructive/15 text-destructive hover:bg-destructive/20 flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span>
+                  全部回收
+                  <span className="ml-1 text-xs opacity-70">×{recycleAllStats.count}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <CopperDisplay copper={recycleAllStats.totalPrice} size="xs" />
+                  {recyclingQuality === 'all' && <span className="animate-spin">⏳</span>}
+                </span>
+              </button>
               {RECYCLE_QUALITIES.map(quality => {
                 const stats = qualityStats[quality] || { count: 0, totalPrice: 0 }
                 const isDisabled = stats.count === 0
@@ -159,7 +182,7 @@ export function InventoryToolbar({
                     key={quality}
                     type="button"
                     onClick={() => onRecycleQuality(quality)}
-                    disabled={isLoading || recyclingQuality === quality || isDisabled}
+                    disabled={isLoading || isRecycling || isDisabled}
                     className="flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{
                       backgroundColor: `${QUALITY_COLORS[quality as ItemQuality]}${isDisabled ? '10' : '20'}`,

@@ -10,6 +10,7 @@ import {
   getCategoryById,
   toSlotCells,
 } from './inventoryUtils'
+import { RECYCLE_QUALITIES } from './inventoryConfig'
 
 interface UseInventoryPanelViewParams {
   inventory: GameItem[]
@@ -49,7 +50,16 @@ export function useInventoryPanelView({
   const handleRecycleQuality = async (quality: string) => {
     setRecyclingQuality(quality)
     try {
-      await sellItemsByQuality(quality)
+      if (quality === 'all') {
+        const qualities = RECYCLE_QUALITIES.filter(
+          itemQuality => qualityStats[itemQuality]?.count > 0
+        )
+        for (const itemQuality of qualities) {
+          await sellItemsByQuality(itemQuality)
+        }
+      } else {
+        await sellItemsByQuality(quality)
+      }
     } finally {
       setRecyclingQuality(null)
     }

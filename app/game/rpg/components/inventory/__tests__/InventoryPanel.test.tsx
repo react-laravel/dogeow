@@ -78,6 +78,11 @@ describe('InventoryPanel', () => {
     await user.click(view.getByRole('button', { name: '价格' }))
     expect(store.sortInventory).toHaveBeenCalledWith('price')
 
+    await user.click(view.getByRole('button', { name: /全部回收/ }))
+    await waitFor(() => {
+      expect(store.sellItemsByQuality).toHaveBeenCalledWith('common')
+    })
+
     await user.click(view.getByRole('button', { name: /普通/ }))
     await waitFor(() => {
       expect(store.sellItemsByQuality).toHaveBeenCalledWith('common')
