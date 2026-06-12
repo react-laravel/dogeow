@@ -4,21 +4,9 @@ import { useState, useMemo, useCallback } from 'react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useGameStore } from '../../stores/gameStore'
 import { EquipmentGrid } from '../inventory/EquipmentGrid'
-import {
-  CLASS_NAMES,
-  STAT_DESCRIPTIONS,
-  STAT_NAMES,
-  CharacterClass,
-  type StatBreakdownItem,
-} from '../../types'
+import { CLASS_NAMES, STAT_DESCRIPTIONS, STAT_NAMES, type StatBreakdownItem } from '../../types'
 
 const CHARACTER_STATS = ['strength', 'dexterity', 'vitality', 'energy'] as const
-
-const classIcon: Record<CharacterClass, string> = {
-  warrior: '⚔️',
-  mage: '🔮',
-  ranger: '🏹',
-}
 
 export function CharacterPanel() {
   const {
@@ -65,31 +53,25 @@ export function CharacterPanel() {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* 角色基本信息 - 移动端优化 */}
-      <PanelCard>
-        <div className="mb-3 flex items-center gap-3 sm:mb-4 sm:gap-4">
-          <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full text-2xl sm:h-16 sm:w-16 sm:text-3xl">
-            {classIcon[character.class]}
-          </div>
+      {/* 装备栏 */}
+      <div className="bg-card overflow-hidden">
+        <div className="px-2">
           <div className="min-w-0 flex-1">
-            <h3 className="text-foreground truncate text-lg font-bold sm:text-xl">
+            <div className="text-muted-foreground flex items-center justify-between gap-3 text-xs sm:text-sm">
+              <span className="shrink-0">
+                Lv.{character.level} {CLASS_NAMES[character.class]}
+              </span>
+              <span className="min-w-0 truncate text-right">
+                经验 {character.experience.toLocaleString()} / {expToNext.toLocaleString()}
+              </span>
+            </div>
+            <h3 className="text-foreground mt-1 truncate text-center text-lg font-bold sm:text-xl">
               {character.name}
             </h3>
-            <p className="text-muted-foreground text-sm">
-              Lv.{character.level} {CLASS_NAMES[character.class]}
-            </p>
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              经验 {character.experience.toLocaleString()} / {expToNext.toLocaleString()}
-            </p>
           </div>
         </div>
-      </PanelCard>
-
-      {/* 装备栏 */}
-      <PanelCard>
-        <h4 className="text-foreground mb-3 text-base font-medium sm:mb-4 sm:text-lg">装备</h4>
         <EquipmentGrid equipment={equipment} onUnequip={unequipItem} />
-      </PanelCard>
+      </div>
 
       {/* 战斗属性 - 移动端优化 */}
       {combatStats && (
@@ -193,7 +175,11 @@ export function CharacterPanel() {
 
 // 可复用、减少重复的组件：PanelCard
 function PanelCard({ children }: { children: React.ReactNode }) {
-  return <div className="bg-card border-border rounded-lg border p-3 sm:p-4">{children}</div>
+  return (
+    <div className="bg-card border-border mx-[var(--rpg-content-inset)] rounded-lg border p-3 sm:p-4">
+      {children}
+    </div>
+  )
 }
 
 // 可复用、减少重复的组件：StatRow（支持悬停与点击显示说明）

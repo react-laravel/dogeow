@@ -76,8 +76,8 @@ export const GameItemSlot = memo(
         disabled={!item}
         className={`relative flex h-12 w-12 items-center justify-center rounded border-2 text-xl shadow-sm transition-all ${
           item
-            ? 'bg-secondary cursor-pointer hover:shadow-md'
-            : 'border-border bg-card cursor-default border-dashed'
+            ? 'cursor-pointer bg-black/65 hover:bg-black/75 hover:shadow-md'
+            : 'border-border cursor-default border-dashed bg-black/50'
         }`}
         style={borderColor ? { borderColor } : undefined}
         title={title}

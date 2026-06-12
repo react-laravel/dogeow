@@ -287,9 +287,9 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
 
       {/* 主体内容/导航 */}
       <main
-        className={`mx-auto flex w-full max-w-7xl flex-1 flex-col overflow-hidden px-[var(--rpg-content-inset)] pt-[calc(var(--rpg-status-bar-block)+var(--rpg-content-inset))] ${
-          usePanelInnerScroll ? 'min-h-0 pb-0' : 'pb-[var(--rpg-content-inset)]'
-        }`}
+        className={`mx-auto flex w-full max-w-7xl flex-1 flex-col overflow-hidden pt-[calc(var(--rpg-status-bar-block)+var(--rpg-content-inset))] ${
+          activeTab === 'character' ? 'px-0' : 'px-[var(--rpg-content-inset)]'
+        } ${usePanelInnerScroll ? 'min-h-0 pb-0' : 'pb-[var(--rpg-content-inset)]'}`}
       >
         <nav className="bg-muted mb-4 hidden gap-1 rounded-lg p-1 lg:flex">
           {tabs.map(tab => (

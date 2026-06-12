@@ -56,8 +56,8 @@ export function EquipmentGrid({ equipment, onUnequip }: EquipmentGridProps) {
 
   return (
     <>
-      <div className="border-border relative mx-auto aspect-[3/4] w-full max-w-[320px] overflow-hidden rounded-lg border bg-black">
-        <Image src={portrait} alt="" fill sizes="320px" className="object-cover" priority={false} />
+      <div className="border-border relative aspect-[3/4] w-full overflow-hidden border-y bg-black">
+        <Image src={portrait} alt="" fill sizes="100vw" className="object-cover" priority={false} />
         {PAPER_DOLL_SLOTS.map(cell => {
           const item = equipment[cell.slot]
 
