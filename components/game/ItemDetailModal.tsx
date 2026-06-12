@@ -73,10 +73,10 @@ export function ItemDetailModal(props: ItemDetailModalProps) {
       onClick={onClose}
     >
       <div
-        className={`border-border bg-card relative rounded-xl border text-sm shadow-2xl ${
+        className={`relative text-sm ${
           isWideCompare
             ? 'w-[356px] max-w-[calc(100vw-2rem)]'
-            : 'w-[280px] max-w-[calc(100vw-2rem)]'
+            : 'border-border bg-card w-[280px] max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl'
         }`}
         onClick={e => e.stopPropagation()}
       >
@@ -294,14 +294,12 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
 
   if (hasEquipped && equippedItem) {
     return (
-      <div className="overflow-hidden rounded-xl p-2 pt-3">
-        <FullComparePanel
-          newItem={shopItemAsGameItem}
-          equippedItem={equippedItem}
-          isShop
-          footer={<div className="mt-2">{buyButton}</div>}
-        />
-      </div>
+      <FullComparePanel
+        newItem={shopItemAsGameItem}
+        equippedItem={equippedItem}
+        isShop
+        footer={<div className="mt-2">{buyButton}</div>}
+      />
     )
   }
 
