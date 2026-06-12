@@ -8,13 +8,15 @@ import { CopperDisplay } from '../shared/CopperDisplay'
 import { ShopItem, QUALITY_COLORS, formatCopper, GameItem, ItemType } from '../../types'
 import { getEquipmentSlot } from '../../utils/itemUtils'
 import { buildSlotArray } from '../inventory/inventoryUtils'
+import { ItemUpgradeIndicator } from '../inventory/ItemUpgradeIndicator'
+import { shouldShowShopUpgradeIndicator } from '../inventory/inventoryEquipmentUtils'
 import { ItemDetailModal, ShopItemIcon } from '@/components/game'
 
 /** 强制刷新费用：1 银 = 100 铜 */
 const SHOP_REFRESH_COST_COPPER = 100
 
-/** 每个分类最多展示的物品数量 */
-const SHOP_ITEMS_PER_CATEGORY = 5
+/** 每个分类最多展示的物品数量（与后端配置一致） */
+const SHOP_ITEMS_PER_CATEGORY_MAX = 5
 
 /** 商店分类行（顺序与左侧图标一致） */
 const SHOP_TYPE_FILTERS: { id: string; label: string; name: string; types: ItemType[] }[] = [
@@ -44,12 +46,19 @@ function ShopRefreshCountdown({ nextRefreshAt }: { nextRefreshAt: number | null 
   if (nextRefreshAt == null) return null
 
   const countdown = Math.max(0, nextRefreshAt - now)
+  const hours = Math.floor(countdown / 3600)
+  const minutes = Math.floor((countdown % 3600) / 60)
+  const seconds = countdown % 60
+  const countdownLabel =
+    countdown > 0
+      ? hours > 0
+        ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        : `${minutes}:${String(seconds).padStart(2, '0')}`
+      : '刷新中'
 
   return (
     <span className="bg-muted/60 text-muted-foreground rounded-full px-2.5 py-0.5 text-[10px] sm:text-xs">
-      {countdown > 0
-        ? `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`
-        : '刷新中'}
+      {countdownLabel}
     </span>
   )
 }
@@ -58,11 +67,13 @@ const ShopItemCell = memo(function ShopItemCell({
   item,
   isSelected,
   isLoading,
+  showUpgradeIndicator = false,
   onSelect,
 }: {
   item: ShopItem
   isSelected: boolean
   isLoading: boolean
+  showUpgradeIndicator?: boolean
   onSelect: (item: ShopItem) => void
 }) {
   const borderColor = isSelected
@@ -83,7 +94,7 @@ const ShopItemCell = memo(function ShopItemCell({
       disabled={isLoading}
       title={`${item.name} - ${formatCopper(item.buy_price, 1)}`}
     >
-      <span className="flex min-h-0 flex-1 items-center justify-center p-0.5">
+      <span className="relative flex min-h-0 flex-1 items-center justify-center p-0.5">
         <ShopItemIcon
           itemId={item.id}
           icon={item.icon}
@@ -91,6 +102,7 @@ const ShopItemCell = memo(function ShopItemCell({
           subType={item.sub_type}
           className="text-base sm:text-lg"
         />
+        {showUpgradeIndicator && <ItemUpgradeIndicator />}
       </span>
       <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-px">
         <CopperDisplay copper={item.buy_price} size="xs" nowrap maxParts={1} />
@@ -108,6 +120,7 @@ export function ShopPanel() {
     refreshShopItems,
     isLoading,
     shopNextRefreshAt,
+    shopManualRefreshEnabled,
     equipment,
     inventory,
     inventorySize,
@@ -120,6 +133,7 @@ export function ShopPanel() {
       refreshShopItems: state.refreshShopItems,
       isLoading: state.isLoading,
       shopNextRefreshAt: state.shopNextRefreshAt,
+      shopManualRefreshEnabled: state.shopManualRefreshEnabled,
       equipment: state.equipment,
       inventory: state.inventory,
       inventorySize: state.inventorySize,
@@ -150,7 +164,7 @@ export function ShopPanel() {
     if (!selectedShopItem) return
     if (!canAfford || !levelEnough || buyQuantity < 1 || inventoryFull) return
     try {
-      await buyItem(selectedShopItem.id, buyQuantity)
+      await buyItem(selectedShopItem.id, buyQuantity, selectedShopItem.listing_id)
       setSelectedShopItem(null)
       setBuyQuantity(1)
     } catch {
@@ -170,7 +184,7 @@ export function ShopPanel() {
         items: shopItems
           .filter(item => filter.types.includes(item.type))
           .sort((a, b) => b.buy_price - a.buy_price)
-          .slice(0, SHOP_ITEMS_PER_CATEGORY),
+          .slice(0, SHOP_ITEMS_PER_CATEGORY_MAX),
       })).filter(group => group.items.length > 0),
     [shopItems]
   )
@@ -201,10 +215,25 @@ export function ShopPanel() {
               {displayedItemCount}
             </span>
           </h4>
-          <ShopRefreshCountdown nextRefreshAt={shopNextRefreshAt} />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ShopRefreshCountdown nextRefreshAt={shopNextRefreshAt} />
+            {shopManualRefreshEnabled && (
+              <button
+                type="button"
+                onClick={() => refreshShopItems()}
+                disabled={isLoading || !canAffordRefresh}
+                className="bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] transition-colors disabled:opacity-50 sm:px-2.5 sm:text-xs"
+                title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
+              >
+                <RefreshCw className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+                <span>刷新</span>
+                <CopperDisplay copper={SHOP_REFRESH_COST_COPPER} size="xs" nowrap maxParts={1} />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 sm:px-4">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
           {itemsByCategory.length > 0 ? (
             itemsByCategory.map(group => (
               <div
@@ -220,11 +249,15 @@ export function ShopPanel() {
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
                   {group.items.map(item => (
-                    <div key={item.id} className="w-11 shrink-0 sm:w-12">
+                    <div key={item.listing_id ?? item.id} className="w-11 shrink-0 sm:w-12">
                       <ShopItemCell
                         item={item}
                         isSelected={selectedItemId === item.id}
                         isLoading={isLoading}
+                        showUpgradeIndicator={shouldShowShopUpgradeIndicator(
+                          item,
+                          getEquippedItem(item)
+                        )}
                         onSelect={handleSelectShopItem}
                       />
                     </div>
@@ -237,20 +270,6 @@ export function ShopPanel() {
               暂无商店物品
             </p>
           )}
-        </div>
-
-        <div className="flex shrink-0 justify-center px-3 py-2 sm:px-4">
-          <button
-            type="button"
-            onClick={() => refreshShopItems()}
-            disabled={isLoading || !canAffordRefresh}
-            className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-2 rounded-full px-4 py-2 text-xs transition-colors disabled:opacity-50"
-            title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>刷新商店</span>
-            <CopperDisplay copper={SHOP_REFRESH_COST_COPPER} size="xs" nowrap maxParts={1} />
-          </button>
         </div>
       </div>
 

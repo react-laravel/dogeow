@@ -45,6 +45,7 @@ import {
   patchCharacter,
   withUpdatedCopper,
   withCombatFlag,
+  replaceItemInLoadout,
 } from './gameStateHelpers'
 
 /** 进入/传送地图接口响应 */
@@ -53,21 +54,6 @@ interface EnterMapResponse {
   map?: MapDefinition
   monsters?: CombatMonster[]
 }
-
-const replaceItemById = (items: GameItem[], itemId: number, replacement: GameItem): GameItem[] =>
-  items.map(item => (item.id === itemId ? replacement : item))
-
-const replaceEquipmentItemById = (
-  equipment: Record<string, GameItem | null>,
-  itemId: number,
-  replacement: GameItem
-): Record<string, GameItem | null> =>
-  Object.fromEntries(
-    Object.entries(equipment).map(([slot, item]) => [
-      slot,
-      item?.id === itemId ? replacement : item,
-    ])
-  ) as Record<string, GameItem | null>
 
 interface GameState {
   // 角色数据
@@ -116,6 +102,8 @@ interface GameState {
   shopItems: ShopItem[]
   /** 下次商店装备刷新的时间戳（秒），用于显示"下次刷新" */
   shopNextRefreshAt: number | null
+  /** 是否允许手动花费银币刷新商店 */
+  shopManualRefreshEnabled: boolean
 
   // 图鉴状态
   compendiumItems: CompendiumItem[]
@@ -200,7 +188,7 @@ interface GameState {
   // 商店操作
   fetchShopItems: () => Promise<void>
   refreshShopItems: () => Promise<void>
-  buyItem: (itemId: number, quantity?: number) => Promise<void>
+  buyItem: (itemId: number, quantity?: number, listingId?: string) => Promise<void>
   sellItemToShop: (itemId: number, quantity?: number) => Promise<void>
 
   // 图鉴操作
@@ -260,6 +248,7 @@ const initialState = {
   activeTab: 'character' as const,
   shopItems: [],
   shopNextRefreshAt: null,
+  shopManualRefreshEnabled: false,
   compendiumItems: [],
   compendiumMonsters: [],
   compendiumMonsterDrops: null,
@@ -609,16 +598,17 @@ const store: StateCreator<GameState> = (set, get) => ({
       }
 
       set(state => {
-        const updatedInventory = replaceItemById(
+        const { inventory, equipment } = replaceItemInLoadout(
           state.inventory,
+          state.equipment,
           itemId,
           response.equipment
-        ).filter(item => item.id !== gemItemId)
+        )
 
         return {
           ...state,
-          inventory: updatedInventory,
-          equipment: replaceEquipmentItemById(state.equipment, itemId, response.equipment),
+          inventory: inventory.filter(item => item.id !== gemItemId),
+          equipment,
           combatStats: response.combat_stats ?? state.combatStats,
           statsBreakdown: response.stats_breakdown ?? state.statsBreakdown,
           isLoading: false,
@@ -650,16 +640,20 @@ const store: StateCreator<GameState> = (set, get) => ({
       }
 
       set(state => {
-        const updatedInventory = replaceItemById(state.inventory, itemId, response.equipment)
+        const { inventory, equipment } = replaceItemInLoadout(
+          state.inventory,
+          state.equipment,
+          itemId,
+          response.equipment
+        )
         const returnedGem = response.gem_item
         const hasReturnedGem =
-          returnedGem != null && updatedInventory.some(item => item.id === returnedGem.id)
+          returnedGem != null && inventory.some(item => item.id === returnedGem.id)
 
         return {
           ...state,
-          inventory:
-            returnedGem && !hasReturnedGem ? [...updatedInventory, returnedGem] : updatedInventory,
-          equipment: replaceEquipmentItemById(state.equipment, itemId, response.equipment),
+          inventory: returnedGem && !hasReturnedGem ? [...inventory, returnedGem] : inventory,
+          equipment,
           combatStats: response.combat_stats ?? state.combatStats,
           statsBreakdown: response.stats_breakdown ?? state.statsBreakdown,
           isLoading: false,
@@ -1381,11 +1375,13 @@ const store: StateCreator<GameState> = (set, get) => ({
         items: ShopItem[]
         player_copper: number
         next_refresh_at?: number
+        manual_refresh_enabled?: boolean
       }
       set(state => ({
         ...state,
         shopItems: response.items || [],
         shopNextRefreshAt: response.next_refresh_at ?? null,
+        shopManualRefreshEnabled: response.manual_refresh_enabled ?? false,
         character: withUpdatedCopper(state.character, response.player_copper),
         isLoading: false,
       }))
@@ -1406,11 +1402,13 @@ const store: StateCreator<GameState> = (set, get) => ({
         items: ShopItem[]
         player_copper: number
         next_refresh_at?: number
+        manual_refresh_enabled?: boolean
       }
       set(state => ({
         ...state,
         shopItems: response.items ?? [],
         shopNextRefreshAt: response.next_refresh_at ?? null,
+        shopManualRefreshEnabled: response.manual_refresh_enabled ?? false,
         character: withUpdatedCopper(state.character, response.player_copper),
         isLoading: false,
       }))
@@ -1420,7 +1418,7 @@ const store: StateCreator<GameState> = (set, get) => ({
     }
   },
 
-  buyItem: async (itemId: number, quantity = 1) => {
+  buyItem: async (itemId: number, quantity = 1, listingId?: string) => {
     startRequest(set)
     try {
       const selectedId = getSelectedCharacterIdOrAbort(get, set, {
@@ -1435,6 +1433,7 @@ const store: StateCreator<GameState> = (set, get) => ({
           item_id: itemId,
           quantity,
           character_id: selectedId,
+          ...(listingId ? { listing_id: listingId } : {}),
         },
         { handleError: false }
       )) as {
@@ -1445,7 +1444,10 @@ const store: StateCreator<GameState> = (set, get) => ({
       }
       soundManager.play('gold')
       set(state => {
-        const purchasedItem = state.shopItems.find(item => item.id === itemId)
+        const purchasedItem = state.shopItems.find(
+          item =>
+            item.id === itemId && (listingId ? item.listing_id === listingId : !item.listing_id)
+        )
         const isRepeatableShopItem = purchasedItem?.type === 'potion'
 
         return {
@@ -1453,7 +1455,9 @@ const store: StateCreator<GameState> = (set, get) => ({
           character: withUpdatedCopper(state.character, response.copper),
           shopItems:
             purchasedItem && !isRepeatableShopItem
-              ? state.shopItems.filter(item => item.id !== itemId)
+              ? state.shopItems.filter(item =>
+                  listingId ? item.listing_id !== listingId : item.id !== itemId
+                )
               : state.shopItems,
           isLoading: false,
         }

@@ -4,6 +4,8 @@ import type { ItemType, ItemQuality } from './item'
 
 export interface ShopItem {
   id: number
+  /** 商店展示实例 ID（同模板可有多条不同属性） */
+  listing_id?: string
   name: string
   type: ItemType
   sub_type?: string
@@ -21,6 +23,8 @@ export interface ShopResponse {
   player_copper: number
   /** 下次商店装备刷新的时间戳（秒） */
   next_refresh_at?: number
+  /** 是否允许手动花费银币刷新商店 */
+  manual_refresh_enabled?: boolean
 }
 
 export interface BuyResponse {

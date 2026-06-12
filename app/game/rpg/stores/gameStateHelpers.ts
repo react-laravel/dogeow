@@ -94,3 +94,22 @@ export const withCombatFlag = (
   isFighting,
   character: patchCharacter(state.character, { is_fighting: isFighting }),
 })
+
+/** 同步更新背包与已装备栏中的同一件物品 */
+export const replaceItemInLoadout = (
+  inventory: GameItem[],
+  equipment: Record<string, GameItem | null>,
+  itemId: number,
+  updatedItem: GameItem
+): { inventory: GameItem[]; equipment: Record<string, GameItem | null> } => {
+  const nextInventory = inventory.map(item => (item.id === itemId ? updatedItem : item))
+  const nextEquipment: Record<string, GameItem | null> = { ...equipment }
+
+  for (const [slot, item] of Object.entries(nextEquipment)) {
+    if (item?.id === itemId) {
+      nextEquipment[slot] = updatedItem
+    }
+  }
+
+  return { inventory: nextInventory, equipment: nextEquipment }
+}

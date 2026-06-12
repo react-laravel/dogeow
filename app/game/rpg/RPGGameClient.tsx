@@ -317,7 +317,9 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
         <div
           className={`flex min-h-0 flex-1 flex-col ${
             usePanelInnerScroll
-              ? 'overflow-hidden overscroll-none pb-28 lg:pb-4'
+              ? isShopTab
+                ? 'overflow-hidden overscroll-none pb-16 lg:pb-4'
+                : 'overflow-hidden overscroll-none pb-28 lg:pb-4'
               : 'overflow-y-auto pb-32 lg:pb-4'
           }`}
         >

@@ -237,6 +237,27 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
     shop_buy_price: shopItem.buy_price,
   }
 
+  const buyButtonLabel = inventoryFull
+    ? shopItem.type === 'potion' || shopItem.type === 'gem'
+      ? '背包已满'
+      : '背包空间不足'
+    : !canAfford
+      ? '货币不足'
+      : !levelEnough
+        ? '等级不足'
+        : '确认购买'
+
+  const buyButton = (
+    <button
+      type="button"
+      onClick={onBuy}
+      disabled={disabledBuy}
+      className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+    >
+      {buyButtonLabel}
+    </button>
+  )
+
   const buyFooter = (
     <>
       {setBuyQuantity && isPotion && (
@@ -267,32 +288,19 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
         </div>
       )}
 
-      <div className="p-3">
-        <button
-          type="button"
-          onClick={onBuy}
-          disabled={disabledBuy}
-          className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-        >
-          {inventoryFull
-            ? shopItem.type === 'potion' || shopItem.type === 'gem'
-              ? '背包已满'
-              : '背包空间不足'
-            : !canAfford
-              ? '货币不足'
-              : !levelEnough
-                ? '等级不足'
-                : '确认购买'}
-        </button>
-      </div>
+      <div className="p-3">{buyButton}</div>
     </>
   )
 
   if (hasEquipped && equippedItem) {
     return (
-      <div className="flex flex-col overflow-hidden rounded-xl">
-        <FullComparePanel newItem={shopItemAsGameItem} equippedItem={equippedItem} isShop />
-        {buyFooter}
+      <div className="overflow-hidden rounded-xl p-2 pt-3">
+        <FullComparePanel
+          newItem={shopItemAsGameItem}
+          equippedItem={equippedItem}
+          isShop
+          footer={<div className="mt-2">{buyButton}</div>}
+        />
       </div>
     )
   }

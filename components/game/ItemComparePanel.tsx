@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import type { GameItem, ShopItem, ItemQuality } from '@/app/game/rpg/types'
 import { QUALITY_COLORS, STAT_NAMES } from '@/app/game/rpg/types'
 import { ItemIcon } from './ItemIcon'
@@ -303,6 +304,7 @@ export function FullComparePanel({
   actions,
   onAction,
   onUnsocketGem,
+  footer,
 }: {
   newItem: GameItem
   equippedItem: GameItem
@@ -310,6 +312,8 @@ export function FullComparePanel({
   actions?: ItemActionType[]
   onAction?: (action: ItemActionType) => void
   onUnsocketGem?: (socketIndex: number) => void
+  /** 渲染在右侧物品栏底部（如商店购买按钮） */
+  footer?: ReactNode
 }) {
   const newStats = getItemTotalStats(newItem)
   const equippedStats = getItemTotalStats(equippedItem)
@@ -330,9 +334,8 @@ export function FullComparePanel({
     equippedItem.sell_price ?? Math.floor((equippedItem.definition?.buy_price ?? 0) / 2)
 
   return (
-    <div className="relative w-[356px] max-w-full">
-      {/* 已装备：绝对定位，高度仅到卖出价，不占下方按钮区域 */}
-      <aside className="bg-card border-border absolute top-0 left-0 z-10 w-[156px] rounded-l-lg border border-r-0 p-2 shadow-md">
+    <div className="flex w-[356px] max-w-full items-start">
+      <aside className="bg-card border-border w-[156px] shrink-0 rounded-l-lg border border-r-0 p-2 shadow-md">
         <CompareItemHeader
           item={equippedItem}
           name={getItemDisplayName(equippedItem)}
@@ -358,8 +361,7 @@ export function FullComparePanel({
           )}
         </div>
       </aside>
-      {/* 背包物品：撑开容器高度 */}
-      <div className="bg-card border-border ml-[156px] flex w-[200px] flex-col rounded-r-lg rounded-bl-lg border p-2 shadow-md">
+      <div className="bg-card border-border flex w-[200px] shrink-0 flex-col rounded-r-lg border p-2 shadow-md">
         <CompareItemHeader
           item={newItem}
           name={getItemDisplayName(newItem)}
@@ -373,6 +375,7 @@ export function FullComparePanel({
             <CopperDisplay copper={newItemDisplayPrice} size="sm" nowrap className="font-medium" />
           </div>
         </div>
+        {footer}
         {actions && actions.length > 0 && onAction && (
           <div className="-mx-2 -mb-2 mt-2">
             <ItemActions actions={actions} onAction={onAction} />

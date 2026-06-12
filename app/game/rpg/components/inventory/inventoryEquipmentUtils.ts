@@ -1,5 +1,5 @@
 import type { ItemActionType } from '@/components/game'
-import type { GameItem } from '../../types'
+import type { GameItem, ShopItem } from '../../types'
 import { getEquipmentSlot, getItemSellUnitPrice, isEquippable } from '../../utils/itemUtils'
 
 type EquippedItems = Record<string, GameItem | null | undefined>
@@ -35,6 +35,26 @@ export const shouldShowUpgradeIndicator = (
   item: GameItem,
   equippedItem: GameItem | null
 ): boolean => isEquippable(item) && isHigherValueThanEquipped(item, equippedItem)
+
+export const isShopItemEquippable = (item: ShopItem): boolean =>
+  item.type !== 'potion' && item.type !== 'gem'
+
+export const isShopItemHigherValueThanEquipped = (
+  shopItem: ShopItem,
+  equippedItem: GameItem | null
+): boolean => {
+  if (!equippedItem) {
+    return true
+  }
+
+  return shopItem.sell_price > getItemSellUnitPrice(equippedItem)
+}
+
+export const shouldShowShopUpgradeIndicator = (
+  shopItem: ShopItem,
+  equippedItem: GameItem | null
+): boolean =>
+  isShopItemEquippable(shopItem) && isShopItemHigherValueThanEquipped(shopItem, equippedItem)
 
 export const getEquippedRingItems = (equipment: EquippedItems): GameItem[] =>
   equipment.ring ? [equipment.ring] : []

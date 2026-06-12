@@ -6,8 +6,11 @@ import {
   handleInventoryCompareAction,
   hasEquippedItemFor,
   isHigherValueThanEquipped,
+  isShopItemHigherValueThanEquipped,
+  shouldShowShopUpgradeIndicator,
   shouldShowUpgradeIndicator,
 } from '../inventoryEquipmentUtils'
+import type { ShopItem } from '../../../types'
 import { createItem } from './testUtils'
 
 describe('inventoryEquipmentUtils', () => {
@@ -82,6 +85,44 @@ describe('inventoryEquipmentUtils', () => {
     expect(isHigherValueThanEquipped(better, equipped)).toBe(true)
     expect(isHigherValueThanEquipped(worse, equipped)).toBe(false)
     expect(isHigherValueThanEquipped(better, null)).toBe(true)
+  })
+
+  it('detects when shop item sell price exceeds equipped item', () => {
+    const equipped = createItem({ id: 45, sell_price: 100 })
+    const betterShopItem = {
+      id: 1,
+      name: 'Shop Sword',
+      type: 'weapon',
+      base_stats: {},
+      quality: 'common',
+      required_level: 1,
+      buy_price: 300,
+      sell_price: 150,
+    } satisfies ShopItem
+    const worseShopItem = {
+      ...betterShopItem,
+      id: 2,
+      sell_price: 80,
+    } satisfies ShopItem
+
+    expect(isShopItemHigherValueThanEquipped(betterShopItem, equipped)).toBe(true)
+    expect(isShopItemHigherValueThanEquipped(worseShopItem, equipped)).toBe(false)
+    expect(isShopItemHigherValueThanEquipped(betterShopItem, null)).toBe(true)
+  })
+
+  it('does not show shop upgrade indicator for potions or gems', () => {
+    const potion = {
+      id: 3,
+      name: 'HP Potion',
+      type: 'potion',
+      base_stats: {},
+      quality: 'common',
+      required_level: 1,
+      buy_price: 10,
+      sell_price: 999,
+    } satisfies ShopItem
+
+    expect(shouldShowShopUpgradeIndicator(potion, null)).toBe(false)
   })
 
   it('does not show upgrade indicator for potions or gems', () => {
