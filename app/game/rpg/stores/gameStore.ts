@@ -105,6 +105,9 @@ interface GameState {
   /** 是否允许手动花费银币刷新商店 */
   shopManualRefreshEnabled: boolean
 
+  /** 装备对比时是否收起左侧「已装备」栏，便于聚焦背包/商店物品 */
+  compareEquippedCollapsed: boolean
+
   // 图鉴状态
   compendiumItems: CompendiumItem[]
   compendiumMonsters: CompendiumMonster[]
@@ -122,6 +125,8 @@ interface GameState {
       | 'settings'
       | 'compendium'
   ) => void
+  setCompareEquippedCollapsed: (collapsed: boolean) => void
+  toggleCompareEquippedCollapsed: () => void
   fetchCharacters: () => Promise<void>
   selectCharacter: (characterId: number) => Promise<void>
   fetchCharacter: () => Promise<void>
@@ -249,6 +254,7 @@ const initialState = {
   shopItems: [],
   shopNextRefreshAt: null,
   shopManualRefreshEnabled: false,
+  compareEquippedCollapsed: false,
   compendiumItems: [],
   compendiumMonsters: [],
   compendiumMonsterDrops: null,
@@ -258,6 +264,12 @@ const store: StateCreator<GameState> = (set, get) => ({
   ...initialState,
 
   setActiveTab: tab => set(state => ({ ...state, activeTab: tab })),
+
+  setCompareEquippedCollapsed: collapsed =>
+    set(state => ({ ...state, compareEquippedCollapsed: collapsed })),
+
+  toggleCompareEquippedCollapsed: () =>
+    set(state => ({ ...state, compareEquippedCollapsed: !state.compareEquippedCollapsed })),
 
   fetchCharacters: async () => {
     set(state => ({ ...state, error: null }))
@@ -1571,6 +1583,7 @@ export const useGameStore = create<GameState>()(
     partialize: state => ({
       selectedCharacterId: state.selectedCharacterId,
       activeTab: state.activeTab,
+      compareEquippedCollapsed: state.compareEquippedCollapsed,
     }),
     skipHydration: true, // 跳过自动 hydration，手动控制
   })

@@ -13,6 +13,7 @@ import {
 } from './InventoryItemDetailContent'
 import { ItemSlotSellPriceBadge } from './ItemSlotSellPriceBadge'
 import type { InventorySlotCell } from './inventoryUtils'
+import { useGameStore } from '../../stores/gameStore'
 
 const POPOVER_COLLISION_PADDING = { top: 12, right: 12, left: 12, bottom: 72 }
 
@@ -63,8 +64,8 @@ export const InventoryGridItem = memo(function InventoryGridItem({
   const equippedItem =
     cell.source === 'inventory' && isEquippable(item) ? getEquippedItem(item) : null
   const showUpgradeIndicator = shouldShowUpgradeIndicator(item, equippedItem)
-  const equippedRings = item.definition?.type === 'ring' ? getEquippedRings() : []
-  const popoverWidth = getInventoryDetailPopoverWidth(item, showCompare, equippedRings.length)
+  const compareEquippedCollapsed = useGameStore(state => state.compareEquippedCollapsed)
+  const popoverWidth = getInventoryDetailPopoverWidth(showCompare, compareEquippedCollapsed)
 
   const handleOpenChange = useCallback(
     (open: boolean) => {

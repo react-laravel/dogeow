@@ -6,6 +6,8 @@ import { FullComparePanel } from './ItemComparePanel'
 import { ItemActions, type ItemActionType } from './ItemActions'
 import { isEquippable, isPotion } from '@/app/game/rpg/utils/itemUtils'
 import { CopperDisplay } from '@/app/game/rpg/components/shared/CopperDisplay'
+import { useGameStore } from '@/app/game/rpg/stores/gameStore'
+import { getFullComparePanelWidthClass } from '@/app/game/rpg/utils/comparePanelUtils'
 
 interface BaseItemDetailModalProps {
   isOpen: boolean
@@ -62,6 +64,7 @@ function usesWideCompareLayout(props: ItemDetailModalProps): boolean {
 
 export function ItemDetailModal(props: ItemDetailModalProps) {
   const { isOpen, onClose, item } = props
+  const compareEquippedCollapsed = useGameStore(state => state.compareEquippedCollapsed)
 
   if (!isOpen || !item) return null
 
@@ -73,10 +76,10 @@ export function ItemDetailModal(props: ItemDetailModalProps) {
       onClick={onClose}
     >
       <div
-        className={`relative text-sm ${
+        className={`relative max-w-[calc(100vw-2rem)] text-sm ${
           isWideCompare
-            ? 'w-[356px] max-w-[calc(100vw-2rem)]'
-            : 'border-border bg-card w-[280px] max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl'
+            ? getFullComparePanelWidthClass(compareEquippedCollapsed)
+            : 'border-border bg-card w-[280px] rounded-xl border shadow-2xl'
         }`}
         onClick={e => e.stopPropagation()}
       >

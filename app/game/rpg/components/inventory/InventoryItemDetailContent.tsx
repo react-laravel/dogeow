@@ -6,6 +6,7 @@ import { isEquippable } from '../../utils/itemUtils'
 import { InventoryDetailActions } from './InventoryDetailActions'
 import { InventoryItemDetailCard } from './InventoryItemDetailCard'
 import type { InventorySlotCell } from './inventoryUtils'
+import { getFullComparePanelWidthClass } from '../../utils/comparePanelUtils'
 
 interface InventoryItemDetailContentProps {
   canSocket: (item: GameItem) => boolean
@@ -29,15 +30,11 @@ interface InventoryItemDetailContentProps {
 }
 
 export function getInventoryDetailPopoverWidth(
-  item: GameItem,
   showCompare: boolean,
-  ringCount: number
+  compareEquippedCollapsed: boolean
 ) {
-  if (showCompare && item.definition?.type === 'ring' && ringCount === 2) {
-    return 'w-[356px]'
-  }
   if (showCompare) {
-    return 'w-[356px]'
+    return getFullComparePanelWidthClass(compareEquippedCollapsed)
   }
   return 'w-[280px]'
 }

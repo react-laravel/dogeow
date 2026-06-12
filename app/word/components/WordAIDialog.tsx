@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Word } from '../types'
-import { Loader2, Send, Save, Bot, RefreshCw, MessageSquare, Edit, Copy, Check } from 'lucide-react'
+import { Send, Bot, MessageSquare, Edit, Copy, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
+import { WordEditFields } from './WordEditFields'
 
 interface WordAIDialogProps {
   word: Word
@@ -310,59 +311,16 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
         </SheetHeader>
         {/* 只显示编辑数据部分，无tabs */}
         <div className="flex-1 overflow-y-auto p-4 pt-2">
-          <div className="space-y-3">
-            {/* AI 生成按钮 */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generateData}
-              disabled={isGenerating}
-              className="w-full text-xs"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                  AI 生成数据
-                </>
-              )}
-            </Button>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">中文释义</label>
-              <Textarea
-                value={editedExplanation}
-                onChange={e => setEditedExplanation(e.target.value)}
-                placeholder="输入中文释义..."
-                className="min-h-[80px] resize-none text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">例句（英文换行+中文，空行分隔多组）</label>
-              <Textarea
-                value={editedExamples}
-                onChange={e => setEditedExamples(e.target.value)}
-                placeholder={`He is a good student.\n他是一个好学生。\n\nShe works hard.\n她努力工作。`}
-                className="min-h-[120px] resize-none text-xs"
-              />
-            </div>
-            <Button onClick={handleSave} disabled={isSaving} className="w-full" size="sm">
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  保存中...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-1 h-3 w-3" />
-                  保存修改
-                </>
-              )}
-            </Button>
-          </div>
+          <WordEditFields
+            explanation={editedExplanation}
+            examples={editedExamples}
+            isGenerating={isGenerating}
+            isSaving={isSaving}
+            onExplanationChange={setEditedExplanation}
+            onExamplesChange={setEditedExamples}
+            onGenerate={generateData}
+            onSave={handleSave}
+          />
         </div>
       </SheetContent>
     </Sheet>

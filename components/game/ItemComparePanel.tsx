@@ -17,6 +17,41 @@ import { CopperDisplay } from '@/app/game/rpg/components/shared/CopperDisplay'
 import { ItemSocketIndicators } from '@/app/game/rpg/components/inventory/ItemSocketIndicators'
 import { ItemUpgradeIndicator } from '@/app/game/rpg/components/inventory/ItemUpgradeIndicator'
 import { isHigherValueThanEquipped } from '@/app/game/rpg/components/inventory/inventoryEquipmentUtils'
+import { useGameStore } from '@/app/game/rpg/stores/gameStore'
+import { useShallow } from 'zustand/react/shallow'
+import {
+  getFullComparePanelWidthClass,
+  COMPARE_TOGGLE_STRIP_WIDTH,
+} from '@/app/game/rpg/utils/comparePanelUtils'
+
+export {
+  getFullComparePanelWidth,
+  getFullComparePanelWidthClass,
+} from '@/app/game/rpg/utils/comparePanelUtils'
+
+function CompareEquippedToggle({
+  collapsed,
+  onToggle,
+  position,
+}: {
+  collapsed: boolean
+  onToggle: () => void
+  position: 'leading' | 'between'
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{ width: COMPARE_TOGGLE_STRIP_WIDTH }}
+      className={`text-muted-foreground hover:text-foreground bg-card border-border flex shrink-0 flex-col items-center justify-center self-stretch border text-[10px] leading-none transition-colors hover:bg-muted/50 ${
+        position === 'leading' ? 'rounded-l-lg border-r-0' : 'border-y border-r-0'
+      }`}
+      aria-label={collapsed ? '展开已装备对比' : '收起已装备对比'}
+    >
+      {collapsed ? '<<' : '>>'}
+    </button>
+  )
+}
 
 function CompareItemIconSlot({
   item,
@@ -94,13 +129,13 @@ function CompareStatList({
   compareStats: Record<string, number>
 }) {
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5 text-xs">
       {statKeys.map(stat => {
         const value = stats[stat] || 0
         const compareValue = compareStats[stat] || 0
 
         return (
-          <div key={stat} className="flex min-h-5 justify-between gap-1">
+          <div key={stat} className="flex min-h-[1.125rem] justify-between gap-1">
             <span className="text-muted-foreground shrink-0">{STAT_NAMES[stat] || stat}</span>
             {value !== 0 ? (
               <span className={getComparedStatClass(value, compareValue)}>
@@ -267,7 +302,7 @@ export function EquipmentComparePanel({
         />
       </div>
       {/* 下方显示属性差异 */}
-      <div className="border-border/50 bg-muted/10 flex-1 space-y-1 border-t px-2 py-2">
+      <div className="border-border/50 bg-muted/10 flex-1 space-y-1 border-t px-2 py-2 text-xs">
         {diffStats.length === 0 ? (
           <div className="text-muted-foreground text-center">属性相同</div>
         ) : (
@@ -347,33 +382,53 @@ export function FullComparePanel({
 
   const showUpgradeIndicator = isHigherValueThanEquipped(newItem, equippedItem)
 
+  const { compareEquippedCollapsed, toggleCompareEquippedCollapsed } = useGameStore(
+    useShallow(state => ({
+      compareEquippedCollapsed: state.compareEquippedCollapsed,
+      toggleCompareEquippedCollapsed: state.toggleCompareEquippedCollapsed,
+    }))
+  )
+
   return (
-    <div className="flex w-[356px] max-w-full items-start">
-      <aside className="bg-card border-border w-[156px] shrink-0 rounded-l-lg border border-r-0 p-2 shadow-md">
-        <CompareItemHeader
-          item={equippedItem}
-          name={getItemDisplayName(equippedItem)}
-          nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
-        />
-        <CompareStatList statKeys={compareStatKeys} stats={equippedStats} compareStats={newStats} />
-        <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
-          <div className="text-muted-foreground flex justify-between gap-1 text-xs">
-            <span className="shrink-0">卖出</span>
-            <CopperDisplay
-              copper={equippedItemSellPrice}
-              size="sm"
-              nowrap
-              className="font-medium"
-            />
-          </div>
-          {equippedItemBuyPrice > 0 && (
-            <div className="flex justify-between gap-1 text-xs text-purple-600 dark:text-purple-400">
-              <span className="shrink-0">买价</span>
-              <span>{equippedItemBuyPrice}</span>
+    <div
+      className={`flex max-w-full items-stretch ${getFullComparePanelWidthClass(compareEquippedCollapsed)}`}
+    >
+      {!compareEquippedCollapsed && (
+        <aside className="bg-card border-border w-[156px] shrink-0 rounded-l-lg border border-r-0 p-2 shadow-md">
+          <CompareItemHeader
+            item={equippedItem}
+            name={getItemDisplayName(equippedItem)}
+            nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
+          />
+          <CompareStatList
+            statKeys={compareStatKeys}
+            stats={equippedStats}
+            compareStats={newStats}
+          />
+          <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
+            <div className="text-muted-foreground flex justify-between gap-1 text-xs">
+              <span className="shrink-0">卖出</span>
+              <CopperDisplay
+                copper={equippedItemSellPrice}
+                size="sm"
+                nowrap
+                className="font-medium"
+              />
             </div>
-          )}
-        </div>
-      </aside>
+            {equippedItemBuyPrice > 0 && (
+              <div className="flex justify-between gap-1 text-xs text-purple-600 dark:text-purple-400">
+                <span className="shrink-0">买价</span>
+                <span>{equippedItemBuyPrice}</span>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
+      <CompareEquippedToggle
+        collapsed={compareEquippedCollapsed}
+        onToggle={toggleCompareEquippedCollapsed}
+        position={compareEquippedCollapsed ? 'leading' : 'between'}
+      />
       <div className="bg-card border-border flex w-[200px] shrink-0 flex-col rounded-r-lg border p-2 shadow-md">
         <CompareItemHeader
           item={newItem}

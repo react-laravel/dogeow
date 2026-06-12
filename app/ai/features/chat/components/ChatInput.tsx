@@ -316,88 +316,53 @@ export const ChatInput = React.memo<ChatInputProps>(
       <div className="text-muted-foreground mt-2 text-xs">图片上传中...</div>
     )
 
-    if (variant === 'dialog') {
-      return (
-        <div className="flex-none border-t p-2">
-          {imagePreview}
-          {fileInput}
-          {iconsRow}
-          <div className="mb-1.5">{modelSelector}</div>
-          <div className="flex items-end gap-2">
-            <Textarea
-              value={prompt + interimTranscript}
-              onChange={event => onPromptChange(event.target.value)}
-              placeholder={
-                placeholder || (images.length > 0 ? '询问关于图片的问题...' : '输入消息...')
-              }
-              className={cn(
-                'flex-1 min-w-0 max-h-[80px] min-h-[48px] resize-none py-2.5',
-                interimTranscript && 'text-blue-500'
-              )}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-              rows={1}
-            />
-            {sendButton}
-          </div>
-          {uploadStatus}
-          {/* Generation modal */}
-          <GenerationModal
-            open={genModalType !== null}
-            type={genModalType}
-            prompt={genPrompt}
-            onPromptChange={setGenPrompt}
-            lyrics={genLyrics}
-            onLyricsChange={setGenLyrics}
-            onSubmit={handleGenSubmit}
-            onClose={() => setGenModalType(null)}
-            isLoading={!!isGeneratingMedia}
-            error={generationError}
+    const inputContent = (
+      <>
+        {imagePreview}
+        {fileInput}
+        {iconsRow}
+        <div className="mb-1.5">{modelSelector}</div>
+        <div className="flex items-end gap-2">
+          <Textarea
+            value={prompt + interimTranscript}
+            onChange={event => onPromptChange(event.target.value)}
+            placeholder={
+              placeholder || (images.length > 0 ? '询问关于图片的问题...' : '输入消息...')
+            }
+            className={cn(
+              'flex-1 min-w-0 max-h-[80px] min-h-[48px] resize-none py-2.5',
+              interimTranscript && 'text-blue-500'
+            )}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            rows={1}
           />
+          {sendButton}
         </div>
-      )
+        {uploadStatus}
+        <GenerationModal
+          open={genModalType !== null}
+          type={genModalType}
+          prompt={genPrompt}
+          onPromptChange={setGenPrompt}
+          lyrics={genLyrics}
+          onLyricsChange={setGenLyrics}
+          onSubmit={handleGenSubmit}
+          onClose={() => setGenModalType(null)}
+          isLoading={!!isGeneratingMedia}
+          error={generationError}
+        />
+      </>
+    )
+
+    if (variant === 'dialog') {
+      return <div className="flex-none border-t p-2">{inputContent}</div>
     }
 
     // page variant
     return (
       <div className="bg-background border-t p-4">
-        <div className="mx-auto max-w-4xl">
-          {imagePreview}
-          {fileInput}
-          {iconsRow}
-          <div className="mb-1.5">{modelSelector}</div>
-          <div className="flex items-end gap-2">
-            <Textarea
-              value={prompt + interimTranscript}
-              onChange={event => onPromptChange(event.target.value)}
-              placeholder={
-                placeholder || (images.length > 0 ? '询问关于图片的问题...' : '输入消息...')
-              }
-              className={cn(
-                'flex-1 min-w-0 max-h-[80px] min-h-[48px] resize-none py-2.5',
-                interimTranscript && 'text-blue-500'
-              )}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-              rows={1}
-            />
-            {sendButton}
-          </div>
-          {uploadStatus}
-          {/* Generation modal */}
-          <GenerationModal
-            open={genModalType !== null}
-            type={genModalType}
-            prompt={genPrompt}
-            onPromptChange={setGenPrompt}
-            lyrics={genLyrics}
-            onLyricsChange={setGenLyrics}
-            onSubmit={handleGenSubmit}
-            onClose={() => setGenModalType(null)}
-            isLoading={!!isGeneratingMedia}
-            error={generationError}
-          />
-        </div>
+        <div className="mx-auto max-w-4xl">{inputContent}</div>
       </div>
     )
   }
