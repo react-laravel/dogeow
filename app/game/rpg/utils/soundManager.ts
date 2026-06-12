@@ -24,6 +24,7 @@ type PlayOptions = {
 class SoundManager {
   private sounds: Map<SoundEffect, HTMLAudioElement> = new Map()
   private audioCache: Map<string, HTMLAudioElement> = new Map()
+  private audioBufferCache: Map<string, Promise<AudioBuffer | null>> = new Map()
   private enabled: boolean = true
   private volume: number = 0.3
   private combatTabActive: boolean = false
@@ -33,6 +34,7 @@ class SoundManager {
   constructor() {
     this.loadSounds()
     this.loadSettings()
+    this.installAudioUnlockListeners()
   }
 
   // 获取或创建 AudioContext 单例
@@ -57,6 +59,24 @@ class SoundManager {
     }
 
     return this.audioContext
+  }
+
+  private installAudioUnlockListeners() {
+    if (typeof window === 'undefined') return
+
+    const unlock = () => {
+      const audioContext = this.getAudioContext()
+      if (audioContext?.state === 'suspended') {
+        audioContext.resume().catch(() => {})
+      }
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('touchstart', unlock)
+      window.removeEventListener('click', unlock)
+    }
+
+    window.addEventListener('pointerdown', unlock, { passive: true })
+    window.addEventListener('touchstart', unlock, { passive: true })
+    window.addEventListener('click', unlock)
   }
 
   private loadSounds() {
@@ -135,7 +155,7 @@ class SoundManager {
 
     void this.playAudioFile(url).then(played => {
       if (!played) {
-        this.playGeneratedSound('skill_use')
+        this.playGeneratedSkillSound(skill)
       }
     })
   }
@@ -153,9 +173,13 @@ class SoundManager {
   }
 
   private async playAudioFile(url: string): Promise<boolean> {
+    const playedByWebAudio = await this.playAudioBuffer(url)
+    if (playedByWebAudio) return true
+
     try {
       const base = this.getCachedAudio(url)
       const audio = base.cloneNode() as HTMLAudioElement
+      audio.preload = 'auto'
       audio.volume = this.volume
       await audio.play()
 
@@ -165,6 +189,123 @@ class SoundManager {
 
       return false
     }
+  }
+
+  private async loadAudioBuffer(url: string): Promise<AudioBuffer | null> {
+    const audioContext = this.getAudioContext()
+    if (!audioContext) return null
+
+    const cached = this.audioBufferCache.get(url)
+    if (cached) return cached
+
+    const promise = fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        return response.arrayBuffer()
+      })
+      .then(buffer => audioContext.decodeAudioData(buffer.slice(0)))
+      .catch(error => {
+        console.warn(`SoundManager: 技能音效解码失败 ${url}`, error)
+        return null
+      })
+
+    this.audioBufferCache.set(url, promise)
+    return promise
+  }
+
+  private async playAudioBuffer(url: string): Promise<boolean> {
+    const audioContext = this.getAudioContext()
+    if (!audioContext) return false
+
+    if (audioContext.state === 'suspended') {
+      try {
+        await audioContext.resume()
+      } catch {
+        return false
+      }
+    }
+
+    const buffer = await this.loadAudioBuffer(url)
+    if (!buffer) return false
+
+    try {
+      const source = audioContext.createBufferSource()
+      const gainNode = audioContext.createGain()
+      source.buffer = buffer
+      gainNode.gain.value = this.volume
+      source.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      source.start(audioContext.currentTime)
+      return true
+    } catch (error) {
+      console.warn(`SoundManager: 技能音效播放失败 ${url}`, error)
+      return false
+    }
+  }
+
+  private playGeneratedSkillSound(skill: Pick<SkillUsedEntry, 'name' | 'effect_key'>) {
+    const audioContext = this.getAudioContext()
+    if (!audioContext) return
+
+    const profiles: Record<
+      string,
+      { type: OscillatorType; start: number; end: number; duration: number; volume: number }
+    > = {
+      heal: { type: 'sine', start: 520, end: 920, duration: 0.32, volume: 0.1 },
+      fireball: { type: 'sawtooth', start: 220, end: 520, duration: 0.24, volume: 0.11 },
+      'ice-arrow': { type: 'triangle', start: 980, end: 520, duration: 0.2, volume: 0.09 },
+      'ice-age': { type: 'triangle', start: 360, end: 120, duration: 0.45, volume: 0.09 },
+      lightning: { type: 'square', start: 1400, end: 260, duration: 0.16, volume: 0.08 },
+      'chain-lightning': { type: 'square', start: 1100, end: 1800, duration: 0.24, volume: 0.08 },
+      meteor: { type: 'sawtooth', start: 160, end: 80, duration: 0.38, volume: 0.12 },
+      'meteor-storm': { type: 'sawtooth', start: 180, end: 70, duration: 0.5, volume: 0.12 },
+      shield: { type: 'sine', start: 300, end: 420, duration: 0.34, volume: 0.09 },
+      pierce: { type: 'triangle', start: 760, end: 1120, duration: 0.14, volume: 0.08 },
+      'multi-shot': { type: 'triangle', start: 680, end: 980, duration: 0.22, volume: 0.08 },
+      dash: { type: 'sine', start: 900, end: 300, duration: 0.12, volume: 0.07 },
+      poison: { type: 'sawtooth', start: 420, end: 260, duration: 0.28, volume: 0.08 },
+      dodge: { type: 'sine', start: 720, end: 460, duration: 0.1, volume: 0.07 },
+      'arrow-rain': { type: 'triangle', start: 760, end: 360, duration: 0.42, volume: 0.08 },
+      'shadow-step': { type: 'sine', start: 260, end: 620, duration: 0.22, volume: 0.08 },
+      slash: { type: 'sawtooth', start: 360, end: 120, duration: 0.18, volume: 0.1 },
+      buff: { type: 'square', start: 240, end: 640, duration: 0.3, volume: 0.08 },
+      charge: { type: 'sawtooth', start: 180, end: 420, duration: 0.26, volume: 0.1 },
+      whirlwind: { type: 'triangle', start: 520, end: 840, duration: 0.36, volume: 0.08 },
+      rage: { type: 'square', start: 180, end: 320, duration: 0.32, volume: 0.09 },
+      execute: { type: 'sawtooth', start: 260, end: 90, duration: 0.24, volume: 0.12 },
+    }
+
+    const profile = skill.effect_key
+      ? (profiles[skill.effect_key] ?? {
+          type: 'sawtooth' as const,
+          start: 300,
+          end: 600,
+          duration: 0.15,
+          volume: 0.1,
+        })
+      : {
+          type: 'sawtooth' as const,
+          start: 300,
+          end: 600,
+          duration: 0.15,
+          volume: 0.1,
+        }
+
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+    const now = audioContext.currentTime
+
+    oscillator.type = profile.type
+    oscillator.frequency.setValueAtTime(profile.start, now)
+    oscillator.frequency.exponentialRampToValueAtTime(profile.end, now + profile.duration)
+    gainNode.gain.setValueAtTime(this.volume * profile.volume, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + profile.duration)
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    oscillator.start(now)
+    oscillator.stop(now + profile.duration)
   }
 
   private playGeneratedSound(effect: SoundEffect) {
