@@ -116,55 +116,6 @@ function CompareStatList({
   )
 }
 
-/** 左右对比属性：数值向内对齐，属性名居中，便于两列对齐 */
-function PairedCompareStatList({
-  statKeys,
-  leftStats,
-  rightStats,
-}: {
-  statKeys: string[]
-  leftStats: Record<string, number>
-  rightStats: Record<string, number>
-}) {
-  return (
-    <div className="space-y-0.5">
-      {statKeys.map(stat => {
-        const leftValue = leftStats[stat] || 0
-        const rightValue = rightStats[stat] || 0
-
-        return (
-          <div
-            key={stat}
-            className="grid min-h-5 grid-cols-[1fr_auto_1fr] items-center gap-x-1 text-xs"
-          >
-            <span
-              className={`text-right tabular-nums ${
-                leftValue !== 0
-                  ? getComparedStatClass(leftValue, rightValue)
-                  : 'text-muted-foreground/40 font-medium'
-              }`}
-            >
-              {leftValue !== 0 ? formatItemStatValue(leftValue, stat) : '—'}
-            </span>
-            <span className="text-muted-foreground min-w-[3.25rem] shrink-0 px-1 text-right">
-              {STAT_NAMES[stat] || stat}
-            </span>
-            <span
-              className={`text-left tabular-nums ${
-                rightValue !== 0
-                  ? getComparedStatClass(rightValue, leftValue)
-                  : 'text-muted-foreground/40 font-medium'
-              }`}
-            >
-              {rightValue !== 0 ? formatItemStatValue(rightValue, stat) : '—'}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 interface ItemComparePanelProps {
   newItem: GameItem | ShopItem
   equippedItem: GameItem
@@ -397,35 +348,15 @@ export function FullComparePanel({
   const showUpgradeIndicator = isHigherValueThanEquipped(newItem, equippedItem)
 
   return (
-    <div className="bg-card border-border w-full max-w-full overflow-hidden rounded-xl border shadow-2xl">
-      <div className="flex items-start">
-        <aside className="border-border w-[156px] shrink-0 border-r p-2">
-          <CompareItemHeader
-            item={equippedItem}
-            name={getItemDisplayName(equippedItem)}
-            nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
-          />
-        </aside>
-        <div className="min-w-0 flex-1 p-2">
-          <CompareItemHeader
-            item={newItem}
-            name={getItemDisplayName(newItem)}
-            nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
-            showUpgradeIndicator={showUpgradeIndicator}
-          />
-        </div>
-      </div>
-
-      <div className="border-border/50 border-t px-2 py-1.5">
-        <PairedCompareStatList
-          statKeys={compareStatKeys}
-          leftStats={equippedStats}
-          rightStats={newStats}
+    <div className="flex w-[356px] max-w-full items-start">
+      <aside className="bg-card border-border w-[156px] shrink-0 rounded-l-lg border border-r-0 p-2 shadow-md">
+        <CompareItemHeader
+          item={equippedItem}
+          name={getItemDisplayName(equippedItem)}
+          nameColor={QUALITY_COLORS[equippedItem.quality as ItemQuality]}
         />
-      </div>
-
-      <div className="border-border/50 flex items-start border-t">
-        <aside className="border-border w-[156px] shrink-0 space-y-0.5 border-r p-2">
+        <CompareStatList statKeys={compareStatKeys} stats={equippedStats} compareStats={newStats} />
+        <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
           <div className="text-muted-foreground flex justify-between gap-1 text-xs">
             <span className="shrink-0">卖出</span>
             <CopperDisplay
@@ -441,19 +372,28 @@ export function FullComparePanel({
               <span>{equippedItemBuyPrice}</span>
             </div>
           )}
-        </aside>
-        <div className="flex min-w-0 flex-1 flex-col p-2">
+        </div>
+      </aside>
+      <div className="bg-card border-border flex w-[200px] shrink-0 flex-col rounded-r-lg border p-2 shadow-md">
+        <CompareItemHeader
+          item={newItem}
+          name={getItemDisplayName(newItem)}
+          nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
+          showUpgradeIndicator={showUpgradeIndicator}
+        />
+        <CompareStatList statKeys={compareStatKeys} stats={newStats} compareStats={equippedStats} />
+        <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
           <div className="text-muted-foreground flex justify-between gap-1 text-xs">
             <span className="shrink-0">{isShop ? '价格' : '卖出'}</span>
             <CopperDisplay copper={newItemDisplayPrice} size="sm" nowrap className="font-medium" />
           </div>
-          {footer}
-          {actions && actions.length > 0 && onAction && (
-            <div className="mt-2">
-              <ItemActions actions={actions} onAction={onAction} />
-            </div>
-          )}
         </div>
+        {footer}
+        {actions && actions.length > 0 && onAction && (
+          <div className="-mx-2 -mb-2 mt-2">
+            <ItemActions actions={actions} onAction={onAction} />
+          </div>
+        )}
       </div>
     </div>
   )
