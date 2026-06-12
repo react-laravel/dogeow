@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '../../stores/gameStore'
 import { EquipmentSlot, GameItem } from '../../types'
 import { EquipmentDetailOverlay } from './EquipmentDetailOverlay'
 import { GemSelectorDialog } from './GemSelectorDialog'
 import { EquipmentSlotButton } from './EquipmentSlotButton'
-import { EQUIPMENT_LAYOUT } from './equipmentLayout'
+import { CHARACTER_PORTRAITS, PAPER_DOLL_SLOTS } from './equipmentLayout'
 import { useGemManagement } from './useGemManagement'
 
 interface EquipmentGridProps {
@@ -16,12 +17,13 @@ interface EquipmentGridProps {
 }
 
 export function EquipmentGrid({ equipment, onUnequip }: EquipmentGridProps) {
-  const { socketGem, unsocketGem, inventory, isLoading } = useGameStore(
+  const { socketGem, unsocketGem, inventory, isLoading, characterClass } = useGameStore(
     useShallow(s => ({
       socketGem: s.socketGem,
       unsocketGem: s.unsocketGem,
       inventory: s.inventory,
       isLoading: s.isLoading,
+      characterClass: s.character?.class,
     }))
   )
   const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot | null>(null)
@@ -50,23 +52,22 @@ export function EquipmentGrid({ equipment, onUnequip }: EquipmentGridProps) {
     setSelectedSlot(null)
   }
 
+  const portrait = CHARACTER_PORTRAITS[characterClass ?? 'warrior'] ?? CHARACTER_PORTRAITS.warrior
+
   return (
     <>
-      <div className="mx-auto grid w-[280px] max-w-full grid-cols-3 gap-x-4 gap-y-3 sm:w-[320px] sm:gap-x-5 sm:gap-y-4">
-        {EQUIPMENT_LAYOUT.map((cell, index) => {
-          if (!cell.slot) {
-            return <div key={`empty-${index}`} className="h-12 w-12 shrink-0" aria-hidden />
-          }
-
+      <div className="border-border relative mx-auto aspect-[3/4] w-full max-w-[320px] overflow-hidden rounded-lg border bg-black">
+        <Image src={portrait} alt="" fill sizes="320px" className="object-cover" priority={false} />
+        {PAPER_DOLL_SLOTS.map(cell => {
           const item = equipment[cell.slot]
 
           return (
-            <div key={cell.slot} className="flex justify-center">
+            <div key={cell.slot} className={`absolute ${cell.className}`}>
               <EquipmentSlotButton
                 slot={cell.slot}
                 item={item}
                 label={cell.label}
-                onClick={() => item && setSelectedSlot(cell.slot!)}
+                onClick={() => item && setSelectedSlot(cell.slot)}
               />
             </div>
           )
