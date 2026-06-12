@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { getAllSkillSoundUrls, getSkillSoundUrl, skillSoundManifest } from '../skillSoundRegistry'
 
 describe('skillSoundRegistry', () => {
@@ -21,5 +23,11 @@ describe('skillSoundRegistry', () => {
   it('returns preloaded urls for every manifest entry', () => {
     expect(getAllSkillSoundUrls()).toHaveLength(skillSoundManifest.length)
     expect(getAllSkillSoundUrls()[0]).toMatch(/^\/game\/rpg\/sfx\//)
+  })
+
+  it('points every manifest entry at an existing public audio file', () => {
+    for (const url of getAllSkillSoundUrls()) {
+      expect(existsSync(join(process.cwd(), 'public', url))).toBe(true)
+    }
   })
 })

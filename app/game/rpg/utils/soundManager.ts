@@ -93,14 +93,19 @@ class SoundManager {
     // 预加载音效（这里使用空音频，实际使用时替换）
     Object.entries(soundUrls).forEach(([key, url]) => {
       if (url) {
-        const audio = new Audio(url)
+        const audio = this.createAudio(url, { silent: true })
+        if (!audio) return
         audio.volume = this.volume
         this.sounds.set(key as SoundEffect, audio)
       }
     })
 
     getAllSkillSoundUrls().forEach(url => {
-      this.getCachedAudio(url)
+      try {
+        this.getCachedAudio(url, { silent: true })
+      } catch {
+        // 测试环境或受限浏览器可能没有可构造的 Audio，实际播放时仍会走 Web Audio/fallback。
+      }
     })
   }
 
@@ -160,16 +165,42 @@ class SoundManager {
     })
   }
 
-  private getCachedAudio(url: string): HTMLAudioElement {
+  private getCachedAudio(
+    url: string,
+    options: {
+      silent?: boolean
+    } = {}
+  ): HTMLAudioElement {
     const cached = this.audioCache.get(url)
     if (cached) return cached
 
-    const audio = new Audio(url)
+    const audio = this.createAudio(url, options)
+    if (!audio) {
+      throw new Error('Audio constructor unavailable')
+    }
     audio.preload = 'auto'
     audio.volume = this.volume
     this.audioCache.set(url, audio)
 
     return audio
+  }
+
+  private createAudio(
+    url: string,
+    options: {
+      silent?: boolean
+    } = {}
+  ): HTMLAudioElement | null {
+    if (typeof Audio === 'undefined') return null
+
+    try {
+      return new Audio(url)
+    } catch (error) {
+      if (!options.silent) {
+        console.warn('SoundManager: 当前环境不支持创建 Audio 元素', error)
+      }
+      return null
+    }
   }
 
   private async playAudioFile(url: string): Promise<boolean> {

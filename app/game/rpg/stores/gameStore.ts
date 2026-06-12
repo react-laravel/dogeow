@@ -949,9 +949,13 @@ const store: StateCreator<GameState> = (set, get) => ({
       })
       soundManager.play('teleport') // 使用传送音效
       const maps = get().maps
-      const currentMap = maps.find(m => m.id === mapId) ?? null
+      const currentMap = response.map ?? maps.find(m => m.id === mapId) ?? null
       set(state => ({
         ...state,
+        maps:
+          currentMap && !state.maps.some(map => map.id === currentMap.id)
+            ? [...state.maps, currentMap]
+            : state.maps,
         currentMap,
         character: response.character,
         isFighting: true, // 后端已自动开始战斗
@@ -978,10 +982,14 @@ const store: StateCreator<GameState> = (set, get) => ({
       })) as EnterMapResponse
       soundManager.play('skill_use')
       const maps = get().maps
-      const currentMap = maps.find(m => m.id === mapId) ?? null
+      const currentMap = response.map ?? maps.find(m => m.id === mapId) ?? null
       const char = response.character
       set(state => ({
         ...state,
+        maps:
+          currentMap && !state.maps.some(map => map.id === currentMap.id)
+            ? [...state.maps, currentMap]
+            : state.maps,
         currentMap,
         character: char,
         isFighting: true, // 后端已自动开始战斗

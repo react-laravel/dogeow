@@ -425,7 +425,8 @@ export function CombatPanel() {
                     await fetchMaps()
                   }
                   // 获取排序后的第一个地图
-                  const sorted = [...maps].sort(
+                  const latestMaps = useGameStore.getState().maps
+                  const sorted = [...latestMaps].sort(
                     (a, b) => (a.act !== b.act ? a.act - b.act : 0) || a.id - b.id
                   )
                   const firstMap = sorted[0]

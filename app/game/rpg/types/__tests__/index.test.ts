@@ -8,6 +8,53 @@ import {
   STAT_NAMES,
   STAT_DESCRIPTIONS,
 } from '../index'
+import type {
+  CharacterClass,
+  CharacterMap,
+  CombatLog,
+  CombatLogDetail,
+  CombatMonster,
+  CombatResult,
+  CombatStats,
+  CompendiumItem,
+  CompendiumMonster,
+  EquipmentSlot,
+  GameCharacter,
+  GameItem,
+  ItemQuality,
+  ItemType,
+  MapDefinition,
+  MonsterDefinition,
+  MonsterType,
+  ShopItem,
+  SkillDefinition,
+  SkillType,
+  SkillWithLearnedState,
+} from '../index'
+
+type ExpectedTypeExports = [
+  CharacterClass,
+  GameCharacter,
+  ItemQuality,
+  ItemType,
+  EquipmentSlot,
+  GameItem,
+  CombatStats,
+  CombatMonster,
+  CombatResult,
+  CombatLog,
+  CombatLogDetail,
+  SkillType,
+  SkillDefinition,
+  SkillWithLearnedState,
+  MapDefinition,
+  CharacterMap,
+  MonsterType,
+  MonsterDefinition,
+  ShopItem,
+  CompendiumItem,
+  CompendiumMonster,
+]
 
 describe('RPG Types', () => {
   describe('formatCopper', () => {
@@ -136,42 +183,8 @@ describe('RPG Types', () => {
 })
 
 describe('Type Exports', () => {
-  it('should export all expected types', async () => {
-    const types = await import('../index')
-
-    // Character types
-    expect(types.CharacterClass).toBeDefined()
-    expect(types.GameCharacter).toBeDefined()
-
-    // Item types
-    expect(types.ItemQuality).toBeDefined()
-    expect(types.ItemType).toBeDefined()
-    expect(types.EquipmentSlot).toBeDefined()
-    expect(types.GameItem).toBeDefined()
-
-    // Combat types
-    expect(types.CombatStats).toBeDefined()
-    expect(types.CombatMonster).toBeDefined()
-    expect(types.CombatResult).toBeDefined()
-    expect(types.CombatLog).toBeDefined()
-    expect(types.CombatLogDetail).toBeDefined()
-
-    // Skill types
-    expect(types.SkillType).toBeDefined()
-    expect(types.SkillDefinition).toBeDefined()
-    expect(types.SkillWithLearnedState).toBeDefined()
-
-    // Map types
-    expect(types.MapDefinition).toBeDefined()
-    expect(types.CharacterMap).toBeDefined()
-
-    // Monster types
-    expect(types.MonsterType).toBeDefined()
-    expect(types.MonsterDefinition).toBeDefined()
-
-    // Shop types
-    expect(types.ShopItem).toBeDefined()
-    expect(types.CompendiumItem).toBeDefined()
-    expect(types.CompendiumMonster).toBeDefined()
+  it('should expose all expected TypeScript types', () => {
+    const typeCheckOnly: ExpectedTypeExports | null = null
+    expect(typeCheckOnly).toBeNull()
   })
 })
