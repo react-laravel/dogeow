@@ -52,7 +52,7 @@ export function CombatPanel() {
   const consumePotion = useGameStore(state => state.consumePotion)
 
   const [mapDropdownOpen, setMapDropdownOpen] = useState(false)
-  const [dropdownAct, setDropdownAct] = useState(1)
+  const [dropdownAct, setDropdownAct] = useState(() => currentMap?.act ?? 1)
   const mapDropdownRef = useRef<HTMLDivElement>(null)
   const [showDeathDialog, setShowDeathDialog] = useState(false)
   const [skillBarLayout, setSkillBarLayout] = useState<SkillBarLayout>(() => readSkillBarLayout())
@@ -204,7 +204,12 @@ export function CombatPanel() {
             <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setMapDropdownOpen(prev => !prev)}
+                onClick={() => {
+                  if (!mapDropdownOpen && currentMap?.act) {
+                    setDropdownAct(currentMap.act)
+                  }
+                  setMapDropdownOpen(prev => !prev)
+                }}
                 className="text-foreground flex min-h-0 items-center gap-1.5 text-base font-medium"
               >
                 <span>{currentMap?.name ?? '选择地图'}</span>
