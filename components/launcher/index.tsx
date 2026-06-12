@@ -490,7 +490,7 @@ export function AppLauncher({
         className="bg-background/80 relative z-50 flex h-full w-full flex-col backdrop-blur-md"
       >
         {shouldShowPersistentLogo && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex items-center pl-3">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex items-center">
             <div className="pointer-events-auto">
               <LogoButton onClick={handlePersistentLogoClick} />
             </div>
