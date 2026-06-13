@@ -16,7 +16,11 @@ import { BattleArena } from './BattleArena'
 import { BattleSkillBar, type SkillBarLayout } from './BattleSkillBar'
 import { CombatLogList } from './CombatLogList'
 import { getActName } from '../../utils/combat'
-import { getPrimaryCombatMonster, getPrimaryCombatMonsterId } from '../../utils/combatUtils'
+import {
+  getPrimaryCombatMonster,
+  getPrimaryCombatMonsterId,
+  isRenderableCombatMonster,
+} from '../../utils/combatUtils'
 import { MapCardMonsterAvatar } from './MapCardMonsterAvatar'
 import { GalleryHorizontal, LayoutGrid, Heart, Droplet } from 'lucide-react'
 import { DIFFICULTY_OPTIONS, DIFFICULTY_COLORS } from '../character/CharacterSelect'
@@ -336,11 +340,9 @@ export function CombatPanel() {
                     }
                     monsterHpBeforeRound={combatResult?.monster_hp_before_round}
                     monsters={
-                      combatResult?.monsters ??
-                      statusCombatMonsters?.filter(
-                        (monster): monster is CombatMonster => monster !== null
-                      ) ??
-                      undefined
+                      (combatResult?.monsters ?? statusCombatMonsters)?.filter(
+                        isRenderableCombatMonster
+                      ) ?? undefined
                     }
                     isFighting={isFighting}
                     isLoading={isLoading}

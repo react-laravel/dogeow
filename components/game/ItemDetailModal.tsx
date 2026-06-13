@@ -255,7 +255,7 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
       type="button"
       onClick={onBuy}
       disabled={disabledBuy}
-      className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+      className="min-h-8 w-full rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
     >
       {buyButtonLabel}
     </button>
@@ -301,7 +301,7 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
         newItem={shopItemAsGameItem}
         equippedItem={equippedItem}
         isShop
-        footer={<div className="mt-2">{buyButton}</div>}
+        footer={buyButton}
       />
     )
   }

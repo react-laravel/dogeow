@@ -433,22 +433,24 @@ export function FullComparePanel({
             <CopperDisplay copper={newItemDisplayPrice} size="sm" nowrap className="font-medium" />
           </div>
         </div>
-        {footer}
         <div className="-mx-2 -mb-2 mt-2">
           <ItemActions
             actions={actions ?? []}
             onAction={action => onAction?.(action)}
             compact
             leadingAction={
-              <button
-                type="button"
-                onClick={toggleCompareEquippedCollapsed}
-                className="bg-muted hover:bg-muted/80 text-foreground border-border inline-flex min-w-12 items-center justify-center rounded border px-2.5 py-1.5 text-xs transition-colors"
-                aria-label={compareEquippedCollapsed ? '展开对比' : '收起对比'}
-                title={compareEquippedCollapsed ? '展开对比' : '收起对比'}
-              >
-                {compareEquippedCollapsed ? '对比' : '收起'}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={toggleCompareEquippedCollapsed}
+                  className="bg-muted hover:bg-muted/80 text-foreground border-border inline-flex min-w-12 items-center justify-center rounded border px-2.5 py-1.5 text-xs transition-colors"
+                  aria-label={compareEquippedCollapsed ? '展开对比' : '收起对比'}
+                  title={compareEquippedCollapsed ? '展开对比' : '收起对比'}
+                >
+                  {compareEquippedCollapsed ? '对比' : '收起'}
+                </button>
+                {footer ? <div className="min-w-0 flex-1">{footer}</div> : null}
+              </>
             }
           />
         </div>

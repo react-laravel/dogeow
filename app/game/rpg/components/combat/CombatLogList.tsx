@@ -139,7 +139,7 @@ function CombatLogDetailDialog({
 
   if (status === 'loading') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="fixed inset-0 z-[10080] flex items-center justify-center bg-black/60 p-4">
         <div className="bg-card border-border rounded-lg border p-6 text-center">
           <p className="text-muted-foreground">加载中...</p>
           <button onClick={onClose} className="text-primary mt-4 hover:underline">
@@ -152,7 +152,7 @@ function CombatLogDetailDialog({
 
   if (status === 'error' || !detail) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="fixed inset-0 z-[10080] flex items-center justify-center bg-black/60 p-4">
         <div className="bg-card border-border rounded-lg border p-6 text-center">
           <p className="text-muted-foreground">日志不存在</p>
           <button onClick={onClose} className="text-primary mt-4 hover:underline">
@@ -166,15 +166,16 @@ function CombatLogDetailDialog({
   const d = detail
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black/60 p-4">
-      <div className="bg-card border-border relative w-full max-w-lg overflow-hidden rounded-lg border">
+    <div className="fixed inset-0 z-[10080] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-card border-border relative flex max-h-[calc(100dvh-2rem)] w-full max-w-lg min-h-0 flex-col overflow-hidden rounded-lg border">
         <button
           onClick={onClose}
           className="hover:bg-muted absolute top-2 right-2 z-10 rounded-full p-1"
+          aria-label="关闭战斗日志详情"
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="max-h-[90vh] overflow-y-auto overscroll-contain px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
+        <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-4 pt-4 pb-3 [-webkit-overflow-scrolling:touch] sm:px-6 sm:pt-6 sm:pb-4">
           <div className="space-y-3">
             <h3 className="text-foreground flex items-center gap-2 pr-8 text-lg font-bold">
               {d.victory
@@ -404,16 +405,6 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                 )}
               </div>
               <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
-                {(log.experience_gained ?? 0) > 0 && (
-                  <span className="text-purple-500 dark:text-purple-400">
-                    +{log.experience_gained}
-                  </span>
-                )}
-                {(log.copper_gained ?? 0) > 0 && (
-                  <span className="inline-flex items-center text-yellow-600 dark:text-yellow-400">
-                    +<CopperDisplay copper={log.copper_gained} size="sm" />
-                  </span>
-                )}
                 {log.loot?.item && (
                   <CombatLogLootIcon
                     item={log.loot.item}
@@ -425,6 +416,16 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                     item={log.loot.potion}
                     onClick={() => setSelectedItem(log.loot!.potion!)}
                   />
+                )}
+                {(log.copper_gained ?? 0) > 0 && (
+                  <span className="inline-flex items-center text-yellow-600 dark:text-yellow-400">
+                    +<CopperDisplay copper={log.copper_gained} size="sm" />
+                  </span>
+                )}
+                {(log.experience_gained ?? 0) > 0 && (
+                  <span className="text-purple-500 dark:text-purple-400">
+                    +{log.experience_gained}
+                  </span>
                 )}
               </div>
             </div>

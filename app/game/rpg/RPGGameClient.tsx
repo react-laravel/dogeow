@@ -193,6 +193,24 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
         })
         .finally(() => {
           combatStatusReadyRef.current = true
+          const state = useGameStore.getState()
+          const hpValue = state.currentHp ?? state.combatStats?.max_hp ?? 0
+          const autoStartKey =
+            state.character?.id && state.currentMap?.id
+              ? `${state.character.id}:${state.currentMap.id}`
+              : null
+
+          if (
+            state.shouldAutoCombat &&
+            !state.isFighting &&
+            state.currentMap &&
+            autoStartKey &&
+            hpValue > 0 &&
+            autoStartRequestKeyRef.current !== autoStartKey
+          ) {
+            autoStartRequestKeyRef.current = autoStartKey
+            void startCombatRef.current()
+          }
         })
       fetchCombatLogs()
     }

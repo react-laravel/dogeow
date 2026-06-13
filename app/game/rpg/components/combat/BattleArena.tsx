@@ -353,19 +353,29 @@ function MercenaryCombatCard({ mercenary }: { mercenary: ActiveMercenary }) {
 
   return (
     <div
-      className={`flex w-24 flex-col items-center gap-1 rounded-md border border-white/15 bg-black/35 px-2 py-2 text-white shadow-sm backdrop-blur-sm sm:w-28 ${
-        attacked ? 'ring-1 ring-amber-300/70' : ''
+      className={`flex w-24 flex-col items-center gap-2 text-white sm:w-28 ${
+        attacked ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.75)]' : ''
       }`}
       title={attacked ? `攻击造成 ${mercenary.last_attack?.damage ?? 0} 伤害` : undefined}
     >
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-500/20 text-lg sm:h-10 sm:w-10">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-lg font-bold sm:h-14 sm:w-14">
         {mercenary.icon ?? '🛡️'}
       </div>
-      <div className="max-w-full truncate text-[10px] font-medium sm:text-xs">{mercenary.name}</div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-        <div className="h-full rounded-full bg-red-500" style={{ width: `${hpPercent}%` }} />
+      <div className="w-full max-w-[140px] space-y-1">
+        <div className="text-muted-foreground flex justify-between gap-1 text-[10px] sm:text-xs">
+          <span className="truncate">{mercenary.name}</span>
+          <span className="shrink-0">
+            {mercenary.current_hp}/{mercenary.stats.max_hp}
+          </span>
+        </div>
+        <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+          <div
+            className="h-full rounded-full bg-red-500 transition-[width] duration-300"
+            style={{ width: `${hpPercent}%` }}
+          />
+        </div>
       </div>
-      <div className="text-[9px] text-white/75">
+      <div className="text-muted-foreground text-[9px] sm:text-[10px]">
         {attacked ? `攻击 -${mercenary.last_attack?.damage ?? 0}` : `Lv.${mercenary.level}`}
       </div>
     </div>

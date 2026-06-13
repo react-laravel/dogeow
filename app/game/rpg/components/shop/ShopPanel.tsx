@@ -67,20 +67,24 @@ const ShopItemCell = memo(function ShopItemCell({
   item,
   isSelected,
   isLoading,
+  canAfford,
   showUpgradeIndicator = false,
   onSelect,
 }: {
   item: ShopItem
   isSelected: boolean
   isLoading: boolean
+  canAfford: boolean
   showUpgradeIndicator?: boolean
   onSelect: (item: ShopItem) => void
 }) {
-  const borderColor = isSelected
+  const borderColor = !canAfford
     ? undefined
-    : item.quality
-      ? QUALITY_COLORS[item.quality]
-      : undefined
+    : isSelected
+      ? undefined
+      : item.quality
+        ? QUALITY_COLORS[item.quality]
+        : undefined
 
   return (
     <button
@@ -88,11 +92,13 @@ const ShopItemCell = memo(function ShopItemCell({
       className={`flex aspect-square w-full min-w-0 flex-col rounded-md border transition-all active:scale-95 ${
         isSelected
           ? 'border-green-500 bg-green-500/20 shadow-sm shadow-green-500/20 dark:border-green-400 dark:bg-green-400/20'
-          : 'bg-muted/40 hover:bg-muted/60'
+          : canAfford
+            ? 'bg-muted/40 hover:bg-muted/60'
+            : 'border-red-500/40 bg-red-950/20 opacity-55 grayscale hover:bg-red-950/30 hover:opacity-75'
       }`}
       style={borderColor ? { borderColor } : undefined}
       disabled={isLoading}
-      title={`${item.name} - ${formatCopper(item.buy_price, 1)}`}
+      title={`${item.name} - ${formatCopper(item.buy_price, 1)}${canAfford ? '' : '（货币不足）'}`}
     >
       <span className="relative flex min-h-0 flex-1 items-center justify-center p-0.5">
         <ShopItemIcon
@@ -103,8 +109,17 @@ const ShopItemCell = memo(function ShopItemCell({
           className="text-base sm:text-lg"
         />
         {showUpgradeIndicator && <ItemUpgradeIndicator />}
+        {!canAfford && (
+          <span className="absolute top-0.5 right-0.5 rounded bg-red-600/90 px-1 text-[8px] leading-3 font-bold text-white">
+            不足
+          </span>
+        )}
       </span>
-      <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-px">
+      <span
+        className={`border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-px ${
+          canAfford ? '' : 'text-red-400'
+        }`}
+      >
         <CopperDisplay copper={item.buy_price} size="xs" nowrap maxParts={1} />
       </span>
     </button>
@@ -288,6 +303,7 @@ function ShopItemsPanel() {
                         item={item}
                         isSelected={selectedItemId === item.id}
                         isLoading={isLoading}
+                        canAfford={(character?.copper ?? 0) >= item.buy_price}
                         showUpgradeIndicator={shouldShowShopUpgradeIndicator(
                           item,
                           getEquippedItem(item)

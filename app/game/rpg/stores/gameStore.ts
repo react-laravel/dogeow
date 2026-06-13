@@ -54,6 +54,7 @@ import {
   withCombatFlag,
   replaceItemInLoadout,
 } from './gameStateHelpers'
+import { normalizeShopItemsWithSystemPotions } from './shopHelpers'
 
 /** 进入/传送地图接口响应 */
 interface EnterMapResponse {
@@ -1061,7 +1062,7 @@ const store: StateCreator<GameState> = (set, get) => ({
             : state.maps,
         currentMap,
         character: response.character,
-        isFighting: true, // 后端已自动开始战斗
+        isFighting: false,
         shouldAutoCombat: true,
         isLoading: false,
         combatResult: null,
@@ -1095,7 +1096,7 @@ const store: StateCreator<GameState> = (set, get) => ({
             : state.maps,
         currentMap,
         character: char,
-        isFighting: true, // 后端已自动开始战斗
+        isFighting: false,
         shouldAutoCombat: true,
         isLoading: false,
         enabledSkillIds: resolveEnabledSkillIds(state.skills, state.enabledSkillIds),
@@ -1513,15 +1514,30 @@ const store: StateCreator<GameState> = (set, get) => ({
       const selectedId = getSelectedCharacterIdOrAbort(get, set, { context: 'fetchShopItems' })
       if (!selectedId) return
       const params = `?character_id=${selectedId}`
-      const response = (await apiGet(`/rpg/shop${params}`)) as {
-        items: ShopItem[]
-        player_copper: number
-        next_refresh_at?: number
-        manual_refresh_enabled?: boolean
-      }
+      const [response, compendiumResponse] = await Promise.all([
+        apiGet(`/rpg/shop${params}`) as Promise<{
+          items: ShopItem[]
+          player_copper: number
+          next_refresh_at?: number
+          manual_refresh_enabled?: boolean
+        }>,
+        Promise.resolve(apiGet(`/rpg/compendium/items${params}`)).catch(error => {
+          console.warn('[GameStore] Fetch compendium potions for shop failed:', error)
+          return null
+        }) as Promise<{
+          items: CompendiumItem[]
+          total: number
+          discovered_count: number
+        } | null>,
+      ])
+      const normalizedItems = normalizeShopItemsWithSystemPotions(
+        response.items || [],
+        compendiumResponse?.items
+      )
       set(state => ({
         ...state,
-        shopItems: response.items || [],
+        shopItems: normalizedItems,
+        compendiumItems: compendiumResponse?.items ?? state.compendiumItems,
         shopNextRefreshAt: response.next_refresh_at ?? null,
         shopManualRefreshEnabled: response.manual_refresh_enabled ?? false,
         character: withUpdatedCopper(state.character, response.player_copper),
@@ -1538,17 +1554,33 @@ const store: StateCreator<GameState> = (set, get) => ({
     if (!selectedId) return
     startRequest(set)
     try {
-      const response = (await post('/rpg/shop/refresh', {
-        character_id: selectedId,
-      })) as {
-        items: ShopItem[]
-        player_copper: number
-        next_refresh_at?: number
-        manual_refresh_enabled?: boolean
-      }
+      const params = `?character_id=${selectedId}`
+      const [response, compendiumResponse] = await Promise.all([
+        post('/rpg/shop/refresh', {
+          character_id: selectedId,
+        }) as Promise<{
+          items: ShopItem[]
+          player_copper: number
+          next_refresh_at?: number
+          manual_refresh_enabled?: boolean
+        }>,
+        Promise.resolve(apiGet(`/rpg/compendium/items${params}`)).catch(error => {
+          console.warn('[GameStore] Fetch compendium potions for refreshed shop failed:', error)
+          return null
+        }) as Promise<{
+          items: CompendiumItem[]
+          total: number
+          discovered_count: number
+        } | null>,
+      ])
+      const normalizedItems = normalizeShopItemsWithSystemPotions(
+        response.items ?? [],
+        compendiumResponse?.items
+      )
       set(state => ({
         ...state,
-        shopItems: response.items ?? [],
+        shopItems: normalizedItems,
+        compendiumItems: compendiumResponse?.items ?? state.compendiumItems,
         shopNextRefreshAt: response.next_refresh_at ?? null,
         shopManualRefreshEnabled: response.manual_refresh_enabled ?? false,
         character: withUpdatedCopper(state.character, response.player_copper),

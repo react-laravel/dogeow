@@ -4,6 +4,7 @@ import { type CombatMonster, type SkillUsedEntry } from '../../types'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MonsterIcon } from './MonsterIcon'
 import { MonsterInfoDialog } from './MonsterInfoDialog'
+import { isRenderableCombatMonster } from '../../utils/combatUtils'
 import styles from '../../rpg.module.css'
 
 type MonsterWithMeta = CombatMonster & { damage_taken?: number; was_attacked?: boolean }
@@ -95,7 +96,7 @@ export function MonsterGroup({
 
   // 过滤出有效的怪物（用于效果和新怪物检测）
   const validMonsters = useMemo(
-    () => monsters?.filter((m): m is MonsterWithMeta => m != null) ?? [],
+    () => monsters?.filter((m): m is MonsterWithMeta => isRenderableCombatMonster(m)) ?? [],
     [monsters]
   )
 
@@ -247,7 +248,7 @@ export function MonsterGroup({
         {[0, 1, 2, 3, 4].map(pos => {
           // 优先使用数组索引对应的怪物，其次查找 position 字段
           const m = monsters[pos] ?? validMonsters.find(monster => monster.position === pos)
-          if (!m) {
+          if (!isRenderableCombatMonster(m)) {
             // 空位置
             return <div key={pos} className="min-h-px w-full" aria-hidden />
           }
@@ -287,7 +288,11 @@ export function MonsterGroup({
                   <div
                     className="h-full rounded-full bg-red-600 transition-all duration-300"
                     style={{
-                      width: `${m.max_hp && m.max_hp > 0 ? Math.min(100, Math.max((m.hp ?? 0) <= 0 ? 0 : 5, (m.hp / m.max_hp) * 100)) : 100}%`,
+                      width: `${
+                        m.max_hp && m.max_hp > 0
+                          ? Math.min(100, Math.max(0, ((m.hp ?? 0) / m.max_hp) * 100))
+                          : 100
+                      }%`,
                     }}
                   />
                 </div>

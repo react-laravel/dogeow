@@ -357,7 +357,7 @@ describe('GameStore', () => {
   })
 
   describe('enterMap', () => {
-    it('should enter a map and start combat', async () => {
+    it('should enter a map and request auto combat', async () => {
       const { post } = await import('@/lib/api')
       vi.mocked(post).mockResolvedValueOnce({
         character: { id: 1, name: 'Test', is_fighting: true },
@@ -376,7 +376,7 @@ describe('GameStore', () => {
 
       await useGameStore.getState().enterMap(1)
 
-      expect(useGameStore.getState().isFighting).toBe(true)
+      expect(useGameStore.getState().isFighting).toBe(false)
       expect(useGameStore.getState().shouldAutoCombat).toBe(true)
       expect(useGameStore.getState().combatResult).toBeNull()
       expect(useGameStore.getState().statusCombatMonsters?.[0]?.name).toBe('Goblin')
@@ -654,6 +654,86 @@ describe('GameStore', () => {
       await useGameStore.getState().fetchShopItems()
 
       expect(useGameStore.getState().shopItems).toHaveLength(1)
+    })
+
+    it('should use fixed system potion definitions in shop items', async () => {
+      const { apiGet } = await import('@/lib/api')
+      vi.mocked(apiGet)
+        .mockResolvedValueOnce({
+          items: [
+            {
+              id: 1,
+              listing_id: 'weapon-1',
+              name: 'Iron Sword',
+              type: 'weapon',
+              base_stats: { attack: 3 },
+              quality: 'common',
+              required_level: 1,
+              buy_price: 30,
+              sell_price: 6,
+            },
+            {
+              id: 2,
+              listing_id: 'random-potion-1',
+              name: 'HP Potion',
+              type: 'potion',
+              sub_type: 'hp',
+              base_stats: { max_hp: 999 },
+              quality: 'rare',
+              required_level: 1,
+              buy_price: 90,
+              sell_price: 18,
+            },
+          ],
+          player_copper: 1000,
+        })
+        .mockResolvedValueOnce({
+          items: [
+            {
+              id: 2,
+              name: 'HP Potion',
+              type: 'potion',
+              sub_type: 'hp',
+              base_stats: { max_hp: 50 },
+              required_level: 1,
+              quality: 'common',
+              buy_price: 5,
+              sell_price: 1,
+            },
+            {
+              id: 3,
+              name: 'MP Potion',
+              type: 'potion',
+              sub_type: 'mp',
+              base_stats: { max_mana: 50 },
+              required_level: 1,
+              quality: 'common',
+              buy_price: 5,
+              sell_price: 1,
+            },
+          ],
+          total: 2,
+          discovered_count: 2,
+        })
+
+      useGameStore.setState({ selectedCharacterId: 1 })
+      await useGameStore.getState().fetchShopItems()
+
+      expect(useGameStore.getState().shopItems).toEqual([
+        expect.objectContaining({ id: 1, type: 'weapon' }),
+        expect.objectContaining({
+          id: 2,
+          type: 'potion',
+          base_stats: { max_hp: 50 },
+          buy_price: 5,
+        }),
+        expect.objectContaining({
+          id: 3,
+          type: 'potion',
+          base_stats: { max_mana: 50 },
+          buy_price: 5,
+        }),
+      ])
     })
   })
 

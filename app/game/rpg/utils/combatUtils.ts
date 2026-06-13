@@ -1,5 +1,17 @@
 import type { CombatMonster } from '../types'
 
+export function isRenderableCombatMonster(
+  monster: CombatMonster | null | undefined
+): monster is CombatMonster {
+  return Boolean(
+    monster &&
+    typeof monster.name === 'string' &&
+    monster.name.trim().length > 0 &&
+    typeof monster.max_hp === 'number' &&
+    monster.max_hp > 0
+  )
+}
+
 export function getPrimaryCombatMonster(
   monsters: (CombatMonster | null)[] | null | undefined
 ): CombatMonster | null {
@@ -7,19 +19,15 @@ export function getPrimaryCombatMonster(
     return null
   }
 
+  const renderableMonsters = monsters.filter(isRenderableCombatMonster)
+
   for (const monster of monsters) {
-    if (monster && (monster.hp ?? 0) > 0) {
+    if (isRenderableCombatMonster(monster) && (monster.hp ?? 0) > 0) {
       return monster
     }
   }
 
-  for (const monster of monsters) {
-    if (monster) {
-      return monster
-    }
-  }
-
-  return null
+  return renderableMonsters[0] ?? null
 }
 
 export function getPrimaryCombatMonsterId(
