@@ -270,7 +270,7 @@ export function MonsterGroup({
               title={`点击查看 ${m.name} 详情`}
             >
               {damage !== undefined && (
-                <span className="absolute -top-5 text-xs font-bold text-red-500 sm:text-sm">
+                <span className="pointer-events-none absolute top-1 left-1/2 z-20 -translate-x-1/2 rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
                   -{damage}
                 </span>
               )}
