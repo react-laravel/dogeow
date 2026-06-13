@@ -112,6 +112,40 @@ const ShopItemCell = memo(function ShopItemCell({
 })
 
 export function ShopPanel() {
+  const [marketTab, setMarketTab] = useState<'shop' | 'mercenary'>('shop')
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="bg-muted mx-3 flex shrink-0 rounded-lg p-1 sm:mx-4">
+        <button
+          type="button"
+          onClick={() => setMarketTab('shop')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            marketTab === 'shop'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          🏪 商店
+        </button>
+        <button
+          type="button"
+          onClick={() => setMarketTab('mercenary')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            marketTab === 'mercenary'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          🛡️ 雇佣兵
+        </button>
+      </div>
+      {marketTab === 'shop' ? <ShopItemsPanel /> : <MercenaryMarketPanel />}
+    </div>
+  )
+}
+
+function ShopItemsPanel() {
   const {
     shopItems,
     character,
@@ -296,5 +330,104 @@ export function ShopPanel() {
         equippedItem={selectedShopItem ? getEquippedItem(selectedShopItem) : null}
       />
     </>
+  )
+}
+
+function StatPill({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-muted/50 rounded-md px-2 py-1 text-xs">
+      <span className="text-muted-foreground mr-1">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  )
+}
+
+function MercenaryMarketPanel() {
+  const { character, mercenaryTemplates, activeMercenary, hireMercenary, isLoading } = useGameStore(
+    useShallow(state => ({
+      character: state.character,
+      mercenaryTemplates: state.mercenaryTemplates,
+      activeMercenary: state.activeMercenary,
+      hireMercenary: state.hireMercenary,
+      isLoading: state.isLoading,
+    }))
+  )
+
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
+      {activeMercenary ? (
+        <div className="border-border bg-card mb-3 rounded-lg border p-3">
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-2xl">
+              {activeMercenary.icon ?? '🛡️'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold">{activeMercenary.name}</div>
+              <div className="text-muted-foreground text-xs">
+                Lv.{activeMercenary.level} {activeMercenary.title ?? '雇佣兵'}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <StatPill
+                  label="HP"
+                  value={`${activeMercenary.current_hp}/${activeMercenary.stats.max_hp}`}
+                />
+                <StatPill label="攻击" value={activeMercenary.stats.attack} />
+                <StatPill label="防御" value={activeMercenary.stats.defense} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {mercenaryTemplates.map(template => {
+          const canAfford = character != null && character.copper >= template.hire_cost
+          const alreadyHired = activeMercenary?.template_id === template.id
+          return (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => void hireMercenary(template.id)}
+              disabled={isLoading || alreadyHired || !canAfford}
+              className="border-border bg-card hover:bg-muted/40 disabled:bg-muted/20 rounded-lg border p-3 text-left transition-colors disabled:opacity-60"
+            >
+              <div className="flex items-start gap-3">
+                <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl">
+                  {template.icon ?? '🛡️'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate text-sm font-semibold">{template.name}</div>
+                    <CopperDisplay copper={template.hire_cost} size="xs" nowrap maxParts={1} />
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    Lv.{template.level} {template.title ?? '雇佣兵'}
+                  </div>
+                  {template.description && (
+                    <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                      {template.description}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <StatPill label="HP" value={template.base_stats.max_hp ?? '-'} />
+                    <StatPill label="攻击" value={template.base_stats.attack ?? '-'} />
+                    <StatPill label="防御" value={template.base_stats.defense ?? '-'} />
+                  </div>
+                  <div className="text-muted-foreground mt-2 text-xs">
+                    {alreadyHired ? '已雇佣' : canAfford ? '点击雇佣' : '铜币不足'}
+                  </div>
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {mercenaryTemplates.length === 0 && (
+        <p className="text-muted-foreground flex min-h-40 items-center justify-center text-sm">
+          暂无可雇佣角色
+        </p>
+      )}
+    </div>
   )
 }

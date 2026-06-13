@@ -1,4 +1,5 @@
 import type { GameCharacter } from './character'
+import type { GameItem } from './item'
 
 export type MercenaryRole = 'guard' | 'marksman' | 'mystic'
 
@@ -24,6 +25,44 @@ export interface Mercenary {
   crit_rate: number
   skill_name: string
   hired_at: string
+}
+
+export type MercenaryEquipmentSlot = 'weapon' | 'helmet' | 'armor'
+
+export interface MercenaryTemplate {
+  id: number
+  name: string
+  title?: string | null
+  level: number
+  hire_cost: number
+  base_stats: {
+    max_hp?: number
+    attack?: number
+    defense?: number
+  }
+  icon?: string | null
+  description?: string | null
+}
+
+export interface ActiveMercenary {
+  id: number
+  template_id: number
+  name: string
+  title?: string | null
+  level: number
+  current_hp: number
+  stats: {
+    max_hp: number
+    attack: number
+    defense: number
+  }
+  equipment: Record<MercenaryEquipmentSlot, GameItem | null>
+  icon?: string | null
+  description?: string | null
+  last_attack?: {
+    target_position: number | null
+    damage: number
+  }
 }
 
 export const MERCENARY_DEFINITIONS: Record<MercenaryRole, MercenaryDefinition> = {

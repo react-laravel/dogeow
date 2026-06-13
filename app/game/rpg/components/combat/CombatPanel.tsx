@@ -40,6 +40,7 @@ export function CombatPanel() {
   const isLoading = useGameStore(state => state.isLoading)
   const combatLogs = useGameStore(state => state.combatLogs)
   const combatResult = useGameStore(state => state.combatResult)
+  const activeMercenary = useGameStore(state => state.activeMercenary)
   const statusCombatMonsters = useGameStore(state => state.statusCombatMonsters)
   const skills = useGameStore(state => state.skills)
   const character = useGameStore(state => state.character)
@@ -354,6 +355,7 @@ export function CombatPanel() {
                     }
                     skillUsed={combatResult?.skills_used?.[0]}
                     skillTargetPositions={combatResult?.skill_target_positions}
+                    mercenary={combatResult?.mercenary ?? activeMercenary}
                   />
                 </div>
               </div>

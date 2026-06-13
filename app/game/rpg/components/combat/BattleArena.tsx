@@ -1,6 +1,6 @@
 'use client'
 
-import { type CombatMonster, type SkillUsedEntry } from '../../types'
+import { type ActiveMercenary, type CombatMonster, type SkillUsedEntry } from '../../types'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MonsterIcon } from './MonsterIcon'
 import { MonsterGroup } from './MonsterGroup'
@@ -24,6 +24,7 @@ export function BattleArena({
   onCombatToggle,
   skillUsed,
   skillTargetPositions,
+  mercenary,
 }: {
   character: { name: string; class: string; level: number } | null
   combatStats: { max_hp: number; max_mana: number } | null
@@ -45,6 +46,7 @@ export function BattleArena({
   onCombatToggle: () => void
   skillUsed?: SkillUsedEntry | null
   skillTargetPositions?: number[]
+  mercenary?: ActiveMercenary | null
 }) {
   const finalMonsterHp = monster?.hp ?? 0
   const maxHp = monster?.max_hp ?? 0
@@ -300,40 +302,71 @@ export function BattleArena({
           </div>
         </div>
 
-        {/* 下侧：用户 */}
-        <div className="mt-auto flex flex-col items-center gap-2 p-3 sm:p-4">
-          <div className="bg-primary/20 text-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl">
-            {character?.name?.charAt(0) ?? '?'}
-          </div>
-          {combatStats && (
-            <div className="w-full max-w-[140px] space-y-1 sm:max-w-[160px]">
-              <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
-                <span>HP</span>
-                <span>
-                  {currentHp ?? 0} / {combatStats.max_hp}
-                </span>
-              </div>
-              <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                <div
-                  className="h-full rounded-full bg-red-500 transition-[width] duration-300"
-                  style={{ width: `${hpPercent}%` }}
-                />
-              </div>
-              <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
-                <span>MP</span>
-                <span>
-                  {currentMana ?? 0} / {combatStats.max_mana}
-                </span>
-              </div>
-              <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
-                  style={{ width: `${manaPercent}%` }}
-                />
-              </div>
+        {/* 下侧：用户与雇佣兵 */}
+        <div className="mt-auto flex items-end justify-center gap-3 p-3 sm:gap-4 sm:p-4">
+          {mercenary && <MercenaryCombatCard mercenary={mercenary} />}
+          <div className="flex flex-col items-center gap-2">
+            <div className="bg-primary/20 text-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl">
+              {character?.name?.charAt(0) ?? '?'}
             </div>
-          )}
+            {combatStats && (
+              <div className="w-full max-w-[140px] space-y-1 sm:max-w-[160px]">
+                <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
+                  <span>HP</span>
+                  <span>
+                    {currentHp ?? 0} / {combatStats.max_hp}
+                  </span>
+                </div>
+                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+                  <div
+                    className="h-full rounded-full bg-red-500 transition-[width] duration-300"
+                    style={{ width: `${hpPercent}%` }}
+                  />
+                </div>
+                <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
+                  <span>MP</span>
+                  <span>
+                    {currentMana ?? 0} / {combatStats.max_mana}
+                  </span>
+                </div>
+                <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
+                    style={{ width: `${manaPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function MercenaryCombatCard({ mercenary }: { mercenary: ActiveMercenary }) {
+  const hpPercent =
+    mercenary.stats.max_hp > 0
+      ? Math.min(100, Math.max(0, (mercenary.current_hp / mercenary.stats.max_hp) * 100))
+      : 0
+  const attacked = (mercenary.last_attack?.damage ?? 0) > 0
+
+  return (
+    <div
+      className={`flex w-24 flex-col items-center gap-1 rounded-md border border-white/15 bg-black/35 px-2 py-2 text-white shadow-sm backdrop-blur-sm sm:w-28 ${
+        attacked ? 'ring-1 ring-amber-300/70' : ''
+      }`}
+      title={attacked ? `攻击造成 ${mercenary.last_attack?.damage ?? 0} 伤害` : undefined}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-500/20 text-lg sm:h-10 sm:w-10">
+        {mercenary.icon ?? '🛡️'}
+      </div>
+      <div className="max-w-full truncate text-[10px] font-medium sm:text-xs">{mercenary.name}</div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+        <div className="h-full rounded-full bg-red-500" style={{ width: `${hpPercent}%` }} />
+      </div>
+      <div className="text-[9px] text-white/75">
+        {attacked ? `攻击 -${mercenary.last_attack?.damage ?? 0}` : `Lv.${mercenary.level}`}
       </div>
     </div>
   )

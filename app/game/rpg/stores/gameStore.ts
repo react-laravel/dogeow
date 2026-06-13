@@ -29,6 +29,9 @@ import {
   MercenaryRole,
   createMercenaryForCharacter,
   syncMercenaryLevel,
+  MercenaryTemplate,
+  ActiveMercenary,
+  MercenaryEquipmentSlot,
 } from '../types'
 import { apiGet, apiRequest, post, put, del } from '@/lib/api'
 import { soundManager } from '../utils/soundManager'
@@ -78,6 +81,8 @@ interface GameState {
   equipment: Record<string, GameItem | null>
   mercenariesByCharacter: Record<number, Mercenary | null>
   mercenary: Mercenary | null
+  mercenaryTemplates: MercenaryTemplate[]
+  activeMercenary: ActiveMercenary | null
   skills: SkillWithLearnedState[]
   maps: MapDefinition[]
   currentMap: MapDefinition | null
@@ -146,7 +151,7 @@ interface GameState {
   setDifficulty: (difficultyTier: number) => Promise<void>
   setDifficultyForCharacter: (characterId: number, difficultyTier: number) => Promise<void>
   setCharacter: (updater: (prev: GameCharacter | null) => GameCharacter | null) => void
-  hireMercenary: (role: MercenaryRole) => void
+  hireMercenary: (roleOrTemplateId: MercenaryRole | number) => void | Promise<void>
   dismissMercenary: () => void
 
   // 背包操作
@@ -203,6 +208,10 @@ interface GameState {
   refreshShopItems: () => Promise<void>
   buyItem: (itemId: number, quantity?: number, listingId?: string) => Promise<void>
   sellItemToShop: (itemId: number, quantity?: number) => Promise<void>
+  fetchMercenaries: () => Promise<void>
+  fetchActiveMercenary: () => Promise<void>
+  equipMercenaryItem: (itemId: number) => Promise<void>
+  unequipMercenaryItem: (slot: MercenaryEquipmentSlot) => Promise<void>
 
   // 图鉴操作
   fetchCompendiumItems: () => Promise<void>
@@ -247,6 +256,8 @@ const initialState = {
   equipment: {},
   mercenariesByCharacter: {} as Record<number, Mercenary | null>,
   mercenary: null,
+  mercenaryTemplates: [],
+  activeMercenary: null,
   skills: [],
   availableSkills: [],
   maps: [],
@@ -331,6 +342,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         stats_breakdown?: CombatStatsBreakdown
         current_hp?: number
         current_mana?: number
+        mercenary?: ActiveMercenary | null
       }
       set(state => {
         const character = response.character
@@ -346,6 +358,7 @@ const store: StateCreator<GameState> = (set, get) => ({
               ? { ...state.mercenariesByCharacter, [character.id]: mercenary }
               : state.mercenariesByCharacter,
           mercenary,
+          activeMercenary: response.mercenary ?? state.activeMercenary,
           experienceTable: response.experience_table ?? state.experienceTable,
           combatStats: response.combat_stats || null,
           statsBreakdown: response.stats_breakdown ?? null,
@@ -518,19 +531,44 @@ const store: StateCreator<GameState> = (set, get) => ({
     }))
   },
 
-  hireMercenary: role => {
-    set(state => {
-      if (!state.character) return state
-      const mercenary = createMercenaryForCharacter(state.character, role)
-      return {
+  hireMercenary: async roleOrTemplateId => {
+    if (typeof roleOrTemplateId !== 'number') {
+      set(state => {
+        if (!state.character) return state
+        const mercenary = createMercenaryForCharacter(state.character, roleOrTemplateId)
+        return {
+          ...state,
+          mercenary,
+          mercenariesByCharacter: {
+            ...state.mercenariesByCharacter,
+            [state.character.id]: mercenary,
+          },
+        }
+      })
+      return
+    }
+
+    startRequest(set)
+    try {
+      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
+        context: 'hireMercenary',
+        warn: false,
+      })
+      if (!selectedId) return
+      const response = (await post('/rpg/mercenaries/hire', {
+        character_id: selectedId,
+        template_id: roleOrTemplateId,
+      })) as { mercenary: ActiveMercenary; copper: number }
+      soundManager.play('gold')
+      set(state => ({
         ...state,
-        mercenary,
-        mercenariesByCharacter: {
-          ...state.mercenariesByCharacter,
-          [state.character.id]: mercenary,
-        },
-      }
-    })
+        activeMercenary: response.mercenary,
+        character: withUpdatedCopper(state.character, response.copper),
+        isLoading: false,
+      }))
+    } catch (error) {
+      setRequestError(set, error)
+    }
   },
 
   dismissMercenary: () => {
@@ -1097,6 +1135,7 @@ const store: StateCreator<GameState> = (set, get) => ({
           max_hp: number
         }
         current_combat_monsters?: (CombatMonster | null)[]
+        mercenary?: ActiveMercenary | null
       }
       set(state => ({
         ...state,
@@ -1108,6 +1147,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         statusCombatMonsters: response.is_fighting
           ? (response.current_combat_monsters ?? null)
           : null,
+        activeMercenary: response.mercenary ?? state.activeMercenary,
       }))
     } catch (error) {
       console.error('[GameStore] Fetch combat status error:', error)
@@ -1382,6 +1422,7 @@ const store: StateCreator<GameState> = (set, get) => ({
 
       return {
         combatResult: typedData,
+        activeMercenary: typedData.mercenary ?? state.activeMercenary,
         combatLogs: newLogs,
         character: typedData.character,
         mercenary: state.mercenary
@@ -1593,6 +1634,80 @@ const store: StateCreator<GameState> = (set, get) => ({
         ...state,
         character: withUpdatedCopper(state.character, response.copper),
         inventory: state.inventory.filter(i => i.id !== itemId),
+        isLoading: false,
+      }))
+    } catch (error) {
+      setRequestError(set, error)
+    }
+  },
+
+  fetchMercenaries: async () => {
+    try {
+      const response = (await apiGet('/rpg/mercenaries')) as { templates: MercenaryTemplate[] }
+      set(state => ({ ...state, mercenaryTemplates: response.templates ?? [] }))
+    } catch (error) {
+      console.error('[GameStore] Fetch mercenaries error:', error)
+      setRequestError(set, error)
+    }
+  },
+
+  fetchActiveMercenary: async () => {
+    try {
+      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
+        context: 'fetchActiveMercenary',
+        stopLoading: false,
+      })
+      if (!selectedId) return
+      const response = (await apiGet(`/rpg/mercenaries/active?character_id=${selectedId}`)) as {
+        mercenary: ActiveMercenary | null
+      }
+      set(state => ({ ...state, activeMercenary: response.mercenary ?? null }))
+    } catch (error) {
+      console.error('[GameStore] Fetch active mercenary error:', error)
+      setRequestError(set, error)
+    }
+  },
+
+  equipMercenaryItem: async (itemId: number) => {
+    startRequest(set)
+    try {
+      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
+        context: 'equipMercenaryItem',
+        warn: false,
+      })
+      if (!selectedId) return
+      const response = (await post('/rpg/mercenaries/equip', {
+        character_id: selectedId,
+        item_id: itemId,
+      })) as { mercenary: ActiveMercenary }
+      soundManager.play('equip')
+      set(state => ({
+        ...state,
+        activeMercenary: response.mercenary,
+        inventory: state.inventory.filter(item => item.id !== itemId),
+        isLoading: false,
+      }))
+    } catch (error) {
+      setRequestError(set, error)
+    }
+  },
+
+  unequipMercenaryItem: async (slot: MercenaryEquipmentSlot) => {
+    startRequest(set)
+    try {
+      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
+        context: 'unequipMercenaryItem',
+        warn: false,
+      })
+      if (!selectedId) return
+      const response = (await post('/rpg/mercenaries/unequip', {
+        character_id: selectedId,
+        slot,
+      })) as { mercenary: ActiveMercenary; item?: GameItem | null }
+      set(state => ({
+        ...state,
+        activeMercenary: response.mercenary,
+        inventory: response.item ? [...state.inventory, response.item] : state.inventory,
         isLoading: false,
       }))
     } catch (error) {
