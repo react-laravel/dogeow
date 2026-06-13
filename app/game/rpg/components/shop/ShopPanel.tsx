@@ -5,7 +5,16 @@ import { RefreshCw } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '../../stores/gameStore'
 import { CopperDisplay } from '../shared/CopperDisplay'
-import { ShopItem, QUALITY_COLORS, formatCopper, GameItem, ItemType } from '../../types'
+import {
+  ShopItem,
+  QUALITY_COLORS,
+  formatCopper,
+  GameItem,
+  ItemType,
+  MERCENARY_DEFINITIONS,
+  createMercenaryForCharacter,
+  type MercenaryRole,
+} from '../../types'
 import { getEquipmentSlot } from '../../utils/itemUtils'
 import { buildSlotArray } from '../inventory/inventoryUtils'
 import { ItemUpgradeIndicator } from '../inventory/ItemUpgradeIndicator'
@@ -30,6 +39,13 @@ const SHOP_TYPE_FILTERS: { id: string; label: string; name: string; types: ItemT
   { id: 'potion', label: '🧪', name: '药水', types: ['potion'] },
   { id: 'gem', label: '💎', name: '宝石', types: ['gem'] },
 ]
+
+const MERCENARY_ROLES: MercenaryRole[] = ['guard', 'marksman', 'mystic']
+const MERCENARY_ICONS: Record<MercenaryRole, string> = {
+  guard: '🛡️',
+  marksman: '🏹',
+  mystic: '🔮',
+}
 
 function ShopRefreshCountdown({ nextRefreshAt }: { nextRefreshAt: number | null }) {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
@@ -359,11 +375,10 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 }
 
 function MercenaryMarketPanel() {
-  const { character, mercenaryTemplates, activeMercenary, hireMercenary, isLoading } = useGameStore(
+  const { character, mercenary, hireMercenary, isLoading } = useGameStore(
     useShallow(state => ({
       character: state.character,
-      mercenaryTemplates: state.mercenaryTemplates,
-      activeMercenary: state.activeMercenary,
+      mercenary: state.mercenary,
       hireMercenary: state.hireMercenary,
       isLoading: state.isLoading,
     }))
@@ -371,24 +386,21 @@ function MercenaryMarketPanel() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 sm:px-4">
-      {activeMercenary ? (
+      {mercenary ? (
         <div className="border-border bg-card mb-3 rounded-lg border p-3">
           <div className="flex items-start gap-3">
             <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-2xl">
-              {activeMercenary.icon ?? '🛡️'}
+              {MERCENARY_ICONS[mercenary.role]}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold">{activeMercenary.name}</div>
+              <div className="text-sm font-semibold">{mercenary.name}</div>
               <div className="text-muted-foreground text-xs">
-                Lv.{activeMercenary.level} {activeMercenary.title ?? '雇佣兵'}
+                Lv.{mercenary.level} {MERCENARY_DEFINITIONS[mercenary.role].title}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <StatPill
-                  label="HP"
-                  value={`${activeMercenary.current_hp}/${activeMercenary.stats.max_hp}`}
-                />
-                <StatPill label="攻击" value={activeMercenary.stats.attack} />
-                <StatPill label="防御" value={activeMercenary.stats.defense} />
+                <StatPill label="HP" value={mercenary.max_hp} />
+                <StatPill label="攻击" value={mercenary.attack} />
+                <StatPill label="防御" value={mercenary.defense} />
               </div>
             </div>
           </div>
@@ -396,41 +408,40 @@ function MercenaryMarketPanel() {
       ) : null}
 
       <div className="grid gap-2 sm:grid-cols-2">
-        {mercenaryTemplates.map(template => {
-          const canAfford = character != null && character.copper >= template.hire_cost
-          const alreadyHired = activeMercenary?.template_id === template.id
+        {MERCENARY_ROLES.map(role => {
+          const definition = MERCENARY_DEFINITIONS[role]
+          const preview = character ? createMercenaryForCharacter(character, role) : null
+          const alreadyHired = mercenary?.role === role
           return (
             <button
-              key={template.id}
+              key={role}
               type="button"
-              onClick={() => void hireMercenary(template.id)}
-              disabled={isLoading || alreadyHired || !canAfford}
+              onClick={() => void hireMercenary(role)}
+              disabled={isLoading || alreadyHired}
               className="border-border bg-card hover:bg-muted/40 disabled:bg-muted/20 rounded-lg border p-3 text-left transition-colors disabled:opacity-60"
             >
               <div className="flex items-start gap-3">
                 <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl">
-                  {template.icon ?? '🛡️'}
+                  {MERCENARY_ICONS[role]}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="truncate text-sm font-semibold">{template.name}</div>
-                    <CopperDisplay copper={template.hire_cost} size="xs" nowrap maxParts={1} />
+                    <div className="truncate text-sm font-semibold">{definition.name}</div>
+                    <span className="text-muted-foreground shrink-0 text-xs">免费</span>
                   </div>
                   <div className="text-muted-foreground text-xs">
-                    Lv.{template.level} {template.title ?? '雇佣兵'}
+                    Lv.{preview?.level ?? character?.level ?? 1} {definition.title}
                   </div>
-                  {template.description && (
-                    <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
-                      {template.description}
-                    </p>
-                  )}
+                  <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                    {definition.description}
+                  </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    <StatPill label="HP" value={template.base_stats.max_hp ?? '-'} />
-                    <StatPill label="攻击" value={template.base_stats.attack ?? '-'} />
-                    <StatPill label="防御" value={template.base_stats.defense ?? '-'} />
+                    <StatPill label="HP" value={preview?.max_hp ?? '-'} />
+                    <StatPill label="攻击" value={preview?.attack ?? '-'} />
+                    <StatPill label="防御" value={preview?.defense ?? '-'} />
                   </div>
                   <div className="text-muted-foreground mt-2 text-xs">
-                    {alreadyHired ? '已雇佣' : canAfford ? '点击雇佣' : '铜币不足'}
+                    {alreadyHired ? '已雇佣' : '点击雇佣'}
                   </div>
                 </div>
               </div>
@@ -438,12 +449,6 @@ function MercenaryMarketPanel() {
           )
         })}
       </div>
-
-      {mercenaryTemplates.length === 0 && (
-        <p className="text-muted-foreground flex min-h-40 items-center justify-center text-sm">
-          暂无可雇佣角色
-        </p>
-      )}
     </div>
   )
 }

@@ -40,8 +40,6 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   const fetchInventory = useGameStore(s => s.fetchInventory)
   const fetchSkills = useGameStore(s => s.fetchSkills)
   const fetchMaps = useGameStore(s => s.fetchMaps)
-  const fetchMercenaries = useGameStore(s => s.fetchMercenaries)
-  const fetchActiveMercenary = useGameStore(s => s.fetchActiveMercenary)
   const fetchCombatStatus = useGameStore(s => s.fetchCombatStatus)
   const fetchCombatLogs = useGameStore(s => s.fetchCombatLogs)
   const isLoading = useGameStore(s => s.isLoading)
@@ -182,8 +180,6 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
       fetchInventory()
       fetchSkills()
       fetchMaps()
-      fetchMercenaries()
-      fetchActiveMercenary()
       fetchCombatStatus()
         .then(() => {
           const state = useGameStore.getState()
@@ -221,8 +217,6 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     fetchInventory,
     fetchSkills,
     fetchMaps,
-    fetchMercenaries,
-    fetchActiveMercenary,
     fetchCombatStatus,
     fetchCombatLogs,
   ])
