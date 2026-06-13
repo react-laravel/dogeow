@@ -245,9 +245,9 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
       ? '背包已满'
       : '背包空间不足'
     : !canAfford
-      ? '货币不足'
+      ? '攒够铜币后购买'
       : !levelEnough
-        ? '等级不足'
+        ? `Lv.${shopItem.required_level} 解锁`
         : '确认购买'
 
   const buyButton = (
@@ -285,7 +285,7 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
       {isPotion && totalBuyPrice != null && totalBuyPrice > 0 && (
         <div className="flex items-center justify-between px-3 pt-1">
           <span className="text-foreground text-sm font-medium">总价:</span>
-          <span className={canAfford ? '' : 'text-red-500'}>
+          <span className={canAfford ? '' : 'text-amber-500'}>
             <CopperDisplay copper={totalBuyPrice} size="sm" />
           </span>
         </div>
