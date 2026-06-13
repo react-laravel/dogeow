@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback } from 'react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useGameStore } from '../../stores/gameStore'
 import { EquipmentGrid } from '../inventory/EquipmentGrid'
-import { MercenaryPanel } from './MercenaryPanel'
 import { CLASS_NAMES, STAT_DESCRIPTIONS, STAT_NAMES, type StatBreakdownItem } from '../../types'
 
 const CHARACTER_STATS = ['strength', 'dexterity', 'vitality', 'energy'] as const
@@ -73,8 +72,6 @@ export function CharacterPanel() {
         </div>
         <EquipmentGrid equipment={equipment} onUnequip={unequipItem} />
       </div>
-
-      <MercenaryPanel />
 
       {/* 战斗属性 - 移动端优化 */}
       {combatStats && (
