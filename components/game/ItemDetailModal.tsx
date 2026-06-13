@@ -245,9 +245,9 @@ function ShopItemDetail(props: ShopItemDetailModalProps) {
       ? '背包已满'
       : '背包空间不足'
     : !canAfford
-      ? '攒够铜币后购买'
+      ? '需要更多铜币'
       : !levelEnough
-        ? `Lv.${shopItem.required_level} 解锁`
+        ? `需求等级Lv.${shopItem.required_level}`
         : '确认购买'
 
   const buyButton = (

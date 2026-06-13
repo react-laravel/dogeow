@@ -1640,7 +1640,20 @@ const store: StateCreator<GameState> = (set, get) => ({
       })
       // 背包由 WebSocket inventory.update 推送
     } catch (error) {
-      setRequestError(set, error)
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('货币不足') || message.includes('余额不足')) {
+        set(state => ({ ...state, error: '需要更多铜币', isLoading: false }))
+      } else if (message.includes('等级不足')) {
+        const requiredLevelMatch = message.match(/(?:需要|需求)?等级\s*(?:Lv\.?\s*)?(\d+)/)
+        const requiredLevel = requiredLevelMatch?.[1]
+        set(state => ({
+          ...state,
+          error: requiredLevel ? `需求等级Lv.${requiredLevel}` : '需求等级未达到',
+          isLoading: false,
+        }))
+      } else {
+        setRequestError(set, error)
+      }
       throw error
     }
   },

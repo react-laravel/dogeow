@@ -116,7 +116,7 @@ const ShopItemCell = memo(function ShopItemCell({
       }`}
       style={borderColor ? { borderColor } : undefined}
       disabled={isLoading}
-      title={`${item.name} - ${formatCopper(item.buy_price, 1)}${levelEnough ? '' : ` · Lv.${item.required_level} 解锁`}`}
+      title={`${item.name} - ${formatCopper(item.buy_price, 1)}${levelEnough ? '' : ` · 需求等级Lv.${item.required_level}`}`}
     >
       <span className="relative flex min-h-0 flex-1 items-center justify-center p-0.5">
         <ShopItemIcon
@@ -289,7 +289,7 @@ function ShopItemsPanel() {
                 onClick={() => refreshShopItems()}
                 disabled={isLoading || !canAffordRefresh}
                 className="bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] transition-colors disabled:opacity-50 sm:px-2.5 sm:text-xs"
-                title={canAffordRefresh ? '强制刷新' : '货币不足，需要1银币'}
+                title={canAffordRefresh ? '强制刷新' : '需要1银币刷新'}
               >
                 <RefreshCw className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
                 <span>刷新</span>
