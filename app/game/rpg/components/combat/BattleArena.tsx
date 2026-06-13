@@ -55,9 +55,6 @@ export function BattleArena({
   const lastPlayedSkillSoundRef = useRef<SkillUsedEntry | null>(null)
   const skillAnimationCompletedRef = useRef(false)
 
-  // 技能动画未结束前不显示扣血，等 onComplete 后再更新
-  const [showDamageAndHp, setShowDamageAndHp] = useState(true)
-
   // 检测怪物死亡
   const isMonsterDead = finalMonsterHp <= 0
   const hpPercent = combatStats?.max_hp
@@ -86,6 +83,32 @@ export function BattleArena({
     ]
     return valid.includes(key as SkillEffectType) ? (key as SkillEffectType) : null
   }, [skillUsed])
+
+  // 用 skill_id + round 识别技能回合，避免 combatResult 新对象引用导致反复更新
+  const skillRoundKey = useMemo(() => {
+    if (!skillUsed || !computedSkillEffect) return null
+    return `${skillUsed.skill_id}:${skillUsed.round ?? 'na'}:${computedSkillEffect}`
+  }, [skillUsed, computedSkillEffect])
+  const lastSkillRoundKeyRef = useRef<string | null>(null)
+  const [settledSkillRoundKey, setSettledSkillRoundKey] = useState<string | null>(null)
+  const showDamageAndHp = !skillRoundKey || settledSkillRoundKey === skillRoundKey
+
+  useLayoutEffect(() => {
+    if (!skillRoundKey) {
+      lastSkillRoundKeyRef.current = null
+      lastSkillUsedRef.current = null
+      // 回合已推进且本回合无技能：上一回合特效若仍在播，视为已结算，
+      // 其迟到的 onComplete 不再重复播命中音/改血量
+      skillAnimationCompletedRef.current = true
+      return
+    }
+
+    if (skillRoundKey !== lastSkillRoundKeyRef.current) {
+      lastSkillRoundKeyRef.current = skillRoundKey
+      lastSkillUsedRef.current = skillUsed ?? null
+      skillAnimationCompletedRef.current = false
+    }
+  }, [skillRoundKey, skillUsed])
 
   useEffect(() => {
     if (!skillUsed) return
@@ -172,50 +195,17 @@ export function BattleArena({
     }))
   }, [skillTargetPositions])
 
-  // 技能特效状态
-  const [activeSkillEffect, setActiveSkillEffect] = useState<SkillEffectType | null>(null)
+  const activeSkillEffect = showDamageAndHp ? null : computedSkillEffect
   const shouldUseMultiTargetEffect =
     activeSkillEffect === 'ice-age' ||
     activeSkillEffect === 'chain-lightning' ||
     (activeSkillEffect === 'fireball' && skillUsed?.target_type === 'all')
-  // 每次触发递增，作为 SkillEffect 的 key：连续回合同一技能也能重新挂载、完整重播动画
-  const [effectNonce, setEffectNonce] = useState(0)
-
-  // 技能回合变化在渲染期间同步状态（官方“根据 props 调整 state”模式），首帧即传扣血前数据
-  const [lastSkillForRender, setLastSkillForRender] = useState<SkillUsedEntry | null>(null)
-  if (skillUsed && computedSkillEffect) {
-    if (skillUsed !== lastSkillForRender) {
-      setLastSkillForRender(skillUsed)
-      setShowDamageAndHp(false)
-      setActiveSkillEffect(computedSkillEffect)
-      setEffectNonce(n => n + 1)
-    }
-  } else if (lastSkillForRender !== null) {
-    setLastSkillForRender(null)
-    setShowDamageAndHp(true)
-  }
-
-  // ref 簿记与上面的渲染期状态调整保持一致（effect 中不再 setState）
-
-  useLayoutEffect(() => {
-    if (skillUsed && computedSkillEffect) {
-      if (skillUsed !== lastSkillUsedRef.current) {
-        lastSkillUsedRef.current = skillUsed
-        skillAnimationCompletedRef.current = false
-      }
-    } else {
-      lastSkillUsedRef.current = null
-      // 回合已推进且本回合无技能：上一回合特效若仍在播，视为已结算，
-      // 其迟到的 onComplete 不再重复播命中音/改血量
-      skillAnimationCompletedRef.current = true
-    }
-  }, [skillUsed, computedSkillEffect])
 
   /** 结算本回合：显示扣血与最终血量，并在视觉命中时播放命中音效 */
   const settleRound = useCallback(() => {
     if (skillAnimationCompletedRef.current) return
     skillAnimationCompletedRef.current = true
-    setShowDamageAndHp(true)
+    setSettledSkillRoundKey(lastSkillRoundKeyRef.current)
     setDisplayMonsterHp(pendingFinalHpRef.current)
     // 命中音效与视觉命中对齐（技能回合的 combat_hit 不在 store 收到推送时播放）
     soundManager.play('combat_hit')
@@ -226,16 +216,15 @@ export function BattleArena({
 
   const handleSkillComplete = useCallback(() => {
     settleRound()
-    setActiveSkillEffect(null)
   }, [settleRound])
 
   // 看门狗：后端约 3 秒一回合，特效若超时未回调 onComplete（卡帧/标签页后台等），
   // 强制结算，保证下一回合数据到达前 UI 已经是最终状态
   useEffect(() => {
-    if (!activeSkillEffect) return
+    if (!activeSkillEffect || !skillRoundKey) return
     const watchdog = setTimeout(handleSkillComplete, 2600)
     return () => clearTimeout(watchdog)
-  }, [activeSkillEffect, effectNonce, handleSkillComplete])
+  }, [activeSkillEffect, skillRoundKey, handleSkillComplete])
 
   // 冰河世纪作为「地面层」在怪物背后，其它技能在顶层
   const effectLayerZ = activeSkillEffect === 'ice-age' ? 'z-0' : 'z-10'
@@ -243,9 +232,9 @@ export function BattleArena({
   return (
     <div className="absolute inset-0 isolate flex flex-col items-stretch">
       {/* 技能特效层：冰河世纪在底层（地面冰面，延伸到怪物身后），其它技能在顶层 */}
-      {activeSkillEffect && (
+      {activeSkillEffect && skillRoundKey && (
         <SkillEffect
-          key={effectNonce}
+          key={skillRoundKey}
           type={activeSkillEffect}
           active={true}
           targetPosition={computedTargetPos}

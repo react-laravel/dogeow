@@ -340,15 +340,16 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
   const [selectedItem, setSelectedItem] = useState<GameItem | null>(null)
   const [selectedLogId, setSelectedLogId] = useState<number | null>(null)
   const [selectedLog, setSelectedLog] = useState<CombatLogEntry | null>(null)
-  const playerSkillIds = useGameStore(state => {
+  const skills = useGameStore(state => state.skills)
+  const playerSkillIds = useMemo(() => {
     const ids = new Set<number>()
-    state.skills.forEach(skill => {
+    skills.forEach(skill => {
       if (!skill.is_learned || skill.type !== 'active') return
       ids.add(skill.id)
       if (skill.character_skill_id != null) ids.add(skill.character_skill_id)
     })
     return ids
-  })
+  }, [skills])
   const maxLogs = useMemo(() => logs.slice(0, 50), [logs])
 
   if (!logs || logs.length === 0) {

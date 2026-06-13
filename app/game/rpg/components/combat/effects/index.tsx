@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import type { SkillEffectProps } from './types'
 import { MeteorStormEffect } from './MeteorStormEffect'
 import { FireballEffect } from './FireballEffect'
@@ -31,22 +31,12 @@ export function SkillEffect({
   onHit,
   className = '',
 }: SkillEffectProps) {
-  const [isActive, setIsActive] = useState(false)
-
-  // active 变化在渲染期间同步（官方“根据 props 调整 state”模式），避免在 effect 中 setState
-  const [prevActive, setPrevActive] = useState(false)
-  if (active !== prevActive) {
-    setPrevActive(active)
-    setIsActive(active)
-  }
-
   const handleComplete = useCallback(() => {
-    setIsActive(false)
     if (onComplete) onComplete()
   }, [onComplete])
 
   const effectProps = {
-    active: isActive,
+    active,
     onComplete: handleComplete,
     onHit,
     targetPosition,

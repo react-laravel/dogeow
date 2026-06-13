@@ -132,7 +132,9 @@ export function CombatPanel() {
   useEffect(() => {
     if (!character?.id || !currentMap?.id || isLoading || isFighting || (currentHp ?? 0) <= 0)
       return
-    setShouldAutoCombat(true)
+    if (!useGameStore.getState().shouldAutoCombat) {
+      setShouldAutoCombat(true)
+    }
   }, [character?.id, currentMap?.id, isLoading, isFighting, currentHp, setShouldAutoCombat])
 
   const handleSelectMap = useCallback(

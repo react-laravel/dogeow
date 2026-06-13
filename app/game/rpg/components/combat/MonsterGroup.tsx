@@ -103,17 +103,6 @@ export function MonsterGroup({
   // 检查是否有有效怪物
   const hasValidMonsters = validMonsters.length > 0
 
-  // 技能动画期间不显示扣血/伤害/受击，并清空状态，避免先播一次、动画结束再播一次
-  // 在渲染期间同步清空（官方“根据 props 调整 state”模式），避免在 effect 中 setState
-  const [prevShowDamageAndHp, setPrevShowDamageAndHp] = useState(showDamageAndHp)
-  if (showDamageAndHp !== prevShowDamageAndHp) {
-    setPrevShowDamageAndHp(showDamageAndHp)
-    if (!showDamageAndHp) {
-      setDamageTexts({})
-      setHitMonsters(new Set())
-    }
-  }
-
   // 检测怪物掉血并显示伤害数字，以及检测新怪物
   useEffect(() => {
     if (!showDamageAndHp) return
@@ -256,11 +245,11 @@ export function MonsterGroup({
           // 使用后端提供的 is_new 字段判断是否是新的怪物
           // 通过 appearingMonsters state 判断是否需要显示出现动画
           const isNew = m.instance_id ? appearingMonsters.has(m.instance_id) : false
-          const damage = damageTexts[`pos-${m.position}`]
+          const damage = showDamageAndHp ? damageTexts[`pos-${m.position}`] : undefined
           // 使用 position 作为 key 来区分同一波中的不同怪物实例
           const monsterKey = `pos-${m.position}`
           const isDead = (m.hp ?? 0) <= 0 && deadMonsters.has(monsterKey)
-          const isHit = m.position != null && hitMonsters.has(m.position)
+          const isHit = showDamageAndHp && m.position != null && hitMonsters.has(m.position)
 
           // 使用 instance_id 作为 key，这样新怪物出现时会重新创建元素触发动画
           return (

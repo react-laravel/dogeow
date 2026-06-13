@@ -1312,7 +1312,9 @@ const store: StateCreator<GameState> = (set, get) => ({
   },
 
   setShouldAutoCombat: (should: boolean) => {
-    set(state => ({ ...state, shouldAutoCombat: should }))
+    set(state =>
+      state.shouldAutoCombat === should ? state : { ...state, shouldAutoCombat: should }
+    )
   },
 
   toggleEnabledSkill: async (skillId: number) => {
