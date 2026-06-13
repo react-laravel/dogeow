@@ -4,7 +4,11 @@ import { type CombatMonster, type SkillUsedEntry } from '../../types'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MonsterIcon } from './MonsterIcon'
 import { MonsterInfoDialog } from './MonsterInfoDialog'
-import { isRenderableCombatMonster } from '../../utils/combatUtils'
+import {
+  isRenderableCombatMonster,
+  COMBAT_MONSTER_COLS,
+  COMBAT_MONSTER_MAX_ROWS,
+} from '../../utils/combatUtils'
 import styles from '../../rpg.module.css'
 
 type MonsterWithMeta = CombatMonster & { damage_taken?: number; was_attacked?: boolean }
@@ -230,25 +234,30 @@ export function MonsterGroup({
   if (!hasValidMonsters) return null
 
   const iconSize = validMonsters.length >= 4 ? 'sm' : 'md'
+  const slotPositions = Array.from({ length: COMBAT_MONSTER_COLS }, (_, i) => i)
 
   return (
     <>
-      <div className="grid w-full max-w-[20rem] grid-cols-5 items-end justify-items-center gap-0.5 sm:max-w-[22rem] sm:gap-1">
-        {[0, 1, 2, 3, 4].map(pos => {
-          // 优先使用数组索引对应的怪物，其次查找 position 字段
-          const m = monsters[pos] ?? validMonsters.find(monster => monster.position === pos)
+      <div
+        className="grid w-full max-w-[18rem] grid-cols-5 items-end justify-items-center gap-x-0.5 gap-y-1 overflow-hidden sm:max-w-[20rem]"
+        style={{ gridTemplateRows: `repeat(${COMBAT_MONSTER_MAX_ROWS}, minmax(0, auto))` }}
+      >
+        {slotPositions.map(pos => {
+          const m = monsters[pos]
           if (!isRenderableCombatMonster(m)) {
-            // 空位置
-            return <div key={pos} className="min-h-px w-full" aria-hidden />
+            return <div key={`slot-${pos}`} className="min-h-px w-full" aria-hidden />
           }
 
-          // 使用后端提供的 is_new 字段判断是否是新的怪物
-          // 通过 appearingMonsters state 判断是否需要显示出现动画
+          const monsterKey = `pos-${m.position ?? pos}`
+          const isDying = (m.hp ?? 0) <= 0 && deadMonsters.has(monsterKey)
+          // 死亡动画结束后不再占位，避免堆叠占满屏幕
+          if ((m.hp ?? 0) <= 0 && !isDying) {
+            return <div key={`slot-${pos}`} className="min-h-px w-full" aria-hidden />
+          }
+
           const isNew = m.instance_id ? appearingMonsters.has(m.instance_id) : false
-          const damage = showDamageAndHp ? damageTexts[`pos-${m.position}`] : undefined
-          // 使用 position 作为 key 来区分同一波中的不同怪物实例
-          const monsterKey = `pos-${m.position}`
-          const isDead = (m.hp ?? 0) <= 0 && deadMonsters.has(monsterKey)
+          const damage = showDamageAndHp ? damageTexts[monsterKey] : undefined
+          const isDead = isDying
           const isHit = showDamageAndHp && m.position != null && hitMonsters.has(m.position)
 
           // 使用 instance_id 作为 key，这样新怪物出现时会重新创建元素触发动画

@@ -38,7 +38,7 @@ export function BattleArena({
   } | null
   monsterId?: number
   monsterHpBeforeRound?: number
-  monsters?: CombatMonster[]
+  monsters?: (CombatMonster | null)[]
   isFighting: boolean
   isLoading: boolean
   skillUsed?: SkillUsedEntry | null
@@ -247,8 +247,8 @@ export function BattleArena({
 
       {/* 内容层：怪物、VS、玩家叠在特效之上，形成立体场景 */}
       <div className="relative z-10 flex flex-1 flex-col min-h-0">
-        {/* 上侧：怪物（支持多只），留出上方空间以便从天而降的技能有足够下落距离 */}
-        <div className="flex flex-1 flex-col items-center gap-2 p-3 pt-10 sm:p-4 sm:pt-12">
+        {/* 上侧：怪物区限高最多三排，给下方角色留出空间 */}
+        <div className="flex max-h-[min(46%,13.5rem)] flex-none flex-col items-center justify-end gap-1 overflow-hidden px-2 pt-4 sm:max-h-[min(48%,15rem)] sm:px-3 sm:pt-6">
           {!isLoading && isFighting && hasValidMonsters ? (
             <MonsterGroup
               monsters={displayMonsters}
@@ -273,7 +273,7 @@ export function BattleArena({
         </div>
 
         {/* 下侧：用户与雇佣兵 */}
-        <div className="mt-auto flex items-end justify-center gap-3 p-3 sm:gap-4 sm:p-4">
+        <div className="mt-auto flex shrink-0 items-end justify-center gap-3 p-3 sm:gap-4 sm:p-4">
           {mercenary && <MercenaryCombatCard mercenary={mercenary} />}
           <div className="flex flex-col items-center gap-2">
             <div className="bg-primary/20 text-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl">

@@ -20,7 +20,7 @@ import { getActName } from '../../utils/combat'
 import {
   getPrimaryCombatMonster,
   getPrimaryCombatMonsterId,
-  isRenderableCombatMonster,
+  normalizeCombatMonsterSlots,
 } from '../../utils/combatUtils'
 import { MapCardMonsterAvatar } from './MapCardMonsterAvatar'
 import { GalleryHorizontal, LayoutGrid, Heart, Droplet } from 'lucide-react'
@@ -353,11 +353,9 @@ export function CombatPanel() {
                       undefined
                     }
                     monsterHpBeforeRound={combatResult?.monster_hp_before_round}
-                    monsters={
-                      (combatResult?.monsters ?? statusCombatMonsters)?.filter(
-                        isRenderableCombatMonster
-                      ) ?? undefined
-                    }
+                    monsters={normalizeCombatMonsterSlots(
+                      combatResult?.monsters ?? statusCombatMonsters
+                    )}
                     isFighting={isFighting}
                     isLoading={isLoading}
                     skillUsed={combatResult?.skills_used?.[0]}
