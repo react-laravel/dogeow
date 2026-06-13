@@ -15,6 +15,7 @@ import { getMapBackgroundStyle } from '../../utils/mapBackground'
 import { BattleArena } from './BattleArena'
 import { BattleSkillBar, type SkillBarLayout } from './BattleSkillBar'
 import { CombatLogList } from './CombatLogList'
+import { VSSwords } from './VSSwords'
 import { getActName } from '../../utils/combat'
 import {
   getPrimaryCombatMonster,
@@ -197,6 +198,10 @@ export function CombatPanel() {
     await stopCombat()
   }
 
+  const isCharacterDead = (currentHp ?? 0) <= 0 && (combatStats?.max_hp ?? 0) > 0
+  const handleCombatToggle =
+    (currentHp ?? 0) <= 0 ? handleRevive : isFighting ? handleStopCombat : handleStartCombat
+
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* 战斗区域：有地图时显示，VS 处点击开始/停止挂机 */}
@@ -206,7 +211,7 @@ export function CombatPanel() {
         {/* 地图选择器 */}
         {currentMap && (
           <div className="relative mb-2 w-full px-2 sm:mb-3 sm:px-3" ref={mapDropdownRef}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -230,6 +235,13 @@ export function CombatPanel() {
                   )}
                 <span className="text-xs leading-none">{mapDropdownOpen ? '▲' : '▼'}</span>
               </button>
+              <VSSwords
+                isFighting={isFighting}
+                isLoading={isLoading}
+                isDead={isCharacterDead}
+                onToggle={handleCombatToggle}
+                variant="inline"
+              />
             </div>
             {/* 下拉内容 */}
             {mapDropdownOpen && (
@@ -346,15 +358,6 @@ export function CombatPanel() {
                     }
                     isFighting={isFighting}
                     isLoading={isLoading}
-                    // 角色死亡时(currentHp<=0)，点击只是复活，不自动开始战斗
-                    // 优先检查死亡状态，因为死亡时 isFighting 可能已经是 false
-                    onCombatToggle={
-                      (currentHp ?? 0) <= 0
-                        ? handleRevive
-                        : isFighting
-                          ? handleStopCombat
-                          : handleStartCombat
-                    }
                     skillUsed={combatResult?.skills_used?.[0]}
                     skillTargetPositions={combatResult?.skill_target_positions}
                     mercenary={combatResult?.mercenary ?? activeMercenary}

@@ -4,7 +4,6 @@ import { type ActiveMercenary, type CombatMonster, type SkillUsedEntry } from '.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MonsterIcon } from './MonsterIcon'
 import { MonsterGroup } from './MonsterGroup'
-import { VSSwords } from './VSSwords'
 import { SkillEffect, type SkillEffectType } from './effects'
 import { soundManager } from '../../utils/soundManager'
 import styles from '../../rpg.module.css'
@@ -21,7 +20,6 @@ export function BattleArena({
   monsters,
   isFighting,
   isLoading,
-  onCombatToggle,
   skillUsed,
   skillTargetPositions,
   mercenary,
@@ -43,7 +41,6 @@ export function BattleArena({
   monsters?: CombatMonster[]
   isFighting: boolean
   isLoading: boolean
-  onCombatToggle: () => void
   skillUsed?: SkillUsedEntry | null
   skillTargetPositions?: number[]
   mercenary?: ActiveMercenary | null
@@ -63,10 +60,6 @@ export function BattleArena({
 
   // 检测怪物死亡
   const isMonsterDead = finalMonsterHp <= 0
-  // 检测角色死亡
-  const maxCharacterHp = combatStats?.max_hp ?? 0
-  const isCharacterDead = (currentHp ?? 0) <= 0 && maxCharacterHp > 0
-
   const hpPercent = combatStats?.max_hp
     ? Math.min(100, Math.max(0, ((currentHp ?? 0) / combatStats.max_hp) * 100))
     : 0
@@ -288,18 +281,6 @@ export function BattleArena({
           {!isLoading && isFighting && !hasValidMonsters && !monster && !monsterId && (
             <div className="text-muted-foreground flex-1 text-xs">战斗中</div>
           )}
-        </div>
-
-        {/* 中轴状态按钮：固定在战场正中央，保证与怪物/玩家等距 */}
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center">
-          <div className="pointer-events-auto">
-            <VSSwords
-              isFighting={isFighting}
-              isLoading={isLoading}
-              isDead={isCharacterDead}
-              onToggle={onCombatToggle}
-            />
-          </div>
         </div>
 
         {/* 下侧：用户与雇佣兵 */}
