@@ -181,6 +181,10 @@ export function BattleArena({
 
   // 技能特效状态
   const [activeSkillEffect, setActiveSkillEffect] = useState<SkillEffectType | null>(null)
+  const shouldUseMultiTargetEffect =
+    activeSkillEffect === 'ice-age' ||
+    activeSkillEffect === 'chain-lightning' ||
+    (activeSkillEffect === 'fireball' && skillUsed?.target_type === 'all')
   // 每次触发递增，作为 SkillEffect 的 key：连续回合同一技能也能重新挂载、完整重播动画
   const [effectNonce, setEffectNonce] = useState(0)
 
@@ -252,11 +256,7 @@ export function BattleArena({
           type={activeSkillEffect}
           active={true}
           targetPosition={computedTargetPos}
-          targetPositions={
-            activeSkillEffect === 'ice-age' || activeSkillEffect === 'chain-lightning'
-              ? computedTargetPositions
-              : undefined
-          }
+          targetPositions={shouldUseMultiTargetEffect ? computedTargetPositions : undefined}
           onComplete={handleSkillComplete}
           onHit={handleHit}
           className={`absolute inset-0 ${effectLayerZ}`}

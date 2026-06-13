@@ -4,13 +4,20 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { EffectBaseProps } from './types'
 
 /** 火球特效 */
-export function FireballEffect({ active, onComplete, onHit, targetPosition }: EffectBaseProps) {
+export function FireballEffect({
+  active,
+  onComplete,
+  onHit,
+  targetPosition,
+  targetPositions = [],
+}: EffectBaseProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fireballsRef = useRef<any[]>([])
   const explosionsRef = useRef<any[]>([])
   const rafRef = useRef<number>(0)
   const [isActive, setIsActive] = useState(false)
   const targetRef = useRef({ x: 0.5, y: 0.5 })
+  const targetPositionsRef = useRef(targetPositions)
   const hasCalledHitRef = useRef(false)
   const onHitRef = useRef(onHit)
 
@@ -23,6 +30,10 @@ export function FireballEffect({ active, onComplete, onHit, targetPosition }: Ef
       targetRef.current = targetPosition
     }
   }, [targetPosition])
+
+  useEffect(() => {
+    targetPositionsRef.current = targetPositions
+  }, [targetPositions])
 
   const cast = useCallback(() => {
     const canvas = canvasRef.current
@@ -86,7 +97,18 @@ export function FireballEffect({ active, onComplete, onHit, targetPosition }: Ef
 
         if (dist < 20) {
           f.alive = false
-          explosionsRef.current.push({ x: f.x, y: f.y, radius: 0, maxRadius: 60, alpha: 1 })
+          const currentTargetPositions = targetPositionsRef.current
+          const explosionTargets =
+            currentTargetPositions.length > 1 ? currentTargetPositions : [targetRef.current]
+          explosionTargets.forEach(pos => {
+            explosionsRef.current.push({
+              x: pos.x * canvas.width,
+              y: pos.y * canvas.height,
+              radius: 0,
+              maxRadius: currentTargetPositions.length > 1 ? 78 : 60,
+              alpha: 1,
+            })
+          })
           // 爆炸瞬间即视觉命中，提前结算扣血而不等尾焰淡出
           if (!hasCalledHitRef.current) {
             hasCalledHitRef.current = true
