@@ -47,6 +47,11 @@ function CombatLogSkillIcons({ skills }: { skills: SkillUsedEntry[] }) {
   )
 }
 
+function filterPlayerSkillsUsed(skills: SkillUsedEntry[] | undefined, playerSkillIds: Set<number>) {
+  if (!skills?.length || playerSkillIds.size === 0) return []
+  return skills.filter(skill => playerSkillIds.has(skill.skill_id))
+}
+
 function CombatLogLootIcon({ item, onClick }: { item: GameItem; onClick: () => void }) {
   const qualityColor = QUALITY_COLORS[item.quality]
   return (
@@ -84,10 +89,12 @@ function ItemDetailDialog({ item, onClose }: { item: GameItem; onClose: () => vo
 function CombatLogDetailDialog({
   logId,
   fallbackLog,
+  playerSkillIds,
   onClose,
 }: {
   logId: number
   fallbackLog: CombatLogEntry | null
+  playerSkillIds: Set<number>
   onClose: () => void
 }) {
   const selectedCharacterId = useGameStore(state => state.selectedCharacterId)
@@ -164,6 +171,7 @@ function CombatLogDetailDialog({
   }
 
   const d = detail
+  const playerSkillsUsed = filterPlayerSkillsUsed(d.skills_used, playerSkillIds)
 
   return (
     <div className="fixed inset-0 z-[10080] flex items-center justify-center bg-black/60 p-4">
@@ -313,11 +321,11 @@ function CombatLogDetailDialog({
             </div>
 
             {/* 使用的技能 */}
-            {d.skills_used && d.skills_used.length > 0 && (
+            {playerSkillsUsed.length > 0 && (
               <div className="bg-muted/50 rounded-lg p-3">
                 <h4 className="text-muted-foreground mb-2 text-sm font-medium">使用的技能</h4>
                 <div className="flex flex-wrap gap-2">
-                  <CombatLogSkillIcons skills={d.skills_used} />
+                  <CombatLogSkillIcons skills={playerSkillsUsed} />
                 </div>
               </div>
             )}
@@ -332,6 +340,15 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
   const [selectedItem, setSelectedItem] = useState<GameItem | null>(null)
   const [selectedLogId, setSelectedLogId] = useState<number | null>(null)
   const [selectedLog, setSelectedLog] = useState<CombatLogEntry | null>(null)
+  const playerSkillIds = useGameStore(state => {
+    const ids = new Set<number>()
+    state.skills.forEach(skill => {
+      if (!skill.is_learned || skill.type !== 'active') return
+      ids.add(skill.id)
+      if (skill.character_skill_id != null) ids.add(skill.character_skill_id)
+    })
+    return ids
+  })
   const maxLogs = useMemo(() => logs.slice(0, 50), [logs])
 
   if (!logs || logs.length === 0) {
@@ -353,6 +370,7 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
           log.potion_used?.before && Object.keys(log.potion_used.before).length > 0
         const hasPotionAfter =
           log.potion_used?.after && Object.keys(log.potion_used.after).length > 0
+        const playerSkillsUsed = filterPlayerSkillsUsed(log.skills_used, playerSkillIds)
 
         return (
           <div key={logKey}>
@@ -400,9 +418,7 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                   {isVictory ? '✅' : '⚔️'}
                 </span>
                 <span className="text-foreground truncate">{log.monster?.name ?? '?'}</span>
-                {log.skills_used && log.skills_used.length > 0 && (
-                  <CombatLogSkillIcons skills={log.skills_used} />
-                )}
+                {playerSkillsUsed.length > 0 && <CombatLogSkillIcons skills={playerSkillsUsed} />}
               </div>
               <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
                 {log.loot?.item && (
@@ -450,6 +466,7 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
         <CombatLogDetailDialog
           logId={selectedLogId}
           fallbackLog={selectedLog}
+          playerSkillIds={playerSkillIds}
           onClose={() => {
             setSelectedLogId(null)
             setSelectedLog(null)
