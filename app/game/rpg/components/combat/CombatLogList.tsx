@@ -253,10 +253,19 @@ function CombatLogDetailDialog({
                     <span>基础/技能伤害:</span>
                     <span className="text-red-500">{d.damage_detail.base_attack}</span>
                   </div>
-                  {d.damage_detail.skill_damage > 0 && (
-                    <div className="flex justify-between">
-                      <span>技能额外伤害:</span>
-                      <span className="text-orange-500">+{d.damage_detail.skill_damage}</span>
+                  {((d.damage_detail.skill_damage ?? 0) > 0 || playerSkillsUsed.length > 0) && (
+                    <div className="flex justify-between gap-2">
+                      <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className="shrink-0">技能额外伤害:</span>
+                        {playerSkillsUsed.length > 0 && (
+                          <CombatLogSkillIcons skills={playerSkillsUsed} />
+                        )}
+                      </span>
+                      {(d.damage_detail.skill_damage ?? 0) > 0 ? (
+                        <span className="shrink-0 text-orange-500">
+                          +{d.damage_detail.skill_damage}
+                        </span>
+                      ) : null}
                     </div>
                   )}
                   {d.damage_detail.crit_damage > 0 && (
@@ -277,7 +286,13 @@ function CombatLogDetailDialog({
                   </div>
                   <div className="flex justify-between">
                     <span>怪物防御减伤:</span>
-                    <span className="text-gray-500">{d.damage_detail.defense_reduction}%</span>
+                    <span className="text-gray-500">
+                      {(
+                        d.damage_detail.defense_reduction_percent ??
+                        d.damage_detail.defense_reduction * 100
+                      ).toFixed(1)}
+                      %
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>怪物反击伤害:</span>
@@ -314,21 +329,13 @@ function CombatLogDetailDialog({
               </h4>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                 <span className="text-purple-500">+{d.experience_gained} 经验</span>
-                <span className="flex items-center gap-1 text-yellow-500">
-                  <Coins className="h-4 w-4 shrink-0" />+{d.copper_gained} 铜币
-                </span>
+                {(d.copper_gained ?? 0) > 0 && (
+                  <span className="flex items-center gap-1 text-yellow-500">
+                    <Coins className="h-4 w-4 shrink-0" />+{d.copper_gained} 铜币
+                  </span>
+                )}
               </div>
             </div>
-
-            {/* 使用的技能 */}
-            {playerSkillsUsed.length > 0 && (
-              <div className="bg-muted/50 rounded-lg p-3">
-                <h4 className="text-muted-foreground mb-2 text-sm font-medium">使用的技能</h4>
-                <div className="flex flex-wrap gap-2">
-                  <CombatLogSkillIcons skills={playerSkillsUsed} />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

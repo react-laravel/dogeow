@@ -24,6 +24,7 @@ type PersistedCombatLogFields = {
   aoe_damage?: number
   total_damage_to_monsters?: number
   monster_defense_reduction?: number
+  monster_defense_reduction_percent?: number
   monster_counter_damage?: number
   round_number?: number
   monsters_alive_count?: number
@@ -178,6 +179,9 @@ export function buildCombatLogDetailFromEntry(
         aoe_damage: log.aoe_damage ?? 0,
         total: log.total_damage_to_monsters ?? log.damage_dealt ?? 0,
         defense_reduction: log.monster_defense_reduction ?? 0,
+        defense_reduction_percent:
+          log.monster_defense_reduction_percent ??
+          (log.monster_defense_reduction != null ? log.monster_defense_reduction * 100 : 0),
         counter_damage: log.monster_counter_damage ?? 0,
       },
       battle: {

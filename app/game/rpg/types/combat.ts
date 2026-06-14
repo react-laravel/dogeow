@@ -170,6 +170,7 @@ export interface CombatLogDetail {
     aoe_damage: number
     total: number
     defense_reduction: number
+    defense_reduction_percent?: number
     counter_damage: number
   }
   battle: {
