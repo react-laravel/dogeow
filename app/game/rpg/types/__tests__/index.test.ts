@@ -150,7 +150,7 @@ describe('RPG Types', () => {
       expect(STAT_NAMES.max_mana).toBe('魔法值')
       expect(STAT_NAMES.crit_rate).toBe('暴击率')
       expect(STAT_NAMES.crit_damage).toBe('暴击伤害')
-      expect(STAT_NAMES.strength).toBe('力量')
+      expect(STAT_NAMES.strength).toBe('攻击力')
       expect(STAT_NAMES.dexterity).toBe('敏捷')
       expect(STAT_NAMES.vitality).toBe('体力')
       expect(STAT_NAMES.energy).toBe('能量')
@@ -160,20 +160,20 @@ describe('RPG Types', () => {
 
   describe('STAT_DESCRIPTIONS', () => {
     it('should have descriptions for base stats', () => {
-      expect(STAT_DESCRIPTIONS.strength).toContain('力量')
+      expect(STAT_DESCRIPTIONS.strength).toContain('攻击力')
       expect(STAT_DESCRIPTIONS.dexterity).toContain('敏捷')
       expect(STAT_DESCRIPTIONS.vitality).toContain('体力')
       expect(STAT_DESCRIPTIONS.energy).toContain('能量')
     })
 
-    it('should describe strength correctly for warriors/rangers', () => {
-      expect(STAT_DESCRIPTIONS.strength).toContain('战士主属性')
+    it('should describe strength correctly for all classes', () => {
+      expect(STAT_DESCRIPTIONS.strength).toContain('所有职业')
       expect(STAT_DESCRIPTIONS.strength).toContain('攻击力')
     })
 
-    it('should describe dexterity correctly for crit rate and rangers', () => {
+    it('should describe dexterity correctly for crit rate', () => {
       expect(STAT_DESCRIPTIONS.dexterity).toContain('暴击率')
-      expect(STAT_DESCRIPTIONS.dexterity).toContain('游侠主属性')
+      expect(STAT_DESCRIPTIONS.dexterity).toContain('防御力')
     })
 
     it('should describe vitality correctly for HP and defense', () => {
@@ -181,9 +181,9 @@ describe('RPG Types', () => {
       expect(STAT_DESCRIPTIONS.vitality).toContain('防御力')
     })
 
-    it('should describe energy correctly for mages', () => {
-      expect(STAT_DESCRIPTIONS.energy).toContain('法师主属性')
-      expect(STAT_DESCRIPTIONS.energy).toContain('攻击力')
+    it('should describe energy correctly for mana', () => {
+      expect(STAT_DESCRIPTIONS.energy).toContain('最大法力')
+      expect(STAT_DESCRIPTIONS.energy).toContain('能量需求')
     })
   })
 
