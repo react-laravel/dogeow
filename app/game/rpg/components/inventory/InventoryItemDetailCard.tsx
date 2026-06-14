@@ -3,7 +3,12 @@
 import type { ReactNode } from 'react'
 import { CopperDisplay } from '../shared/CopperDisplay'
 import { GameItem, QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '../../types'
-import { formatItemStatValue, getItemDisplayName, getItemTotalStats } from '../../utils/itemUtils'
+import {
+  formatItemStatValue,
+  getDisplayableItemStats,
+  getItemDisplayName,
+  getItemTotalStats,
+} from '../../utils/itemUtils'
 import { ItemTipIcon } from '@/components/game/ItemTipIcon'
 import { ItemSocketIndicators } from './ItemSocketIndicators'
 
@@ -55,7 +60,9 @@ export function EquipmentDetailBody({
   onUnsocketGem,
   showBuyPrice = false,
 }: EquipmentDetailBodyProps) {
-  const displayStats = getItemTotalStats(item)
+  const displayStats = getDisplayableItemStats(getItemTotalStats(item), {
+    hideRestore: item.definition?.type === 'potion',
+  })
 
   return (
     <>

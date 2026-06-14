@@ -6,6 +6,7 @@ import { ItemTipIcon } from './ItemTipIcon'
 import { ShopItemIcon } from './ShopItemIcon'
 import {
   formatItemStatValue,
+  getDisplayableItemStats,
   getItemDisplayName,
   getItemTotalStats,
   ITEM_TYPE_NAMES,
@@ -22,7 +23,13 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
   const quality = isShopItem ? item.quality : (item as GameItem).quality
 
   // 获取属性
-  const stats = isShopItem ? (item as ShopItem).base_stats : getItemTotalStats(item as GameItem)
+  const isPotionItem = isShopItem
+    ? (item as ShopItem).type === 'potion'
+    : (item as GameItem).definition?.type === 'potion'
+  const stats = getDisplayableItemStats(
+    isShopItem ? (item as ShopItem).base_stats : getItemTotalStats(item as GameItem),
+    { hideRestore: isPotionItem }
+  )
 
   // 获取显示名称
   const displayName = isShopItem ? (item as ShopItem).name : getItemDisplayName(item as GameItem)
@@ -92,10 +99,6 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
         {/* 属性信息 */}
         <div className="mt-1 space-y-0.5 text-xs">
           {Object.entries(stats || {}).map(([stat, value]) => {
-            // 药水不显示 restore 属性
-            if (isShopItem && (item as ShopItem).type === 'potion' && stat === 'restore') {
-              return null
-            }
             return (
               <p key={stat} className="text-green-600 dark:text-green-400">
                 +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}

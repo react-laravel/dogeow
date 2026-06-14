@@ -15,6 +15,8 @@ type MonsterWithMeta = CombatMonster & { damage_taken?: number; was_attacked?: b
 
 // sessionStorage key，用于持久化已显示过动画的怪物 instance_id
 const APPEARED_MONSTERS_KEY = 'rpg_appeared_monsters'
+const DAMAGE_TEXT_DURATION_MS = 2200
+const DEAD_MONSTER_HOLD_MS = 2400
 
 /** 获取已显示过动画的怪物 ID 集合 */
 function getAppearedMonsters(): Set<string> {
@@ -71,12 +73,17 @@ export function MonsterGroup({
   const [selectedMonster, setSelectedMonster] = useState<MonsterWithMeta | null>(null)
   // 记录死亡的怪物，用于触发动画
   const [deadMonsters, setDeadMonsters] = useState<Set<string>>(new Set())
+  // 保留刚死亡怪物的快照，避免后端马上清空该位置导致伤害数字看不清
+  const [deadMonsterSnapshots, setDeadMonsterSnapshots] = useState<Record<string, MonsterWithMeta>>(
+    {}
+  )
   // 记录需要显示出现动画的怪物 instance_id（仅当前会话使用，不从 sessionStorage 初始化）
   const [appearingMonsters, setAppearingMonsters] = useState<Set<string>>(new Set())
   // 记录需要显示被攻击后退动画的怪物 position
   const [hitMonsters, setHitMonsters] = useState<Set<number>>(new Set())
   // 本组件创建的所有定时器，卸载时统一清理，避免对已卸载组件 setState
   const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+  const scheduledDeadRemovalRef = useRef<Set<string>>(new Set())
 
   const scheduleTimeout = (fn: () => void, ms: number) => {
     const t = setTimeout(() => {
@@ -88,9 +95,11 @@ export function MonsterGroup({
 
   useEffect(() => {
     const timers = timersRef.current
+    const scheduledDeadRemoval = scheduledDeadRemovalRef.current
     return () => {
       timers.forEach(clearTimeout)
       timers.clear()
+      scheduledDeadRemoval.clear()
     }
   }, [])
 
@@ -176,7 +185,7 @@ export function MonsterGroup({
     if (Object.keys(newDamage).length > 0) {
       queueMicrotask(() => {
         setDamageTexts(newDamage)
-        scheduleTimeout(() => setDamageTexts({}), 1500)
+        scheduleTimeout(() => setDamageTexts({}), DAMAGE_TEXT_DURATION_MS)
       })
       // 触发被攻击后退动画（被攻击且伤害大于0时）
       const hitPositions = validMonsters
@@ -199,23 +208,75 @@ export function MonsterGroup({
 
     // 检测怪物死亡/复位：HP <= 0 时触发死亡动画；该位置出现活怪（新一波）时移除标记
     queueMicrotask(() => {
+      const deadEntries = validMonsters
+        .filter(m => (m.hp ?? 0) <= 0)
+        .map(m => [`pos-${m.position}`, m] as const)
+      const aliveKeys = validMonsters.filter(m => (m.hp ?? 0) > 0).map(m => `pos-${m.position}`)
+
+      if (deadEntries.length > 0) {
+        setDeadMonsterSnapshots(snapshots => {
+          let changed = false
+          const next = { ...snapshots }
+          deadEntries.forEach(([key, monster]) => {
+            if (next[key] !== monster) {
+              next[key] = monster
+              changed = true
+            }
+          })
+          return changed ? next : snapshots
+        })
+      }
+
+      aliveKeys.forEach(key => scheduledDeadRemovalRef.current.delete(key))
+
       setDeadMonsters(prev => {
         let changed = false
         const next = new Set(prev)
-        validMonsters.forEach(m => {
-          const key = `pos-${m.position}`
-          if ((m.hp ?? 0) <= 0) {
-            if (!next.has(key)) {
-              next.add(key)
-              changed = true
-            }
-          } else if (next.has(key)) {
+        deadEntries.forEach(([key]) => {
+          if (!next.has(key)) {
+            next.add(key)
+            changed = true
+          }
+          if (!scheduledDeadRemovalRef.current.has(key)) {
+            scheduledDeadRemovalRef.current.add(key)
+            scheduleTimeout(() => {
+              scheduledDeadRemovalRef.current.delete(key)
+              setDeadMonsters(current => {
+                if (!current.has(key)) return current
+                const updated = new Set(current)
+                updated.delete(key)
+                return updated
+              })
+              setDeadMonsterSnapshots(snapshots => {
+                if (!(key in snapshots)) return snapshots
+                const { [key]: _removed, ...rest } = snapshots
+                return rest
+              })
+            }, DEAD_MONSTER_HOLD_MS)
+          }
+        })
+        aliveKeys.forEach(key => {
+          if (next.has(key)) {
             next.delete(key)
             changed = true
           }
         })
         return changed ? next : prev
       })
+
+      if (aliveKeys.length > 0) {
+        setDeadMonsterSnapshots(snapshots => {
+          let changed = false
+          const next = { ...snapshots }
+          aliveKeys.forEach(key => {
+            if (key in next) {
+              delete next[key]
+              changed = true
+            }
+          })
+          return changed ? next : snapshots
+        })
+      }
     })
 
     prevMonstersRef.current = validMonsters
@@ -231,7 +292,7 @@ export function MonsterGroup({
   }, [validMonsters])
 
   // 如果没有有效怪物则不渲染
-  if (!hasValidMonsters) return null
+  if (!hasValidMonsters && Object.keys(deadMonsterSnapshots).length === 0) return null
 
   const iconSize = validMonsters.length >= 4 ? 'sm' : 'md'
   const slotPositions = Array.from({ length: COMBAT_MONSTER_COLS }, (_, i) => i)
@@ -243,20 +304,26 @@ export function MonsterGroup({
         style={{ gridTemplateRows: `repeat(${COMBAT_MONSTER_MAX_ROWS}, minmax(0, auto))` }}
       >
         {slotPositions.map(pos => {
-          const m = monsters[pos]
+          const liveMonster = monsters[pos]
+          const monsterKey = `pos-${pos}`
+          const m = isRenderableCombatMonster(liveMonster)
+            ? liveMonster
+            : deadMonsterSnapshots[monsterKey]
           if (!isRenderableCombatMonster(m)) {
             return <div key={`slot-${pos}`} className="min-h-px w-full" aria-hidden />
           }
 
-          const monsterKey = `pos-${m.position ?? pos}`
-          const isDying = (m.hp ?? 0) <= 0 && deadMonsters.has(monsterKey)
+          const displayMonsterKey = `pos-${m.position ?? pos}`
+          const isDying =
+            (m.hp ?? 0) <= 0 &&
+            (deadMonsters.has(displayMonsterKey) || deadMonsterSnapshots[displayMonsterKey] != null)
           // 死亡动画结束后不再占位，避免堆叠占满屏幕
           if ((m.hp ?? 0) <= 0 && !isDying) {
             return <div key={`slot-${pos}`} className="min-h-px w-full" aria-hidden />
           }
 
           const isNew = m.instance_id ? appearingMonsters.has(m.instance_id) : false
-          const damage = showDamageAndHp ? damageTexts[monsterKey] : undefined
+          const damage = showDamageAndHp ? damageTexts[displayMonsterKey] : undefined
           const isDead = isDying
           const isHit = showDamageAndHp && m.position != null && hitMonsters.has(m.position)
 

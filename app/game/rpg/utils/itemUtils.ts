@@ -4,6 +4,7 @@ import type { GameItem, ItemDefinition, ItemType, EquipmentSlot } from '../types
 import { STAT_NAMES } from '../types'
 
 const STAT_DISPLAY_ORDER = Object.keys(STAT_NAMES)
+const HIDDEN_ITEM_STAT_KEYS = new Set(['price'])
 
 /** 装备宝石孔位上限 */
 export const MAX_ITEM_SOCKETS = 3
@@ -173,6 +174,7 @@ export function getCompareStatKeys(
   for (const stats of statRecords) {
     if (!stats) continue
     for (const [key, value] of Object.entries(stats)) {
+      if (HIDDEN_ITEM_STAT_KEYS.has(key)) continue
       if (value != null && value !== 0) keys.add(key)
     }
   }
@@ -180,6 +182,21 @@ export function getCompareStatKeys(
   const ordered = STAT_DISPLAY_ORDER.filter(key => keys.has(key))
   const extras = [...keys].filter(key => !STAT_DISPLAY_ORDER.includes(key)).sort()
   return [...ordered, ...extras]
+}
+
+export function getDisplayableItemStats(
+  stats: Record<string, number> | undefined,
+  options: { hideRestore?: boolean } = {}
+): Record<string, number> {
+  if (!stats) return {}
+
+  return Object.fromEntries(
+    Object.entries(stats).filter(([key]) => {
+      if (HIDDEN_ITEM_STAT_KEYS.has(key)) return false
+      if (options.hideRestore && key === 'restore') return false
+      return true
+    })
+  )
 }
 
 /**

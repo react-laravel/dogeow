@@ -24,7 +24,7 @@ import { ItemDetailModal, ShopItemIcon } from '@/components/game'
 /** 强制刷新费用：1 银 = 100 铜 */
 const SHOP_REFRESH_COST_COPPER = 100
 
-/** 每个分类最多展示的物品数量（与后端配置一致） */
+/** 每个非药水分类最多展示的物品数量（与后端配置一致） */
 const SHOP_ITEMS_PER_CATEGORY_MAX = 5
 
 /** 商店分类行（顺序与左侧图标一致） */
@@ -246,13 +246,16 @@ function ShopItemsPanel() {
 
   const itemsByCategory = useMemo(
     () =>
-      SHOP_TYPE_FILTERS.map(filter => ({
-        ...filter,
-        items: shopItems
+      SHOP_TYPE_FILTERS.map(filter => {
+        const items = shopItems
           .filter(item => filter.types.includes(item.type))
           .sort((a, b) => b.buy_price - a.buy_price)
-          .slice(0, SHOP_ITEMS_PER_CATEGORY_MAX),
-      })).filter(group => group.items.length > 0),
+
+        return {
+          ...filter,
+          items: filter.id === 'potion' ? items : items.slice(0, SHOP_ITEMS_PER_CATEGORY_MAX),
+        }
+      }).filter(group => group.items.length > 0),
     [shopItems]
   )
 

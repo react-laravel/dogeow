@@ -8,6 +8,7 @@ import { ItemActions, type ItemActionType } from './ItemActions'
 import {
   formatItemStatValue,
   getCompareStatKeys,
+  getDisplayableItemStats,
   getItemDisplayName,
   getItemTotalStats,
   getShopItemIcon,
@@ -143,12 +144,12 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
   const isShopItem = isShop
 
   // 计算新物品属性
-  const newStats = isShopItem
-    ? (newItem as ShopItem).base_stats || {}
-    : getItemTotalStats(newItem as GameItem)
+  const newStats = getDisplayableItemStats(
+    isShopItem ? (newItem as ShopItem).base_stats || {} : getItemTotalStats(newItem as GameItem)
+  )
 
   // 计算已装备物品属性
-  const equippedStats = getItemTotalStats(equippedItem)
+  const equippedStats = getDisplayableItemStats(getItemTotalStats(equippedItem))
 
   const compareStatKeys = getCompareStatKeys(newStats, equippedStats)
 

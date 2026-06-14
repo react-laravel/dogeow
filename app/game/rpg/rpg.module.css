@@ -35,9 +35,13 @@
   animation: monster-appear 1.2s ease-out forwards;
 }
 
-/* 怪物死亡动画：1.5秒慢慢淡出 */
+/* 怪物死亡动画：先停留，让伤害数字可读，再慢慢淡出 */
 @keyframes monster-death {
   0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  65% {
     opacity: 1;
     transform: scale(1);
   }
@@ -48,7 +52,7 @@
 }
 
 .monster-death {
-  animation: monster-death 1.5s ease-out forwards;
+  animation: monster-death 2.4s ease-out forwards;
 }
 
 /* 怪物被攻击后退动画：向左后方位移 */
