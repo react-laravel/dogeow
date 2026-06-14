@@ -96,13 +96,15 @@ const ShopItemCell = memo(function ShopItemCell({
   showUpgradeIndicator?: boolean
   onSelect: (item: ShopItem) => void
 }) {
-  const borderColor = isSelected
-    ? undefined
-    : !levelEnough
+  const insufficientCurrency = levelEnough && !canAfford
+  const borderColor =
+    isSelected || insufficientCurrency
       ? undefined
-      : item.quality
-        ? QUALITY_COLORS[item.quality]
-        : undefined
+      : !levelEnough
+        ? undefined
+        : item.quality
+          ? QUALITY_COLORS[item.quality]
+          : undefined
 
   return (
     <button
@@ -110,9 +112,11 @@ const ShopItemCell = memo(function ShopItemCell({
       className={`flex aspect-square w-full min-w-0 flex-col rounded-md border transition-all active:scale-95 ${
         isSelected
           ? 'border-green-500 bg-green-500/20 shadow-sm shadow-green-500/20 dark:border-green-400 dark:bg-green-400/20'
-          : levelEnough
-            ? 'bg-muted/40 hover:bg-muted/60'
-            : 'border-amber-400/70 bg-amber-500/10 ring-1 ring-amber-300/20 hover:bg-amber-500/15'
+          : !levelEnough
+            ? 'border-amber-400/70 bg-amber-500/10 ring-1 ring-amber-300/20 hover:bg-amber-500/15'
+            : insufficientCurrency
+              ? 'border-muted-foreground/20 bg-muted/20 opacity-45 grayscale saturate-0 hover:bg-muted/30'
+              : 'bg-muted/40 hover:bg-muted/60'
       }`}
       style={borderColor ? { borderColor } : undefined}
       disabled={isLoading}
@@ -131,9 +135,6 @@ const ShopItemCell = memo(function ShopItemCell({
           <span className="absolute top-0.5 right-0.5 rounded bg-amber-500/95 px-1 text-[8px] leading-3 font-bold text-black shadow-sm">
             Lv{item.required_level}
           </span>
-        )}
-        {!canAfford && levelEnough && (
-          <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.9)]" />
         )}
       </span>
       <span className="border-border/40 bg-background/60 flex shrink-0 items-center justify-center border-t px-0.5 py-px">
