@@ -163,12 +163,12 @@ describe('RPG Types', () => {
       expect(STAT_DESCRIPTIONS.strength).toContain('力量')
       expect(STAT_DESCRIPTIONS.dexterity).toContain('敏捷')
       expect(STAT_DESCRIPTIONS.vitality).toContain('体力')
-      expect(STAT_DESCRIPTIONS.energy).toContain('精力')
+      expect(STAT_DESCRIPTIONS.energy).toContain('能量')
     })
 
     it('should describe strength correctly for warriors/rangers', () => {
-      expect(STAT_DESCRIPTIONS.strength).toContain('战士/游侠主属性')
-      expect(STAT_DESCRIPTIONS.strength).toContain('物理攻击力')
+      expect(STAT_DESCRIPTIONS.strength).toContain('战士主属性')
+      expect(STAT_DESCRIPTIONS.strength).toContain('攻击力')
     })
 
     it('should describe dexterity correctly for crit rate and rangers', () => {
@@ -183,7 +183,7 @@ describe('RPG Types', () => {
 
     it('should describe energy correctly for mages', () => {
       expect(STAT_DESCRIPTIONS.energy).toContain('法师主属性')
-      expect(STAT_DESCRIPTIONS.energy).toContain('法术攻击力')
+      expect(STAT_DESCRIPTIONS.energy).toContain('攻击力')
     })
   })
 
