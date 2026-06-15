@@ -105,35 +105,53 @@ export const InventoryGridItem = memo(function InventoryGridItem({
       />
       {isSelected &&
         createPortal(
-          <div
-            className={`fixed left-1/2 z-[150] max-w-[calc(100vw-24px)] -translate-x-1/2 overflow-visible ${
-              showCompare
-                ? 'border-0 !bg-transparent p-0 shadow-none'
-                : 'w-[280px] rounded-md border bg-background text-foreground shadow-md'
-            } ${showCompare ? popoverWidth : ''}`}
-            style={{ top: detailPanelTop }}
-          >
-            <InventoryItemDetailContent
-              canSocket={canSocket}
-              canUnsocket={canUnsocket}
-              gemsInInventoryCount={gemsInInventoryCount}
-              getCompareActions={getCompareActions}
-              getEquippedItem={getEquippedItem}
-              getEquippedRings={getEquippedRings}
-              handleCompareAction={handleCompareAction}
-              hasEquippedItem={hasEquippedItem}
-              isLoading={isLoading}
-              item={item}
-              onClose={handleClose}
-              onEquip={onEquip}
-              onMove={onMove}
-              onOpenGemSelector={onOpenGemSelector}
-              onSell={onSell}
-              onUnsocketGem={onUnsocketGem}
-              onUsePotion={onUsePotion}
-              source={cell.source}
+          <>
+            <div
+              className="fixed inset-0 z-[149] bg-black/70"
+              onClick={handleClose}
+              aria-hidden="true"
             />
-          </div>,
+            <div
+              className={`fixed left-1/2 z-[150] max-w-[calc(100vw-24px)] -translate-x-1/2 overflow-visible ${
+                showCompare
+                  ? 'border-0 !bg-transparent p-0 shadow-none'
+                  : 'w-[280px] rounded-md border bg-background text-foreground shadow-md'
+              } ${showCompare ? popoverWidth : ''} relative`}
+              style={{ top: detailPanelTop }}
+              onClick={event => event.stopPropagation()}
+            >
+              {showCompare && (
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="text-muted-foreground hover:text-foreground absolute top-2 right-2 z-20 rounded p-1 transition-colors"
+                  aria-label="关闭"
+                >
+                  ✕
+                </button>
+              )}
+              <InventoryItemDetailContent
+                canSocket={canSocket}
+                canUnsocket={canUnsocket}
+                gemsInInventoryCount={gemsInInventoryCount}
+                getCompareActions={getCompareActions}
+                getEquippedItem={getEquippedItem}
+                getEquippedRings={getEquippedRings}
+                handleCompareAction={handleCompareAction}
+                hasEquippedItem={hasEquippedItem}
+                isLoading={isLoading}
+                item={item}
+                onClose={handleClose}
+                onEquip={onEquip}
+                onMove={onMove}
+                onOpenGemSelector={onOpenGemSelector}
+                onSell={onSell}
+                onUnsocketGem={onUnsocketGem}
+                onUsePotion={onUsePotion}
+                source={cell.source}
+              />
+            </div>
+          </>,
           document.body
         )}
     </>
