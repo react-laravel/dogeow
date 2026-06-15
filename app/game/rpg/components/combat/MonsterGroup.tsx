@@ -55,12 +55,15 @@ export function MonsterGroup({
   skillUsed,
   skillTargetPositions,
   showDamageAndHp = true,
+  onAppearActiveChange,
 }: {
   monsters: (MonsterWithMeta | null)[]
   skillUsed?: SkillUsedEntry | null
   skillTargetPositions?: number[]
   /** 为 false 时表示技能动画中，不显示扣血/伤害/受击，并清空已有状态避免重复播放 */
   showDamageAndHp?: boolean
+  /** 出现动画进行中（用于延迟技能特效与扣血显示） */
+  onAppearActiveChange?: (active: boolean) => void
 }) {
   const prevMonstersRef = useRef<MonsterWithMeta[]>([])
   // 存储上一次的 instance_id，用于检测新怪物（持久化，避免切换导航后重新触发动画）
@@ -116,20 +119,14 @@ export function MonsterGroup({
   // 检查是否有有效怪物
   const hasValidMonsters = validMonsters.length > 0
 
-  // 检测怪物掉血并显示伤害数字，以及检测新怪物
+  // 检测新怪物并触发出现动画（与扣血显示解耦，技能动画阶段也要能播出现动画）
   useEffect(() => {
-    if (!showDamageAndHp) return
-
-    // 检测新怪物：通过比较 instance_id
     const currentInstanceIds = new Set<string>(
       validMonsters.map(m => m.instance_id).filter((id): id is string => Boolean(id))
     )
     const prevInstanceIds = prevInstanceIdsRef.current
-
-    // 获取已显示过动画的怪物（持久化）
     const appearedMonsters = getAppearedMonsters()
 
-    // 找出新出现的怪物 instance_id（排除已显示过动画的）
     const newAppearing: string[] = []
     currentInstanceIds.forEach(instanceId => {
       if (instanceId && !prevInstanceIds.has(instanceId) && !appearedMonsters.has(instanceId)) {
@@ -138,7 +135,6 @@ export function MonsterGroup({
     })
 
     if (newAppearing.length > 0) {
-      // 立即更新 ref，用于渲染时判断
       newAppearingRef.current = new Set(newAppearing)
       queueMicrotask(() => {
         setAppearingMonsters(prev => {
@@ -146,12 +142,10 @@ export function MonsterGroup({
           newAppearing.forEach(id => next.add(id))
           return next
         })
-        // 持久化保存已显示过动画的怪物 ID
         const updatedAppeared = new Set(appearedMonsters)
         newAppearing.forEach(id => updatedAppeared.add(id))
         saveAppearedMonsters(updatedAppeared)
       })
-      // 1.2秒后移除动画标记（与 monster-appear 动画时长一致）
       scheduleTimeout(() => {
         setAppearingMonsters(prev => {
           const next = new Set(prev)
@@ -162,8 +156,16 @@ export function MonsterGroup({
       }, 1200)
     }
 
-    // 更新上一次的 instance_id
     prevInstanceIdsRef.current = currentInstanceIds
+  }, [validMonsters])
+
+  useEffect(() => {
+    onAppearActiveChange?.(appearingMonsters.size > 0)
+  }, [appearingMonsters, onAppearActiveChange])
+
+  // 检测怪物掉血、受击与死亡（仅在允许显示扣血后执行）
+  useEffect(() => {
+    if (!showDamageAndHp) return
 
     if (prevMonstersRef.current.length === 0 || validMonsters.length === 0) {
       prevMonstersRef.current = validMonsters

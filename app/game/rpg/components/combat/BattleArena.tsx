@@ -91,7 +91,14 @@ export function BattleArena({
   }, [skillUsed, computedSkillEffect])
   const lastSkillRoundKeyRef = useRef<string | null>(null)
   const [settledSkillRoundKey, setSettledSkillRoundKey] = useState<string | null>(null)
-  const showDamageAndHp = !skillRoundKey || settledSkillRoundKey === skillRoundKey
+  const [monsterAppearBlocking, setMonsterAppearBlocking] = useState(false)
+  const skillRoundPending = Boolean(skillRoundKey && settledSkillRoundKey !== skillRoundKey)
+  const deferDamageDisplay = skillRoundPending || monsterAppearBlocking
+  const showDamageAndHp = !deferDamageDisplay
+
+  const handleAppearActiveChange = useCallback((active: boolean) => {
+    setMonsterAppearBlocking(active)
+  }, [])
 
   useLayoutEffect(() => {
     if (!skillRoundKey) {
@@ -111,17 +118,17 @@ export function BattleArena({
   }, [skillRoundKey, skillUsed])
 
   useEffect(() => {
-    if (!skillUsed) return
+    if (!skillUsed || monsterAppearBlocking) return
     if (skillUsed === lastPlayedSkillSoundRef.current) return
 
     lastPlayedSkillSoundRef.current = skillUsed
     soundManager.playSkill(skillUsed)
-  }, [skillUsed])
+  }, [skillUsed, monsterAppearBlocking])
 
   // 多怪物：延迟显示时传扣血前数据
   const displayMonsters = useMemo(() => {
     const list = monsters ?? []
-    if (showDamageAndHp || list.length === 0) return list
+    if (!deferDamageDisplay || list.length === 0) return list
     return list.map(m => {
       if (m == null) return m
       const rawTaken = (m as CombatMonster & { damage_taken?: number }).damage_taken ?? 0
@@ -130,12 +137,12 @@ export function BattleArena({
       const beforeHp = Math.min(m.max_hp ?? 99999, (m.hp ?? 0) + taken)
       return { ...m, hp: beforeHp, damage_taken: undefined } as typeof m
     })
-  }, [monsters, showDamageAndHp])
+  }, [monsters, deferDamageDisplay])
 
   // 有技能回合且未到「可显示扣血」时，强制用扣血前血量，避免首帧就显示 finalMonsterHp
   const hasSkillThisRound = Boolean(skillUsed && computedSkillEffect)
   const effectiveMonsterHp =
-    hasSkillThisRound && !showDamageAndHp
+    hasSkillThisRound && deferDamageDisplay
       ? (monsterHpBeforeRound ?? displayMonsterHp ?? maxHp ?? 0)
       : (displayMonsterHp ?? monsterHpBeforeRound ?? finalMonsterHp)
 
@@ -195,7 +202,7 @@ export function BattleArena({
     }))
   }, [skillTargetPositions])
 
-  const activeSkillEffect = showDamageAndHp ? null : computedSkillEffect
+  const activeSkillEffect = skillRoundPending && !monsterAppearBlocking ? computedSkillEffect : null
   const shouldUseMultiTargetEffect =
     activeSkillEffect === 'ice-age' ||
     activeSkillEffect === 'chain-lightning' ||
@@ -255,6 +262,7 @@ export function BattleArena({
               skillUsed={skillUsed}
               skillTargetPositions={skillTargetPositions}
               showDamageAndHp={showDamageAndHp}
+              onAppearActiveChange={handleAppearActiveChange}
             />
           ) : !isLoading && isFighting && monster ? (
             <div className={isMonsterDead ? styles['monster-death'] : ''}>

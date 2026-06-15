@@ -1392,6 +1392,7 @@ const store: StateCreator<GameState> = (set, get) => ({
     set(state => ({
       ...state,
       statusCombatMonsters: typedData.monsters || [],
+      combatResult: null,
       currentHp,
       currentMana,
     }))

@@ -522,7 +522,10 @@ describe('GameStore', () => {
 
   describe('handleMonstersAppear', () => {
     it('should handle monsters appear event', () => {
-      useGameStore.setState({ isFighting: true })
+      useGameStore.setState({
+        isFighting: true,
+        combatResult: { victory: false } as never,
+      })
 
       useGameStore.getState().handleMonstersAppear({
         monsters: [{ id: 1, name: 'Monster1', type: 'normal', level: 1, hp: 50, max_hp: 50 }],
@@ -530,6 +533,7 @@ describe('GameStore', () => {
       })
 
       expect(useGameStore.getState().statusCombatMonsters).toHaveLength(1)
+      expect(useGameStore.getState().combatResult).toBeNull()
     })
 
     it('should not update if not fighting', () => {
