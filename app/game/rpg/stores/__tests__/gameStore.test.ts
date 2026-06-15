@@ -67,6 +67,7 @@ describe('GameStore', () => {
       combatResult: null,
       statusCombatMonsters: null,
       combatLogs: [],
+      pendingCombatLog: null,
       combatLogDetail: null,
       isLoading: false,
       error: null,
@@ -554,6 +555,7 @@ describe('GameStore', () => {
 
       useGameStore.getState().handleCombatUpdate({
         victory: false,
+        combat_log_id: 99,
         monster: { name: 'Monster', type: 'normal', level: 1 },
         damage_dealt: 10,
         damage_taken: 5,
@@ -565,6 +567,13 @@ describe('GameStore', () => {
       })
 
       expect(useGameStore.getState().combatResult).toBeDefined()
+      expect(useGameStore.getState().pendingCombatLog).not.toBeNull()
+      expect(useGameStore.getState().combatLogs).toHaveLength(0)
+
+      useGameStore.getState().flushPendingCombatLog()
+
+      expect(useGameStore.getState().combatLogs).toHaveLength(1)
+      expect(useGameStore.getState().pendingCombatLog).toBeNull()
     })
 
     it('should preserve enabled skills when auto stopped after defeat', () => {

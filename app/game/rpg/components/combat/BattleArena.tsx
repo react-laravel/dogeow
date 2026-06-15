@@ -24,6 +24,8 @@ export function BattleArena({
   skillUsed,
   skillTargetPositions,
   mercenary,
+  combatLogId,
+  onRoundVisualSettled,
 }: {
   character: { name: string; class: string; level: number } | null
   combatStats: { max_hp: number; max_mana: number } | null
@@ -45,6 +47,8 @@ export function BattleArena({
   skillUsed?: SkillUsedEntry | null
   skillTargetPositions?: number[]
   mercenary?: ActiveMercenary | null
+  combatLogId?: number | null
+  onRoundVisualSettled?: () => void
 }) {
   const finalMonsterHp = monster?.hp ?? 0
   const maxHp = monster?.max_hp ?? 0
@@ -55,6 +59,14 @@ export function BattleArena({
   const lastSkillUsedRef = useRef<SkillUsedEntry | null>(null)
   const lastPlayedSkillSoundRef = useRef<SkillUsedEntry | null>(null)
   const skillAnimationCompletedRef = useRef(false)
+  const lastNotifiedLogIdRef = useRef<number | null>(null)
+
+  const notifyRoundVisualSettled = useCallback(() => {
+    if (!onRoundVisualSettled) return
+    if (combatLogId != null && combatLogId === lastNotifiedLogIdRef.current) return
+    if (combatLogId != null) lastNotifiedLogIdRef.current = combatLogId
+    onRoundVisualSettled()
+  }, [combatLogId, onRoundVisualSettled])
 
   // 检测怪物死亡
   const isMonsterDead = finalMonsterHp <= 0
@@ -225,7 +237,8 @@ export function BattleArena({
     setDisplayMonsterHp(pendingFinalHpRef.current)
     // 命中音效与视觉命中对齐（技能回合的 combat_hit 不在 store 收到推送时播放）
     soundManager.play('combat_hit')
-  }, [])
+    notifyRoundVisualSettled()
+  }, [notifyRoundVisualSettled])
 
   /** 技能视觉命中时调用（如冰箭击中），提前显示扣血，不等尾效播完 */
   const handleHit = settleRound
@@ -249,6 +262,28 @@ export function BattleArena({
     const watchdog = setTimeout(handleSkillComplete, 2600)
     return () => clearTimeout(watchdog)
   }, [activeSkillEffect, skillRoundKey, handleSkillComplete])
+
+  // 无视觉技能特效的回合：出现动画结束后展示扣血，再写入战斗日志
+  useEffect(() => {
+    if (monsterAppearBlocking || deferDamageDisplay) return
+    if (skillUsed && computedSkillEffect) return
+    if (combatLogId == null) return
+    if (combatLogId === lastNotifiedLogIdRef.current) return
+
+    const timer = setTimeout(() => {
+      soundManager.play('combat_hit')
+      notifyRoundVisualSettled()
+    }, 150)
+
+    return () => clearTimeout(timer)
+  }, [
+    monsterAppearBlocking,
+    deferDamageDisplay,
+    skillUsed,
+    computedSkillEffect,
+    combatLogId,
+    notifyRoundVisualSettled,
+  ])
 
   // 冰河世纪作为「地面层」在怪物背后，其它技能在顶层
   const effectLayerZ = activeSkillEffect === 'ice-age' ? 'z-0' : 'z-10'

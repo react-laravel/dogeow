@@ -82,13 +82,36 @@ export const InventoryGridItem = memo(function InventoryGridItem({
   }, [onSelectedItemChange])
 
   useEffect(() => {
-    if (!isSelected) return
+    if (!isSelected || showCompare) return
 
     const updateTop = () => setDetailPanelTop(getCenteredDetailTop(slotRef.current))
 
     window.addEventListener('resize', updateTop)
     return () => window.removeEventListener('resize', updateTop)
-  }, [isSelected])
+  }, [isSelected, showCompare])
+
+  const detailContent = (
+    <InventoryItemDetailContent
+      canSocket={canSocket}
+      canUnsocket={canUnsocket}
+      gemsInInventoryCount={gemsInInventoryCount}
+      getCompareActions={getCompareActions}
+      getEquippedItem={getEquippedItem}
+      getEquippedRings={getEquippedRings}
+      handleCompareAction={handleCompareAction}
+      hasEquippedItem={hasEquippedItem}
+      isLoading={isLoading}
+      item={item}
+      onClose={handleClose}
+      onEquip={onEquip}
+      onMove={onMove}
+      onOpenGemSelector={onOpenGemSelector}
+      onSell={onSell}
+      onUnsocketGem={onUnsocketGem}
+      onUsePotion={onUsePotion}
+      source={cell.source}
+    />
+  )
 
   return (
     <>
@@ -104,23 +127,17 @@ export const InventoryGridItem = memo(function InventoryGridItem({
         footer={<ItemSlotSellPriceBadge item={item} />}
       />
       {isSelected &&
+        typeof document !== 'undefined' &&
         createPortal(
-          <>
+          showCompare ? (
             <div
-              className="fixed inset-0 z-[149] bg-black/70"
+              className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 p-4"
               onClick={handleClose}
-              aria-hidden="true"
-            />
-            <div
-              className={`fixed left-1/2 z-[150] max-w-[calc(100vw-24px)] -translate-x-1/2 overflow-visible ${
-                showCompare
-                  ? 'border-0 !bg-transparent p-0 shadow-none'
-                  : 'w-[280px] rounded-md border bg-background text-foreground shadow-md'
-              } ${showCompare ? popoverWidth : ''} relative`}
-              style={{ top: detailPanelTop }}
-              onClick={event => event.stopPropagation()}
             >
-              {showCompare && (
+              <div
+                className={`relative max-w-[calc(100vw-2rem)] text-sm ${popoverWidth}`}
+                onClick={event => event.stopPropagation()}
+              >
                 <button
                   type="button"
                   onClick={handleClose}
@@ -129,29 +146,25 @@ export const InventoryGridItem = memo(function InventoryGridItem({
                 >
                   ✕
                 </button>
-              )}
-              <InventoryItemDetailContent
-                canSocket={canSocket}
-                canUnsocket={canUnsocket}
-                gemsInInventoryCount={gemsInInventoryCount}
-                getCompareActions={getCompareActions}
-                getEquippedItem={getEquippedItem}
-                getEquippedRings={getEquippedRings}
-                handleCompareAction={handleCompareAction}
-                hasEquippedItem={hasEquippedItem}
-                isLoading={isLoading}
-                item={item}
-                onClose={handleClose}
-                onEquip={onEquip}
-                onMove={onMove}
-                onOpenGemSelector={onOpenGemSelector}
-                onSell={onSell}
-                onUnsocketGem={onUnsocketGem}
-                onUsePotion={onUsePotion}
-                source={cell.source}
-              />
+                {detailContent}
+              </div>
             </div>
-          </>,
+          ) : (
+            <>
+              <div
+                className="fixed inset-0 z-[149] bg-black/70"
+                onClick={handleClose}
+                aria-hidden="true"
+              />
+              <div
+                className="fixed left-1/2 z-[150] w-[280px] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-md border bg-background text-foreground shadow-md"
+                style={{ top: detailPanelTop }}
+                onClick={event => event.stopPropagation()}
+              >
+                {detailContent}
+              </div>
+            </>
+          ),
           document.body
         )}
     </>

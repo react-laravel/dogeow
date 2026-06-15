@@ -22,6 +22,7 @@ import {
   getPrimaryCombatMonsterId,
   normalizeCombatMonsterSlots,
 } from '../../utils/combatUtils'
+import { extractCombatLogId } from '../../stores/combatHelpers'
 import { MapCardMonsterAvatar } from './MapCardMonsterAvatar'
 import { GalleryHorizontal, LayoutGrid, Heart, Droplet } from 'lucide-react'
 import { DIFFICULTY_OPTIONS, DIFFICULTY_COLORS } from '../character/CharacterSelect'
@@ -45,6 +46,7 @@ export function CombatPanel() {
   const isLoading = useGameStore(state => state.isLoading)
   const combatLogs = useGameStore(state => state.combatLogs)
   const combatResult = useGameStore(state => state.combatResult)
+  const flushPendingCombatLog = useGameStore(state => state.flushPendingCombatLog)
   const activeMercenary = useGameStore(state => state.activeMercenary)
   const statusCombatMonsters = useGameStore(state => state.statusCombatMonsters)
   const skills = useGameStore(state => state.skills)
@@ -63,6 +65,24 @@ export function CombatPanel() {
   const [showDeathDialog, setShowDeathDialog] = useState(false)
   const [skillBarLayout, setSkillBarLayout] = useState<SkillBarLayout>(() => readSkillBarLayout())
   const lastAutoStoppedRef = useRef<boolean | undefined>(undefined)
+  const handleRoundVisualSettled = useCallback(() => {
+    flushPendingCombatLog()
+  }, [flushPendingCombatLog])
+
+  // 战斗场景动画异常未回调时，兜底写入战斗日志，避免一直卡在 pending
+  useEffect(() => {
+    const logId = combatResult?.combat_log_id
+    if (!logId || !isFighting) return
+
+    const watchdog = setTimeout(() => {
+      const state = useGameStore.getState()
+      if (state.pendingCombatLog && extractCombatLogId(state.pendingCombatLog) === logId) {
+        state.flushPendingCombatLog()
+      }
+    }, 3200)
+
+    return () => clearTimeout(watchdog)
+  }, [combatResult?.combat_log_id, isFighting])
 
   // 监听战斗结果，检测角色死亡
   useEffect(() => {
@@ -361,6 +381,8 @@ export function CombatPanel() {
                     skillUsed={combatResult?.skills_used?.[0]}
                     skillTargetPositions={combatResult?.skill_target_positions}
                     mercenary={combatResult?.mercenary ?? activeMercenary}
+                    combatLogId={combatResult?.combat_log_id ?? null}
+                    onRoundVisualSettled={handleRoundVisualSettled}
                   />
                 </div>
               </div>

@@ -95,6 +95,8 @@ interface GameState {
   /** 刷新页面时由 combat/status 返回的当前怪物列表，用于在未收到 WebSocket 回合前显示怪物 */
   statusCombatMonsters: (CombatMonster | null)[] | null
   combatLogs: (CombatResult | CombatLog)[]
+  /** WebSocket 回合推送先缓存，等战斗场景动画结算后再写入 combatLogs */
+  pendingCombatLog: CombatLogEntry | null
   combatLogDetail: CombatLogDetail | null // 选中的战斗日志详情
 
   // UI状态
@@ -193,6 +195,7 @@ interface GameState {
   // WebSocket 事件处理
   handleMonstersAppear: (data: unknown) => void // 怪物出现
   handleCombatUpdate: (data: unknown) => void
+  flushPendingCombatLog: () => void
   handleLootDropped: (data: unknown) => void
   handleLevelUp: (data: unknown) => void
   /** 从 WebSocket inventory.update 直接更新背包/仓库/装备，不再发 HTTP 请求 */
@@ -269,6 +272,7 @@ const initialState = {
   combatResult: null,
   statusCombatMonsters: null,
   combatLogs: [],
+  pendingCombatLog: null,
   combatLogDetail: null, // 选中的战斗日志详情
   isLoading: false,
   error: null,
@@ -1300,6 +1304,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         await post('/rpg/combat/stop', { character_id: selectedId })
       }
     } finally {
+      get().flushPendingCombatLog()
       set(state => ({
         ...state,
         enabledSkillIds: [],
@@ -1307,6 +1312,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         shouldAutoCombat: false,
         combatResult: null,
         statusCombatMonsters: null,
+        pendingCombatLog: null,
       }))
     }
   },
@@ -1405,10 +1411,6 @@ const store: StateCreator<GameState> = (set, get) => ({
 
     if (typedData.defeat || typedData.auto_stopped) {
       soundManager.play('combat_defeat')
-    } else if (!typedData.skills_used?.length) {
-      // 技能回合的音效由 BattleArena 负责：施法时播技能音、视觉命中时播命中音，
-      // 此处不再立即播 combat_hit，避免音画错位和重复音效
-      soundManager.play('combat_hit')
     }
 
     const usedPotion = hasPotionUsage(typedData)
@@ -1422,12 +1424,13 @@ const store: StateCreator<GameState> = (set, get) => ({
         typedData.current_mana ?? typedData.character?.current_mana ?? state.currentMana
 
       const dataLogId = extractCombatLogId(typedData)
-      const newLogs = mergeCombatLogsWithUpdate(state.combatLogs, typedData)
+      const pendingCombatLog =
+        dataLogId != null ? ({ ...typedData, id: dataLogId } as CombatLogEntry) : null
 
       return {
         combatResult: typedData,
+        pendingCombatLog: pendingCombatLog ?? state.pendingCombatLog,
         activeMercenary: typedData.mercenary ?? state.activeMercenary,
-        combatLogs: newLogs,
         character: typedData.character,
         mercenary: state.mercenary
           ? syncMercenaryLevel(state.mercenary, typedData.character)
@@ -1455,7 +1458,28 @@ const store: StateCreator<GameState> = (set, get) => ({
       }
     })
 
+    if (typedData.auto_stopped || typedData.defeat) {
+      setTimeout(() => {
+        get().flushPendingCombatLog()
+      }, 1800)
+    }
+
     // 背包由 WebSocket inventory.update 推送，不再在此处请求 fetchInventory
+  },
+
+  flushPendingCombatLog: () => {
+    set(state => {
+      if (!state.pendingCombatLog) return state
+
+      return {
+        ...state,
+        combatLogs: mergeCombatLogsWithUpdate(
+          state.combatLogs,
+          state.pendingCombatLog as GameCombatUpdateEvent
+        ),
+        pendingCombatLog: null,
+      }
+    })
   },
 
   handleInventoryUpdate: data => {
