@@ -44,6 +44,20 @@ export function getSkillSoundUrl(
   return null
 }
 
+export function getSkillSoundDuration(
+  skill?: Pick<SkillUsedEntry, 'name' | 'effect_key'> | null
+): number | null {
+  if (!skill) return null
+
+  const byName = skill.name ? skillSoundByName.get(skill.name) : undefined
+  if (byName) return byName.durationSeconds
+
+  const byEffectKey = skill.effect_key ? skillSoundByEffectKey.get(skill.effect_key) : undefined
+  if (byEffectKey) return byEffectKey.durationSeconds
+
+  return null
+}
+
 export function getAllSkillSoundUrls(): string[] {
   return skillSoundManifest.map(entry => toSkillSoundUrl(entry.fileName))
 }

@@ -66,9 +66,8 @@ export function MonsterGroup({
   onAppearActiveChange?: (active: boolean) => void
 }) {
   const prevMonstersRef = useRef<MonsterWithMeta[]>([])
-  // 存储上一次的 instance_id，用于检测新怪物（持久化，避免切换导航后重新触发动画）
-  // 初始化时从 sessionStorage 读取，避免组件重新挂载后丢失状态
-  const prevInstanceIdsRef = useRef<Set<string>>(getAppearedMonsters())
+  // 按槽位记录上一帧 instance_id，避免刷新后存留怪物被误判为「新出现」
+  const prevSlotInstanceRef = useRef<Record<number, string | null>>({})
   // 存储当前新出现的怪物 instance_id（立即可用，不需要等待状态更新）
   const newAppearingRef = useRef<Set<string>>(new Set())
   const [damageTexts, setDamageTexts] = useState<Record<string, number>>({})
@@ -119,20 +118,32 @@ export function MonsterGroup({
   // 检查是否有有效怪物
   const hasValidMonsters = validMonsters.length > 0
 
-  // 检测新怪物并触发出现动画（与扣血显示解耦，技能动画阶段也要能播出现动画）
+  // 检测新怪物并触发出现动画（按槽位对比 instance_id，存留怪物不重复播放）
   useEffect(() => {
-    const currentInstanceIds = new Set<string>(
-      validMonsters.map(m => m.instance_id).filter((id): id is string => Boolean(id))
-    )
-    const prevInstanceIds = prevInstanceIdsRef.current
     const appearedMonsters = getAppearedMonsters()
-
     const newAppearing: string[] = []
-    currentInstanceIds.forEach(instanceId => {
-      if (instanceId && !prevInstanceIds.has(instanceId) && !appearedMonsters.has(instanceId)) {
+
+    for (let pos = 0; pos < COMBAT_MONSTER_COLS; pos++) {
+      const m = monsters[pos]
+      if (!isRenderableCombatMonster(m) || !m.instance_id) continue
+
+      const instanceId = m.instance_id
+      const prevId = prevSlotInstanceRef.current[pos] ?? null
+
+      // 同一槽位仍是同一实例（例如 3 秒刷新后存留的怪）→ 不播出现动画
+      if (instanceId === prevId) continue
+
+      if (!appearedMonsters.has(instanceId)) {
         newAppearing.push(instanceId)
       }
-    })
+    }
+
+    const nextSlots: Record<number, string | null> = {}
+    for (let pos = 0; pos < COMBAT_MONSTER_COLS; pos++) {
+      const m = monsters[pos]
+      nextSlots[pos] = isRenderableCombatMonster(m) ? (m.instance_id ?? null) : null
+    }
+    prevSlotInstanceRef.current = nextSlots
 
     if (newAppearing.length > 0) {
       newAppearingRef.current = new Set(newAppearing)
@@ -155,9 +166,7 @@ export function MonsterGroup({
         newAppearing.forEach(id => newAppearingRef.current.delete(id))
       }, 1200)
     }
-
-    prevInstanceIdsRef.current = currentInstanceIds
-  }, [validMonsters])
+  }, [monsters])
 
   useEffect(() => {
     onAppearActiveChange?.(appearingMonsters.size > 0)
@@ -288,8 +297,8 @@ export function MonsterGroup({
   useEffect(() => {
     const hasAliveMonsters = validMonsters.some(m => (m.hp ?? 0) > 0)
     if (!hasAliveMonsters && validMonsters.length > 0) {
-      // 战斗结束，清除缓存
       saveAppearedMonsters(new Set())
+      prevSlotInstanceRef.current = {}
     }
   }, [validMonsters])
 

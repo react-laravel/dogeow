@@ -6,6 +6,7 @@ import { MonsterIcon } from './MonsterIcon'
 import { MonsterGroup } from './MonsterGroup'
 import { SkillEffect, type SkillEffectType } from './effects'
 import { soundManager } from '../../utils/soundManager'
+import { getSkillSoundDuration } from '../../utils/skillSoundRegistry'
 import styles from '../../rpg.module.css'
 
 /** 战斗对阵：上侧怪物（支持多只），下侧用户，中间 VS 可点击开始/停止挂机 */
@@ -95,6 +96,7 @@ export function BattleArena({
   const skillRoundPending = Boolean(skillRoundKey && settledSkillRoundKey !== skillRoundKey)
   const deferDamageDisplay = skillRoundPending || monsterAppearBlocking
   const showDamageAndHp = !deferDamageDisplay
+  const activeSkillEffect = skillRoundPending && !monsterAppearBlocking ? computedSkillEffect : null
 
   const handleAppearActiveChange = useCallback((active: boolean) => {
     setMonsterAppearBlocking(active)
@@ -117,13 +119,21 @@ export function BattleArena({
     }
   }, [skillRoundKey, skillUsed])
 
+  // 有视觉特效的技能：音效与特效同时开始；无特效技能：与扣血显示同步
   useEffect(() => {
     if (!skillUsed || monsterAppearBlocking) return
     if (skillUsed === lastPlayedSkillSoundRef.current) return
 
+    const hasVisualEffect = Boolean(computedSkillEffect)
+    if (hasVisualEffect) {
+      if (!activeSkillEffect) return
+    } else if (!showDamageAndHp) {
+      return
+    }
+
     lastPlayedSkillSoundRef.current = skillUsed
     soundManager.playSkill(skillUsed)
-  }, [skillUsed, monsterAppearBlocking])
+  }, [skillUsed, monsterAppearBlocking, computedSkillEffect, activeSkillEffect, showDamageAndHp])
 
   // 多怪物：延迟显示时传扣血前数据
   const displayMonsters = useMemo(() => {
@@ -202,7 +212,6 @@ export function BattleArena({
     }))
   }, [skillTargetPositions])
 
-  const activeSkillEffect = skillRoundPending && !monsterAppearBlocking ? computedSkillEffect : null
   const shouldUseMultiTargetEffect =
     activeSkillEffect === 'ice-age' ||
     activeSkillEffect === 'chain-lightning' ||
@@ -224,6 +233,14 @@ export function BattleArena({
   const handleSkillComplete = useCallback(() => {
     settleRound()
   }, [settleRound])
+
+  // 技能音效结束时对齐结算扣血，避免音效播完还要再等特效尾段
+  useEffect(() => {
+    if (!activeSkillEffect || !skillUsed) return
+    const durationMs = Math.round((getSkillSoundDuration(skillUsed) ?? 0.55) * 1000)
+    const syncTimer = setTimeout(() => settleRound(), durationMs)
+    return () => clearTimeout(syncTimer)
+  }, [activeSkillEffect, skillUsed, settleRound])
 
   // 看门狗：后端约 3 秒一回合，特效若超时未回调 onComplete（卡帧/标签页后台等），
   // 强制结算，保证下一回合数据到达前 UI 已经是最终状态
