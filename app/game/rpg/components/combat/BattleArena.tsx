@@ -97,11 +97,11 @@ export function BattleArena({
     return valid.includes(key as SkillEffectType) ? (key as SkillEffectType) : null
   }, [skillUsed])
 
-  // 用 skill_id + round 识别技能回合，避免 combatResult 新对象引用导致反复更新
+  // 用 combatLogId + skill_id + round 识别技能回合，避免新战斗同技能同回合被当成旧回合
   const skillRoundKey = useMemo(() => {
     if (!skillUsed || !computedSkillEffect) return null
-    return `${skillUsed.skill_id}:${skillUsed.round ?? 'na'}:${computedSkillEffect}`
-  }, [skillUsed, computedSkillEffect])
+    return `${combatLogId ?? 'pending'}:${skillUsed.skill_id}:${skillUsed.round ?? 'na'}:${computedSkillEffect}`
+  }, [skillUsed, computedSkillEffect, combatLogId])
   const lastSkillRoundKeyRef = useRef<string | null>(null)
   const [settledSkillRoundKey, setSettledSkillRoundKey] = useState<string | null>(null)
   const [monsterAppearBlocking, setMonsterAppearBlocking] = useState(false)
@@ -127,6 +127,7 @@ export function BattleArena({
     if (skillRoundKey !== lastSkillRoundKeyRef.current) {
       lastSkillRoundKeyRef.current = skillRoundKey
       lastSkillUsedRef.current = skillUsed ?? null
+      lastPlayedSkillSoundRef.current = null
       skillAnimationCompletedRef.current = false
     }
   }, [skillRoundKey, skillUsed])

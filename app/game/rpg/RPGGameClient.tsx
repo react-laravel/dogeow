@@ -95,10 +95,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     setShouldAutoCombatRef.current = setShouldAutoCombat
   }, [startCombat, stopCombat, setShouldAutoCombat])
 
-  useEffect(() => {
-    soundManager.setCombatTabActive(activeTab === 'combat')
-    return () => soundManager.setCombatTabActive(false)
-  }, [activeTab])
+  // 战斗音效不再受标签页切换限制，移除 combatTabActive 门控
 
   useEffect(() => {
     resetContentScroll()

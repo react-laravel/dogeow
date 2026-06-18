@@ -16,18 +16,12 @@ type SoundEffect =
   | 'teleport'
   | 'potion'
 
-type PlayOptions = {
-  /** 忽略战斗页限制，仅用于设置页试听等场景 */
-  force?: boolean
-}
-
 class SoundManager {
   private sounds: Map<SoundEffect, HTMLAudioElement> = new Map()
   private audioCache: Map<string, HTMLAudioElement> = new Map()
   private audioBufferCache: Map<string, Promise<AudioBuffer | null>> = new Map()
   private enabled: boolean = true
   private volume: number = 0.3
-  private combatTabActive: boolean = false
   // 单例 AudioContext - 避免每次播放音效都创建新实例
   private audioContext: AudioContext | null = null
 
@@ -37,20 +31,29 @@ class SoundManager {
     this.installAudioUnlockListeners()
   }
 
+  private createAudioContext(): AudioContext | null {
+    try {
+      const Ctor =
+        window.AudioContext ??
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      return Ctor ? new Ctor() : null
+    } catch (error) {
+      console.warn('SoundManager: 无法创建 AudioContext', error)
+      return null
+    }
+  }
+
   // 获取或创建 AudioContext 单例
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null
 
+    if (this.audioContext?.state === 'closed') {
+      this.audioContext = null
+      this.audioBufferCache.clear()
+    }
+
     if (!this.audioContext) {
-      try {
-        const Ctor =
-          window.AudioContext ??
-          (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-        if (Ctor) this.audioContext = new Ctor()
-      } catch (error) {
-        console.warn('SoundManager: 无法创建 AudioContext', error)
-        return null
-      }
+      this.audioContext = this.createAudioContext()
     }
 
     // 如果 AudioContext 被暂停（浏览器自动暂停策略），尝试恢复
@@ -132,25 +135,24 @@ class SoundManager {
     }
   }
 
-  setCombatTabActive(active: boolean) {
-    this.combatTabActive = active
+  setCombatTabActive(): void {
+    // no-op: 战斗音效不再受标签页切换限制
   }
 
-  private canPlay(options?: PlayOptions) {
+  private canPlay(): boolean {
     if (!this.enabled || typeof window === 'undefined') return false
-    if (!this.combatTabActive && !options?.force) return false
     return true
   }
 
-  play(effect: SoundEffect, options?: PlayOptions) {
-    if (!this.canPlay(options)) return
+  play(effect: SoundEffect): void {
+    if (!this.canPlay()) return
 
     // 使用 Web Audio API 生成简单音效
     this.playGeneratedSound(effect)
   }
 
-  playSkill(skill?: Pick<SkillUsedEntry, 'name' | 'effect_key'> | null, options?: PlayOptions) {
-    if (!this.canPlay(options) || !skill) return
+  playSkill(skill?: Pick<SkillUsedEntry, 'name' | 'effect_key'> | null): void {
+    if (!this.canPlay() || !skill) return
 
     const url = getSkillSoundUrl(skill)
     if (!url) {
@@ -280,167 +282,175 @@ class SoundManager {
     const audioContext = this.getAudioContext()
     if (!audioContext) return
 
-    const profiles: Record<
-      string,
-      { type: OscillatorType; start: number; end: number; duration: number; volume: number }
-    > = {
-      heal: { type: 'sine', start: 520, end: 920, duration: 0.32, volume: 0.1 },
-      fireball: { type: 'sawtooth', start: 220, end: 520, duration: 0.24, volume: 0.11 },
-      'ice-arrow': { type: 'triangle', start: 980, end: 520, duration: 0.2, volume: 0.09 },
-      'ice-age': { type: 'triangle', start: 360, end: 120, duration: 0.45, volume: 0.09 },
-      lightning: { type: 'square', start: 1400, end: 260, duration: 0.16, volume: 0.08 },
-      'chain-lightning': { type: 'square', start: 1100, end: 1800, duration: 0.24, volume: 0.08 },
-      meteor: { type: 'sawtooth', start: 160, end: 80, duration: 0.38, volume: 0.12 },
-      'meteor-storm': { type: 'sawtooth', start: 180, end: 70, duration: 0.5, volume: 0.12 },
-      shield: { type: 'sine', start: 300, end: 420, duration: 0.34, volume: 0.09 },
-      pierce: { type: 'triangle', start: 760, end: 1120, duration: 0.14, volume: 0.08 },
-      'multi-shot': { type: 'triangle', start: 680, end: 980, duration: 0.22, volume: 0.08 },
-      dash: { type: 'sine', start: 900, end: 300, duration: 0.12, volume: 0.07 },
-      poison: { type: 'sawtooth', start: 420, end: 260, duration: 0.28, volume: 0.08 },
-      dodge: { type: 'sine', start: 720, end: 460, duration: 0.1, volume: 0.07 },
-      'arrow-rain': { type: 'triangle', start: 760, end: 360, duration: 0.42, volume: 0.08 },
-      'shadow-step': { type: 'sine', start: 260, end: 620, duration: 0.22, volume: 0.08 },
-      slash: { type: 'sawtooth', start: 360, end: 120, duration: 0.18, volume: 0.1 },
-      buff: { type: 'square', start: 240, end: 640, duration: 0.3, volume: 0.08 },
-      charge: { type: 'sawtooth', start: 180, end: 420, duration: 0.26, volume: 0.1 },
-      whirlwind: { type: 'triangle', start: 520, end: 840, duration: 0.36, volume: 0.08 },
-      rage: { type: 'square', start: 180, end: 320, duration: 0.32, volume: 0.09 },
-      execute: { type: 'sawtooth', start: 260, end: 90, duration: 0.24, volume: 0.12 },
+    try {
+      const profiles: Record<
+        string,
+        { type: OscillatorType; start: number; end: number; duration: number; volume: number }
+      > = {
+        heal: { type: 'sine', start: 520, end: 920, duration: 0.32, volume: 0.1 },
+        fireball: { type: 'sawtooth', start: 220, end: 520, duration: 0.24, volume: 0.11 },
+        'ice-arrow': { type: 'triangle', start: 980, end: 520, duration: 0.2, volume: 0.09 },
+        'ice-age': { type: 'triangle', start: 360, end: 120, duration: 0.45, volume: 0.09 },
+        lightning: { type: 'square', start: 1400, end: 260, duration: 0.16, volume: 0.08 },
+        'chain-lightning': { type: 'square', start: 1100, end: 1800, duration: 0.24, volume: 0.08 },
+        meteor: { type: 'sawtooth', start: 160, end: 80, duration: 0.38, volume: 0.12 },
+        'meteor-storm': { type: 'sawtooth', start: 180, end: 70, duration: 0.5, volume: 0.12 },
+        shield: { type: 'sine', start: 300, end: 420, duration: 0.34, volume: 0.09 },
+        pierce: { type: 'triangle', start: 760, end: 1120, duration: 0.14, volume: 0.08 },
+        'multi-shot': { type: 'triangle', start: 680, end: 980, duration: 0.22, volume: 0.08 },
+        dash: { type: 'sine', start: 900, end: 300, duration: 0.12, volume: 0.07 },
+        poison: { type: 'sawtooth', start: 420, end: 260, duration: 0.28, volume: 0.08 },
+        dodge: { type: 'sine', start: 720, end: 460, duration: 0.1, volume: 0.07 },
+        'arrow-rain': { type: 'triangle', start: 760, end: 360, duration: 0.42, volume: 0.08 },
+        'shadow-step': { type: 'sine', start: 260, end: 620, duration: 0.22, volume: 0.08 },
+        slash: { type: 'sawtooth', start: 360, end: 120, duration: 0.18, volume: 0.1 },
+        buff: { type: 'square', start: 240, end: 640, duration: 0.3, volume: 0.08 },
+        charge: { type: 'sawtooth', start: 180, end: 420, duration: 0.26, volume: 0.1 },
+        whirlwind: { type: 'triangle', start: 520, end: 840, duration: 0.36, volume: 0.08 },
+        rage: { type: 'square', start: 180, end: 320, duration: 0.32, volume: 0.09 },
+        execute: { type: 'sawtooth', start: 260, end: 90, duration: 0.24, volume: 0.12 },
+      }
+
+      const profile = skill.effect_key
+        ? (profiles[skill.effect_key] ?? {
+            type: 'sawtooth' as const,
+            start: 300,
+            end: 600,
+            duration: 0.15,
+            volume: 0.1,
+          })
+        : {
+            type: 'sawtooth' as const,
+            start: 300,
+            end: 600,
+            duration: 0.15,
+            volume: 0.1,
+          }
+
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      const now = audioContext.currentTime
+
+      oscillator.type = profile.type
+      oscillator.frequency.setValueAtTime(profile.start, now)
+      oscillator.frequency.exponentialRampToValueAtTime(profile.end, now + profile.duration)
+      gainNode.gain.setValueAtTime(this.volume * profile.volume, now)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + profile.duration)
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      oscillator.start(now)
+      oscillator.stop(now + profile.duration)
+    } catch (error) {
+      console.warn('SoundManager: 技能生成音效播放失败', error)
     }
-
-    const profile = skill.effect_key
-      ? (profiles[skill.effect_key] ?? {
-          type: 'sawtooth' as const,
-          start: 300,
-          end: 600,
-          duration: 0.15,
-          volume: 0.1,
-        })
-      : {
-          type: 'sawtooth' as const,
-          start: 300,
-          end: 600,
-          duration: 0.15,
-          volume: 0.1,
-        }
-
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
-    const now = audioContext.currentTime
-
-    oscillator.type = profile.type
-    oscillator.frequency.setValueAtTime(profile.start, now)
-    oscillator.frequency.exponentialRampToValueAtTime(profile.end, now + profile.duration)
-    gainNode.gain.setValueAtTime(this.volume * profile.volume, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + profile.duration)
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
-    oscillator.start(now)
-    oscillator.stop(now + profile.duration)
   }
 
   private playGeneratedSound(effect: SoundEffect) {
     const audioContext = this.getAudioContext()
     if (!audioContext) return
 
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
+    try {
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
 
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
 
-    gainNode.gain.value = this.volume * 0.1
+      gainNode.gain.value = this.volume * 0.1
 
-    switch (effect) {
-      case 'combat_start':
-        oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.2)
-        break
+      switch (effect) {
+        case 'combat_start':
+          oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
+          oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.2)
+          break
 
-      case 'combat_hit':
-        oscillator.type = 'square'
-        oscillator.frequency.setValueAtTime(150, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.05)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.05)
-        break
+        case 'combat_hit':
+          oscillator.type = 'square'
+          oscillator.frequency.setValueAtTime(150, audioContext.currentTime)
+          oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.05)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.05)
+          break
 
-      case 'combat_victory':
-        oscillator.frequency.setValueAtTime(400, audioContext.currentTime)
-        oscillator.frequency.setValueAtTime(500, audioContext.currentTime + 0.1)
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.2)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.4)
-        break
+        case 'combat_victory':
+          oscillator.frequency.setValueAtTime(400, audioContext.currentTime)
+          oscillator.frequency.setValueAtTime(500, audioContext.currentTime + 0.1)
+          oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.2)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.4)
+          break
 
-      case 'combat_defeat':
-        oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.3)
-        break
+        case 'combat_defeat':
+          oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
+          oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.3)
+          break
 
-      case 'level_up':
-        const now = audioContext.currentTime
-        oscillator.frequency.setValueAtTime(523, now) // C5
-        oscillator.frequency.setValueAtTime(659, now + 0.1) // E5
-        oscillator.frequency.setValueAtTime(784, now + 0.2) // G5
-        oscillator.frequency.setValueAtTime(1047, now + 0.3) // C6
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5)
-        oscillator.start(now)
-        oscillator.stop(now + 0.5)
-        break
+        case 'level_up':
+          const now = audioContext.currentTime
+          oscillator.frequency.setValueAtTime(523, now) // C5
+          oscillator.frequency.setValueAtTime(659, now + 0.1) // E5
+          oscillator.frequency.setValueAtTime(784, now + 0.2) // G5
+          oscillator.frequency.setValueAtTime(1047, now + 0.3) // C6
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5)
+          oscillator.start(now)
+          oscillator.stop(now + 0.5)
+          break
 
-      case 'item_drop':
-        oscillator.type = 'sine'
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.15)
-        break
+        case 'item_drop':
+          oscillator.type = 'sine'
+          oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
+          oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.15)
+          break
 
-      case 'skill_use':
-        oscillator.type = 'sawtooth'
-        oscillator.frequency.setValueAtTime(300, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.15)
-        break
+        case 'skill_use':
+          oscillator.type = 'sawtooth'
+          oscillator.frequency.setValueAtTime(300, audioContext.currentTime)
+          oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.15)
+          break
 
-      case 'button_click':
-        oscillator.type = 'sine'
-        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.03)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.03)
-        break
+        case 'button_click':
+          oscillator.type = 'sine'
+          oscillator.frequency.setValueAtTime(1000, audioContext.currentTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.03)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.03)
+          break
 
-      case 'equip':
-        oscillator.type = 'square'
-        oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.15)
-        break
+        case 'equip':
+          oscillator.type = 'square'
+          oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
+          oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.15)
+          break
 
-      case 'gold':
-        oscillator.type = 'sine'
-        oscillator.frequency.setValueAtTime(1200, audioContext.currentTime)
-        oscillator.frequency.setValueAtTime(1500, audioContext.currentTime + 0.05)
-        oscillator.frequency.setValueAtTime(1800, audioContext.currentTime + 0.1)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.15)
-        break
+        case 'gold':
+          oscillator.type = 'sine'
+          oscillator.frequency.setValueAtTime(1200, audioContext.currentTime)
+          oscillator.frequency.setValueAtTime(1500, audioContext.currentTime + 0.05)
+          oscillator.frequency.setValueAtTime(1800, audioContext.currentTime + 0.1)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.15)
+          break
+      }
+    } catch (error) {
+      console.warn(`SoundManager: 生成音效播放失败 ${effect}`, error)
     }
   }
 

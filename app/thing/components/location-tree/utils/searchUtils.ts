@@ -10,11 +10,12 @@ export const matchesSearch = (text: string, searchTerm: string): boolean => {
 /**
  * 构建区域到房间、房间到位置的映射
  */
-export const buildLocationMaps = (rooms: Room[], spots: Spot[]) => {
-  const areaRoomsMap = new Map<number, Room[]>()
-  const roomSpotsMap = new Map<number, Spot[]>()
+export const buildLocationMaps = (rooms: Array<Room | null>, spots: Array<Spot | null>) => {
+  const areaRoomsMap = new Map<number | undefined, Room[]>()
+  const roomSpotsMap = new Map<number | undefined, Spot[]>()
 
   rooms.forEach(room => {
+    if (!room) return
     if (!areaRoomsMap.has(room.area_id)) {
       areaRoomsMap.set(room.area_id, [])
     }
@@ -22,6 +23,7 @@ export const buildLocationMaps = (rooms: Room[], spots: Spot[]) => {
   })
 
   spots.forEach(spot => {
+    if (!spot) return
     if (!roomSpotsMap.has(spot.room_id)) {
       roomSpotsMap.set(spot.room_id, [])
     }

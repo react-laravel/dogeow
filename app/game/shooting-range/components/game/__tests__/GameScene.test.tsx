@@ -6,7 +6,7 @@ import { GameScene } from '../GameScene'
 vi.mock('@react-three/fiber', () => ({
   useThree: vi.fn(() => ({
     camera: {
-      position: { clone: vi.fn(() => ({ add: vi.fn() })), clone: vi.fn() },
+      position: { clone: vi.fn(() => ({ add: vi.fn() })) },
     },
     gl: { domElement: document.createElement('canvas') },
     scene: { traverse: vi.fn() },
