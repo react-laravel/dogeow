@@ -49,6 +49,9 @@ next-env.d.ts
 # 知识库向量索引
 .knowledge/
 
+# 书籍预处理 JSON（部署到又拍云，不纳入前端仓库）
+/public/books/hongloumeng/
+
 # PM2
 logs/
 

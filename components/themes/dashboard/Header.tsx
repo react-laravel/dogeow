@@ -1,32 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
 import { useUITheme } from '@/components/themes/UIThemeProvider'
-import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
+import { RouteAwareAiLauncher } from '@/components/app/RouteAwareAiLauncher'
 import { Search, Menu } from 'lucide-react'
 import { NotificationDropdown } from '@/components/app/NotificationDropdown'
 import useAuthStore from '@/stores/authStore'
-
-const AiDialog = dynamic(
-  () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
-  { ssr: false }
-)
-
-function RouteAwareAiLauncher() {
-  const [isAiOpen, setIsAiOpen] = useState(false)
-
-  return (
-    <>
-      <AiDialog open={isAiOpen} onOpenChange={setIsAiOpen} />
-      <LazyAppLauncher
-        onOpenAi={() => setIsAiOpen(prev => !prev)}
-        isAiOpen={isAiOpen}
-        onCloseAi={() => setIsAiOpen(false)}
-      />
-    </>
-  )
-}
 
 /**
  * Dashboard 主题的 Header 组件

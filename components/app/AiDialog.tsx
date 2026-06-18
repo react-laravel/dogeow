@@ -19,6 +19,7 @@ import {
 } from '@/app/ai/features/chat/components'
 import type { ChatMessage } from '@/app/ai/features/chat/types'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
+import { useAiDialogStore } from '@/stores/aiDialogStore'
 
 interface AiDialogProps {
   open: boolean
@@ -44,6 +45,7 @@ const docsFetcher = async (url: string): Promise<KnowledgeDocumentsResponse> => 
 }
 
 export function AiDialog({ open, onOpenChange }: AiDialogProps) {
+  const consumeSeedPrompt = useAiDialogStore(state => state.consumeSeedPrompt)
   const [chatMode, setChatMode] = useState<'ai' | 'knowledge'>('ai')
   const [imageHistoryOpen, setImageHistoryOpen] = useState(false)
 
@@ -117,6 +119,16 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     handleClear,
     messagesEndRef,
   } = activeChat as typeof knowledgeChat
+
+  useEffect(() => {
+    if (!open) return
+    const seedPrompt = consumeSeedPrompt()
+    if (!seedPrompt) return
+    queueMicrotask(() => {
+      setChatMode('ai')
+      aiChat.setPrompt(seedPrompt)
+    })
+  }, [open, consumeSeedPrompt, aiChat])
 
   const {
     provider,

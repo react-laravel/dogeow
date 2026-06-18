@@ -9,6 +9,8 @@
   },
   "scripts": {
     "preinstall": "node scripts/enforce-package-manager.mjs",
+    "preprocess:hongloumeng": "node scripts/preprocess-hongloumeng.mjs",
+    "publish:hongloumeng": "npm run preprocess:hongloumeng && cd ../dogeow-api && php artisan books:upload-hongloumeng",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

@@ -1,28 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import dynamic from 'next/dynamic'
-import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
-
-const AiDialog = dynamic(
-  () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
-  { ssr: false }
-)
-
-function RouteAwareAiLauncher() {
-  const [isAiOpen, setIsAiOpen] = useState(false)
-
-  return (
-    <>
-      <AiDialog open={isAiOpen} onOpenChange={setIsAiOpen} />
-      <LazyAppLauncher
-        onOpenAi={() => setIsAiOpen(prev => !prev)}
-        isAiOpen={isAiOpen}
-        onCloseAi={() => setIsAiOpen(false)}
-      />
-    </>
-  )
-}
+import { RouteAwareAiLauncher } from '@/components/app/RouteAwareAiLauncher'
 
 /**
  * 默认主题的 Header 组件
