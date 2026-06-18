@@ -15,6 +15,7 @@ export default function TagSpeedDial() {
           size="icon"
           className="bg-primary hover:bg-primary/90 h-14 w-14 rounded-full text-white shadow-lg"
           onClick={() => setDialogOpen(true)}
+          aria-label="添加标签"
         >
           <Plus className="h-6 w-6" />
         </Button>

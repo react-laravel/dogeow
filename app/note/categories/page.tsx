@@ -150,6 +150,7 @@ export default function NoteCategories() {
                       className="h-5 w-5 p-0 text-green-600 hover:bg-transparent"
                       onClick={saveEditing}
                       disabled={loading || !editingName.trim()}
+                      aria-label="保存"
                     >
                       ✓
                     </Button>
@@ -159,6 +160,7 @@ export default function NoteCategories() {
                       className="h-5 w-5 p-0 text-red-600 hover:bg-transparent"
                       onClick={cancelEditing}
                       disabled={loading}
+                      aria-label="取消"
                     >
                       ✕
                     </Button>
@@ -173,6 +175,7 @@ export default function NoteCategories() {
                     className="ml-1 h-5 w-5 p-0 hover:bg-transparent"
                     onClick={() => startEditing(category)}
                     disabled={loading}
+                    aria-label={`编辑分类 ${category.name}`}
                   >
                     <Pencil className="h-3 w-3" />
                   </Button>
@@ -182,6 +185,7 @@ export default function NoteCategories() {
                     className="ml-1 h-5 w-5 p-0 hover:bg-transparent"
                     onClick={() => openDeleteDialog(category.id)}
                     disabled={loading}
+                    aria-label={`删除分类 ${category.name}`}
                   >
                     <X className="h-3 w-3" />
                   </Button>

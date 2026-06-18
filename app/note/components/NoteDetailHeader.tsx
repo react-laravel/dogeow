@@ -16,7 +16,7 @@ export const NoteDetailHeader = memo<NoteDetailHeaderProps>(
 
     return (
       <div className="mb-6 flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="返回">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="flex flex-1 items-center justify-center truncate text-center text-2xl font-bold tracking-tight">
@@ -31,10 +31,11 @@ export const NoteDetailHeader = memo<NoteDetailHeaderProps>(
               const id = Array.isArray(noteId) ? noteId[0] : noteId
               router.push(`/note/edit/${id}`)
             }}
+            aria-label="编辑"
           >
             <Edit className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={onDelete}>
+          <Button variant="ghost" size="icon" onClick={onDelete} aria-label="删除">
             <Trash2 className="text-destructive h-5 w-5" />
           </Button>
         </div>

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Edit, Trash2, Lock } from 'lucide-react'
-import { format } from 'date-fns'
+import { formatDate, formatDateTime, calculateDaysDifference } from '@/lib/helpers/dateUtils'
 import { PageContainer } from '@/components/layout'
 import { toast } from 'sonner'
 import { useItemStore } from '@/app/thing/stores/itemStore'
@@ -20,38 +20,6 @@ import { ItemRelationsDisplay } from '../components/ItemRelationsDisplay'
 import { StatusIndicator } from '../components/item-detail/components/StatusIndicator'
 import { ImageGallery } from '../components/item-detail/components/ImageGallery'
 import { useAuth } from '@/hooks/useAuth'
-
-// 日期格式化工具函数
-const formatDate = (date: string | null) => {
-  if (!date) return '-'
-  try {
-    return format(new Date(date), 'yyyy-MM-dd')
-  } catch {
-    return '无效日期'
-  }
-}
-
-const formatDateTime = (date: string | null) => {
-  if (!date) return '-'
-  try {
-    return format(new Date(date), 'yyyy-MM-dd HH:mm:ss')
-  } catch {
-    return '无效日期'
-  }
-}
-
-const calculateDaysDifference = (startDate: string | null, endDate: string | null) => {
-  if (!startDate || !endDate) return null
-  try {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
-  } catch {
-    return null
-  }
-}
 
 // 标签渲染组件
 const TagsDisplay = ({ tags }: { tags: Tag[] }) => {
@@ -248,7 +216,13 @@ export default function ItemDetail() {
       {/* 页面头部 */}
       <div className="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
         <div className="flex w-full items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2 p-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="mr-2 p-1"
+            aria-label="返回"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -261,13 +235,19 @@ export default function ItemDetail() {
             ) : null}
           </div>
           <div className="ml-auto flex justify-end gap-1">
-            <Button variant="ghost" onClick={handleEdit} className="flex-1 p-1 sm:flex-auto">
+            <Button
+              variant="ghost"
+              onClick={handleEdit}
+              className="flex-1 p-1 sm:flex-auto"
+              aria-label="编辑"
+            >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 p-1 sm:flex-auto"
               onClick={() => setDeleteDialogOpen(true)}
+              aria-label="删除"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

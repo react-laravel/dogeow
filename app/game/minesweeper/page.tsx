@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -98,6 +98,92 @@ const createEmptyBoard = (rows: number, cols: number): Cell[][] => {
   }
   return newBoard
 }
+
+// 获取格子显示内容（纯函数，移到组件外部）
+const getCellContent = (cell: Cell): string => {
+  if (!cell || cell.state === undefined) return ''
+  if (cell.state === 'flagged') return '🚩'
+  if (cell.state === 'hidden') return ''
+  if (cell.isMine) return '💣'
+  if (cell.neighborCount === 0) return ''
+  return cell.neighborCount.toString()
+}
+
+// 获取格子样式（纯函数，移到组件外部）
+const getCellStyle = (cell: Cell): string => {
+  const baseStyle =
+    'w-8 h-8 border border-gray-400 flex items-center justify-center text-sm font-bold cursor-pointer select-none'
+
+  if (!cell || cell.state === undefined) {
+    return `${baseStyle} bg-gray-300 dark:bg-gray-600`
+  }
+
+  if (cell.state === 'hidden') {
+    return `${baseStyle} bg-gray-300 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500`
+  }
+
+  if (cell.state === 'flagged') {
+    return `${baseStyle} bg-yellow-200 dark:bg-yellow-700`
+  }
+
+  if (cell.isMine) {
+    return `${baseStyle} bg-red-500 text-white`
+  }
+
+  const numberColors = [
+    '', // 0
+    'text-blue-600', // 1
+    'text-green-600', // 2
+    'text-red-600', // 3
+    'text-purple-600', // 4
+    'text-yellow-600', // 5
+    'text-pink-600', // 6
+    'text-gray-600', // 7
+    'text-black', // 8
+  ]
+
+  return `${baseStyle} bg-gray-100 dark:bg-gray-700 ${numberColors[cell.neighborCount] || ''}`
+}
+
+// 格子组件 - 使用 memo 优化渲染性能
+interface MinesweeperCellProps {
+  cell: Cell
+  rowIndex: number
+  colIndex: number
+  onCellClick: (row: number, col: number) => void
+  onCellRightClick: (e: React.MouseEvent, row: number, col: number) => void
+  onTouchStart: (row: number, col: number) => void
+  onTouchEnd: () => void
+}
+
+const MinesweeperCell = memo(function MinesweeperCell({
+  cell,
+  rowIndex,
+  colIndex,
+  onCellClick,
+  onCellRightClick,
+  onTouchStart,
+  onTouchEnd,
+}: MinesweeperCellProps) {
+  return (
+    <div
+      className={getCellStyle(cell)}
+      onClick={() => onCellClick(rowIndex, colIndex)}
+      onContextMenu={e => onCellRightClick(e, rowIndex, colIndex)}
+      onTouchStart={() => onTouchStart(rowIndex, colIndex)}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      onMouseDown={e => {
+        // 阻止鼠标中键和右键的默认行为
+        if (e.button === 1 || e.button === 2) {
+          e.preventDefault()
+        }
+      }}
+    >
+      {getCellContent(cell)}
+    </div>
+  )
+})
 
 export default function MinesweeperGame() {
   const { stats, updateStats } = useMinesweeperStore()
@@ -430,50 +516,7 @@ export default function MinesweeperGame() {
   }, [gameState, difficulty, timer, updateStats])
 
   // 获取格子显示内容
-  const getCellContent = (cell: Cell) => {
-    if (!cell || cell.state === undefined) return ''
-    if (cell.state === 'flagged') return '🚩'
-    if (cell.state === 'hidden') return ''
-    if (cell.isMine) return '💣'
-    if (cell.neighborCount === 0) return ''
-    return cell.neighborCount.toString()
-  }
-
-  // 获取格子样式
-  const getCellStyle = (cell: Cell) => {
-    const baseStyle =
-      'w-8 h-8 border border-gray-400 flex items-center justify-center text-sm font-bold cursor-pointer select-none'
-
-    if (!cell || cell.state === undefined) {
-      return `${baseStyle} bg-gray-300 dark:bg-gray-600`
-    }
-
-    if (cell.state === 'hidden') {
-      return `${baseStyle} bg-gray-300 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500`
-    }
-
-    if (cell.state === 'flagged') {
-      return `${baseStyle} bg-yellow-200 dark:bg-yellow-700`
-    }
-
-    if (cell.isMine) {
-      return `${baseStyle} bg-red-500 text-white`
-    }
-
-    const numberColors = [
-      '', // 0
-      'text-blue-600', // 1
-      'text-green-600', // 2
-      'text-red-600', // 3
-      'text-purple-600', // 4
-      'text-yellow-600', // 5
-      'text-pink-600', // 6
-      'text-gray-600', // 7
-      'text-black', // 8
-    ]
-
-    return `${baseStyle} bg-gray-100 dark:bg-gray-700 ${numberColors[cell.neighborCount] || ''}`
-  }
+  // (moved to module-level getCellContent)
 
   return (
     <div className="container mx-auto flex min-h-screen max-w-4xl flex-col px-4 py-4">
@@ -562,23 +605,16 @@ export default function MinesweeperGame() {
           >
             {board.map((row, rowIndex) =>
               row.map((cell, colIndex) => (
-                <div
+                <MinesweeperCell
                   key={`${rowIndex}-${colIndex}`}
-                  className={getCellStyle(cell)}
-                  onClick={() => handleCellClick(rowIndex, colIndex)}
-                  onContextMenu={e => handleCellRightClick(e, rowIndex, colIndex)}
-                  onTouchStart={() => handleTouchStart(rowIndex, colIndex)}
+                  cell={cell}
+                  rowIndex={rowIndex}
+                  colIndex={colIndex}
+                  onCellClick={handleCellClick}
+                  onCellRightClick={handleCellRightClick}
+                  onTouchStart={handleTouchStart}
                   onTouchEnd={handleTouchEnd}
-                  onTouchCancel={handleTouchEnd}
-                  onMouseDown={e => {
-                    // 阻止鼠标中键和右键的默认行为
-                    if (e.button === 1 || e.button === 2) {
-                      e.preventDefault()
-                    }
-                  }}
-                >
-                  {getCellContent(cell)}
-                </div>
+                />
               ))
             )}
           </div>

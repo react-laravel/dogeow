@@ -13,6 +13,15 @@ import type {
   CreateRoomData,
   MessagePagination,
 } from '@/app/chat/types'
+import {
+  isRecord,
+  isOnlineUser,
+  isChatMessage,
+  isChatRoom,
+  resolveRoomsResponse,
+  resolveUsersResponse,
+  resolveCreateRoomResponse,
+} from '@/app/chat/utils/typeGuards'
 
 export interface UseChatRoomReturn {
   // Room management
@@ -54,50 +63,6 @@ type ChatRoomsResponse = ChatRoom[] | { rooms?: ChatRoom[] }
 type CreateRoomResponse = ChatRoom | { room?: ChatRoom }
 type RoomUsersResponse = OnlineUser[] | { users?: OnlineUser[]; online_users?: OnlineUser[] }
 type ApiErrorResponse = { message?: string }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isOnlineUser = (value: unknown): value is OnlineUser =>
-  isRecord(value) && typeof value.id === 'number' && typeof value.name === 'string'
-
-const isChatMessage = (value: unknown): value is ChatMessage =>
-  isRecord(value) && typeof value.id === 'number' && typeof value.message === 'string'
-
-const isChatRoom = (value: unknown): value is ChatRoom =>
-  isRecord(value) && typeof value.id === 'number' && typeof value.name === 'string'
-
-const resolveRoomsResponse = (data: ChatRoomsResponse): ChatRoom[] => {
-  if (Array.isArray(data)) {
-    return data
-  }
-
-  return Array.isArray(data.rooms) ? data.rooms : []
-}
-
-const resolveUsersResponse = (data: RoomUsersResponse): OnlineUser[] => {
-  if (Array.isArray(data)) {
-    return data
-  }
-
-  if (Array.isArray(data.online_users)) {
-    return data.online_users
-  }
-
-  return Array.isArray(data.users) ? data.users : []
-}
-
-const resolveCreateRoomResponse = (data: CreateRoomResponse): ChatRoom => {
-  if (isRecord(data) && 'room' in data && isChatRoom((data as { room?: unknown }).room)) {
-    return (data as { room: ChatRoom }).room
-  }
-
-  if (isChatRoom(data)) {
-    return data
-  }
-
-  throw new Error('Invalid create room response payload')
-}
 
 const createFallbackRoom = (roomId: string): ChatRoom => {
   const now = new Date().toISOString()

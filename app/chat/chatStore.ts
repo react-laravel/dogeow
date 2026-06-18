@@ -5,7 +5,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ChatRoom, ChatMessage, OnlineUser, CreateRoomData, MessagePagination } from './types'
 import { ApiRequestError, get as apiGet, post as apiPost } from '@/lib/api'
-import { handleChatApiError, type ChatApiError } from '@/lib/api/chat-error-handler'
+import { type ChatApiError } from '@/lib/api/chat-error-handler'
 import chatCache from '@/lib/cache/chat-cache'
 import { getSafeStorage } from './stores/utils/storage'
 import { createThrottledFunction } from './stores/utils/throttle'
@@ -16,6 +16,8 @@ import {
   cleanRoomData,
   addOnlineUserToList,
   removeOnlineUserFromList,
+  handleChatStoreError,
+  setChatError,
 } from './stores/utils/helpers'
 import {
   calculateTotalUnreadCount,
@@ -58,7 +60,7 @@ export interface ChatState {
   setCurrentRoom: (room: ChatRoom | null) => void
   setRooms: (rooms: ChatRoom[]) => void
   loadRooms: () => Promise<void>
-  createRoom: (roomData: CreateRoomData) => Promise<ChatRoom>
+  createRoom: (roomData: CreateRoomData) => Promise<ChatRoom | undefined>
   joinRoom: (roomId: number) => Promise<void>
   leaveRoom: (roomId: number) => Promise<void>
 
@@ -263,17 +265,8 @@ const useChatStore = create<ChatState>()(
             isLoading: false,
           }))
         } catch (error) {
-          console.error('ChatStore: Failed to load rooms:', error)
-          const chatError = handleChatApiError(error, '加载聊天室失败', {
-            showToast: true,
-            retryable: true,
-          })
-          set({
-            error: chatError,
-            lastError: chatError,
-            isLoading: false,
-          })
-          throw chatError
+          const chatError = handleChatStoreError(error, '加载聊天室失败')
+          setChatError(set, chatError, { isLoading: false })
         }
       }, 1000),
 
@@ -288,16 +281,8 @@ const useChatStore = create<ChatState>()(
           }))
           return newRoom
         } catch (error) {
-          const chatError = handleChatApiError(error, '创建聊天室失败', {
-            showToast: true,
-            retryable: true,
-          })
-          set({
-            error: chatError,
-            lastError: chatError,
-            isLoading: false,
-          })
-          throw chatError
+          const chatError = handleChatStoreError(error, '创建聊天室失败')
+          setChatError(set, chatError, { isLoading: false })
         }
       },
 
@@ -306,15 +291,8 @@ const useChatStore = create<ChatState>()(
         try {
           await apiPost(`/chat/rooms/${roomId}/join`, {})
         } catch (error) {
-          const chatError = handleChatApiError(error, '加入聊天室失败', {
-            showToast: true,
-            retryable: true,
-          })
-          set({
-            error: chatError,
-            lastError: chatError,
-          })
-          throw chatError
+          const chatError = handleChatStoreError(error, '加入聊天室失败')
+          setChatError(set, chatError)
         }
       },
 
@@ -335,15 +313,8 @@ const useChatStore = create<ChatState>()(
             return newState
           })
         } catch (error) {
-          const chatError = handleChatApiError(error, '离开聊天室失败', {
-            showToast: true,
-            retryable: true,
-          })
-          set({
-            error: chatError,
-            lastError: chatError,
-          })
-          throw chatError
+          const chatError = handleChatStoreError(error, '离开聊天室失败')
+          setChatError(set, chatError)
         }
       },
 
@@ -473,18 +444,11 @@ const useChatStore = create<ChatState>()(
               ...clearMissingCurrentRoom(state, roomId),
               isLoading: false,
             }))
+            return
           }
 
-          const chatError = handleChatApiError(error, '加载消息失败', {
-            showToast: true,
-            retryable: true,
-          })
-          set({
-            error: chatError,
-            lastError: chatError,
-            isLoading: false,
-          })
-          throw chatError
+          const chatError = handleChatStoreError(error, '加载消息失败')
+          setChatError(set, chatError, { isLoading: false })
         }
       },
 
@@ -520,15 +484,8 @@ const useChatStore = create<ChatState>()(
             }
           })
         } catch (error) {
-          const chatError = handleChatApiError(error, '加载更多消息失败', {
-            showToast: true,
-            retryable: true,
-          })
-          set({
-            error: chatError,
-            lastError: chatError,
-          })
-          throw chatError
+          const chatError = handleChatStoreError(error, '加载更多消息失败')
+          setChatError(set, chatError)
         }
       },
 
@@ -605,11 +562,7 @@ const useChatStore = create<ChatState>()(
             }))
           }
 
-          console.error('ChatStore: Failed to load online users:', error)
-          const chatError = handleChatApiError(error, '加载在线用户失败', {
-            showToast: false,
-            retryable: true,
-          })
+          const chatError = handleChatStoreError(error, '加载在线用户失败', { showToast: false })
           set({ error: chatError })
         }
       }, 5000) as unknown as (roomId: number) => Promise<void>,

@@ -1,6 +1,7 @@
 import useAuthStore from '@/stores/authStore'
 import type { ChatMessage, OnlineUser } from '../../types'
 import type { ChatState } from '../../chatStore'
+import { handleChatApiError, type ChatApiError } from '@/lib/api/chat-error-handler'
 
 /**
  * 获取当前用户ID
@@ -15,6 +16,42 @@ export const getCurrentUserId = (): number | null => {
 export const isOwnMessage = (message: ChatMessage): boolean => {
   const currentUserId = getCurrentUserId()
   return currentUserId ? message.user.id === currentUserId : false
+}
+
+/**
+ * 统一处理聊天API错误，减少重复代码
+ * @param error - 捕获的错误
+ * @param label - 错误标签（用于日志和提示）
+ * @param options - 配置选项
+ * @returns 处理后的 ChatApiError
+ */
+export const handleChatStoreError = (
+  error: unknown,
+  label: string,
+  options?: { showToast?: boolean; retryable?: boolean }
+): ChatApiError => {
+  const chatError = handleChatApiError(error, label, {
+    showToast: options?.showToast ?? true,
+    retryable: options?.retryable ?? true,
+  })
+  return chatError
+}
+
+/**
+ * 设置错误状态并抛出，用于 async thunk 模式
+ * 注意：此函数总是抛出错误，不会正常返回
+ */
+export const setChatError = (
+  set: (partial: Partial<ChatState> | ((state: ChatState) => Partial<ChatState>)) => void,
+  error: ChatApiError,
+  extraState?: Partial<ChatState>
+): never => {
+  set({
+    error,
+    lastError: error,
+    ...extraState,
+  })
+  throw error
 }
 
 /**

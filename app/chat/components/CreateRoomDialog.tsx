@@ -83,6 +83,7 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
           is_private: data.is_private ?? false,
         }
         const newRoom = await createRoom(roomData)
+        if (!newRoom) return
         // 自动加入并设置当前房间
         await joinRoom(newRoom.id)
         setCurrentRoom(newRoom)

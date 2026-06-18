@@ -92,6 +92,7 @@ export default function NoteTags() {
                   className="ml-1 h-5 w-5 p-0 hover:bg-transparent"
                   onClick={() => openDeleteDialog(tag.id)}
                   disabled={loading}
+                  aria-label={`删除标签 ${tag.name}`}
                 >
                   <X className="h-3 w-3" />
                 </Button>
