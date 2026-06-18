@@ -174,7 +174,7 @@ export interface CombatLogDetail {
     counter_damage: number
   }
   battle: {
-    round: number
+    round?: number
     alive_count: number
     killed_count: number
   }

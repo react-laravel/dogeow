@@ -172,6 +172,7 @@ function CombatLogDetailDialog({
 
   const d = detail
   const playerSkillsUsed = filterPlayerSkillsUsed(d.skills_used, playerSkillIds)
+  const hasBattleInfo = d.battle?.alive_count != null || d.battle?.killed_count != null
 
   return (
     <div className="fixed inset-0 z-[10080] flex items-center justify-center bg-black/60 p-4">
@@ -307,9 +308,9 @@ function CombatLogDetailDialog({
             {/* 战斗信息 */}
             <div className="bg-muted/50 rounded-lg p-3">
               <h4 className="text-muted-foreground mb-2 text-sm font-medium">战斗信息</h4>
-              {d.battle?.round != null ? (
+              {hasBattleInfo ? (
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>回合: {d.battle.round}</div>
+                  {d.battle.round != null ? <div>回合: {d.battle.round}</div> : null}
                   <div>存活: {d.battle.alive_count}只</div>
                   <div>击杀: {d.battle.killed_count}只</div>
                   <div>
