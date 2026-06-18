@@ -12,6 +12,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "clean:cache": "rm -rf .next/dev/cache/turbopack",
     "postinstall": "node scripts/patch-next-polyfills.mjs",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
