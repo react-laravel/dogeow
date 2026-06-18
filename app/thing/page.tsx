@@ -175,8 +175,6 @@ export default function Thing() {
         </div>
       </PullToRefresh>
 
-      {!filterDrawerOpen ? <ThingSpeedDial /> : null}
-
       {/* 物品详情弹窗 */}
       <ItemDetailModal
         itemId={selectedItemId}

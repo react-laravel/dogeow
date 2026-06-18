@@ -40,6 +40,65 @@ function useHydrated() {
   )
 }
 
+function MagazineSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="bg-card/70 rounded-xl border border-white/10 p-4">
+          <div className="bg-white/20 h-6 w-3/4 rounded mb-3" />
+          <div className="bg-white/10 h-4 w-full rounded mb-2" />
+          <div className="bg-white/10 h-4 w-2/3 rounded" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function IconSkeleton() {
+  return (
+    <div className="animate-pulse grid grid-cols-4 gap-4 sm:grid-cols-6 md:grid-cols-8">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className="flex flex-col items-center gap-2">
+          <div className="bg-white/20 h-12 w-12 rounded-xl" />
+          <div className="bg-white/10 h-3 w-10 rounded" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="bg-card/70 rounded-xl border border-white/10 p-4">
+          <div className="bg-white/20 h-5 w-16 rounded mb-3" />
+          <div className="bg-white/10 h-4 w-full rounded mb-2" />
+          <div className="bg-white/10 h-4 w-3/4 rounded" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ListSkeleton() {
+  return (
+    <div className="animate-pulse space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="bg-card/70 rounded-xl border border-white/10 p-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 h-8 w-8 rounded-lg" />
+            <div className="flex-1">
+              <div className="bg-white/20 h-4 w-24 rounded mb-2" />
+              <div className="bg-white/10 h-3 w-48 rounded" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function TileList({
   tiles,
   projectCoverMode,
@@ -98,8 +157,18 @@ export function HomePage() {
         </header>
 
         <section aria-label={t('home.section_tiles', '应用入口')}>
-          {!isHydrated && layoutType === 'grid' ? (
-            <HomeTilesSkeleton />
+          {!isHydrated ? (
+            layoutType === 'magazine' ? (
+              <MagazineSkeleton />
+            ) : layoutType === 'icon' ? (
+              <IconSkeleton />
+            ) : layoutType === 'dashboard' ? (
+              <DashboardSkeleton />
+            ) : layoutType === 'grid' ? (
+              <HomeTilesSkeleton />
+            ) : (
+              <ListSkeleton />
+            )
           ) : layoutType === 'magazine' ? (
             <MagazineLayout
               tiles={tiles}

@@ -3,6 +3,7 @@
 import React from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/helpers'
 import { useRouter } from 'next/navigation'
 
 interface SpeedDialProps {
@@ -30,7 +31,15 @@ export function SpeedDial({
 
   return (
     <div className="fixed right-6 bottom-24 z-50">
-      <Button size="icon" className={className} onClick={handleClick}>
+      <Button
+        size="icon"
+        className={cn(
+          'h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white',
+          'transition-all duration-200 hover:scale-105 active:scale-95',
+          className
+        )}
+        onClick={handleClick}
+      >
         {icon}
       </Button>
     </div>

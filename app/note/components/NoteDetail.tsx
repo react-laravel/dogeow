@@ -40,7 +40,7 @@ export default function NoteDetail() {
           icon={<AlertCircle className="h-10 w-10 text-red-500" />}
           title="加载失败"
           description="无法加载笔记内容，请稍后重试。"
-          action={{ label: '返回列表', onClick: () => window.history.back() }}
+          primaryAction={{ label: '返回列表', onClick: () => window.history.back() }}
         />
       </PageContainer>
     )

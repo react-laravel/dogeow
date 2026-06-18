@@ -289,11 +289,13 @@ export default function LearnPage() {
         <div className="w-9" />
       </div>
       {currentWord && (
-        <WordCard
-          key={`${currentWord.id}-${sessionKey}-${cardNonce}`}
-          word={currentWord}
-          onResult={handleWordResult}
-        />
+        <div key={`card-wrapper-${currentWord.id}-${cardNonce}`} className="animate-card-enter">
+          <WordCard
+            key={`${currentWord.id}-${sessionKey}-${cardNonce}`}
+            word={currentWord}
+            onResult={handleWordResult}
+          />
+        </div>
       )}
       {isCompleting && (
         <p className="text-muted-foreground mt-4 text-center text-sm">正在打卡...</p>

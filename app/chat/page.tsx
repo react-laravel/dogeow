@@ -16,10 +16,12 @@ import {
 } from './components'
 import ChatErrorBoundary, { useChatErrorHandler } from './components/ChatErrorBoundary'
 import { useChatUIStore } from './stores/uiStore'
+import { useShallow } from 'zustand/react/shallow'
 import useChatStore from '@/app/chat/chatStore'
 import useAuthStore from '@/stores/authStore'
 import { useChatWebSocket } from '@/hooks/useChatWebSocket'
 import type { ChatMessage, MessageData } from './types'
+import { normalizeIncomingMessage } from './utils/typeGuards'
 import './styles/chat-mobile.css'
 
 // 通用空函数
@@ -30,56 +32,9 @@ const LOAD_THROTTLE_TIME = 5000
 const CONNECTION_CHECK_INTERVAL = 100
 const CONNECTION_TIMEOUT = 10000
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const normalizeIncomingMessage = (value: unknown): ChatMessage | null => {
-  if (!isRecord(value)) return null
-
-  // sendMessage API may return { data: ChatMessage, mentions: [] }
-  const source = isRecord(value.data) ? value.data : value
-
-  const id = Number(source.id)
-  const roomId = Number(source.room_id)
-  const userId = Number(source.user_id)
-
-  if (!Number.isFinite(id) || !Number.isFinite(roomId) || !Number.isFinite(userId)) {
-    return null
-  }
-
-  const createdAt =
-    typeof source.created_at === 'string' && source.created_at
-      ? source.created_at
-      : new Date().toISOString()
-  const updatedAt =
-    typeof source.updated_at === 'string' && source.updated_at ? source.updated_at : createdAt
-
-  const user = isRecord(source.user) ? source.user : null
-  const normalizedUserId = Number(user?.id ?? userId)
-
-  return {
-    id,
-    room_id: roomId,
-    user_id: userId,
-    message: typeof source.message === 'string' ? source.message : '',
-    message_type: source.message_type === 'system' ? 'system' : 'text',
-    created_at: createdAt,
-    updated_at: updatedAt,
-    user: {
-      id: Number.isFinite(normalizedUserId) ? normalizedUserId : userId,
-      name: typeof user?.name === 'string' && user.name ? user.name : 'Unknown',
-      email: typeof user?.email === 'string' ? user.email : '',
-    },
-    reactions: Array.isArray(source.reactions)
-      ? (source.reactions as ChatMessage['reactions'])
-      : undefined,
-  }
-}
-
 function ChatPageContent() {
   const router = useRouter()
   const { isAuthenticated, loading: authLoading, token } = useAuthStore()
-  const chatStore = useChatStore()
   const {
     currentRoom,
     rooms,
@@ -92,7 +47,21 @@ function ChatPageContent() {
     updateMuteStatus,
     updateRoomOnlineCount,
     setTyping,
-  } = chatStore
+  } = useChatStore(
+    useShallow(s => ({
+      currentRoom: s.currentRoom,
+      rooms: s.rooms,
+      retryLastAction: s.retryLastAction,
+      clearError: s.clearError,
+      error: s.error,
+      clearAllOnlineUsers: s.clearAllOnlineUsers,
+      setConnectionStatus: s.setConnectionStatus,
+      addMessage: s.addMessage,
+      updateMuteStatus: s.updateMuteStatus,
+      updateRoomOnlineCount: s.updateRoomOnlineCount,
+      setTyping: s.setTyping,
+    }))
+  )
 
   // Refs 优化
   const hasLoadedInitialDataRef = useRef(false)
@@ -402,10 +371,6 @@ function ChatPageContent() {
               currentRoom={currentRoom}
               onRoomListOpenChange={setRoomListOpen}
               onUsersListOpenChange={setUsersListOpen}
-              onMentionUser={noop}
-              onDirectMessage={noop}
-              onBlockUser={noop}
-              onReportUser={noop}
             />
 
             {currentRoom ? (
@@ -463,10 +428,6 @@ function ChatPageContent() {
             onReconnect={reconnect}
             onRetryMessages={retryFailedMessages}
             onClearQueue={clearOfflineQueue}
-            onMentionUser={noop}
-            onDirectMessage={noop}
-            onBlockUser={noop}
-            onReportUser={noop}
           />
         </div>
       </div>

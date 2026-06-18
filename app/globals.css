@@ -138,8 +138,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  :focus-visible {
+    @apply ring-ring ring-2 outline-none;
+  }
   html {
     @apply bg-background text-foreground;
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground;
@@ -186,12 +190,12 @@
     max-height: min(250px, 35vh) !important;
   }
 
-  /* 确保移动端页面高度正确 */
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
+  /* 聊天等全屏容器禁止原生 overscroll 穿透 */
+  .chat-page-shell {
+    overscroll-behavior: none;
   }
+
+  /* 尊重用户减少动画偏好 */
 }
 
 /* 游戏动画效果 */
@@ -230,8 +234,37 @@ html[data-custom-cursor='true'] input {
   cursor: url('/cursor/text.cur'), text;
 }
 
+/* 单词卡片切换动画 */
+@keyframes card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-card-enter {
+  animation: card-enter 0.25s ease-out forwards;
+}
+
 /* 主题切换时背景色渐变（需在设置中开启） */
 html[data-theme-transition='true'] body {
   transition-property: background-color;
   transition-duration: 1s;
+}
+
+/* 尊重用户减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-float-up {
+    animation: none;
+  }
+  .animate-pulse {
+    animation: none;
+  }
 }
