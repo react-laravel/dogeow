@@ -20,6 +20,7 @@ import { buildAiPromptForExcerpt } from '../utils/bookMarks'
 import {
   getReadingPosition,
   scheduleReaderJump,
+  findScrollingAncestor,
   type ReaderJumpTarget,
 } from '../utils/readerScroll'
 import { getHongloumengBookUrl } from '../utils/bookAssetUrls'
@@ -58,12 +59,14 @@ export function HongloumengReader() {
         if (!pendingJumpRef.current && restoreScroll && typeof window !== 'undefined') {
           const saved = sessionStorage.getItem(`${SCROLL_KEY}:${chapterId}`)
           requestAnimationFrame(() => {
-            if (contentRef.current) {
-              contentRef.current.scrollTop = saved ? Number(saved) || 0 : 0
+            const scrollEl = contentRef.current ? findScrollingAncestor(contentRef.current) : null
+            if (scrollEl) {
+              scrollEl.scrollTop = saved ? Number(saved) || 0 : 0
             }
           })
-        } else if (!pendingJumpRef.current && contentRef.current) {
-          contentRef.current.scrollTop = 0
+        } else if (!pendingJumpRef.current) {
+          const scrollEl = contentRef.current ? findScrollingAncestor(contentRef.current) : null
+          if (scrollEl) scrollEl.scrollTop = 0
         }
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : '加载失败')
@@ -108,14 +111,16 @@ export function HongloumengReader() {
       if (!contentRef.current) return
       if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current)
       scrollSaveTimer.current = setTimeout(() => {
+        const scrollEl = findScrollingAncestor(contentRef.current)
         sessionStorage.setItem(
           `${SCROLL_KEY}:${settings.chapterId}`,
-          String(contentRef.current?.scrollTop ?? 0)
+          String(scrollEl?.scrollTop ?? contentRef.current?.scrollTop ?? 0)
         )
       }, 200)
     }
 
-    const node = contentRef.current
+    const scrollEl = contentRef.current ? findScrollingAncestor(contentRef.current) : null
+    const node = scrollEl || contentRef.current
     node?.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       node?.removeEventListener('scroll', onScroll)
@@ -211,6 +216,8 @@ export function HongloumengReader() {
         return
       }
 
+      // Same chapter: use setTimeout to let Sheet close animation + layout settle
+      // then try the jump via scheduleReaderJump
       setJumpRequest(value => value + 1)
     },
     [patchSettings, settings.chapterId]
@@ -260,7 +267,7 @@ export function HongloumengReader() {
         onRemove={removeMark}
       />
 
-      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto pb-20">
         <article
           ref={articleRef}
           className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8"

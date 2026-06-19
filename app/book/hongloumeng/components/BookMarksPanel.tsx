@@ -99,9 +99,16 @@ function MarkSection({
           <ul className="space-y-2">
             {marks.map(mark => (
               <li key={mark.id}>
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onJump(mark)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onJump(mark)
+                    }
+                  }}
                   className="hover:bg-muted/60 w-full rounded-lg border px-3 py-2 text-left transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -133,7 +140,7 @@ function MarkSection({
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                </button>
+                </div>
               </li>
             ))}
           </ul>

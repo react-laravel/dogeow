@@ -40,8 +40,8 @@ export function ReaderToolbar({
     <header
       className={
         toolbarTheme
-          ? 'sticky top-0 z-20 border-b backdrop-blur-sm'
-          : 'border-border/60 bg-background/90 sticky top-0 z-20 border-b backdrop-blur-sm'
+          ? 'fixed bottom-0 left-0 right-0 z-10 border-t backdrop-blur-sm'
+          : 'border-border/60 bg-background/95 fixed bottom-0 left-0 right-0 z-10 border-t backdrop-blur-sm'
       }
       style={
         toolbarTheme

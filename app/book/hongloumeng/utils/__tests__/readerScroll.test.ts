@@ -56,7 +56,7 @@ describe('readerScroll', () => {
       pairIndex: 12,
     })
 
-    expect(container.scrollTop).toBe(20)
+    expect(container.scrollTop).toBe(200)
   })
 
   it('finds nearest rendered pair when exact index is missing', () => {
@@ -88,6 +88,35 @@ describe('readerScroll', () => {
       scrollTop: 120,
       pairIndex: 8,
     })
+  })
+
+  it('detects visible pair index from the actual scrolling ancestor', () => {
+    const scrollContainer = document.createElement('main')
+    scrollContainer.setAttribute('data-scroll-container', '')
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400 })
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 1000 })
+    Object.defineProperty(scrollContainer, 'scrollTop', { writable: true, value: 320 })
+    scrollContainer.getBoundingClientRect = () => mockRect(0, 400)
+
+    const container = document.createElement('div')
+    const aboveViewport = document.createElement('section')
+    aboveViewport.setAttribute('data-pair-index', '2')
+    aboveViewport.getBoundingClientRect = () => mockRect(-80, 30)
+
+    const nearAnchor = document.createElement('section')
+    nearAnchor.setAttribute('data-pair-index', '9')
+    nearAnchor.getBoundingClientRect = () => mockRect(102, 30)
+
+    container.append(aboveViewport, nearAnchor)
+    scrollContainer.appendChild(container)
+    document.body.appendChild(scrollContainer)
+
+    expect(getReadingPosition(container)).toEqual({
+      scrollTop: 320,
+      pairIndex: 9,
+    })
+
+    scrollContainer.remove()
   })
 
   it('centers element within container', () => {

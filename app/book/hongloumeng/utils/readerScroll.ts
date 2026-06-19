@@ -27,12 +27,16 @@ export interface ReaderJumpTarget {
   pairIndex: number | null
 }
 
+const READING_ANCHOR_RATIO = 0.28
+
 /** 取当前阅读位置：定位视口内最接近阅读线的句块 */
 export function getReadingPosition(container: HTMLElement | null): ReadingPosition {
   if (!container) return { scrollTop: 0, pairIndex: null }
 
-  const containerRect = container.getBoundingClientRect()
-  const anchorY = containerRect.top + container.clientHeight * 0.28
+  const scrollContainer = findScrollingAncestor(container) ?? container
+  const viewportRect = scrollContainer.getBoundingClientRect()
+  const viewportHeight = scrollContainer.clientHeight || viewportRect.height
+  const anchorY = viewportRect.top + viewportHeight * READING_ANCHOR_RATIO
   const pairs = container.querySelectorAll('[data-pair-index]')
 
   let pairIndex: number | null = null
@@ -42,7 +46,7 @@ export function getReadingPosition(container: HTMLElement | null): ReadingPositi
     if (!(node instanceof HTMLElement)) return
 
     const rect = node.getBoundingClientRect()
-    if (rect.bottom < containerRect.top || rect.top > containerRect.bottom) return
+    if (rect.bottom < viewportRect.top || rect.top > viewportRect.bottom) return
 
     const centerY = rect.top + rect.height / 2
     const distance = Math.abs(centerY - anchorY)
@@ -56,7 +60,7 @@ export function getReadingPosition(container: HTMLElement | null): ReadingPositi
   })
 
   return {
-    scrollTop: container.scrollTop,
+    scrollTop: scrollContainer.scrollTop,
     pairIndex,
   }
 }
@@ -72,59 +76,121 @@ export function findPairElement(container: HTMLElement, pairIndex: number): HTML
 }
 
 export function applyReaderJump(container: HTMLElement, target: ReaderJumpTarget): void {
+  const scrollContainer = findScrollingAncestor(container) ?? container
+
   if (target.pairIndex != null) {
     const pair = findPairElement(container, target.pairIndex)
     if (pair) {
-      scrollElementIntoContainer(container, pair, 'center')
+      scrollElementIntoContainer(scrollContainer, pair, 'start')
       return
     }
   }
 
-  container.scrollTop = target.scrollTop
+  scrollContainer.scrollTop = target.scrollTop
 }
 
-const MAX_JUMP_ATTEMPTS = 16
+const MAX_JUMP_ATTEMPTS = 20
+const JUMP_RETRY_INTERVAL = 80
 
-/** 章节渲染完成后多次尝试，避免 DOM 尚未就绪导致跳转失败 */
+function canScrollY(el: HTMLElement): boolean {
+  const style = window.getComputedStyle(el)
+  const overflowY = style.overflowY
+  return (
+    (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+    el.scrollHeight > el.clientHeight
+  )
+}
+
+/** 找到实际滚动容器；优先用最近的容器，避免误滚外层页面 */
+export function findScrollingAncestor(el: HTMLElement | null): HTMLElement | null {
+  if (!el) return null
+
+  let current: HTMLElement | null = el
+  while (current) {
+    if (canScrollY(current)) return current
+
+    if (current.hasAttribute('data-scroll-container')) {
+      return current
+    }
+
+    current = current.parentElement
+  }
+
+  const knownContainer =
+    document.getElementById('main-scroll') ?? document.getElementById('main-container')
+  if (knownContainer instanceof HTMLElement) return knownContainer
+
+  return null
+}
+
+/**
+ * 跳转到指定书签位置。
+ * 章节内容和外层布局可能各自有滚动容器，所以这里始终先解析真实滚动容器。
+ */
 export function scheduleReaderJump(
   container: HTMLElement,
   target: ReaderJumpTarget,
   onComplete?: () => void
 ): () => void {
   let attempts = 0
-  let frame = 0
+  let timer: ReturnType<typeof setTimeout> | null = null
   let cancelled = false
 
-  const tick = () => {
+  const tryJump = () => {
     if (cancelled) return
     attempts++
+
+    const scrollContainer = findScrollingAncestor(container)
+    if (!scrollContainer) {
+      onComplete?.()
+      return
+    }
+
+    const viewportRect = scrollContainer.getBoundingClientRect()
+    const viewportHeight = scrollContainer.clientHeight || viewportRect.height
+
+    if (viewportHeight <= 0) {
+      if (attempts < MAX_JUMP_ATTEMPTS) {
+        timer = setTimeout(tryJump, JUMP_RETRY_INTERVAL)
+        return
+      }
+    }
 
     if (target.pairIndex != null) {
       const pair = findPairElement(container, target.pairIndex)
       if (pair) {
-        scrollElementIntoContainer(container, pair, 'center')
-        onComplete?.()
+        const elementRect = pair.getBoundingClientRect()
+
+        if (elementRect.height > 0) {
+          const elementOffset = elementRect.top - viewportRect.top
+          const anchorOffset = viewportHeight * READING_ANCHOR_RATIO
+          const targetScroll = scrollContainer.scrollTop + elementOffset - anchorOffset
+          scrollContainer.scrollTop = Math.max(0, Math.round(targetScroll))
+
+          onComplete?.()
+          return
+        }
+      } else if (attempts < MAX_JUMP_ATTEMPTS) {
+        timer = setTimeout(tryJump, JUMP_RETRY_INTERVAL)
         return
       }
-    } else {
-      container.scrollTop = target.scrollTop
-      onComplete?.()
-      return
     }
 
-    if (attempts >= MAX_JUMP_ATTEMPTS) {
-      container.scrollTop = target.scrollTop
-      onComplete?.()
-      return
+    if (target.scrollTop > 0) {
+      scrollContainer.scrollTop = target.scrollTop
     }
 
-    frame = requestAnimationFrame(tick)
+    onComplete?.()
   }
 
-  frame = requestAnimationFrame(tick)
+  timer = setTimeout(() => {
+    requestAnimationFrame(() => {
+      if (!cancelled) tryJump()
+    })
+  }, 350)
 
   return () => {
     cancelled = true
-    cancelAnimationFrame(frame)
+    if (timer) clearTimeout(timer)
   }
 }
