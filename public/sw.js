@@ -1,8 +1,35 @@
 // Service Worker for DogeOW PWA
 // Bump this whenever SW fetch behavior changes. PWARegister also appends this
 // version as a query string to bypass stale CDN copies of /sw.js.
-const CACHE_NAME = 'dogeow-v1.0.4'
+const CACHE_NAME = 'dogeow-v1.0.5'
 const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
+
+const NAVIGATION_FETCH_ATTEMPTS = 3
+const NAVIGATION_RETRY_DELAYS_MS = [200, 500, 1000]
+
+async function fetchNavigationWithRetry(request) {
+  const url = request.url
+
+  for (let attempt = 0; attempt < NAVIGATION_FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(attempt === 0 ? request : url, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      })
+      return response
+    } catch (error) {
+      const isLastAttempt = attempt === NAVIGATION_FETCH_ATTEMPTS - 1
+      if (isLastAttempt) {
+        throw error
+      }
+
+      const delayMs = NAVIGATION_RETRY_DELAYS_MS[attempt] ?? 1000
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
+  }
+
+  throw new Error('Navigation fetch failed')
+}
 
 // 安装事件 - 缓存资源
 self.addEventListener('install', event => {
@@ -95,7 +122,7 @@ self.addEventListener('fetch', event => {
   // Safari 的 “This page couldn’t load” 系统错误页。
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => {
+      fetchNavigationWithRetry(request).catch(() => {
         return caches.match('/offline').then(response => {
           return response || Response.error()
         })
