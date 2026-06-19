@@ -20,6 +20,13 @@ export const ja = {
   'nav.chat': 'チャット',
   'nav.about': 'について',
   'nav.word': '単語',
+  'nav.book': '電子書籍',
+
+  // Book
+  'book.hongloumeng': '紅楼夢',
+  'book.hongloumeng.desc': '中国四大古典文学の一つ、曹雪芹著',
+  'book.select_description': '本を選んで読み始めましょう',
+  'book.start_reading': '読み始める',
 
   // Settings
   'settings.language': '言語',

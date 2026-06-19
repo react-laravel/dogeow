@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { pairSentences, parseHongloumengText, splitChineseSentences } from '../parseBook'
+import {
+  alignSentencePairs,
+  mergeContinuationSentences,
+  pairSentences,
+  parseHongloumengText,
+  splitChapterHeading,
+  splitChineseSentences,
+} from '../parseBook'
 
 describe('parseBook', () => {
   it('splits long paragraphs into sentences and pairs with translation', () => {
@@ -38,5 +45,34 @@ describe('parseBook', () => {
     )
     expect(pairs).toHaveLength(2)
     expect(pairs[1]).toEqual({ o: '第二句。', t: '' })
+  })
+
+  it('merges misaligned sentences when translation uses fewer full stops', () => {
+    const original =
+      "至于才子佳人等书，则又开口'文君'，满篇'子建'，千部一腔，千人一面。且终不能不涉淫滥。在作者，不过要写出自己的两首情诗艳赋来。"
+    const translation =
+      '至于才子佳人等书，开口就是文君，满篇都是子建，千部一腔、千人一面，且终不免淫滥。作者不过想写出自己的几首情诗艳赋。'
+
+    const pairs = alignSentencePairs(
+      mergeContinuationSentences(splitChineseSentences(original)),
+      splitChineseSentences(translation)
+    )
+
+    expect(pairs[0]?.o).toBe(
+      "至于才子佳人等书，则又开口'文君'，满篇'子建'，千部一腔，千人一面。且终不能不涉淫滥。"
+    )
+    expect(pairs[0]?.t).toContain('且终不免淫滥')
+    expect(pairs.some(pair => pair.o === '且终不能不涉淫滥。')).toBe(false)
+  })
+
+  it('splits chapter heading into aligned prefix and body', () => {
+    expect(splitChapterHeading('第01回 甄士隐梦幻识通灵 贾雨村风尘怀闺秀')).toEqual({
+      prefix: '第01回',
+      body: '甄士隐梦幻识通灵 贾雨村风尘怀闺秀',
+    })
+    expect(splitChapterHeading('第一回 甄士隐梦幻识通灵 贾雨村风尘怀闺秀')).toEqual({
+      prefix: '第一回',
+      body: '甄士隐梦幻识通灵 贾雨村风尘怀闺秀',
+    })
   })
 })

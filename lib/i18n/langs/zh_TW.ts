@@ -19,6 +19,13 @@ export const zh_TW = {
   'nav.chat': '聊天',
   'nav.about': '關於',
   'nav.word': '單詞',
+  'nav.book': '電子書',
+
+  // Book
+  'book.hongloumeng': '紅樓夢',
+  'book.hongloumeng.desc': '中國古代四大名著之一，曹雪芹著',
+  'book.select_description': '選擇一本好書開始閱讀',
+  'book.start_reading': '開始閱讀',
 
   // Settings
   'settings.language': '語言設定',

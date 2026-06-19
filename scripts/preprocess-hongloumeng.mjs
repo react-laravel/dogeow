@@ -52,6 +52,120 @@ export function pairSentences(originals, translations) {
   return pairs
 }
 
+/** @param {string} text */
+function normalizeForMatch(text) {
+  return text.replace(/[^\u4e00-\u9fff]/g, '')
+}
+
+/** @param {string[]} sentences */
+export function mergeContinuationSentences(sentences) {
+  const result = []
+
+  for (const sentence of sentences) {
+    const previous = result.at(-1)
+    if (previous && /^且.{1,14}。$/.test(sentence)) {
+      result[result.length - 1] = previous + sentence
+      continue
+    }
+    result.push(sentence)
+  }
+
+  return result
+}
+
+/** @param {string} original @param {string} translation */
+export function scoreSentenceMatch(original, translation) {
+  const o = normalizeForMatch(original)
+  const t = normalizeForMatch(translation)
+  if (!o && !t) return 1
+  if (!o || !t) return 0
+
+  let hits = 0
+  let total = 0
+  for (let len = 3; len <= 6; len++) {
+    for (let start = 0; start <= o.length - len; start++) {
+      total++
+      if (t.includes(o.slice(start, start + len))) hits++
+    }
+  }
+
+  if (total === 0) return t.includes(o) ? 1 : 0
+  return hits / total
+}
+
+/**
+ * @param {string[]} originals
+ * @param {string[]} translations
+ * @returns {{ o: string, t: string }[]}
+ */
+export function alignSentencePairs(originals, translations) {
+  const n = originals.length
+  const m = translations.length
+
+  if (n === 0 && m === 0) return []
+  if (n === 0) return translations.map(t => ({ o: '', t }))
+  if (m === 0) return originals.map(o => ({ o, t: '' }))
+  if (n === m) return pairSentences(originals, translations)
+
+  const dp = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: m + 1 }, () => ({
+      score: -Infinity,
+      prevI: 0,
+      prevJ: 0,
+      mergeO: 0,
+      mergeT: 0,
+    }))
+  )
+
+  dp[0][0] = { score: 0, prevI: 0, prevJ: 0, mergeO: 0, mergeT: 0 }
+
+  for (let i = 0; i <= n; i++) {
+    for (let j = 0; j <= m; j++) {
+      if (i === 0 && j === 0) continue
+
+      let best = { score: -Infinity, prevI: 0, prevJ: 0, mergeO: 0, mergeT: 0 }
+
+      for (let mergeO = 1; mergeO <= Math.min(3, i); mergeO++) {
+        for (let mergeT = 1; mergeT <= Math.min(3, j); mergeT++) {
+          const prevI = i - mergeO
+          const prevJ = j - mergeT
+          const prev = dp[prevI][prevJ]
+          if (prev.score === -Infinity) continue
+
+          const o = originals.slice(prevI, i).join('')
+          const t = translations.slice(prevJ, j).join('')
+          const mergePenalty = mergeO + mergeT > 2 ? 0.03 : 0
+          const score = prev.score + scoreSentenceMatch(o, t) - mergePenalty
+
+          if (score > best.score) {
+            best = { score, prevI, prevJ, mergeO, mergeT }
+          }
+        }
+      }
+
+      dp[i][j] = best
+    }
+  }
+
+  const pairs = []
+  let i = n
+  let j = m
+
+  while (i > 0 || j > 0) {
+    const cell = dp[i][j]
+    if (cell.mergeO === 0 && cell.mergeT === 0) break
+
+    pairs.unshift({
+      o: originals.slice(cell.prevI, i).join(''),
+      t: translations.slice(cell.prevJ, j).join(''),
+    })
+    i = cell.prevI
+    j = cell.prevJ
+  }
+
+  return pairs
+}
+
 /** @param {string} raw */
 function stripTranslationPrefix(raw) {
   return raw.replace(/^【译文】/, '').trim()
@@ -106,8 +220,8 @@ export function parseHongloumengText(content) {
       if (!current.translationTitle && current.pairs.length === 0 && /^第.+回/.test(translation)) {
         current.translationTitle = translation
       } else {
-        const pairs = pairSentences(
-          splitChineseSentences(original),
+        const pairs = alignSentencePairs(
+          mergeContinuationSentences(splitChineseSentences(original)),
           splitChineseSentences(translation)
         )
         current.pairs.push(...pairs)

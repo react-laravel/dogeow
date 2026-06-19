@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Languages,
   ListTodo,
+  BookOpen,
 } from 'lucide-react'
 import { PRESET_THEME_COLORS } from '@/lib/constants/theme-colors'
 
@@ -121,6 +122,15 @@ const TILES = [
     color: '#E91E63',
     needLogin: true,
   },
+  {
+    name: 'book',
+    nameKey: 'nav.book',
+    icon: <BookOpen />,
+    href: '/book',
+    color: '#795548',
+    cover: 'book.png',
+    needLogin: true,
+  },
 ]
 
 // 游戏列表配置
@@ -208,14 +218,24 @@ export const configs = {
     templateAreas: `
       "thing word file"
       "chat tool nav"
-      "chat note todos"
-      "game . ."
+      "note todos game"
+      "book . ."
     `,
   },
   games: GAMES,
   navigation: [createModule('nav-1', 'module.nav.name', 'module.nav.desc', '/nav')],
   notes: [createModule('note-1', 'module.note.name', 'module.note.desc', '/note')],
   files: [createModule('file-1', 'module.file.name', 'module.file.desc', '/file')],
+  books: [
+    {
+      id: 'hongloumeng',
+      nameKey: 'book.hongloumeng',
+      descriptionKey: 'book.hongloumeng.desc',
+      href: '/book/hongloumeng',
+      color: '#795548',
+      icon: '📖',
+    } as const,
+  ],
   systemBackgrounds: SYSTEM_BACKGROUNDS,
   themeColors: PRESET_THEME_COLORS,
 }
@@ -273,6 +293,7 @@ export const getTranslatedConfigs = (t: (key: string, fallback?: string) => stri
   navigation: mapWithTranslation(configs.navigation, t, ['nameKey', 'descriptionKey']),
   notes: mapWithTranslation(configs.notes, t, ['nameKey', 'descriptionKey']),
   files: mapWithTranslation(configs.files, t, ['nameKey', 'descriptionKey']),
+  books: mapWithTranslation(configs.books, t, ['nameKey', 'descriptionKey']),
   systemBackgrounds: mapWithTranslation(configs.systemBackgrounds, t, ['nameKey']),
   themeColors: mapWithTranslation(configs.themeColors, t, ['nameKey']),
 })

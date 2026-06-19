@@ -3,31 +3,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ReaderToolbar } from './ReaderToolbar'
+import { ReaderSettingsPanel } from './ReaderSettingsPanel'
+import { ChapterHeading } from './ChapterHeading'
 import { SentencePairBlock } from './SentencePairBlock'
 import { TextSelectionToolbar, type TextSelectionState } from './TextSelectionToolbar'
 import { BookMarksPanel } from './BookMarksPanel'
 import type { BookMark } from '../types/marks'
 import type { BookChapter, BookIndex } from '../utils/parseBook'
 import {
-  getReaderFontFamily,
   getReaderThemeStyle,
   getTranslationMutedColor,
   useReaderSettings,
 } from '../hooks/useReaderSettings'
 import { useBookMarks } from '../hooks/useBookMarks'
 import { buildAiPromptForExcerpt } from '../utils/bookMarks'
+import {
+  getReadingPosition,
+  scheduleReaderJump,
+  type ReaderJumpTarget,
+} from '../utils/readerScroll'
 import { getHongloumengBookUrl } from '../utils/bookAssetUrls'
 import { useAiDialogStore } from '@/stores/aiDialogStore'
 
 const SCROLL_KEY = 'dogeow-hongloumeng-scroll'
 
-interface PendingJump {
-  scrollTop?: number
-  pairIndex?: number | null
-}
-
 export function HongloumengReader() {
-  const { settings, patchSettings, bumpFontSize, hydrated } = useReaderSettings()
+  const { settings, patchSettings, hydrated } = useReaderSettings()
   const { marks, addPositionBookmark, addCollection, removeMark } = useBookMarks()
   const requestOpenAi = useAiDialogStore(state => state.requestOpen)
   const [index, setIndex] = useState<BookIndex | null>(null)
@@ -35,33 +36,12 @@ export function HongloumengReader() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [marksPanelOpen, setMarksPanelOpen] = useState(false)
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
+  const [jumpRequest, setJumpRequest] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
   const articleRef = useRef<HTMLElement>(null)
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingJumpRef = useRef<PendingJump | null>(null)
-
-  const applyPendingJump = useCallback(() => {
-    const pending = pendingJumpRef.current
-    if (!pending || !contentRef.current) return
-
-    pendingJumpRef.current = null
-
-    requestAnimationFrame(() => {
-      if (!contentRef.current) return
-
-      if (pending.pairIndex != null) {
-        const target = contentRef.current.querySelector(`[data-pair-index="${pending.pairIndex}"]`)
-        if (target instanceof HTMLElement) {
-          target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          return
-        }
-      }
-
-      if (typeof pending.scrollTop === 'number') {
-        contentRef.current.scrollTop = pending.scrollTop
-      }
-    })
-  }, [])
+  const pendingJumpRef = useRef<ReaderJumpTarget | null>(null)
 
   const loadChapter = useCallback(
     async (chapterId: number, restoreScroll = false) => {
@@ -75,16 +55,14 @@ export function HongloumengReader() {
         const data = (await response.json()) as BookChapter
         setChapter(data)
 
-        if (pendingJumpRef.current) {
-          requestAnimationFrame(() => applyPendingJump())
-        } else if (restoreScroll && typeof window !== 'undefined') {
+        if (!pendingJumpRef.current && restoreScroll && typeof window !== 'undefined') {
           const saved = sessionStorage.getItem(`${SCROLL_KEY}:${chapterId}`)
           requestAnimationFrame(() => {
             if (contentRef.current) {
               contentRef.current.scrollTop = saved ? Number(saved) || 0 : 0
             }
           })
-        } else if (contentRef.current) {
+        } else if (!pendingJumpRef.current && contentRef.current) {
           contentRef.current.scrollTop = 0
         }
       } catch (loadError) {
@@ -93,7 +71,7 @@ export function HongloumengReader() {
         setLoading(false)
       }
     },
-    [index, applyPendingJump]
+    [index]
   )
 
   useEffect(() => {
@@ -110,6 +88,20 @@ export function HongloumengReader() {
     if (!hydrated || !index) return
     loadChapter(settings.chapterId, true)
   }, [hydrated, index, settings.chapterId, loadChapter])
+
+  useEffect(() => {
+    const pending = pendingJumpRef.current
+    if (!pending || loading || !chapter || chapter.id !== pending.chapterId) return
+
+    const container = contentRef.current
+    if (!container) return
+
+    return scheduleReaderJump(container, pending, () => {
+      if (pendingJumpRef.current === pending) {
+        pendingJumpRef.current = null
+      }
+    })
+  }, [loading, chapter, settings.chapterId, jumpRequest])
 
   useEffect(() => {
     const onScroll = () => {
@@ -136,21 +128,33 @@ export function HongloumengReader() {
   }
 
   const getChapterContext = useCallback(() => {
+    const position = getReadingPosition(contentRef.current)
+    const pair = position.pairIndex != null ? chapter?.pairs[position.pairIndex] : undefined
+    const excerpt = pair ? (pair.o || pair.t).trim().slice(0, 80) : ''
+
     return {
       chapterId: settings.chapterId,
       chapterTitle:
         chapter?.title ?? index?.chapters.find(ch => ch.id === settings.chapterId)?.title ?? '',
-      scrollTop: contentRef.current?.scrollTop ?? 0,
+      scrollTop: position.scrollTop,
+      pairIndex: position.pairIndex,
+      excerpt,
     }
-  }, [chapter?.title, index?.chapters, settings.chapterId])
+  }, [chapter, index?.chapters, settings.chapterId])
 
   const handleAddCurrentBookmark = useCallback(() => {
     const context = getChapterContext()
+    if (context.pairIndex == null) {
+      toast.error('请稍候，正文加载完成后再添加书签')
+      return
+    }
+
     addPositionBookmark({
       chapterId: context.chapterId,
       chapterTitle: context.chapterTitle,
       scrollTop: context.scrollTop,
-      excerpt: '',
+      pairIndex: context.pairIndex,
+      excerpt: context.excerpt,
     })
     toast.success('已添加书签')
   }, [addPositionBookmark, getChapterContext])
@@ -162,7 +166,7 @@ export function HongloumengReader() {
         chapterId: context.chapterId,
         chapterTitle: context.chapterTitle,
         scrollTop: context.scrollTop,
-        pairIndex: selection.pairIndex,
+        pairIndex: selection.pairIndex ?? context.pairIndex,
         excerpt: selection.text,
       })
       toast.success('已添加书签')
@@ -197,6 +201,7 @@ export function HongloumengReader() {
   const handleJumpToMark = useCallback(
     (mark: BookMark) => {
       pendingJumpRef.current = {
+        chapterId: mark.chapterId,
         scrollTop: mark.scrollTop,
         pairIndex: mark.pairIndex,
       }
@@ -206,9 +211,9 @@ export function HongloumengReader() {
         return
       }
 
-      applyPendingJump()
+      setJumpRequest(value => value + 1)
     },
-    [applyPendingJump, patchSettings, settings.chapterId]
+    [patchSettings, settings.chapterId]
   )
 
   const themeStyle = getReaderThemeStyle(settings.theme)
@@ -224,23 +229,28 @@ export function HongloumengReader() {
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col"
+      className="flex h-full min-h-0 flex-col overflow-hidden"
       style={themeStyle}
       data-reader-theme={settings.theme}
     >
       {index && (
         <ReaderToolbar
-          bookTitle={index.title}
           chapters={index.chapters}
           settings={settings}
           markCount={marks.length}
           onChapterChange={handleChapterChange}
-          onPatchSettings={patchSettings}
-          onBumpFontSize={bumpFontSize}
           onAddBookmark={handleAddCurrentBookmark}
           onOpenMarks={() => setMarksPanelOpen(true)}
+          onOpenSettings={() => setSettingsPanelOpen(true)}
         />
       )}
+
+      <ReaderSettingsPanel
+        open={settingsPanelOpen}
+        onOpenChange={setSettingsPanelOpen}
+        settings={settings}
+        onPatchSettings={patchSettings}
+      />
 
       <BookMarksPanel
         open={marksPanelOpen}
@@ -255,7 +265,6 @@ export function HongloumengReader() {
           ref={articleRef}
           className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8"
           style={{
-            fontFamily: getReaderFontFamily(settings.fontFamily),
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
           }}
@@ -263,21 +272,15 @@ export function HongloumengReader() {
           {loading && <p className="text-sm opacity-70">正在加载章节…</p>}
 
           {!loading && chapter && (
-            <header className="mb-8 space-y-2 border-b border-current/10 pb-6">
-              {settings.contentMode !== 'translation' ? (
-                <h1 className="text-[1.15em] font-semibold tracking-wide">{chapter.title}</h1>
-              ) : null}
-              {settings.contentMode !== 'original' && chapter.translationTitle ? (
-                settings.contentMode === 'translation' ? (
-                  <h1 className="text-[1.15em] font-semibold tracking-wide">
-                    {chapter.translationTitle}
-                  </h1>
-                ) : (
-                  <p style={{ color: translationColor }}>{chapter.translationTitle}</p>
-                )
-              ) : settings.contentMode === 'translation' ? (
-                <h1 className="text-[1.15em] font-semibold tracking-wide">{chapter.title}</h1>
-              ) : null}
+            <header className="mb-8 border-b border-current/10 pb-6">
+              <ChapterHeading
+                title={chapter.title}
+                translationTitle={chapter.translationTitle}
+                contentMode={settings.contentMode}
+                translationColor={translationColor}
+                originalFontFamily={settings.originalFontFamily}
+                translationFontFamily={settings.translationFontFamily}
+              />
             </header>
           )}
 
@@ -291,6 +294,8 @@ export function HongloumengReader() {
                   displayMode={settings.pairDisplayMode}
                   theme={settings.theme}
                   contentMode={settings.contentMode}
+                  originalFontFamily={settings.originalFontFamily}
+                  translationFontFamily={settings.translationFontFamily}
                 />
               ))}
             </div>

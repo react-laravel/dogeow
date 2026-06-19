@@ -20,6 +20,14 @@ export const en = {
   'nav.chat': 'Chat',
   'nav.about': 'About',
   'nav.word': 'Word',
+  'nav.book': 'Books',
+
+  // Book
+  'book.hongloumeng': 'Dream of the Red Chamber',
+  'book.hongloumeng.desc':
+    'One of the Four Great Classical Novels of Chinese literature by Cao Xueqin',
+  'book.select_description': 'Select a book and start reading',
+  'book.start_reading': 'Start Reading',
 
   // Settings
   'settings.language': 'Language',

@@ -2,7 +2,13 @@
 
 import { memo } from 'react'
 import type { SentencePair } from '../utils/parseBook'
-import type { PairDisplayMode, ReaderContentMode, ReaderTheme } from '../hooks/useReaderSettings'
+import type {
+  PairDisplayMode,
+  ReaderContentMode,
+  ReaderFont,
+  ReaderTheme,
+} from '../hooks/useReaderSettings'
+import { getReaderFontFamily } from '../hooks/useReaderSettings'
 import { getPairLinePresentation } from '../utils/pairDisplay'
 
 interface SentencePairBlockProps {
@@ -11,6 +17,8 @@ interface SentencePairBlockProps {
   displayMode: PairDisplayMode
   theme: ReaderTheme
   contentMode: ReaderContentMode
+  originalFontFamily: ReaderFont
+  translationFontFamily: ReaderFont
 }
 
 function PairLine({
@@ -18,17 +26,20 @@ function PairLine({
   displayMode,
   theme,
   role,
+  fontFamily,
 }: {
   text: string
   displayMode: PairDisplayMode
   theme: ReaderTheme
   role: 'original' | 'translation'
+  fontFamily: ReaderFont
 }) {
   const { className, style, prefix } = getPairLinePresentation(displayMode, theme, role)
+  const lineStyle = { ...style, fontFamily: getReaderFontFamily(fontFamily) }
 
   if (prefix) {
     return (
-      <p className={className} style={style}>
+      <p className={className} style={lineStyle}>
         <span
           className="shrink-0 rounded px-1.5 py-0.5 text-[0.72em] font-medium tracking-wide"
           style={{
@@ -46,7 +57,7 @@ function PairLine({
   }
 
   return (
-    <p className={className} style={style}>
+    <p className={className} style={lineStyle}>
       {text}
     </p>
   )
@@ -58,6 +69,8 @@ export const SentencePairBlock = memo(function SentencePairBlock({
   theme,
   contentMode,
   pairIndex,
+  originalFontFamily,
+  translationFontFamily,
 }: SentencePairBlockProps) {
   const showOriginal = contentMode === 'both' || contentMode === 'original'
   const showTranslation = contentMode === 'both' || contentMode === 'translation'
@@ -72,10 +85,22 @@ export const SentencePairBlock = memo(function SentencePairBlock({
   return (
     <section className={gapClass} data-pair-index={pairIndex}>
       {showOriginal && pair.o ? (
-        <PairLine text={pair.o} displayMode={displayMode} theme={theme} role="original" />
+        <PairLine
+          text={pair.o}
+          displayMode={displayMode}
+          theme={theme}
+          role="original"
+          fontFamily={originalFontFamily}
+        />
       ) : null}
       {showTranslation && pair.t ? (
-        <PairLine text={pair.t} displayMode={displayMode} theme={theme} role="translation" />
+        <PairLine
+          text={pair.t}
+          displayMode={displayMode}
+          theme={theme}
+          role="translation"
+          fontFamily={translationFontFamily}
+        />
       ) : null}
     </section>
   )
