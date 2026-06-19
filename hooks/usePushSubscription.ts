@@ -17,6 +17,24 @@ export function isPushSupported(): boolean {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 
+function bufferEquals(left: ArrayBuffer | null, right: Uint8Array): boolean {
+  if (!left || left.byteLength !== right.byteLength) return false
+
+  const leftBytes = new Uint8Array(left)
+  for (let index = 0; index < leftBytes.length; index += 1) {
+    if (leftBytes[index] !== right[index]) return false
+  }
+
+  return true
+}
+
+function subscriptionMatchesApplicationServerKey(
+  subscription: PushSubscription,
+  applicationServerKey: Uint8Array
+): boolean {
+  return bufferEquals(subscription.options.applicationServerKey, applicationServerKey)
+}
+
 /**
  * 在用户已登录且已授权通知时，向服务端注册当前设备的推送订阅。
  * 可在 PWA 安装后或用户开启「浏览器通知」后调用。
@@ -57,10 +75,21 @@ export function usePushSubscription() {
       }
 
       const applicationServerKey = base64UrlToUint8Array(publicKey)
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: applicationServerKey as BufferSource,
-      })
+      const existingSubscription = await registration.pushManager.getSubscription()
+      const subscription =
+        existingSubscription &&
+        subscriptionMatchesApplicationServerKey(existingSubscription, applicationServerKey)
+          ? existingSubscription
+          : await (async () => {
+              if (existingSubscription) {
+                await existingSubscription.unsubscribe()
+              }
+
+              return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey as BufferSource,
+              })
+            })()
 
       const payload = subscriptionToPayload(subscription)
       await savePushSubscription(payload)
