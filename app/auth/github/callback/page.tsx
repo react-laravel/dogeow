@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import useAuthStore from '@/stores/authStore'
 import type { User } from '@/app'
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export default function GithubCallbackPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -13,22 +15,28 @@ export default function GithubCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('token')
-      const userJson = urlParams.get('user')
+      const code = urlParams.get('code')
 
-      if (!token || !userJson) {
+      if (!code) {
         setError('登录信息不完整')
         return
       }
 
       try {
-        const user = JSON.parse(decodeURIComponent(userJson)) as User
+        const res = await fetch(`${API_BASE}/api/auth/github/callback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        })
 
-        // 存储 token 和用户信息
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data?.message || 'GitHub 登录失败')
+        }
+
+        const { token, user } = await res.json()
         await setToken(token)
-        setUser(user)
-
-        // 跳转到首页
+        setUser(user as User)
         router.push('/')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'GitHub 登录失败')
