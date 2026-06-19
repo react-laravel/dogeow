@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { asset } from '@/lib/helpers/assets'
 
 const SCROLL_HEIGHT = 500
@@ -23,10 +24,14 @@ function getScrollContainer(): Element | null {
 }
 
 export function ScrollButton() {
+  const pathname = usePathname()
   const [bottom, setBottom] = useState(DEFAULT_BOTTOM)
   const [delay, setDelay] = useState('1.5s')
+  const isBookReadingPage = pathname.startsWith('/book/')
 
   useEffect(() => {
+    if (isBookReadingPage) return
+
     const el = getScrollContainer()
     if (!el) return
 
@@ -54,7 +59,7 @@ export function ScrollButton() {
       el.removeEventListener('scroll', toggleVisible)
       window.removeEventListener('resize', handleResize)
     }
-  }, [])
+  }, [isBookReadingPage])
 
   const scrollToTop = useCallback(() => {
     const el = getScrollContainer()
@@ -64,6 +69,8 @@ export function ScrollButton() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [])
+
+  if (isBookReadingPage) return null
 
   return (
     <div

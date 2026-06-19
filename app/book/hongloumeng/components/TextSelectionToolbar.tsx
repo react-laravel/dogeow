@@ -30,6 +30,17 @@ function getPairIndexFromNode(node: Node | null): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function getSelectionRect(range: Range): DOMRect | null {
+  const rect = range.getBoundingClientRect()
+  if (rect.width || rect.height) return rect
+
+  for (const clientRect of Array.from(range.getClientRects())) {
+    if (clientRect.width || clientRect.height) return clientRect
+  }
+
+  return null
+}
+
 export function TextSelectionToolbar({
   containerRef,
   onAddBookmark,
@@ -66,8 +77,8 @@ export function TextSelectionToolbar({
       return
     }
 
-    const rect = range.getBoundingClientRect()
-    if (!rect.width && !rect.height) {
+    const rect = getSelectionRect(range)
+    if (!rect) {
       hide()
       return
     }
@@ -84,20 +95,27 @@ export function TextSelectionToolbar({
     const container = containerRef.current
     if (!container) return
 
-    const handleMouseUp = () => {
+    const updateAfterSelectionSettles = () => {
       requestAnimationFrame(updateSelection)
+      window.setTimeout(updateSelection, 80)
     }
 
     const handleKeyUp = (event: KeyboardEvent) => {
       if (event.key === 'Escape') hide()
     }
 
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mouseup', updateAfterSelectionSettles)
+    document.addEventListener('pointerup', updateAfterSelectionSettles)
+    document.addEventListener('touchend', updateAfterSelectionSettles, { passive: true })
+    document.addEventListener('selectionchange', updateAfterSelectionSettles)
     document.addEventListener('keyup', handleKeyUp)
     container.addEventListener('scroll', hide, { passive: true })
 
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mouseup', updateAfterSelectionSettles)
+      document.removeEventListener('pointerup', updateAfterSelectionSettles)
+      document.removeEventListener('touchend', updateAfterSelectionSettles)
+      document.removeEventListener('selectionchange', updateAfterSelectionSettles)
       document.removeEventListener('keyup', handleKeyUp)
       container.removeEventListener('scroll', hide)
     }
@@ -161,7 +179,7 @@ function ToolbarButton({
       size="sm"
       className={cn('h-8 rounded-full px-2.5 text-xs')}
       onPointerDown={event => {
-        event.preventDefault()
+        if (event.pointerType === 'mouse') event.preventDefault()
         event.stopPropagation()
       }}
       onClick={event => {
