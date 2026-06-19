@@ -1,11 +1,14 @@
 import React from 'react'
 import {
   type AIProvider,
+  CodexModelSelector,
+  CodexReasoningEffortSelector,
   type OllamaModelListItem,
   OllamaModelSelector,
   ProviderSelector,
   ZhipuaiModelSelector,
 } from './ChatInputModelSelector'
+import type { CodexReasoningEffort } from '../request-model'
 
 interface ChatInputModelRowProps {
   chatMode: 'ai' | 'knowledge'
@@ -13,6 +16,8 @@ interface ChatInputModelRowProps {
   onProviderChange?: (value: AIProvider) => void
   model?: string
   onModelChange?: (value: string) => void
+  codexReasoningEffort?: CodexReasoningEffort
+  onCodexReasoningEffortChange?: (value: CodexReasoningEffort) => void
   ollamaModels: OllamaModelListItem[]
   isLoading: boolean
   isLoadingOllamaModels: boolean
@@ -25,6 +30,8 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
     onProviderChange,
     model,
     onModelChange,
+    codexReasoningEffort,
+    onCodexReasoningEffortChange,
     ollamaModels,
     isLoading,
     isLoadingOllamaModels,
@@ -39,27 +46,47 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
             onProviderChange={onProviderChange}
             isLoading={isLoading}
           />
-          {onModelChange && (provider === 'ollama' || provider === 'zhipuai') && (
-            <>
-              <span className="text-muted-foreground">·</span>
-              {provider === 'ollama' && (
-                <OllamaModelSelector
-                  model={selectedModel}
-                  onModelChange={onModelChange}
-                  ollamaModels={ollamaModels}
-                  isLoading={isLoading}
-                  isLoadingOllamaModels={isLoadingOllamaModels}
-                />
-              )}
-              {provider === 'zhipuai' && (
-                <ZhipuaiModelSelector
-                  model={selectedModel}
-                  onModelChange={onModelChange}
-                  isLoading={isLoading}
-                />
-              )}
-            </>
-          )}
+          {onModelChange &&
+            (provider === 'ollama' || provider === 'zhipuai' || provider === 'codex') && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                {provider === 'ollama' && (
+                  <OllamaModelSelector
+                    model={selectedModel}
+                    onModelChange={onModelChange}
+                    ollamaModels={ollamaModels}
+                    isLoading={isLoading}
+                    isLoadingOllamaModels={isLoadingOllamaModels}
+                  />
+                )}
+                {provider === 'zhipuai' && (
+                  <ZhipuaiModelSelector
+                    model={selectedModel}
+                    onModelChange={onModelChange}
+                    isLoading={isLoading}
+                  />
+                )}
+                {provider === 'codex' && (
+                  <>
+                    <CodexModelSelector
+                      model={selectedModel}
+                      onModelChange={onModelChange}
+                      isLoading={isLoading}
+                    />
+                    {codexReasoningEffort && onCodexReasoningEffortChange && (
+                      <>
+                        <span className="text-muted-foreground">·</span>
+                        <CodexReasoningEffortSelector
+                          effort={codexReasoningEffort}
+                          onEffortChange={onCodexReasoningEffortChange}
+                          isLoading={isLoading}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              </>
+            )}
         </div>
       )
     }

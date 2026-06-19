@@ -43,6 +43,8 @@ describe('useAiChat model loading', () => {
     localStorage.removeItem('browser_ollama_address')
     localStorage.removeItem('ollama_model')
     localStorage.removeItem('zhipuai_model')
+    localStorage.removeItem('codex_model')
+    localStorage.removeItem('codex_reasoning_effort')
   })
 
   afterEach(() => {
@@ -253,6 +255,51 @@ describe('useAiChat model loading', () => {
     await waitFor(() => {
       expect(fetchMock).not.toHaveBeenCalled()
     })
+  })
+
+  it('sends Codex model and reasoning effort through the server', async () => {
+    localStorage.setItem('ai_provider', 'codex')
+    localStorage.setItem('codex_model', 'gpt-5.4')
+    localStorage.setItem('codex_reasoning_effort', 'high')
+
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === '/api/generate') {
+        return Promise.resolve(
+          createStreamingResponse(['0:"你好，Codex"\n', 'd:{"finishReason":"stop"}\n'])
+        )
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useAiChat({ open: true }))
+
+    expect(result.current.provider).toBe('codex')
+    expect(result.current.model).toBe('gpt-5.4')
+    expect(result.current.codexReasoningEffort).toBe('high')
+
+    act(() => {
+      result.current.setPrompt('你好')
+    })
+
+    await act(async () => {
+      await result.current.handleSend()
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/generate',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"model":"gpt-5.4"'),
+      })
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/generate',
+      expect.objectContaining({
+        body: expect.stringContaining('"codexReasoningEffort":"high"'),
+      })
+    )
   })
 
   it('shows an image placeholder message and replaces it with the generated image', async () => {

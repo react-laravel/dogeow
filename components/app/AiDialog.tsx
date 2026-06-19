@@ -194,6 +194,10 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           supportsImages={chatMode === 'ai' ? supportsImages : false}
           model={model}
           onModelChange={setModel}
+          codexReasoningEffort={chatMode === 'ai' ? aiChat.codexReasoningEffort : undefined}
+          onCodexReasoningEffortChange={
+            chatMode === 'ai' ? aiChat.setCodexReasoningEffort : undefined
+          }
           provider={provider}
           onProviderChange={setProvider}
           chatMode={chatMode}

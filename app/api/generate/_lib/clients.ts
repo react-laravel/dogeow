@@ -1,6 +1,10 @@
+import { spawn, type ChildProcessByStdio } from 'node:child_process'
+import type { Readable } from 'node:stream'
 import {
   ANTHROPIC_BASE_URL,
   ANTHROPIC_MODEL,
+  CODEX_CLI_PATH,
+  CODEX_MODEL,
   DEFAULT_MODEL,
   GITHUB_MODEL,
   GITHUB_MODELS_URL,
@@ -16,7 +20,72 @@ import {
   isEmbeddingModel,
   isLikelyZhipuModel,
 } from './config'
-import type { ChatMessage } from './types'
+import type { ChatMessage, CodexReasoningEffort } from './types'
+
+const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>([
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+])
+
+function buildCodexChatPrompt(messages: ChatMessage[]): string {
+  const formattedMessages = messages
+    .map(message => {
+      const roleLabel =
+        message.role === 'system' ? '系统' : message.role === 'assistant' ? '助理' : '用户'
+      return `${roleLabel}：${message.content}`
+    })
+    .join('\n\n')
+
+  return [
+    '你现在作为 DogeOW 聊天面板中的 ChatGPT Codex provider 回复。',
+    '请只回答用户的问题，不要修改文件，不要执行命令，除非用户明确要求代码仓库操作。',
+    '默认使用中文回答。',
+    '',
+    '对话历史：',
+    formattedMessages,
+  ].join('\n')
+}
+
+export function callCodexExecAPI(
+  messages: ChatMessage[],
+  model?: string,
+  reasoningEffort?: CodexReasoningEffort
+): ChildProcessByStdio<null, Readable, Readable> {
+  const selectedModel = model?.trim() || CODEX_MODEL
+  const selectedReasoningEffort = CODEX_REASONING_EFFORTS.has(
+    reasoningEffort as CodexReasoningEffort
+  )
+    ? reasoningEffort
+    : undefined
+  const args = [
+    'exec',
+    '--ephemeral',
+    '--sandbox',
+    'read-only',
+    '--ask-for-approval',
+    'never',
+    '--skip-git-repo-check',
+  ]
+
+  if (selectedModel) {
+    args.push('--model', selectedModel)
+  }
+
+  if (selectedReasoningEffort) {
+    args.push('--config', `model_reasoning_effort="${selectedReasoningEffort}"`)
+  }
+
+  args.push(buildCodexChatPrompt(messages))
+
+  return spawn(CODEX_CLI_PATH, args, {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+}
 
 export const callOllamaGenerateAPI = async (prompt: string, model?: string): Promise<Response> => {
   const requested = model ?? DEFAULT_MODEL

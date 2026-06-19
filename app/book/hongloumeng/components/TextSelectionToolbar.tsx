@@ -160,7 +160,14 @@ function ToolbarButton({
       variant="ghost"
       size="sm"
       className={cn('h-8 rounded-full px-2.5 text-xs')}
-      onClick={onClick}
+      onPointerDown={event => {
+        event.preventDefault()
+        event.stopPropagation()
+      }}
+      onClick={event => {
+        event.stopPropagation()
+        onClick()
+      }}
     >
       <Icon className="mr-1 h-3.5 w-3.5" />
       {label}

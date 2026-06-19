@@ -27,6 +27,8 @@ export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? 'MiniMax-M2.5-high
 export const ZHIPUAI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4'
 export const ZHIPUAI_API_KEY = process.env.ZHIPUAI_API_KEY ?? ''
 export const ZHIPUAI_MODEL = 'glm-4.6v-flash'
+export const CODEX_CLI_PATH = process.env.CODEX_CLI_PATH?.trim() || 'codex'
+export const CODEX_MODEL = process.env.CODEX_MODEL?.trim() || ''
 
 const EMBEDDING_MODEL_PREFIXES = ['qwen3-embedding', 'embeddinggemma', 'nomic-embed-text']
 export const isEmbeddingModel = (model: string) =>
@@ -56,6 +58,7 @@ export const getAIProvider = (requestedProvider?: AIProvider): AIProvider => {
   if (requestedProvider === 'github' && GITHUB_PAT) return 'github'
   if (requestedProvider === 'minimax' && MINIMAX_COMPAT_API_KEY) return 'minimax'
   if (requestedProvider === 'zhipuai' && ZHIPUAI_API_KEY) return 'zhipuai'
+  if (requestedProvider === 'codex') return 'codex'
   if (requestedProvider === 'ollama') return 'ollama'
   if (GITHUB_PAT) return 'github'
   if (MINIMAX_COMPAT_API_KEY) return 'minimax'
@@ -71,6 +74,9 @@ export const getProviderFallbackMessage = (provider: AIProvider): string => {
   }
   if (provider === 'zhipuai') {
     return 'AI 服务暂时不可用，请检查后端 ZHIPUAI_API_KEY 环境变量及网络'
+  }
+  if (provider === 'codex') {
+    return 'ChatGPT Codex 暂时不可用，请确认服务器已安装 Codex CLI，并执行 codex login --device-auth 完成设备登录'
   }
   return 'AI 服务暂时不可用，请确保 Ollama 服务正在运行'
 }

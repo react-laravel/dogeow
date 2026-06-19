@@ -5,8 +5,10 @@ import type { AIProvider } from '../request-model'
 import {
   getStoredProvider,
   getStoredOllamaModel,
+  getStoredCodexModel,
   getStoredZhipuaiModel,
   setStoredProvider,
+  setStoredCodexModel,
   setStoredOllamaModel,
   setStoredZhipuaiModel,
 } from './modelStorage'
@@ -38,6 +40,11 @@ export function useChatModelStorage({
 
     if (provider === 'zhipuai') {
       setModel(getStoredZhipuaiModel())
+      return
+    }
+
+    if (provider === 'codex') {
+      setModel(getStoredCodexModel())
     }
   }, [provider, setModel])
 
@@ -50,6 +57,11 @@ export function useChatModelStorage({
 
     if (provider === 'zhipuai') {
       setStoredZhipuaiModel(model)
+      return
+    }
+
+    if (provider === 'codex') {
+      setStoredCodexModel(model)
     }
   }, [model, provider])
 
@@ -60,6 +72,7 @@ export function useChatModelStorage({
 
   // Initialize model from storage based on provider
   const initializeModel = (currentProvider: AIProvider): string => {
+    if (currentProvider === 'codex') return getStoredCodexModel()
     return currentProvider === 'zhipuai' ? getStoredZhipuaiModel() : getStoredOllamaModel()
   }
 

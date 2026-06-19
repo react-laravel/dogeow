@@ -6,6 +6,7 @@ import {
   getProviderFallbackMessage,
 } from './_lib/config'
 import {
+  callCodexExecAPI,
   callGitHubModelsAPI,
   callMiniMaxAPI,
   callOllamaChatAPI,
@@ -13,6 +14,7 @@ import {
   callZhipuAIAPI,
 } from './_lib/clients'
 import {
+  createCodexExecStreamResponse,
   createGitHubStreamResponse,
   createMiniMaxStreamResponse,
   createStreamResponse,
@@ -21,6 +23,8 @@ import {
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
 import { requireAuth } from '../_lib/auth-guard'
 import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
+
+export const runtime = 'nodejs'
 
 function buildChatMessages(messages: ChatMessage[], command?: string): ChatMessage[] {
   if (messages.some(m => m.role === 'system')) return messages
@@ -51,7 +55,7 @@ async function handleChatRequest(
   chatMessages: ChatMessage[],
   requestId: string
 ) {
-  const { provider, images, imageUrl, model } = body
+  const { provider, images, imageUrl, model, codexReasoningEffort } = body
   const actualProvider = getAIProvider(provider)
   const promptTokens = getPromptTokens(chatMessages)
 
@@ -68,6 +72,11 @@ async function handleChatRequest(
   if (actualProvider === 'zhipuai') {
     const zhipuaiResponse = await callZhipuAIAPI(chatMessages, images, imageUrl, model)
     return createZhipuAIStreamResponse(zhipuaiResponse)
+  }
+
+  if (actualProvider === 'codex') {
+    const codexProcess = callCodexExecAPI(chatMessages, model, codexReasoningEffort)
+    return createCodexExecStreamResponse(codexProcess, promptTokens)
   }
 
   const ollamaResponse = await callOllamaChatAPI(chatMessages, model)
@@ -98,7 +107,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '无效的请求体' }, { status: 400 })
   }
 
-  const { messages, useChat = false, command, provider, images, imageUrl, model } = body
+  const {
+    messages,
+    useChat = false,
+    command,
+    provider,
+    images,
+    imageUrl,
+    model,
+    codexReasoningEffort,
+  } = body
   const hasImages = !!(images && images.length > 0) || !!imageUrl
 
   // Generate idempotency key for this request
@@ -113,10 +131,17 @@ export async function POST(request: NextRequest) {
     images,
     imageUrl,
     model,
+    codexReasoningEffort,
   })
 
   try {
-    console.log('[Generate API] 接收到的请求:', { provider, model, useChat, hasImages })
+    console.log('[Generate API] 接收到的请求:', {
+      provider,
+      model,
+      codexReasoningEffort,
+      useChat,
+      hasImages,
+    })
     console.log('[Generate API] 实际使用的 AI 提供商:', getAIProvider(provider))
     console.log('[Generate API] Request ID:', requestId)
 

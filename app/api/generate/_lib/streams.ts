@@ -1,3 +1,5 @@
+import type { ChildProcessByStdio } from 'node:child_process'
+import type { Readable } from 'node:stream'
 import type { GitHubChunk, MiniMaxChunk, OllamaResponse, ZhipuAIChunk } from './types'
 
 const STREAM_HEADERS = {
@@ -270,6 +272,79 @@ export function createGitHubStreamResponse(
       } finally {
         reader.releaseLock()
       }
+    },
+  })
+
+  return new Response(stream, { headers: STREAM_HEADERS })
+}
+
+export function createCodexExecStreamResponse(
+  codexProcess: ChildProcessByStdio<null, Readable, Readable>,
+  promptTokens: number
+): Response {
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    start(controller) {
+      let outputTokens = 0
+      let hasOutput = false
+      let stderr = ''
+      let closed = false
+
+      const closeWithDone = () => {
+        if (closed) return
+        closed = true
+        controller.enqueue(
+          encoder.encode(
+            `d:${JSON.stringify({
+              finishReason: 'stop',
+              usage: {
+                promptTokens,
+                completionTokens: outputTokens,
+                totalTokens: promptTokens + outputTokens,
+              },
+            })}\n`
+          )
+        )
+        controller.close()
+      }
+
+      const enqueueText = (text: string) => {
+        if (!text || closed) return
+        hasOutput = true
+        outputTokens += Math.ceil(text.length / 4)
+        controller.enqueue(encoder.encode(`0:"${escapeJsonString(text)}"\n`))
+      }
+
+      codexProcess.stdout.on('data', chunk => {
+        enqueueText(String(chunk))
+      })
+
+      codexProcess.stderr.on('data', chunk => {
+        stderr += String(chunk)
+      })
+
+      codexProcess.on('error', error => {
+        enqueueText(
+          `Codex CLI 无法启动：${error.message}。请确认服务器已安装 Codex CLI，并执行 codex login --device-auth 完成设备登录。`
+        )
+        closeWithDone()
+      })
+
+      codexProcess.on('close', code => {
+        if (code !== 0 && !hasOutput) {
+          const detail = stderr.trim() || `codex exec exited with code ${code}`
+          enqueueText(
+            `ChatGPT Codex 调用失败：${detail}\n\n请确认服务器已安装 Codex CLI，并执行 codex login --device-auth 完成设备登录。`
+          )
+        }
+
+        closeWithDone()
+      })
+    },
+
+    cancel() {
+      codexProcess.kill('SIGTERM')
     },
   })
 

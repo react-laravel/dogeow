@@ -1,6 +1,8 @@
 export type GenerateOption = 'improve' | 'fix' | 'shorter' | 'longer' | 'continue' | 'zap'
 
-export type AIProvider = 'github' | 'minimax' | 'ollama' | 'zhipuai'
+export type AIProvider = 'github' | 'minimax' | 'ollama' | 'zhipuai' | 'codex'
+
+export type CodexReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -15,6 +17,7 @@ export interface GenerateRequestBody {
   useChat?: boolean
   model?: string
   provider?: AIProvider
+  codexReasoningEffort?: CodexReasoningEffort
   images?: string[]
   imageUrl?: string
 }

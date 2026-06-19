@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterAll, describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   generatePrompt,
-  getAIProvider,
   getProviderFallbackMessage,
   isEmbeddingModel,
   isLikelyZhipuModel,
@@ -49,7 +48,7 @@ describe('generate config', () => {
 
     it('should generate prompt for zap option with command', () => {
       const result = generatePrompt('zap', '原文', '自定义命令')
-      expect(result).toBe('自定义命令\n\n原文')
+      expect(result).toBe('自定义命令\n\n原文：原文')
     })
 
     it('should fall back to default template for unknown option', () => {
@@ -59,55 +58,60 @@ describe('generate config', () => {
 
     it('should handle empty command for zap option', () => {
       const result = generatePrompt('zap', '原文', '')
-      expect(result).toBe('\n\n原文')
+      expect(result).toBe('\n\n原文：原文')
     })
   })
 
   describe('getAIProvider', () => {
-    it('should return github when requested and configured', () => {
+    it('should return github when requested and configured', async () => {
       process.env.GITHUB_PAT = 'test-token'
-      const { getAIProvider } = require('../config')
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider('github')).toBe('github')
     })
 
-    it('should return minimax when requested and configured', () => {
+    it('should return minimax when requested and configured', async () => {
       process.env.MINIMAX_TOKEN_API_KEY = 'test-token'
-      const { getAIProvider } = require('../config')
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider('minimax')).toBe('minimax')
     })
 
-    it('should return zhipuai when requested and configured', () => {
+    it('should return zhipuai when requested and configured', async () => {
       process.env.ZHIPUAI_API_KEY = 'test-key'
-      const { getAIProvider } = require('../config')
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider('zhipuai')).toBe('zhipuai')
     })
 
-    it('should return ollama when requested', () => {
-      const { getAIProvider } = require('../config')
+    it('should return codex when requested', async () => {
+      const { getAIProvider } = await import('../config')
+      expect(getAIProvider('codex')).toBe('codex')
+    })
+
+    it('should return ollama when requested', async () => {
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider('ollama')).toBe('ollama')
     })
 
-    it('should fall back to github when no provider requested but github configured', () => {
+    it('should fall back to github when no provider requested but github configured', async () => {
       process.env.GITHUB_PAT = 'test-token'
-      const { getAIProvider } = require('../config')
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider()).toBe('github')
     })
 
-    it('should fall back to minimax when no provider requested but minimax configured', () => {
+    it('should fall back to minimax when no provider requested but minimax configured', async () => {
       process.env.MINIMAX_TOKEN_API_KEY = 'test-token'
-      const { getAIProvider } = require('../config')
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider()).toBe('minimax')
     })
 
-    it('should fall back to ollama when no provider requested and no other configured', () => {
-      const { getAIProvider } = require('../config')
+    it('should fall back to ollama when no provider requested and no other configured', async () => {
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider()).toBe('ollama')
     })
 
-    it('should not return github if requested but not configured', () => {
+    it('should not return github if requested but not configured', async () => {
       process.env.GITHUB_PAT = ''
       process.env.MINIMAX_TOKEN_API_KEY = 'test-token'
-      const { getAIProvider } = require('../config')
+      const { getAIProvider } = await import('../config')
       expect(getAIProvider('github')).toBe('minimax')
     })
   })
@@ -126,6 +130,11 @@ describe('generate config', () => {
     it('should return zhipuai fallback message', () => {
       const result = getProviderFallbackMessage('zhipuai')
       expect(result).toContain('ZHIPUAI_API_KEY')
+    })
+
+    it('should return codex fallback message', () => {
+      const result = getProviderFallbackMessage('codex')
+      expect(result).toContain('codex login --device-auth')
     })
 
     it('should return ollama fallback message', () => {

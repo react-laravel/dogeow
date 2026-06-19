@@ -29,6 +29,7 @@ import { GenerationModal } from './GenerationModal'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { type AIProvider, type OllamaModelListItem } from './ChatInputModelSelector'
 import { ChatInputModelRow } from './ChatInputModelRow'
+import type { CodexReasoningEffort } from '../request-model'
 
 interface ChatInputProps {
   prompt: string
@@ -41,6 +42,8 @@ interface ChatInputProps {
   supportsImages?: boolean
   model?: string
   onModelChange?: (value: string) => void
+  codexReasoningEffort?: CodexReasoningEffort
+  onCodexReasoningEffortChange?: (value: CodexReasoningEffort) => void
   provider?: AIProvider
   onProviderChange?: (value: AIProvider) => void
   chatMode?: 'ai' | 'knowledge'
@@ -73,6 +76,8 @@ export const ChatInput = React.memo<ChatInputProps>(
     supportsImages = false,
     model,
     onModelChange,
+    codexReasoningEffort,
+    onCodexReasoningEffortChange,
     provider,
     onProviderChange,
     chatMode,
@@ -273,6 +278,8 @@ export const ChatInput = React.memo<ChatInputProps>(
         onProviderChange={onProviderChange}
         model={model}
         onModelChange={onModelChange}
+        codexReasoningEffort={codexReasoningEffort}
+        onCodexReasoningEffortChange={onCodexReasoningEffortChange}
         ollamaModels={ollamaModels}
         isLoading={isLoading}
         isLoadingOllamaModels={isLoadingOllamaModels}

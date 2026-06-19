@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { AI_SYSTEM_PROMPT, type ChatMessage } from '../types'
-import { getRequestModel, type AIProvider } from '../request-model'
+import { getRequestModel, type AIProvider, type CodexReasoningEffort } from '../request-model'
 import { readAiChatStream, readOllamaChatStream } from './chatStream'
 import { useAiChatImages, type ImageItem } from './useAiChatImages'
 import { useOllamaModels, type OllamaModelListItem } from './useOllamaModels'
@@ -15,8 +15,12 @@ import {
   getStoredProvider,
   getStoredOllamaModel,
   resolveOllamaModelSelection,
+  getStoredCodexModel,
+  getStoredCodexReasoningEffort,
   getStoredZhipuaiModel,
   setStoredProvider,
+  setStoredCodexModel,
+  setStoredCodexReasoningEffort,
   setStoredOllamaModel,
   setStoredZhipuaiModel,
 } from './modelStorage'
@@ -45,6 +49,8 @@ interface UseAiChatReturn {
   supportsImages: boolean
   model: string
   setModel: (value: string) => void
+  codexReasoningEffort: CodexReasoningEffort
+  setCodexReasoningEffort: (value: CodexReasoningEffort) => void
   provider: AIProvider
   setProvider: (value: AIProvider) => void
   stop: () => void
@@ -90,12 +96,14 @@ async function callServerAiChatAPI({
   provider,
   images,
   signal,
+  codexReasoningEffort,
 }: {
   messages: Array<Pick<ChatMessage, 'role' | 'content'>>
   model: string
   provider: AIProvider
   images: string[]
   signal?: AbortSignal
+  codexReasoningEffort?: CodexReasoningEffort
 }): Promise<Response> {
   return fetch('/api/generate', {
     method: 'POST',
@@ -108,6 +116,7 @@ async function callServerAiChatAPI({
       model,
       provider,
       images,
+      codexReasoningEffort,
     }),
     signal,
   })
@@ -127,8 +136,12 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
   const [model, setModel] = useState<string>(() => {
     const initialProvider = getStoredProvider()
+    if (initialProvider === 'codex') return getStoredCodexModel()
     return initialProvider === 'zhipuai' ? getStoredZhipuaiModel() : getStoredOllamaModel()
   })
+  const [codexReasoningEffort, setCodexReasoningEffort] = useState<CodexReasoningEffort>(() =>
+    getStoredCodexReasoningEffort()
+  )
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -275,6 +288,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
             model: requestModel,
             provider,
             images: imageUrls,
+            codexReasoningEffort,
             signal: abortController.signal,
           })
         } else {
@@ -291,6 +305,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
               model: requestModel,
               provider,
               images: imageUrls,
+              codexReasoningEffort,
               signal: abortController.signal,
             })
           }
@@ -301,6 +316,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
           model: requestModel,
           provider,
           images: imageUrls,
+          codexReasoningEffort,
           signal: abortController.signal,
         })
       }
@@ -363,6 +379,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     isLoading,
     model,
     provider,
+    codexReasoningEffort,
     effectiveOllamaAccessMode,
     clearImages,
     ttsEnabled,
@@ -382,6 +399,11 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
     if (provider === 'zhipuai') {
       setModel(getStoredZhipuaiModel())
+      return
+    }
+
+    if (provider === 'codex') {
+      setModel(getStoredCodexModel())
     }
   }, [provider])
 
@@ -394,8 +416,17 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
     if (provider === 'zhipuai') {
       setStoredZhipuaiModel(model)
+      return
+    }
+
+    if (provider === 'codex') {
+      setStoredCodexModel(model)
     }
   }, [model, provider])
+
+  useEffect(() => {
+    setStoredCodexReasoningEffort(codexReasoningEffort)
+  }, [codexReasoningEffort])
 
   return {
     prompt,
@@ -416,6 +447,8 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     supportsImages,
     model,
     setModel,
+    codexReasoningEffort,
+    setCodexReasoningEffort,
     provider,
     setProvider,
     stop,

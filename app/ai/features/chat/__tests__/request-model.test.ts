@@ -10,6 +10,10 @@ describe('getRequestModel', () => {
     expect(getRequestModel('minimax', 'qwen2.5:0.5b')).toBe('')
   })
 
+  it('preserves the model for codex requests', () => {
+    expect(getRequestModel('codex', 'gpt-5.4')).toBe('gpt-5.4')
+  })
+
   it('preserves the model for ollama requests', () => {
     expect(getRequestModel('ollama', 'qwen3:0.6b')).toBe('qwen3:0.6b')
   })

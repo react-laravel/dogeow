@@ -11,8 +11,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/helpers'
+import type { CodexReasoningEffort } from '../request-model'
 
-export type AIProvider = 'github' | 'minimax' | 'ollama' | 'zhipuai'
+export type AIProvider = 'github' | 'minimax' | 'ollama' | 'zhipuai' | 'codex'
 
 export interface OllamaModelListItem {
   name: string
@@ -26,6 +27,7 @@ export const PROVIDER_LABELS: Record<AIProvider, string> = {
   github: 'GitHub',
   minimax: 'MiniMax',
   zhipuai: '智谱AI',
+  codex: 'ChatGPT Codex',
 }
 
 const PROVIDER_STYLES: Record<AIProvider, string> = {
@@ -33,6 +35,7 @@ const PROVIDER_STYLES: Record<AIProvider, string> = {
   github: 'bg-green-500/10 ring-green-500',
   minimax: 'bg-orange-500/10 ring-orange-500',
   zhipuai: 'bg-cyan-500/10 ring-cyan-500',
+  codex: 'bg-sky-500/10 ring-sky-500',
 }
 
 const PROVIDER_DESCRIPTIONS: Record<AIProvider, string> = {
@@ -40,6 +43,7 @@ const PROVIDER_DESCRIPTIONS: Record<AIProvider, string> = {
   github: 'GPT-5 Mini',
   minimax: 'M2.5',
   zhipuai: 'GLM 系列',
+  codex: '设备登录',
 }
 
 const ZHIPUAI_MODELS = [
@@ -47,6 +51,25 @@ const ZHIPUAI_MODELS = [
   { value: 'glm-4.6v-flash', label: 'GLM-4.6V Flash', desc: '视觉理解' },
   { value: 'glm-4.6v', label: 'GLM-4.6V', desc: '视觉理解(标准)' },
   { value: 'glm-4.5-air', label: 'GLM-4.5-Air', desc: '轻量快速' },
+]
+
+const CODEX_MODELS = [
+  { value: 'gpt-5.5', label: 'GPT-5.5', desc: '复杂任务' },
+  { value: 'gpt-5.4', label: 'GPT-5.4', desc: '强能力' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini', desc: '轻量快速' },
+  { value: 'gpt-5.3-codex-spark', label: 'Codex Spark', desc: 'Pro 快速预览' },
+]
+
+const CODEX_REASONING_EFFORTS: Array<{
+  value: CodexReasoningEffort
+  label: string
+  desc: string
+}> = [
+  { value: 'minimal', label: 'Minimal', desc: '最快' },
+  { value: 'low', label: 'Low', desc: '轻量' },
+  { value: 'medium', label: 'Medium', desc: '默认' },
+  { value: 'high', label: 'High', desc: '复杂' },
+  { value: 'xhigh', label: 'XHigh', desc: '最深' },
 ]
 
 export function getModelLabel(provider: AIProvider | undefined, model: string | undefined): string {
@@ -58,7 +81,15 @@ export function getModelLabel(provider: AIProvider | undefined, model: string | 
   }
   if (provider === 'github') return 'GPT-5 Mini'
   if (provider === 'minimax') return 'M2.5'
+  if (provider === 'codex') {
+    const found = CODEX_MODELS.find(m => m.value === model)
+    return found?.label ?? model
+  }
   return model
+}
+
+export function getCodexReasoningEffortLabel(effort: CodexReasoningEffort): string {
+  return CODEX_REASONING_EFFORTS.find(item => item.value === effort)?.label ?? effort
 }
 
 function formatOllamaModelMeta(model: OllamaModelListItem): string | undefined {
@@ -275,3 +306,90 @@ export const ZhipuaiModelSelector = React.memo<ZhipuaiModelSelectorProps>(
   }
 )
 ZhipuaiModelSelector.displayName = 'ZhipuaiModelSelector'
+
+// --- Codex Model Selector ---
+
+interface CodexModelSelectorProps {
+  model: string
+  onModelChange: (value: string) => void
+  isLoading: boolean
+}
+
+export const CodexModelSelector = React.memo<CodexModelSelectorProps>(
+  ({ model, onModelChange, isLoading }) => {
+    const [open, setOpen] = React.useState(false)
+
+    return (
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isLoading}
+            className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+          >
+            {getModelLabel('codex', model)}
+            {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
+            {CODEX_MODELS.map(m => (
+              <DropdownMenuRadioItem key={m.value} value={m.value} className="cursor-pointer">
+                <div className="flex flex-col">
+                  <span>{m.label}</span>
+                  <span className="text-muted-foreground text-xs">{m.desc}</span>
+                </div>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+)
+CodexModelSelector.displayName = 'CodexModelSelector'
+
+interface CodexReasoningEffortSelectorProps {
+  effort: CodexReasoningEffort
+  onEffortChange: (value: CodexReasoningEffort) => void
+  isLoading: boolean
+}
+
+export const CodexReasoningEffortSelector = React.memo<CodexReasoningEffortSelectorProps>(
+  ({ effort, onEffortChange, isLoading }) => {
+    const [open, setOpen] = React.useState(false)
+
+    return (
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isLoading}
+            className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+          >
+            {getCodexReasoningEffortLabel(effort)}
+            {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuRadioGroup
+            value={effort}
+            onValueChange={value => onEffortChange(value as CodexReasoningEffort)}
+          >
+            {CODEX_REASONING_EFFORTS.map(item => (
+              <DropdownMenuRadioItem key={item.value} value={item.value} className="cursor-pointer">
+                <div className="flex flex-col">
+                  <span>{item.label}</span>
+                  <span className="text-muted-foreground text-xs">{item.desc}</span>
+                </div>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+)
+CodexReasoningEffortSelector.displayName = 'CodexReasoningEffortSelector'
