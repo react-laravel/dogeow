@@ -154,27 +154,27 @@ export function HongloumengReader() {
       return
     }
 
-    addPositionBookmark({
+    const result = addPositionBookmark({
       chapterId: context.chapterId,
       chapterTitle: context.chapterTitle,
       scrollTop: context.scrollTop,
       pairIndex: context.pairIndex,
       excerpt: context.excerpt,
     })
-    toast.success('已添加书签')
+    toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
   }, [addPositionBookmark, getChapterContext])
 
   const handleSelectionBookmark = useCallback(
     (selection: TextSelectionState) => {
       const context = getChapterContext()
-      addPositionBookmark({
+      const result = addPositionBookmark({
         chapterId: context.chapterId,
         chapterTitle: context.chapterTitle,
         scrollTop: context.scrollTop,
         pairIndex: selection.pairIndex ?? context.pairIndex,
         excerpt: selection.text,
       })
-      toast.success('已添加书签')
+      toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
     },
     [addPositionBookmark, getChapterContext]
   )

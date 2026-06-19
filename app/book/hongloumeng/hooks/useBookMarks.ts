@@ -7,11 +7,34 @@ import type { BookMark, CreateBookMarkInput } from '../types/marks'
 import { HONGLOUMENG_BOOK_ID } from '../types/marks'
 import { buildBookMark, sortBookMarks } from '../utils/bookMarks'
 
+interface AddBookMarkResult {
+  mark: BookMark
+  created: boolean
+}
+
 interface BookMarksState {
   marks: BookMark[]
-  addMark: (input: CreateBookMarkInput) => BookMark
+  addMark: (input: CreateBookMarkInput) => AddBookMarkResult
   removeMark: (id: string) => void
   clearMarks: () => void
+}
+
+function isSamePositionMark(mark: BookMark, input: CreateBookMarkInput): boolean {
+  if (
+    mark.bookId !== HONGLOUMENG_BOOK_ID ||
+    mark.kind !== 'position' ||
+    input.kind !== 'position' ||
+    mark.chapterId !== input.chapterId
+  ) {
+    return false
+  }
+
+  const inputPairIndex = input.pairIndex ?? null
+  if (mark.pairIndex != null || inputPairIndex != null) {
+    return mark.pairIndex === inputPairIndex
+  }
+
+  return Math.round(mark.scrollTop) === Math.round(input.scrollTop)
 }
 
 const useBookMarksStore = create<BookMarksState>()(
@@ -19,9 +42,18 @@ const useBookMarksStore = create<BookMarksState>()(
     (set, get) => ({
       marks: [],
       addMark: input => {
+        const duplicate =
+          input.kind === 'position'
+            ? get().marks.find(mark => isSamePositionMark(mark, input))
+            : undefined
+
+        if (duplicate) {
+          return { mark: duplicate, created: false }
+        }
+
         const mark = buildBookMark(input)
         set({ marks: sortBookMarks([mark, ...get().marks]) })
-        return mark
+        return { mark, created: true }
       },
       removeMark: id => {
         set({ marks: get().marks.filter(mark => mark.id !== id) })
