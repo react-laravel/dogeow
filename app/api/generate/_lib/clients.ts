@@ -60,15 +60,7 @@ export function callCodexExecAPI(
   )
     ? reasoningEffort
     : undefined
-  const args = [
-    'exec',
-    '--ephemeral',
-    '--sandbox',
-    'read-only',
-    '--ask-for-approval',
-    'never',
-    '--skip-git-repo-check',
-  ]
+  const args = ['exec', '--ephemeral', '--sandbox', 'read-only', '--skip-git-repo-check']
 
   if (selectedModel) {
     args.push('--model', selectedModel)
