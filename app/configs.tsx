@@ -128,7 +128,7 @@ const TILES = [
     icon: <BookOpen />,
     href: '/book',
     color: '#795548',
-    cover: 'book.png',
+    cover: 'book-portal.png',
     needLogin: true,
   },
 ]
