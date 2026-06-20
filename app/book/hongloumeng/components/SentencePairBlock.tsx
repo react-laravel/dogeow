@@ -10,6 +10,7 @@ import type {
 } from '../hooks/useReaderSettings'
 import { getReaderFontFamily } from '../hooks/useReaderSettings'
 import { getPairLinePresentation } from '../utils/pairDisplay'
+import { cn } from '@/lib/helpers'
 
 interface SentencePairBlockProps {
   pair: SentencePair
@@ -19,6 +20,7 @@ interface SentencePairBlockProps {
   contentMode: ReaderContentMode
   originalFontFamily: ReaderFont
   translationFontFamily: ReaderFont
+  isNarrating?: boolean
 }
 
 function PairLine({
@@ -71,6 +73,7 @@ export const SentencePairBlock = memo(function SentencePairBlock({
   pairIndex,
   originalFontFamily,
   translationFontFamily,
+  isNarrating = false,
 }: SentencePairBlockProps) {
   const showOriginal = contentMode === 'both' || contentMode === 'original'
   const showTranslation = contentMode === 'both' || contentMode === 'translation'
@@ -83,7 +86,13 @@ export const SentencePairBlock = memo(function SentencePairBlock({
     displayMode === 'card' ? 'space-y-2' : displayMode === 'border' ? 'space-y-2' : 'space-y-1.5'
 
   return (
-    <section className={gapClass} data-pair-index={pairIndex}>
+    <section
+      className={cn(
+        gapClass,
+        isNarrating && 'rounded-md bg-current/5 px-2 py-1 ring-1 ring-current/15 transition-colors'
+      )}
+      data-pair-index={pairIndex}
+    >
       {showOriginal && pair.o ? (
         <PairLine
           text={pair.o}

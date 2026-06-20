@@ -25,6 +25,7 @@ import {
 } from '../utils/readerScroll'
 import { getHongloumengBookUrl } from '../utils/bookAssetUrls'
 import { useAiDialogStore } from '@/stores/aiDialogStore'
+import { useBookNarration, type BookNarrationMode } from '../hooks/useBookNarration'
 
 const SCROLL_KEY = 'dogeow-hongloumeng-scroll'
 
@@ -39,10 +40,16 @@ export function HongloumengReader() {
   const [marksPanelOpen, setMarksPanelOpen] = useState(false)
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [jumpRequest, setJumpRequest] = useState(0)
+  const [narrationMode, setNarrationMode] = useState<BookNarrationMode>('original')
   const contentRef = useRef<HTMLDivElement>(null)
   const articleRef = useRef<HTMLElement>(null)
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingJumpRef = useRef<ReaderJumpTarget | null>(null)
+  const narration = useBookNarration({
+    chapter,
+    narrationMode,
+    contentRef,
+  })
 
   const loadChapter = useCallback(
     async (chapterId: number, restoreScroll = false) => {
@@ -129,6 +136,7 @@ export function HongloumengReader() {
   }, [settings.chapterId, chapter])
 
   const handleChapterChange = (chapterId: number) => {
+    narration.stop()
     patchSettings({ chapterId })
   }
 
@@ -163,6 +171,14 @@ export function HongloumengReader() {
     })
     toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
   }, [addPositionBookmark, getChapterContext])
+
+  const handleStartNarration = useCallback(() => {
+    const context = getChapterContext()
+    const startPairIndex = context.pairIndex ?? 0
+    if (!narration.start(startPairIndex)) {
+      toast.error('当前浏览器不支持听书，或章节还没有加载完成')
+    }
+  }, [getChapterContext, narration])
 
   const handleSelectionBookmark = useCallback(
     (selection: TextSelectionState) => {
@@ -249,6 +265,13 @@ export function HongloumengReader() {
           onAddBookmark={handleAddCurrentBookmark}
           onOpenMarks={() => setMarksPanelOpen(true)}
           onOpenSettings={() => setSettingsPanelOpen(true)}
+          narrationStatus={narration.status}
+          narrationMode={narrationMode}
+          onNarrationModeChange={setNarrationMode}
+          onStartNarration={handleStartNarration}
+          onPauseNarration={narration.pause}
+          onResumeNarration={narration.resume}
+          onStopNarration={narration.stop}
         />
       )}
 
@@ -303,6 +326,7 @@ export function HongloumengReader() {
                   contentMode={settings.contentMode}
                   originalFontFamily={settings.originalFontFamily}
                   translationFontFamily={settings.translationFontFamily}
+                  isNarrating={narration.activePairIndex === pairIndex}
                 />
               ))}
             </div>
