@@ -7,6 +7,19 @@ import type { ReaderContentMode } from './useReaderSettings'
 
 export type BookNarrationStatus = 'idle' | 'playing' | 'paused'
 export type BookNarrationMode = ReaderContentMode
+export interface BookNarrationHighlight {
+  pairIndex: number
+  role: 'original' | 'translation'
+  start: number
+  end: number
+}
+
+interface NarrationSegment {
+  role: 'original' | 'translation'
+  text: string
+  start: number
+  end: number
+}
 
 interface UseBookNarrationOptions {
   chapter: BookChapter | null
@@ -14,10 +27,45 @@ interface UseBookNarrationOptions {
   contentRef: RefObject<HTMLDivElement | null>
 }
 
-function getPairNarrationText(pair: SentencePair, narrationMode: BookNarrationMode): string {
-  if (narrationMode === 'translation') return pair.t || pair.o
-  if (narrationMode === 'both') return [pair.o, pair.t].filter(Boolean).join('。')
-  return pair.o || pair.t
+function getPairNarrationParts(
+  pair: SentencePair,
+  narrationMode: BookNarrationMode
+): { text: string; segments: NarrationSegment[] } {
+  const fallbackRole = pair.o ? 'original' : 'translation'
+
+  if (narrationMode === 'translation') {
+    const text = pair.t || pair.o
+    return {
+      text,
+      segments: text
+        ? [{ role: pair.t ? 'translation' : fallbackRole, text, start: 0, end: text.length }]
+        : [],
+    }
+  }
+
+  if (narrationMode === 'both') {
+    const segments: NarrationSegment[] = []
+    let text = ''
+    if (pair.o) {
+      segments.push({ role: 'original', text: pair.o, start: 0, end: pair.o.length })
+      text = pair.o
+    }
+    if (pair.t) {
+      const separator = text ? '。' : ''
+      const start = text.length + separator.length
+      text = `${text}${separator}${pair.t}`
+      segments.push({ role: 'translation', text: pair.t, start, end: start + pair.t.length })
+    }
+    return { text, segments }
+  }
+
+  const text = pair.o || pair.t
+  return {
+    text,
+    segments: text
+      ? [{ role: pair.o ? 'original' : fallbackRole, text, start: 0, end: text.length }]
+      : [],
+  }
 }
 
 function getSpeechSynthesis(): SpeechSynthesis | null {
@@ -28,6 +76,7 @@ function getSpeechSynthesis(): SpeechSynthesis | null {
 export function useBookNarration({ chapter, narrationMode, contentRef }: UseBookNarrationOptions) {
   const [status, setStatus] = useState<BookNarrationStatus>('idle')
   const [activePairIndex, setActivePairIndex] = useState<number | null>(null)
+  const [activeHighlight, setActiveHighlight] = useState<BookNarrationHighlight | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const nextPairIndexRef = useRef(0)
   const stoppedRef = useRef(true)
@@ -58,6 +107,7 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
     synth?.cancel()
     setStatus('idle')
     setActivePairIndex(null)
+    setActiveHighlight(null)
   }, [])
 
   const speakNext = useCallback(() => {
@@ -75,10 +125,10 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
       return
     }
 
-    const text = getPairNarrationText(pair, narrationModeRef.current).trim()
+    const { text, segments } = getPairNarrationParts(pair, narrationModeRef.current)
     nextPairIndexRef.current = pairIndex + 1
 
-    if (!text) {
+    if (!text.trim()) {
       speakNextRef.current()
       return
     }
@@ -88,6 +138,23 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
     utterance.rate = 0.92
     utterance.pitch = 1
     utterance.volume = 1
+    utterance.onboundary = event => {
+      const charIndex = event.charIndex
+      const charLength =
+        'charLength' in event && typeof event.charLength === 'number' && event.charLength > 0
+          ? event.charLength
+          : 1
+      const segment =
+        segments.find(item => charIndex >= item.start && charIndex < item.end) ??
+        segments.find(item => charIndex < item.start) ??
+        segments.at(-1)
+
+      if (!segment) return
+
+      const start = Math.max(0, Math.min(charIndex - segment.start, segment.text.length - 1))
+      const end = Math.max(start + 1, Math.min(start + charLength, segment.text.length))
+      setActiveHighlight({ pairIndex, role: segment.role, start, end })
+    }
     utterance.onend = () => {
       if (!stoppedRef.current) speakNextRef.current()
     }
@@ -97,6 +164,7 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
 
     utteranceRef.current = utterance
     setActivePairIndex(pairIndex)
+    setActiveHighlight(null)
     setStatus('playing')
     scrollActivePairIntoView(pairIndex)
     synth.speak(utterance)
@@ -143,6 +211,7 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
 
   return {
     activePairIndex,
+    activeHighlight,
     status,
     start,
     pause,

@@ -327,6 +327,11 @@ export function HongloumengReader() {
                   originalFontFamily={settings.originalFontFamily}
                   translationFontFamily={settings.translationFontFamily}
                   isNarrating={narration.activePairIndex === pairIndex}
+                  narrationHighlight={
+                    narration.activeHighlight?.pairIndex === pairIndex
+                      ? narration.activeHighlight
+                      : null
+                  }
                 />
               ))}
             </div>

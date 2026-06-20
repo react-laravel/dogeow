@@ -11,6 +11,7 @@ import type {
 import { getReaderFontFamily } from '../hooks/useReaderSettings'
 import { getPairLinePresentation } from '../utils/pairDisplay'
 import { cn } from '@/lib/helpers'
+import type { BookNarrationHighlight } from '../hooks/useBookNarration'
 
 interface SentencePairBlockProps {
   pair: SentencePair
@@ -21,6 +22,31 @@ interface SentencePairBlockProps {
   originalFontFamily: ReaderFont
   translationFontFamily: ReaderFont
   isNarrating?: boolean
+  narrationHighlight?: BookNarrationHighlight | null
+}
+
+function HighlightedText({
+  text,
+  highlight,
+}: {
+  text: string
+  highlight?: Pick<BookNarrationHighlight, 'start' | 'end'> | null
+}) {
+  if (!highlight || highlight.start < 0 || highlight.end <= highlight.start) return <>{text}</>
+
+  const start = Math.min(highlight.start, text.length)
+  const end = Math.min(highlight.end, text.length)
+  if (start >= end) return <>{text}</>
+
+  return (
+    <>
+      {text.slice(0, start)}
+      <span className="rounded-sm bg-yellow-300/70 px-0.5 text-current shadow-[0_0_0_1px_rgba(250,204,21,0.35)]">
+        {text.slice(start, end)}
+      </span>
+      {text.slice(end)}
+    </>
+  )
 }
 
 function PairLine({
@@ -29,12 +55,14 @@ function PairLine({
   theme,
   role,
   fontFamily,
+  highlight,
 }: {
   text: string
   displayMode: PairDisplayMode
   theme: ReaderTheme
   role: 'original' | 'translation'
   fontFamily: ReaderFont
+  highlight?: Pick<BookNarrationHighlight, 'start' | 'end'> | null
 }) {
   const { className, style, prefix } = getPairLinePresentation(displayMode, theme, role)
   const lineStyle = { ...style, fontFamily: getReaderFontFamily(fontFamily) }
@@ -53,14 +81,16 @@ function PairLine({
         >
           {prefix}
         </span>
-        <span className="min-w-0 flex-1">{text}</span>
+        <span className="min-w-0 flex-1">
+          <HighlightedText text={text} highlight={highlight} />
+        </span>
       </p>
     )
   }
 
   return (
     <p className={className} style={lineStyle}>
-      {text}
+      <HighlightedText text={text} highlight={highlight} />
     </p>
   )
 }
@@ -74,6 +104,7 @@ export const SentencePairBlock = memo(function SentencePairBlock({
   originalFontFamily,
   translationFontFamily,
   isNarrating = false,
+  narrationHighlight = null,
 }: SentencePairBlockProps) {
   const showOriginal = contentMode === 'both' || contentMode === 'original'
   const showTranslation = contentMode === 'both' || contentMode === 'translation'
@@ -100,6 +131,7 @@ export const SentencePairBlock = memo(function SentencePairBlock({
           theme={theme}
           role="original"
           fontFamily={originalFontFamily}
+          highlight={narrationHighlight?.role === 'original' ? narrationHighlight : null}
         />
       ) : null}
       {showTranslation && pair.t ? (
@@ -109,6 +141,7 @@ export const SentencePairBlock = memo(function SentencePairBlock({
           theme={theme}
           role="translation"
           fontFamily={translationFontFamily}
+          highlight={narrationHighlight?.role === 'translation' ? narrationHighlight : null}
         />
       ) : null}
     </section>
