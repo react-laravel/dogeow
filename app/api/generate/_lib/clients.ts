@@ -67,11 +67,15 @@ export function callCodexExecAPI(
   reasoningEffort?: CodexReasoningEffort
 ): ChildProcessByStdio<null, Readable, Readable> {
   const selectedModel = model?.trim() || CODEX_MODEL
-  const selectedReasoningEffort = CODEX_REASONING_EFFORTS.has(
-    reasoningEffort as CodexReasoningEffort
-  )
-    ? reasoningEffort
-    : undefined
+  // Codex CLI 0.139 sends built-in tools such as web_search/image_gen.
+  // The ChatGPT backend rejects those tools when reasoning.effort is "minimal",
+  // so omit the override and let Codex use its default effort for minimal.
+  const selectedReasoningEffort =
+    reasoningEffort &&
+    reasoningEffort !== 'minimal' &&
+    CODEX_REASONING_EFFORTS.has(reasoningEffort as CodexReasoningEffort)
+      ? reasoningEffort
+      : undefined
   const args = ['exec', '--ephemeral', '--sandbox', 'read-only', '--skip-git-repo-check']
 
   if (selectedModel) {
