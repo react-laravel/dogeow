@@ -80,6 +80,12 @@ export function scoreSentenceMatch(original, translation) {
   if (!o && !t) return 1
   if (!o || !t) return 0
 
+  // 按较短文本的长度归一化，防止子串匹配虚高
+  const oLen = o.length
+  const tLen = t.length
+  const lenRatio = Math.min(oLen, tLen) / Math.max(oLen, tLen)
+  if (lenRatio < 0.15) return 0 // 长度差异太大，不可能是有效配对
+
   let hits = 0
   let total = 0
   for (let len = 3; len <= 6; len++) {
@@ -89,8 +95,8 @@ export function scoreSentenceMatch(original, translation) {
     }
   }
 
-  if (total === 0) return t.includes(o) ? 1 : 0
-  return hits / total
+  if (total === 0) return t.includes(o) ? lenRatio : 0
+  return (hits / total) * lenRatio // 乘以长度比，归一化
 }
 
 /**
@@ -134,8 +140,21 @@ export function alignSentencePairs(originals, translations) {
 
           const o = originals.slice(prevI, i).join('')
           const t = translations.slice(prevJ, j).join('')
-          const mergePenalty = mergeO + mergeT > 2 ? 0.03 : 0
-          const score = prev.score + scoreSentenceMatch(o, t) - mergePenalty
+          const rawScore = prev.score + scoreSentenceMatch(o, t)
+
+          // 合并偏好：1:1 最优，原文合并次之，译文合并惩罚
+          let mergeAdjust = 0
+          if (mergeO === 1 && mergeT === 1) {
+            mergeAdjust = 0.05
+          } else if (mergeO > 1 && mergeT === 1) {
+            mergeAdjust = 0.02 * (mergeO - 1)
+          } else if (mergeO === 1 && mergeT > 1) {
+            mergeAdjust = -0.04 * (mergeT - 1)
+          } else {
+            mergeAdjust = -0.1 * Math.max(mergeO - 1, mergeT - 1)
+          }
+
+          const score = rawScore + mergeAdjust
 
           if (score > best.score) {
             best = { score, prevI, prevJ, mergeO, mergeT }
