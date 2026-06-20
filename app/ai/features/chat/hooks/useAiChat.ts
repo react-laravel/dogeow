@@ -11,6 +11,7 @@ import { uploadImageToServer } from './uploadImage'
 import { generateTtsForMessage } from './ttsHandlers'
 import { callBrowserLocalOllamaChatAPI } from './browserOllama'
 import { useOllamaAccessMode } from './ollamaAccessMode'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import {
   getStoredProvider,
   getStoredOllamaModel,
@@ -105,7 +106,7 @@ async function callServerAiChatAPI({
   signal?: AbortSignal
   codexReasoningEffort?: CodexReasoningEffort
 }): Promise<Response> {
-  return fetch('/api/generate', {
+  return authenticatedInternalFetch('/api/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

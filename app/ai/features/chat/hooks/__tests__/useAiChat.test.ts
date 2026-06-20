@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAiChat } from '../useAiChat'
 import { setStoredBrowserOllamaAddress } from '../browserOllama'
 
+let mockAuthToken: string | null = null
+
 function createStreamingResponse(chunks: string[]): Response {
   const encoder = new TextEncoder()
 
@@ -21,7 +23,7 @@ vi.mock('@/stores/authStore', () => {
     getState: () => { token: string | null }
   }
 
-  mockStore.getState = () => ({ token: null })
+  mockStore.getState = () => ({ token: mockAuthToken })
 
   return {
     default: mockStore,
@@ -38,6 +40,7 @@ vi.mock('sonner', () => ({
 describe('useAiChat model loading', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAuthToken = null
     localStorage.removeItem('ai_provider')
     localStorage.removeItem('ollama_access_mode_override')
     localStorage.removeItem('browser_ollama_address')
@@ -300,6 +303,37 @@ describe('useAiChat model loading', () => {
         body: expect.stringContaining('"codexReasoningEffort":"high"'),
       })
     )
+  })
+
+  it('sends the SPA auth token to protected server AI routes', async () => {
+    mockAuthToken = 'auth-test-token'
+    localStorage.setItem('ai_provider', 'codex')
+
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (input === '/api/generate') {
+        return Promise.resolve(
+          createStreamingResponse(['0:"你好"\n', 'd:{"finishReason":"stop"}\n'])
+        )
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useAiChat({ open: true }))
+
+    act(() => {
+      result.current.setPrompt('你好')
+    })
+
+    await act(async () => {
+      await result.current.handleSend()
+    })
+
+    const generateCall = fetchMock.mock.calls.find(([input]) => input === '/api/generate')
+    expect(generateCall).toBeTruthy()
+    const headers = new Headers((generateCall?.[1] as RequestInit).headers)
+    expect(headers.get('Authorization')).toBe('Bearer auth-test-token')
   })
 
   it('shows an image placeholder message and replaces it with the generated image', async () => {
