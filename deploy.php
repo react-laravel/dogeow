@@ -160,7 +160,15 @@ BASH);
 
 desc('构建 Next.js 生产产物');
 task('deploy:build', function () {
-    run('cd {{release_path}} && NEXT_TELEMETRY_DISABLED=1 npm run build');
+    run(<<<'BASH'
+bash -lc '
+set -euo pipefail
+build_version="$(git -C "{{workspace_root}}" rev-parse --short=12 HEAD 2>/dev/null || date +%s)"
+echo "[deploy] NEXT_PUBLIC_APP_BUILD_VERSION=$build_version"
+cd "{{release_path}}"
+NEXT_PUBLIC_APP_BUILD_VERSION="$build_version" NEXT_TELEMETRY_DISABLED=1 npm run build
+'
+BASH);
 });
 
 desc('保留跨发布的 Next 静态资源');
