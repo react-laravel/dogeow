@@ -54,10 +54,9 @@ const ZHIPUAI_MODELS = [
 ]
 
 const CODEX_MODELS = [
-  { value: 'gpt-5.5', label: 'GPT-5.5', desc: '复杂任务' },
-  { value: 'gpt-5.4', label: 'GPT-5.4', desc: '强能力' },
-  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini', desc: '轻量快速' },
-  { value: 'gpt-5.3-codex-spark', label: 'Codex Spark', desc: 'Pro 快速预览' },
+  { value: 'gpt-5.5', label: 'GPT-5.5' },
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
 ]
 
 const CODEX_REASONING_EFFORTS: Array<{
@@ -336,10 +335,7 @@ export const CodexModelSelector = React.memo<CodexModelSelectorProps>(
           <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
             {CODEX_MODELS.map(m => (
               <DropdownMenuRadioItem key={m.value} value={m.value} className="cursor-pointer">
-                <div className="flex flex-col">
-                  <span>{m.label}</span>
-                  <span className="text-muted-foreground text-xs">{m.desc}</span>
-                </div>
+                <span>{m.label}</span>
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
