@@ -41,7 +41,7 @@ function HighlightedText({
   return (
     <>
       {text.slice(0, start)}
-      <span className="rounded-sm bg-yellow-300/70 px-0.5 text-current shadow-[0_0_0_1px_rgba(250,204,21,0.35)]">
+      <span className="text-amber-500 drop-shadow-[0_0_0.45px_currentColor]">
         {text.slice(start, end)}
       </span>
       {text.slice(end)}
