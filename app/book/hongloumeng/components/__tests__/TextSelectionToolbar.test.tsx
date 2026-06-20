@@ -16,6 +16,7 @@ function ToolbarHarness() {
         onAddBookmark={vi.fn()}
         onAddCollection={vi.fn()}
         onAskAi={vi.fn()}
+        onPlaySelection={vi.fn()}
       />
     </div>
   )
@@ -62,5 +63,6 @@ describe('TextSelectionToolbar', () => {
     expect(screen.getByRole('button', { name: /加书签/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /收藏/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /问 AI/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /播放/ })).toBeInTheDocument()
   })
 })

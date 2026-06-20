@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Bookmark, Bot, Star } from 'lucide-react'
+import { Bookmark, Bot, Play, Star, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/helpers'
 
@@ -17,6 +17,7 @@ interface TextSelectionToolbarProps {
   onAddBookmark: (selection: TextSelectionState) => void
   onAddCollection: (selection: TextSelectionState) => void
   onAskAi: (selection: TextSelectionState) => void
+  onPlaySelection: (selection: TextSelectionState) => void
 }
 
 function getPairIndexFromNode(node: Node | null): number | null {
@@ -46,6 +47,7 @@ export function TextSelectionToolbar({
   onAddBookmark,
   onAddCollection,
   onAskAi,
+  onPlaySelection,
 }: TextSelectionToolbarProps) {
   const [selection, setSelection] = useState<TextSelectionState | null>(null)
 
@@ -132,6 +134,15 @@ export function TextSelectionToolbar({
     >
       <div className="bg-background/95 pointer-events-auto flex items-center gap-1 rounded-full border px-1 py-1 shadow-lg backdrop-blur-sm">
         <ToolbarButton
+          label="播放"
+          icon={Play}
+          onClick={() => {
+            onPlaySelection(selection)
+            hide()
+            window.getSelection()?.removeAllRanges()
+          }}
+        />
+        <ToolbarButton
           label="加书签"
           icon={Bookmark}
           onClick={() => {
@@ -169,7 +180,7 @@ function ToolbarButton({
   onClick,
 }: {
   label: string
-  icon: typeof Bookmark
+  icon: LucideIcon
   onClick: () => void
 }) {
   return (

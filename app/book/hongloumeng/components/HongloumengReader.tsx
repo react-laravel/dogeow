@@ -219,6 +219,17 @@ export function HongloumengReader() {
     [getChapterContext, requestOpenAi]
   )
 
+  const handlePlaySelection = useCallback(
+    (selection: TextSelectionState) => {
+      const context = getChapterContext()
+      const startPairIndex = selection.pairIndex ?? context.pairIndex ?? 0
+      if (!narration.start(startPairIndex)) {
+        toast.error('当前浏览器不支持听书，或章节还没有加载完成')
+      }
+    },
+    [getChapterContext, narration]
+  )
+
   const handleJumpToMark = useCallback(
     (mark: BookMark) => {
       pendingJumpRef.current = {
@@ -345,6 +356,7 @@ export function HongloumengReader() {
           onAddBookmark={handleSelectionBookmark}
           onAddCollection={handleAddCollection}
           onAskAi={handleAskAi}
+          onPlaySelection={handlePlaySelection}
         />
       </div>
     </div>
