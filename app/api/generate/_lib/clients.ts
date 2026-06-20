@@ -30,6 +30,18 @@ const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>([
   'xhigh',
 ])
 
+const CODEX_RUNTIME_HOME = process.env.CODEX_HOME_DIR?.trim() || '/home/actions-runner'
+const CODEX_NODE_BIN = '/home/actions-runner/.nvm/versions/node/v24.16.0/bin'
+
+function buildCodexEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    HOME: process.env.CODEX_EXEC_HOME?.trim() || CODEX_RUNTIME_HOME,
+    CODEX_HOME: process.env.CODEX_HOME?.trim() || `${CODEX_RUNTIME_HOME}/.codex`,
+    PATH: ['/usr/local/bin', CODEX_NODE_BIN, process.env.PATH ?? '/usr/bin:/bin'].join(':'),
+  }
+}
+
 function buildCodexChatPrompt(messages: ChatMessage[]): string {
   const formattedMessages = messages
     .map(message => {
@@ -74,7 +86,7 @@ export function callCodexExecAPI(
 
   return spawn(CODEX_CLI_PATH, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: buildCodexEnv(),
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 }
