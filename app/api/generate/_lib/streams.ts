@@ -291,9 +291,16 @@ export function createCodexExecStreamResponse(
       let stderr = ''
       let closed = false
 
+      const heartbeat = setInterval(() => {
+        if (!closed) {
+          controller.enqueue(encoder.encode(`0:""\n`))
+        }
+      }, 10000)
+
       const closeWithDone = () => {
         if (closed) return
         closed = true
+        clearInterval(heartbeat)
         controller.enqueue(
           encoder.encode(
             `d:${JSON.stringify({

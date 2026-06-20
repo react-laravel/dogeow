@@ -43,11 +43,24 @@ function buildCodexEnv(): NodeJS.ProcessEnv {
 }
 
 function buildCodexChatPrompt(messages: ChatMessage[]): string {
-  const formattedMessages = messages
+  const systemMessage = messages.find(message => message.role === 'system')
+  const recentMessages = messages
+    .filter(message => {
+      if (message.role === 'system') return false
+      // Do not feed previous provider/runtime failures back into Codex; they are
+      // noisy, make the prompt much larger, and can trigger slow retries/timeouts.
+      if (message.role === 'assistant' && message.content.includes('Codex 调用失败')) return false
+      return true
+    })
+    .slice(-6)
+
+  const formattedMessages = [systemMessage, ...recentMessages]
+    .filter((message): message is ChatMessage => Boolean(message))
     .map(message => {
       const roleLabel =
         message.role === 'system' ? '系统' : message.role === 'assistant' ? '助理' : '用户'
-      return `${roleLabel}：${message.content}`
+      const content = message.content.length > 2000 ? `${message.content.slice(-2000)}…` : message.content
+      return `${roleLabel}：${content}`
     })
     .join('\n\n')
 
