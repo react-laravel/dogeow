@@ -1,256 +1,47 @@
-// Service Worker for DogeOW PWA
-// Bump this whenever SW fetch behavior changes. PWARegister also appends this
-// version as a query string to bypass stale CDN copies of /sw.js.
-const CACHE_NAME = 'dogeow-v1.0.5'
-const urlsToCache = ['/offline', '/480.png', '/80.png', '/favicon.ico']
+// DogeOW service worker kill-switch.
+//
+// The former PWA service worker cached /offline and intercepted navigations.
+// After transient CDN/network failures, some browsers stayed stuck on the
+// offline page: “正在检查网络... 请稍候”. Keep this file as a no-op unregistering
+// service worker so existing registrations update, delete old DogeOW caches,
+// and stop controlling future navigations.
 
-const NAVIGATION_FETCH_ATTEMPTS = 3
-const NAVIGATION_RETRY_DELAYS_MS = [200, 500, 1000]
+const DISABLED_CACHE_PREFIX = 'dogeow-'
 
-async function fetchNavigationWithRetry(request) {
-  const url = request.url
-
-  for (let attempt = 0; attempt < NAVIGATION_FETCH_ATTEMPTS; attempt += 1) {
-    try {
-      const response = await fetch(attempt === 0 ? request : url, {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      })
-      return response
-    } catch (error) {
-      const isLastAttempt = attempt === NAVIGATION_FETCH_ATTEMPTS - 1
-      if (isLastAttempt) {
-        throw error
-      }
-
-      const delayMs = NAVIGATION_RETRY_DELAYS_MS[attempt] ?? 1000
-      await new Promise(resolve => setTimeout(resolve, delayMs))
-    }
-  }
-
-  throw new Error('Navigation fetch failed')
+async function clearDogeowCaches() {
+  if (!self.caches) return
+  const cacheNames = await caches.keys()
+  await Promise.all(
+    cacheNames
+      .filter(cacheName => cacheName.startsWith(DISABLED_CACHE_PREFIX))
+      .map(cacheName => caches.delete(cacheName).catch(() => false))
+  )
 }
 
-// 安装事件 - 缓存资源
+async function unregisterSelf() {
+  await clearDogeowCaches()
+  await self.registration.unregister()
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  for (const client of clients) {
+    client.postMessage({ type: 'SW_DISABLED' })
+  }
+}
+
 self.addEventListener('install', event => {
-  console.log('Service Worker installing... Version:', CACHE_NAME)
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache:', CACHE_NAME)
-        return cache.addAll(urlsToCache)
-      })
-      .catch(error => {
-        console.error('Failed to install Service Worker:', error)
-        // 即使安装失败，也要继续激活
-        return Promise.resolve()
-      })
-  )
-  // 强制激活新的Service Worker
   self.skipWaiting()
+  event.waitUntil(clearDogeowCaches())
 })
 
-// 激活事件 - 清理旧缓存
 self.addEventListener('activate', event => {
-  console.log('Service Worker activating...')
-  event.waitUntil(
-    caches
-      .keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME) {
-              console.log('Deleting old cache:', cacheName)
-              return caches.delete(cacheName).catch(error => {
-                console.warn('Failed to delete old cache:', cacheName, error)
-                return Promise.resolve()
-              })
-            }
-          })
-        )
-      })
-      .catch(error => {
-        console.error('Failed to activate Service Worker:', error)
-        return Promise.resolve()
-      })
-  )
-  // 立即控制所有页面
-  event.waitUntil(self.clients.claim())
-
-  // 通知所有客户端页面Service Worker已激活
-  event.waitUntil(
-    self.clients.matchAll().then(clients => {
-      clients.forEach(client => {
-        client.postMessage({ type: 'SW_ACTIVATED' })
-      })
-    })
-  )
+  event.waitUntil(unregisterSelf())
 })
 
-// 获取事件 - 网络优先，缓存备用
-self.addEventListener('fetch', event => {
-  const request = event.request
-  const requestUrl = new URL(request.url)
+// Do not call event.respondWith(). Every request must go directly to network/
+// browser HTTP cache, never through a DogeOW SW fallback.
+self.addEventListener('fetch', () => {})
 
-  // 跳过不支持的请求方案
-  if (
-    request.url.startsWith('chrome-extension://') ||
-    request.url.startsWith('moz-extension://') ||
-    request.url.startsWith('chrome-devtools://') ||
-    request.url.startsWith('moz-devtools://')
-  ) {
-    return
-  }
-
-  // 跳过非HTTP/HTTPS请求
-  if (!request.url.startsWith('http')) {
-    return
-  }
-
-  // 跳过非GET请求
-  if (request.mode !== 'navigate' && request.method !== 'GET') {
-    return
-  }
-
-  // 让浏览器自己处理 Next 的构建产物，避免 SW 保留旧 chunk。
-  if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/_next/')) {
-    return
-  }
-
-  // 页面导航网络优先；网络失败时返回离线页，避免 iOS PWA 刷新时直接显示
-  // Safari 的 “This page couldn’t load” 系统错误页。
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetchNavigationWithRetry(request).catch(() => {
-        return caches.match('/offline').then(response => {
-          return response || Response.error()
-        })
-      })
-    )
-    return
-  }
-
-  // 对于favicon.ico等静态资源，使用缓存优先策略
-  if (
-    request.destination === 'image' ||
-    request.url.includes('favicon.ico') ||
-    request.url.includes('.png') ||
-    request.url.includes('.jpg') ||
-    request.url.includes('.jpeg') ||
-    request.url.includes('.gif') ||
-    request.url.includes('.svg') ||
-    request.url.includes('.ico')
-  ) {
-    // 对于favicon.ico，直接返回缓存的版本，避免重复请求
-    if (request.url.includes('favicon.ico')) {
-      event.respondWith(
-        caches.match('/favicon.ico').then(response => {
-          if (response) {
-            return response
-          }
-          // 如果缓存中没有，返回默认的favicon
-          return new Response('', { status: 404 })
-        })
-      )
-      return
-    }
-
-    event.respondWith(
-      caches.match(request).then(response => {
-        if (response) {
-          return response
-        }
-        return fetch(request).then(response => {
-          if (response.status === 200) {
-            const responseClone = response.clone()
-            caches
-              .open(CACHE_NAME)
-              .then(cache => {
-                cache.put(request, responseClone).catch(() => {})
-              })
-              .catch(() => {})
-          }
-          return response
-        })
-      })
-    )
-    return
-  }
-
-  // 其他请求交给浏览器默认处理，避免缓存 API 响应、RSC payload 或页面数据。
-})
-
-// 监听来自页面的消息
 self.addEventListener('message', event => {
-  console.log('Service Worker 收到消息:', event.data)
-
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('收到跳过等待请求，立即激活新版本')
+  if (event.data?.type === 'SKIP_WAITING' || event.data?.type === 'DISABLE_SW') {
     self.skipWaiting()
   }
 })
-
-// 推送通知事件
-self.addEventListener('push', function (event) {
-  if (!event.data) return
-
-  let data
-  try {
-    data = event.data.json()
-  } catch {
-    // payload 可能是纯文本（非 JSON），按纯文本展示
-    const text = event.data.text()
-    event.waitUntil(
-      self.registration.showNotification('DogeOW', {
-        body: text || 'DogeOW 有新消息',
-        icon: '/480.png',
-        badge: '/80.png',
-        data: { url: '/' },
-      })
-    )
-    return
-  }
-
-  // 后端 WebPushNotification 把 url 放在 data 对象里，即 payload.data.url
-  const url = data.url ?? data.data?.url ?? '/'
-  const options = {
-    body: data.body || 'DogeOW 有新消息',
-    icon: data.icon || '/480.png',
-    badge: '/80.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: '1',
-      url,
-    },
-    actions: [
-      { action: 'open', title: '打开', icon: '/80.png' },
-      { action: 'close', title: '关闭', icon: '/80.png' },
-    ],
-  }
-  event.waitUntil(self.registration.showNotification(data.title || 'DogeOW', options))
-})
-
-// 通知点击事件
-self.addEventListener('notificationclick', function (event) {
-  console.log('收到通知点击')
-  event.notification.close()
-
-  if (event.action === 'open' || event.action === undefined) {
-    event.waitUntil(clients.openWindow(event.notification.data?.url || '/'))
-  }
-})
-
-// 后台同步事件
-self.addEventListener('sync', function (event) {
-  if (event.tag === 'background-sync') {
-    event.waitUntil(doBackgroundSync())
-  }
-})
-
-function doBackgroundSync() {
-  // 在这里实现后台同步逻辑
-  console.log('执行后台同步')
-  return Promise.resolve()
-}
