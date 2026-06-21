@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, Cloud, PenTool } from 'lucide-react'
+import { Activity, Cloud, PenTool, Scissors } from 'lucide-react'
 
 export interface DashboardHomeLink {
   id: string
@@ -34,5 +34,13 @@ export const DASHBOARD_HOME_LINKS: DashboardHomeLink[] = [
     href: 'https://upyun-web.dogeow.com/',
     icon: Cloud,
     gradientClassName: 'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600',
+  },
+  {
+    id: 'rmbg',
+    label: 'RMBG',
+    caption: 'rmbg.dogeow.com',
+    href: 'https://rmbg.dogeow.com/',
+    icon: Scissors,
+    gradientClassName: 'bg-gradient-to-br from-fuchsia-400 via-pink-500 to-rose-600',
   },
 ]
