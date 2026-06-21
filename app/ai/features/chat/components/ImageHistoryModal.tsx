@@ -20,6 +20,52 @@ function formatTime(ts: number) {
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function ClearConfirmButton({
+  onClear,
+  confirmText = '确认清空',
+  cancelText = '取消',
+  triggerText = '清空',
+}: {
+  onClear: () => void
+  confirmText?: string
+  cancelText?: string
+  triggerText?: string
+}) {
+  const [confirmClear, setConfirmClear] = useState(false)
+
+  if (confirmClear) {
+    return (
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => {
+            onClear()
+            setConfirmClear(false)
+          }}
+        >
+          {confirmText}
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setConfirmClear(false)}>
+          {cancelText}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="text-muted-foreground hover:text-destructive"
+      onClick={() => setConfirmClear(true)}
+    >
+      <Trash2 className="mr-1 h-3.5 w-3.5" />
+      {triggerText}
+    </Button>
+  )
+}
+
 export const ImageHistoryModal = React.memo<ImageHistoryModalProps>(({ open, onOpenChange }) => {
   const { imageHistory, removeImage, clearImages, videoHistory, clearVideos } = useImageHistory()
 
@@ -96,8 +142,6 @@ const ImageGrid = React.memo<{
   onClear: () => void
   emptyText: string
 }>(({ items, onCopy, onRemove, onClear, emptyText }) => {
-  const [confirmClear, setConfirmClear] = useState(false)
-
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -111,33 +155,7 @@ const ImageGrid = React.memo<{
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        {confirmClear ? (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                onClear()
-                setConfirmClear(false)
-              }}
-            >
-              确认清空
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setConfirmClear(false)}>
-              取消
-            </Button>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground hover:text-destructive"
-            onClick={() => setConfirmClear(true)}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            清空
-          </Button>
-        )}
+        <ClearConfirmButton onClear={onClear} />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {items.map(item => (
@@ -188,8 +206,6 @@ const VideoGrid = React.memo<{
   onClear: () => void
   emptyText: string
 }>(({ items, onCopy, onClear, emptyText }) => {
-  const [confirmClear, setConfirmClear] = useState(false)
-
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -203,33 +219,7 @@ const VideoGrid = React.memo<{
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        {confirmClear ? (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                onClear()
-                setConfirmClear(false)
-              }}
-            >
-              确认清空
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setConfirmClear(false)}>
-              取消
-            </Button>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground hover:text-destructive"
-            onClick={() => setConfirmClear(true)}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            清空
-          </Button>
-        )}
+        <ClearConfirmButton onClear={onClear} />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {items.map(item => (

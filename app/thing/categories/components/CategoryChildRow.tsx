@@ -1,8 +1,8 @@
 import React, { memo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { TableRow, TableCell } from '@/components/ui/table'
-import { Trash2, Check, X } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
+import { EditableCategoryName } from './EditableCategoryName'
 import type { Category } from '../../types'
 
 interface CategoryChildRowProps {
@@ -39,47 +39,20 @@ export const CategoryChildRow = memo<CategoryChildRowProps>(
       <TableRow className="hover:bg-accent/20 border-l-border/40 border-l-2 transition-colors">
         <TableCell>
           <div className="ml-8 flex items-center">
-            {isEditing ? (
-              <div className="flex flex-1 items-center gap-2">
-                <Input
-                  ref={inputRef}
-                  value={editingValue}
-                  onChange={e => onValueChange(e.target.value)}
-                  className="border-primary/50 focus:border-primary h-8"
-                  onKeyDown={onKeyDown}
-                  disabled={loading}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onSave}
-                  disabled={loading}
-                  className="h-8 w-8 hover:bg-green-50 hover:text-green-600"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onCancel}
-                  disabled={loading}
-                  className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div
-                className={`flex-1 font-medium transition-colors ${
-                  isEditMode
-                    ? 'text-foreground hover:text-primary cursor-pointer hover:underline'
-                    : 'text-foreground'
-                }`}
-                onClick={isEditMode ? onEdit : undefined}
-              >
-                {category.name}
-              </div>
-            )}
+            <EditableCategoryName
+              name={category.name}
+              isEditing={isEditing}
+              editingValue={editingValue}
+              loading={loading}
+              onValueChange={onValueChange}
+              onSave={onSave}
+              onCancel={onCancel}
+              onEdit={onEdit}
+              onKeyDown={onKeyDown}
+              inputRef={inputRef}
+              indent={false}
+              bold={false}
+            />
           </div>
         </TableCell>
         {isEditMode ? (
