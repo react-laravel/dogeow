@@ -3,7 +3,7 @@
 import useSWR from 'swr'
 import { Activity, Cloud, ExternalLink, Network, PenTool, Scissors } from 'lucide-react'
 import { cn } from '@/lib/helpers'
-import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
+import { apiRequest } from '@/lib/api'
 import type { DashboardHomeLink, DashboardHomeLinkIcon } from '../homeLinks'
 
 const iconMap: Record<DashboardHomeLinkIcon, typeof Activity> = {
@@ -14,25 +14,10 @@ const iconMap: Record<DashboardHomeLinkIcon, typeof Activity> = {
   scissors: Scissors,
 }
 
-async function fetchDashboardHomeLinks(): Promise<DashboardHomeLink[]> {
-  const response = await authenticatedInternalFetch('/api/dashboard/home-links')
-
-  if (response.status === 403) {
-    return []
-  }
-
-  if (!response.ok) {
-    throw new Error('无法加载仪表盘链接')
-  }
-
-  const payload = (await response.json()) as { data?: DashboardHomeLink[] }
-  return payload.data ?? []
-}
-
 export function HomePanel() {
   const { data: links = [], isLoading } = useSWR<DashboardHomeLink[]>(
-    '/api/dashboard/home-links',
-    fetchDashboardHomeLinks,
+    '/dashboard/home-links',
+    apiRequest,
     { revalidateOnFocus: false }
   )
 

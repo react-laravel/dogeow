@@ -9,7 +9,6 @@ import {
   Languages,
   ListTodo,
   BookOpen,
-  Network,
 } from 'lucide-react'
 import { PRESET_THEME_COLORS } from '@/lib/constants/theme-colors'
 
@@ -132,14 +131,6 @@ const TILES = [
     cover: 'book-portal-20260619.png',
     needLogin: true,
   },
-  {
-    name: 'mind',
-    nameKey: 'nav.mind',
-    icon: <Network />,
-    href: 'https://mind.dogeow.com',
-    color: '#7C3AED',
-    needLogin: true,
-  },
 ]
 
 // 游戏列表配置
@@ -228,7 +219,7 @@ export const configs = {
       "thing word file"
       "chat tool nav"
       "note todos game"
-      "book mind ."
+      "book . ."
     `,
   },
   games: GAMES,

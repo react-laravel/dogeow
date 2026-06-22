@@ -20,7 +20,6 @@ export const zh_TW = {
   'nav.about': '關於',
   'nav.word': '單詞',
   'nav.book': '電子書',
-  'nav.mind': '知識圖譜',
 
   // Book
   'book.hongloumeng': '紅樓夢',

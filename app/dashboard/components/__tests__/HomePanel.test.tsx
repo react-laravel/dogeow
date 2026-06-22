@@ -1,17 +1,32 @@
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { HomePanel } from '../HomePanel'
-import { DASHBOARD_HOME_LINKS } from '../../homeLinks'
+import type { DashboardHomeLink } from '../../homeLinks'
+
+const dashboardHomeLinks: DashboardHomeLink[] = [
+  {
+    id: 'mind',
+    label: '知识图谱',
+    caption: 'mind.dogeow.com',
+    href: 'https://mind.dogeow.com/',
+    icon: 'network',
+    gradientClassName: 'bg-gradient-to-br from-violet-500 via-fuchsia-500 to-indigo-600',
+  },
+]
 
 vi.mock('swr', () => ({
-  default: () => ({ data: DASHBOARD_HOME_LINKS, isLoading: false }),
+  default: () => ({ data: dashboardHomeLinks, isLoading: false }),
+}))
+
+vi.mock('@/lib/api', () => ({
+  apiRequest: vi.fn(),
 }))
 
 describe('HomePanel', () => {
-  it('renders the admin API external link cards', () => {
+  it('renders external link cards loaded from the Laravel API', () => {
     render(<HomePanel />)
 
-    DASHBOARD_HOME_LINKS.forEach(item => {
+    dashboardHomeLinks.forEach(item => {
       expect(screen.getByText(item.caption)).toBeInTheDocument()
 
       const link = screen.getByRole('link', { name: `打开 ${item.label}` })
