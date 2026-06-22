@@ -1,9 +1,14 @@
 import { render, screen } from '@testing-library/react'
+import { vi } from 'vitest'
 import { HomePanel } from '../HomePanel'
 import { DASHBOARD_HOME_LINKS } from '../../homeLinks'
 
+vi.mock('swr', () => ({
+  default: () => ({ data: DASHBOARD_HOME_LINKS, isLoading: false }),
+}))
+
 describe('HomePanel', () => {
-  it('renders the configured external link cards', () => {
+  it('renders the admin API external link cards', () => {
     render(<HomePanel />)
 
     DASHBOARD_HOME_LINKS.forEach(item => {

@@ -1,12 +1,53 @@
-import { ExternalLink } from 'lucide-react'
-import { DASHBOARD_HOME_LINKS } from '../homeLinks'
+'use client'
+
+import useSWR from 'swr'
+import { Activity, Cloud, ExternalLink, Network, PenTool, Scissors } from 'lucide-react'
 import { cn } from '@/lib/helpers'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
+import type { DashboardHomeLink, DashboardHomeLinkIcon } from '../homeLinks'
+
+const iconMap: Record<DashboardHomeLinkIcon, typeof Activity> = {
+  activity: Activity,
+  cloud: Cloud,
+  network: Network,
+  'pen-tool': PenTool,
+  scissors: Scissors,
+}
+
+async function fetchDashboardHomeLinks(): Promise<DashboardHomeLink[]> {
+  const response = await authenticatedInternalFetch('/api/dashboard/home-links')
+
+  if (response.status === 403) {
+    return []
+  }
+
+  if (!response.ok) {
+    throw new Error('无法加载仪表盘链接')
+  }
+
+  const payload = (await response.json()) as { data?: DashboardHomeLink[] }
+  return payload.data ?? []
+}
 
 export function HomePanel() {
+  const { data: links = [], isLoading } = useSWR<DashboardHomeLink[]>(
+    '/api/dashboard/home-links',
+    fetchDashboardHomeLinks,
+    { revalidateOnFocus: false }
+  )
+
+  if (isLoading) {
+    return <div className="text-muted-foreground text-sm">正在加载仪表盘链接...</div>
+  }
+
+  if (links.length === 0) {
+    return null
+  }
+
   return (
     <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-5">
-      {DASHBOARD_HOME_LINKS.map(link => {
-        const Icon = link.icon
+      {links.map(link => {
+        const Icon = iconMap[link.icon] ?? ExternalLink
 
         return (
           <a

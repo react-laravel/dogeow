@@ -1,12 +1,11 @@
-import type { LucideIcon } from 'lucide-react'
-import { Activity, Cloud, Network, PenTool, Scissors } from 'lucide-react'
+export type DashboardHomeLinkIcon = 'activity' | 'cloud' | 'network' | 'pen-tool' | 'scissors'
 
 export interface DashboardHomeLink {
   id: string
   label: string
   caption: string
   href: string
-  icon: LucideIcon
+  icon: DashboardHomeLinkIcon
   gradientClassName: string
 }
 
@@ -16,7 +15,7 @@ export const DASHBOARD_HOME_LINKS: DashboardHomeLink[] = [
     label: 'vnStat',
     caption: 'vnstat.dogeow.com',
     href: 'https://vnstat.dogeow.com',
-    icon: Activity,
+    icon: 'activity',
     gradientClassName: 'bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500',
   },
   {
@@ -24,7 +23,7 @@ export const DASHBOARD_HOME_LINKS: DashboardHomeLink[] = [
     label: 'Canvas',
     caption: 'canvas.dogeow.com',
     href: 'https://canvas.dogeow.com/',
-    icon: PenTool,
+    icon: 'pen-tool',
     gradientClassName: 'bg-gradient-to-br from-orange-400 via-amber-500 to-rose-500',
   },
   {
@@ -32,7 +31,7 @@ export const DASHBOARD_HOME_LINKS: DashboardHomeLink[] = [
     label: 'UpYun Web',
     caption: 'upyun-web.dogeow.com',
     href: 'https://upyun-web.dogeow.com/',
-    icon: Cloud,
+    icon: 'cloud',
     gradientClassName: 'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600',
   },
   {
@@ -40,7 +39,7 @@ export const DASHBOARD_HOME_LINKS: DashboardHomeLink[] = [
     label: 'RMBG',
     caption: 'rmbg.dogeow.com',
     href: 'https://rmbg.dogeow.com/',
-    icon: Scissors,
+    icon: 'scissors',
     gradientClassName: 'bg-gradient-to-br from-fuchsia-400 via-pink-500 to-rose-600',
   },
   {
@@ -48,7 +47,7 @@ export const DASHBOARD_HOME_LINKS: DashboardHomeLink[] = [
     label: '知识图谱',
     caption: 'mind.dogeow.com',
     href: 'https://mind.dogeow.com/',
-    icon: Network,
+    icon: 'network',
     gradientClassName: 'bg-gradient-to-br from-violet-500 via-fuchsia-500 to-indigo-600',
   },
 ]
