@@ -21,6 +21,7 @@ export const en = {
   'nav.about': 'About',
   'nav.word': 'Word',
   'nav.book': 'Books',
+  'nav.mind': 'Knowledge Graph',
 
   // Book
   'book.hongloumeng': 'Dream of the Red Chamber',

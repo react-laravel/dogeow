@@ -20,6 +20,7 @@ export const zh_CN = {
   'nav.about': '关于',
   'nav.word': '单词',
   'nav.book': '电子书',
+  'nav.mind': '知识图谱',
 
   // Book
   'book.hongloumeng': '红楼梦',
