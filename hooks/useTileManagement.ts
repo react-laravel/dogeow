@@ -28,7 +28,14 @@ export function useTileManagement() {
   // 优化导航处理
   const handleTileClick = useCallback(
     (tile: Tile) => {
-      const navigate = () => router.push(tile.href)
+      const navigate = () => {
+        if (/^https?:\/\//.test(tile.href)) {
+          window.location.href = tile.href
+          return
+        }
+
+        router.push(tile.href)
+      }
 
       if (isProtectedTile(tile)) {
         requireLogin(navigate)
