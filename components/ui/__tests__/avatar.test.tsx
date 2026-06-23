@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '../avatar'
 vi.mock('next/image', () => ({
   __esModule: true,
   default: (
-    props: React.ComponentProps<'div'> & {
+    props: React.ComponentProps<'img'> & {
       src?: string
       alt?: string
       width?: number | string
@@ -15,7 +15,7 @@ vi.mock('next/image', () => ({
       onError?: () => void
       onLoad?: () => void
     }
-  ) => <div data-testid="avatar-image" {...props} />,
+  ) => <img data-testid="avatar-image" {...props} />,
 }))
 
 describe('Avatar', () => {

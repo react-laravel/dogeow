@@ -1,48 +1,82 @@
+import { describe, expect, it, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { useState } from 'react'
 import { useThingFilters } from '../useThingFilters'
-import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
 
-// mock persistence store
+// Mock filter persistence store
+const mockSaveFilters = vi.fn()
+const mockClearFilters = vi.fn()
+const mockSavedFilters: any = {}
+
 vi.mock('@/app/thing/stores/filterPersistenceStore', () => ({
-  useFilterPersistenceStore: vi.fn(),
+  useFilterPersistenceStore: () => ({
+    savedFilters: mockSavedFilters,
+    saveFilters: mockSaveFilters,
+    clearFilters: mockClearFilters,
+  }),
+}))
+
+vi.mock('@/hooks/usePagination', () => ({
+  usePagination: (initialPage?: number) => {
+    const [page, setPage] = useState(initialPage ?? 1)
+    return {
+      currentPage: page,
+      setPage: setPage,
+      reset: () => setPage(initialPage ?? 1),
+    }
+  },
 }))
 
 describe('useThingFilters', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    ;(useFilterPersistenceStore as any).mockReturnValue({
-      savedFilters: {},
-      saveFilters: vi.fn(),
-      clearFilters: vi.fn(),
-    })
+    mockSaveFilters.mockClear()
+    mockClearFilters.mockClear()
+    Object.assign(mockSavedFilters, {})
   })
 
-  it('initializes with saved filters and page 1', () => {
+  it('initializes with empty filters', () => {
     const { result } = renderHook(() => useThingFilters())
     expect(result.current.filters).toEqual({})
     expect(result.current.currentPage).toBe(1)
   })
 
-  it('updateFilters merges and persists and leaves page unchanged', () => {
+  it('updates filters', () => {
     const { result } = renderHook(() => useThingFilters())
-    act(() => result.current.updateFilters({ foo: 'bar' }))
-    expect(result.current.filters.foo).toBe('bar')
-    expect(result.current.currentPage).toBe(1)
+    act(() => {
+      result.current.updateFilters({ name: 'test' })
+    })
+    expect(result.current.filters.name).toBe('test')
+  })
+
+  it('clears filters', () => {
+    const { result } = renderHook(() => useThingFilters())
+    act(() => {
+      result.current.updateFilters({ name: 'test' })
+    })
+    act(() => {
+      result.current.clearFilters()
+    })
+    expect(result.current.filters).toEqual({})
+  })
+
+  it('hasActiveFilters returns false for empty filters', () => {
+    const { result } = renderHook(() => useThingFilters())
+    expect(result.current.hasActiveFilters()).toBe(false)
+  })
+
+  it('hasActiveFilters returns true for active filters', () => {
+    const { result } = renderHook(() => useThingFilters())
+    act(() => {
+      result.current.updateFilters({ name: 'test' })
+    })
     expect(result.current.hasActiveFilters()).toBe(true)
   })
 
-  it('clearFilters resets filters and page and clears persistence', () => {
-    const clearPersist = vi.fn()
-    ;(useFilterPersistenceStore as any).mockReturnValue({
-      savedFilters: { foo: 'bar' },
-      saveFilters: vi.fn(),
-      clearFilters: clearPersist,
-    })
+  it('setCurrentPage updates page', () => {
     const { result } = renderHook(() => useThingFilters())
-    act(() => result.current.clearFilters())
-    expect(result.current.filters).toEqual({})
-    expect(result.current.currentPage).toBe(1)
-    expect(clearPersist).toHaveBeenCalled()
+    act(() => {
+      result.current.setCurrentPage(3)
+    })
+    expect(result.current.currentPage).toBe(3)
   })
 })

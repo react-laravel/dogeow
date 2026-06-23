@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import MarkdownPreview from '../markdown-preview'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
+import type MarkdownPreviewComponent from '../markdown-preview'
+
+let MarkdownPreview: typeof MarkdownPreviewComponent
 
 // Mock Novel components
 vi.mock('novel', () => ({
@@ -24,6 +26,23 @@ vi.mock('tiptap-markdown', () => ({
   },
 }))
 
+vi.mock('@tiptap/react', () => ({
+  useEditor: vi.fn(() => ({
+    commands: {
+      setContent: vi.fn(),
+    },
+    getJSON: vi.fn(() => ({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'parsed markdown' }],
+        },
+      ],
+    })),
+  })),
+}))
+
 // Mock class-variance-authority
 vi.mock('class-variance-authority', () => ({
   cx: vi.fn((...classes) => classes.filter(Boolean).join(' ')),
@@ -37,6 +56,10 @@ vi.mock('highlight.js', () => ({
 }))
 
 describe('MarkdownPreview', () => {
+  beforeAll(async () => {
+    MarkdownPreview = (await import('../markdown-preview')).default
+  })
+
   it('should render markdown content', () => {
     const markdownContent = '# Hello World\n\nThis is a test.'
 

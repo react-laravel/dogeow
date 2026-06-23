@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/api', () => ({ API_URL: 'http://localhost:8000' }))
 
-import { getFileStorageUrl } from '../api'
+import { getFileStorageUrl, getFilePreviewUrl, getFileDownloadUrl } from '../api'
 
 describe('getFileStorageUrl', () => {
   it('returns full absolute urls unchanged', () => {
@@ -21,5 +21,43 @@ describe('getFileStorageUrl', () => {
     expect(getFileStorageUrl('uploads/image.png')).toBe(
       'http://localhost:8000/storage/uploads/image.png'
     )
+  })
+
+  it('returns empty string for empty path', () => {
+    expect(getFileStorageUrl('')).toBe('')
+  })
+
+  it('handles absolute URLs with https', () => {
+    expect(getFileStorageUrl('https://cdn.example.com/file.jpg')).toBe(
+      'https://cdn.example.com/file.jpg'
+    )
+  })
+
+  it('strips multiple leading slashes', () => {
+    expect(getFileStorageUrl('///uploads/file.jpg')).toBe(
+      'http://localhost:8000/storage/uploads/file.jpg'
+    )
+  })
+})
+
+describe('getFilePreviewUrl', () => {
+  it('generates correct preview URL', () => {
+    expect(getFilePreviewUrl(123)).toBe(
+      'http://localhost:8000/api/cloud/files/123/preview?thumb=true'
+    )
+  })
+
+  it('handles file ID 1', () => {
+    expect(getFilePreviewUrl(1)).toContain('/files/1/preview?thumb=true')
+  })
+})
+
+describe('getFileDownloadUrl', () => {
+  it('generates correct download URL', () => {
+    expect(getFileDownloadUrl(456)).toBe('http://localhost:8000/api/cloud/files/456/download')
+  })
+
+  it('handles file ID 1', () => {
+    expect(getFileDownloadUrl(1)).toContain('/files/1/download')
   })
 })

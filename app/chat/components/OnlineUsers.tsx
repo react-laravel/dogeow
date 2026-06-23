@@ -30,7 +30,7 @@ interface OnlineUsersProps {
   onReportUser?: (userId: number) => void
 }
 
-export default function OnlineUsers({
+function OnlineUsers({
   roomId,
   className = '',
   onMentionUser,
@@ -124,3 +124,6 @@ export default function OnlineUsers({
     </div>
   )
 }
+
+export { OnlineUsers }
+export default OnlineUsers

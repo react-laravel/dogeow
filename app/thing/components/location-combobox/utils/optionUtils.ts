@@ -5,7 +5,7 @@ import type { Area, Room, Spot } from '@/app/thing/types'
  */
 export const getAreaOptions = (areas: Area[]) => [
   { value: '', label: '请选择区域' },
-  ...areas.map(area => ({
+  ...areas.filter(Boolean).map(area => ({
     value: area.id.toString(),
     label: area.name,
   })),
@@ -16,10 +16,11 @@ export const getAreaOptions = (areas: Area[]) => [
  */
 export const getRoomOptions = (selectedAreaId: string, rooms: Room[]) => {
   if (!selectedAreaId) return []
+  if (Number.isNaN(Number(selectedAreaId))) return [{ value: '', label: '请选择房间' }]
 
   return [
     { value: '', label: '请选择房间' },
-    ...rooms.map(room => ({
+    ...rooms.filter(Boolean).map(room => ({
       value: room.id.toString(),
       label: room.name,
     })),
@@ -31,10 +32,13 @@ export const getRoomOptions = (selectedAreaId: string, rooms: Room[]) => {
  */
 export const getSpotOptions = (selectedRoomId: string, spots: Spot[]) => {
   if (!selectedRoomId) return []
+  if (Number.isNaN(Number(selectedRoomId))) {
+    return [{ value: '', label: '请选择具体位置' }]
+  }
 
   return [
     { value: '', label: '请选择具体位置' },
-    ...spots.map(spot => ({
+    ...spots.filter(Boolean).map(spot => ({
       value: spot.id.toString(),
       label: spot.name,
     })),

@@ -6,6 +6,10 @@ interface AutoSaveStatusProps {
 }
 
 export default function AutoSaveStatus({ autoSaving, lastSaved }: AutoSaveStatusProps) {
+  if (!autoSaving && !lastSaved) {
+    return null
+  }
+
   return (
     <div className="text-muted-foreground flex items-center gap-2 text-sm">
       {autoSaving && (

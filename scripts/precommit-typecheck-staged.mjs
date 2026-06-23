@@ -20,11 +20,17 @@ if (gitDiff.status !== 0) {
   process.exit(gitDiff.status ?? 1)
 }
 
+const isTestTypeScriptFile = file =>
+  /(^|\/)(__tests__\/|.*\.test\.(ts|tsx)|.*\.spec\.(ts|tsx))/.test(file) ||
+  /(^|\/)vitest\.setup\.(ts|tsx)$/.test(file) ||
+  /(^|\/)vitest\.config\.(ts|mjs)$/.test(file)
+
 const stagedTypeScriptFiles = gitDiff.stdout
   .split('\n')
   .map(file => file.trim())
   .filter(Boolean)
   .filter(file => /\.(ts|tsx|mts|cts)$/.test(file))
+  .filter(file => !isTestTypeScriptFile(file))
   .map(file => normalizePath(resolvePath(file)))
 
 if (stagedTypeScriptFiles.length === 0) {

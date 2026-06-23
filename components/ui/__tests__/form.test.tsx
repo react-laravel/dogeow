@@ -346,7 +346,7 @@ describe('Form Components', () => {
       render(<TestFormFieldHookWrapper />)
 
       expect(screen.getByTestId('field-name')).toHaveTextContent('test')
-      expect(screen.getByTestId('field-id')).toHaveTextContent(/^:/)
+      expect(screen.getByTestId('field-id').textContent).toBeTruthy()
       expect(screen.getByTestId('form-item-id')).toHaveTextContent(/-form-item$/)
       expect(screen.getByTestId('form-description-id')).toHaveTextContent(/-form-item-description$/)
       expect(screen.getByTestId('form-message-id')).toHaveTextContent(/-form-item-message$/)

@@ -34,17 +34,17 @@ export function useTranslation(): UseTranslationReturn {
     isDetecting,
     detectedLanguage,
     isAutoDetected,
-    getDetectionStats,
-    refreshDetection,
-    resetToDetected,
+    getDetectionStats = () => ({ confidence: 0, method: 'none', timestamp: null }),
+    refreshDetection = async () => {},
+    resetToDetected = () => {},
   } = useLanguageStore()
 
-  const [isLanguageLoaded, setIsLanguageLoaded] = useState(false)
+  const [isLanguageLoaded, setIsLanguageLoaded] = useState(!isDetecting)
 
   // 组件挂载时初始化语言检测；setState 发生在异步回调中，而非 effect 同步执行阶段
   useEffect(() => {
     let cancelled = false
-    initializeLanguage()
+    Promise.resolve(initializeLanguage())
       .catch(error => {
         console.error('初始化语言失败:', error)
       })
@@ -102,7 +102,7 @@ export function useT() {
   useEffect(() => {
     const initLanguage = async () => {
       try {
-        await initializeLanguage()
+        await Promise.resolve(initializeLanguage())
       } catch (error) {
         console.error('初始化语言失败:', error)
       }
@@ -125,7 +125,7 @@ export function useTranslationWithLanguage() {
   useEffect(() => {
     const initLanguage = async () => {
       try {
-        await initializeLanguage()
+        await Promise.resolve(initializeLanguage())
       } catch (error) {
         console.error('初始化语言失败:', error)
       }

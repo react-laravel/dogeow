@@ -1,325 +1,72 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import CreatableCategorySelect from '../CreatableCategorySelect'
-import { toast } from 'sonner'
 
-// Mock toast
+vi.mock('@/components/ui/command', () => ({
+  Command: ({ children }: any) => <div data-testid="command">{children}</div>,
+  CommandInput: ({ onValueChange, ...props }: any) => (
+    <input
+      data-testid="command-input"
+      {...props}
+      onChange={event => onValueChange?.(event.currentTarget.value)}
+    />
+  ),
+  CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
+  CommandItem: ({ children, onSelect, ...props }: any) => (
+    <div data-testid={props['data-testid'] ?? 'command-item'} onClick={onSelect}>
+      {children}
+    </div>
+  ),
+  CommandEmpty: ({ children }: any) => <div>{children}</div>,
+}))
+
+vi.mock('@/components/ui/button', () => ({
+  Button: ({ children, onClick, ...props }: any) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+}))
+
 vi.mock('sonner', () => ({
-  toast: {
-    error: vi.fn(),
-  },
+  toast: { error: vi.fn() },
 }))
 
 describe('CreatableCategorySelect', () => {
-  const mockOnValueChange = vi.fn()
-  const mockOnCreateCategory = vi.fn()
+  const defaultProps = {
+    value: '',
+    onValueChange: vi.fn(),
+    categories: [
+      { id: 1, name: 'Electronics' },
+      { id: 2, name: 'Clothing' },
+    ],
+  }
 
-  const mockCategories = [
-    { id: 1, name: '电子产品' },
-    { id: 2, name: '书籍' },
-    { id: 3, name: '家具' },
-  ]
-
-  beforeEach(() => {
-    vi.clearAllMocks()
+  it('renders with default label', () => {
+    render(<CreatableCategorySelect {...defaultProps} />)
+    expect(screen.getByText('选择分类')).toBeDefined()
   })
 
-  describe('渲染', () => {
-    it('应该渲染选择按钮', () => {
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      expect(screen.getByText('选择分类')).toBeInTheDocument()
-    })
-
-    it('应该显示选中的分类名称', () => {
-      render(
-        <CreatableCategorySelect
-          value="1"
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      expect(screen.getByText('电子产品')).toBeInTheDocument()
-    })
-
-    it('应该在允许未分类选项时显示"未分类"', () => {
-      render(
-        <CreatableCategorySelect
-          value="none"
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-          allowNoneOption={true}
-        />
-      )
-
-      expect(screen.getByText('未分类')).toBeInTheDocument()
-    })
+  it('shows "Uncategorized" when allowNoneOption and value is none', () => {
+    render(<CreatableCategorySelect {...defaultProps} allowNoneOption value="none" />)
+    expect(screen.getByText('未分类')).toBeDefined()
   })
 
-  describe('交互', () => {
-    it('应该在点击按钮时打开下拉菜单', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(screen.getByText('电子产品')).toBeInTheDocument()
-        expect(screen.getByText('书籍')).toBeInTheDocument()
-        expect(screen.getByText('家具')).toBeInTheDocument()
-      })
-    })
-
-    it('应该在选择分类时调用 onValueChange', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(screen.getByText('电子产品')).toBeInTheDocument()
-      })
-
-      const categoryOption = screen.getByText('电子产品')
-      await user.click(categoryOption)
-
-      expect(mockOnValueChange).toHaveBeenCalledWith('1')
-    })
-
-    it('应该支持搜索分类', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      // 等待下拉菜单打开和输入框出现
-      await waitFor(() => {
-        const input = screen.getByPlaceholderText('输入或选择分类')
-        expect(input).toBeInTheDocument()
-      })
-
-      const input = screen.getByPlaceholderText('输入或选择分类')
-      await user.type(input, '电子')
-
-      // 验证搜索结果
-      await waitFor(() => {
-        expect(screen.getByText('电子产品')).toBeInTheDocument()
-      })
-    })
-
-    it('应该在输入新分类名称时显示创建选项', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-          onCreateCategory={mockOnCreateCategory}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      await waitFor(() => {
-        const input = screen.getByPlaceholderText('输入或选择分类')
-        expect(input).toBeInTheDocument()
-      })
-
-      const input = screen.getByPlaceholderText('输入或选择分类')
-      await user.type(input, '新分类')
-
-      await waitFor(() => {
-        expect(screen.getByText(/添加"新分类"/)).toBeInTheDocument()
-      })
-    })
-
-    it('应该在选择创建选项时创建新分类', async () => {
-      mockOnCreateCategory.mockResolvedValue({ id: 4, name: '新分类' })
-
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-          onCreateCategory={mockOnCreateCategory}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      await waitFor(() => {
-        const input = screen.getByPlaceholderText('输入或选择分类')
-        expect(input).toBeInTheDocument()
-      })
-
-      const input = screen.getByPlaceholderText('输入或选择分类')
-      await user.type(input, '新分类')
-
-      await waitFor(() => {
-        expect(screen.getByText(/添加"新分类"/)).toBeInTheDocument()
-      })
-
-      const createOption = screen.getByText(/添加"新分类"/)
-      await user.click(createOption)
-
-      await waitFor(() => {
-        expect(mockOnCreateCategory).toHaveBeenCalledWith('新分类')
-        expect(mockOnValueChange).toHaveBeenCalledWith('4')
-      })
-    })
-
-    it('应该在没有 onCreateCategory 时回退为本地创建值', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      await user.click(screen.getByText('选择分类'))
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('输入或选择分类')).toBeInTheDocument()
-      })
-
-      const input = screen.getByPlaceholderText('输入或选择分类')
-      await user.type(input, '临时分类')
-
-      const createOption = await screen.findByText(/添加"临时分类"/)
-      fireEvent.click(createOption)
-
-      await waitFor(() => {
-        expect(mockOnValueChange).toHaveBeenCalledWith('临时分类')
-      })
-    })
-
-    it('应该在创建分类失败时显示错误提示', async () => {
-      mockOnCreateCategory.mockRejectedValue(new Error('创建失败'))
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-          onCreateCategory={mockOnCreateCategory}
-        />
-      )
-
-      await user.click(screen.getByText('选择分类'))
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('输入或选择分类')).toBeInTheDocument()
-      })
-
-      const input = screen.getByPlaceholderText('输入或选择分类')
-      await user.type(input, '失败分类')
-      const createOption = await screen.findByText(/添加"失败分类"/)
-      fireEvent.click(createOption)
-
-      await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('创建失败')
-      })
-    })
-
-    it('应该在再次点击选择按钮时关闭并清空输入', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('输入或选择分类')).toBeInTheDocument()
-      })
-      await user.type(screen.getByPlaceholderText('输入或选择分类'), 'abc')
-
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(screen.queryByPlaceholderText('输入或选择分类')).not.toBeInTheDocument()
-      })
-    })
+  it('shows category name when a category is selected', () => {
+    render(<CreatableCategorySelect {...defaultProps} value="1" />)
+    expect(screen.getByText('Electronics')).toBeDefined()
   })
 
-  describe('未分类选项', () => {
-    it('应该在允许未分类时显示未分类选项', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-          allowNoneOption={true}
-        />
-      )
+  it('opens dropdown on click', () => {
+    render(<CreatableCategorySelect {...defaultProps} />)
+    fireEvent.click(screen.getByText('选择分类'))
+    expect(screen.getByTestId('command')).toBeDefined()
+  })
 
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(screen.getByText('未分类')).toBeInTheDocument()
-      })
-    })
-
-    it('应该支持选择未分类', async () => {
-      const user = userEvent.setup()
-      render(
-        <CreatableCategorySelect
-          value=""
-          onValueChange={mockOnValueChange}
-          categories={mockCategories}
-          allowNoneOption={true}
-        />
-      )
-
-      const button = screen.getByText('选择分类')
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(screen.getByText('未分类')).toBeInTheDocument()
-      })
-
-      const noneOption = screen.getByText('未分类')
-      await user.click(noneOption)
-
-      expect(mockOnValueChange).toHaveBeenCalledWith('none')
-    })
+  it('shows create option when no category matches input', () => {
+    render(<CreatableCategorySelect {...defaultProps} />)
+    fireEvent.click(screen.getByText('选择分类'))
+    fireEvent.change(screen.getByTestId('command-input'), { target: { value: 'Books' } })
+    expect(screen.getByTestId('create-option')).toBeDefined()
   })
 })

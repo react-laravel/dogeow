@@ -126,7 +126,11 @@ describe('WebSocket Auth Manager', () => {
       })
 
       it('should return null when auth storage is invalid JSON', () => {
-        vi.mocked(localStorage.getItem).mockReturnValue('invalid-json')
+        vi.mocked(localStorage.getItem).mockImplementation(key => {
+          if (key === 'auth-storage') return 'invalid-json'
+          if (key === 'auth-token') return null
+          return null
+        })
 
         const token = manager.getToken()
         expect(token).toBeNull()

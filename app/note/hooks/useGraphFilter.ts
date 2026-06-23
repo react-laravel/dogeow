@@ -60,7 +60,7 @@ export function useGraphFilter(
     }
 
     // 找出匹配节点的所有邻居（包括连接的节点）
-    const neighborIds = new Set<string>(matchedIds)
+    const matchedNeighborIds = new Set<string>(matchedIds)
     for (const link of links) {
       const s =
         typeof link.source === 'string' || typeof link.source === 'number'
@@ -70,12 +70,12 @@ export function useGraphFilter(
         typeof link.target === 'string' || typeof link.target === 'number'
           ? String(link.target)
           : String((link.target as NodeData).id)
-      if (matchedIds.has(s)) neighborIds.add(t)
-      if (matchedIds.has(t)) neighborIds.add(s)
+      if (matchedIds.has(s)) matchedNeighborIds.add(t)
+      if (matchedIds.has(t)) matchedNeighborIds.add(s)
     }
 
     // 过滤节点：包含匹配节点和它们的邻居
-    const fNodes = nodes.filter(n => neighborIds.has(String(n.id)))
+    const fNodes = nodes.filter(n => matchedNeighborIds.has(String(n.id)))
     const fSet = new Set(fNodes.map(n => String(n.id)))
 
     // 过滤链接：只显示连接这些节点的完整链接
@@ -92,7 +92,7 @@ export function useGraphFilter(
     })
 
     return { nodes: fNodes, links: fLinks }
-  }, [nodes, links, query, showNeighborsOnly, activeNode])
+  }, [nodes, links, query, showNeighborsOnly, activeNode, neighborIds])
 
   return { filtered, neighborIds }
 }

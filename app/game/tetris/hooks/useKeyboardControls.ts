@@ -6,6 +6,7 @@ interface KeyboardControlsProps {
   hardDrop: () => void
   togglePause: () => void
   gameOver: boolean
+  enabled?: boolean
 }
 
 export function useKeyboardControls({
@@ -14,8 +15,11 @@ export function useKeyboardControls({
   hardDrop,
   togglePause,
   gameOver,
+  enabled = true,
 }: KeyboardControlsProps) {
   useEffect(() => {
+    if (!enabled) return
+
     const handleKeyPress = (e: KeyboardEvent) => {
       if (gameOver) return
 
@@ -54,5 +58,5 @@ export function useKeyboardControls({
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [movePiece, rotatePiece, hardDrop, togglePause, gameOver])
+  }, [movePiece, rotatePiece, hardDrop, togglePause, gameOver, enabled])
 }

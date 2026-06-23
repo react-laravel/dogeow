@@ -87,8 +87,7 @@ export default function CreatableCategorySelect({
           const newOpen = !open
           setOpen(newOpen)
           if (newOpen) {
-            // 延迟显示输入框，避免自动聚焦
-            setTimeout(() => setShowInput(true), 100)
+            setShowInput(true)
           } else {
             setShowInput(false)
             setInputValue('')
@@ -139,6 +138,7 @@ export default function CreatableCategorySelect({
               ))}
               {filtered.length === 0 && inputValue.trim() && !exists && (
                 <CommandItem
+                  data-testid="create-option"
                   value={inputValue.trim()}
                   onSelect={() => {
                     handleCreate()

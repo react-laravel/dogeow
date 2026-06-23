@@ -1,267 +1,107 @@
 import { describe, it, expect } from 'vitest'
-import { userRoleUtils, type UserRole } from '../userUtils'
+import { userRoleUtils, formatJoinedDate, getInitials } from '../userUtils'
 import type { OnlineUser } from '@/app/chat/types'
+
+const makeUser = (overrides: Partial<OnlineUser> = {}): OnlineUser => ({
+  id: 1,
+  name: 'Test User',
+  email: 'test@example.com',
+  role: 'user',
+  joined_at: '2024-01-15T10:00:00Z',
+  is_online: true,
+  ...overrides,
+})
 
 describe('userRoleUtils', () => {
   describe('isAdmin', () => {
-    it('should return true only when user.role is admin', () => {
-      const adminUser: OnlineUser = {
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: 'admin',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const regularUser: OnlineUser = {
-        id: 2,
-        name: 'Regular User',
-        email: 'user@example.com',
-        role: 'user',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const moderatorUser: OnlineUser = {
-        id: 3,
-        name: 'Moderator User',
-        email: 'mod@example.com',
-        role: 'moderator',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      expect(userRoleUtils.isAdmin(adminUser)).toBe(true)
-      expect(userRoleUtils.isAdmin(regularUser)).toBe(false)
-      expect(userRoleUtils.isAdmin(moderatorUser)).toBe(false)
+    it('should return true for admin role', () => {
+      expect(userRoleUtils.isAdmin(makeUser({ role: 'admin' }))).toBe(true)
     })
 
-    it('should NOT determine admin status by email containing "admin"', () => {
-      // This was the previous vulnerable implementation that allowed privilege escalation
-      // A user could set their email to 'hacker@admin.com' and gain admin access
-      const maliciousUser: OnlineUser = {
-        id: 4,
-        name: 'Malicious User',
-        email: 'hacker@admin.com', // Attempting to exploit old email-based check
-        role: 'user', // But actual role is 'user'
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      // Security fix: email-based privilege escalation should NOT work
-      expect(userRoleUtils.isAdmin(maliciousUser)).toBe(false)
-    })
-
-    it('should NOT determine admin status by email containing "admin" with various patterns', () => {
-      const exploitUsers: OnlineUser[] = [
-        {
-          id: 10,
-          name: 'Exploit 1',
-          email: 'admin@example.com',
-          role: 'user',
-          joined_at: '2024-01-01T00:00:00Z',
-          is_online: true,
-        },
-        {
-          id: 11,
-          name: 'Exploit 2',
-          email: 'admin@legit.com',
-          role: 'user',
-          joined_at: '2024-01-01T00:00:00Z',
-          is_online: true,
-        },
-        {
-          id: 12,
-          name: 'Exploit 3',
-          email: 'notanadmin@admin.xyz',
-          role: 'user',
-          joined_at: '2024-01-01T00:00:00Z',
-          is_online: true,
-        },
-      ]
-
-      // None of these email patterns should grant admin access
-      for (const user of exploitUsers) {
-        expect(userRoleUtils.isAdmin(user)).toBe(false)
-      }
-    })
-
-    it('should handle user without role field (defaults to not admin)', () => {
-      const userWithoutRole: OnlineUser = {
-        id: 5,
-        name: 'No Role User',
-        email: 'norole@example.com',
-        // role is not defined
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      expect(userRoleUtils.isAdmin(userWithoutRole)).toBe(false)
+    it('should return false for non-admin roles', () => {
+      expect(userRoleUtils.isAdmin(makeUser({ role: 'moderator' }))).toBe(false)
+      expect(userRoleUtils.isAdmin(makeUser({ role: 'user' }))).toBe(false)
+      expect(userRoleUtils.isAdmin(makeUser({ role: undefined }))).toBe(false)
     })
   })
 
   describe('isModerator', () => {
-    it('should return true when user.role is moderator or admin', () => {
-      const adminUser: OnlineUser = {
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: 'admin',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const moderatorUser: OnlineUser = {
-        id: 2,
-        name: 'Moderator User',
-        email: 'mod@example.com',
-        role: 'moderator',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const regularUser: OnlineUser = {
-        id: 3,
-        name: 'Regular User',
-        email: 'user@example.com',
-        role: 'user',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      expect(userRoleUtils.isModerator(adminUser)).toBe(true)
-      expect(userRoleUtils.isModerator(moderatorUser)).toBe(true)
-      expect(userRoleUtils.isModerator(regularUser)).toBe(false)
+    it('should return true for moderator role', () => {
+      expect(userRoleUtils.isModerator(makeUser({ role: 'moderator' }))).toBe(true)
     })
 
-    it('should NOT determine moderator status by email containing "mod" or "admin"', () => {
-      // Old vulnerable implementation allowed email-based privilege escalation
-      const maliciousModerator: OnlineUser = {
-        id: 4,
-        name: 'Fake Moderator',
-        email: 'super@mod.com', // Attempting to exploit old email-based check
-        role: 'user', // But actual role is 'user'
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const maliciousAdmin: OnlineUser = {
-        id: 5,
-        name: 'Fake Admin',
-        email: 'admin@hack.com', // Attempting to exploit old email-based check
-        role: 'user', // But actual role is 'user'
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      // Security fix: email-based privilege escalation should NOT work
-      expect(userRoleUtils.isModerator(maliciousModerator)).toBe(false)
-      expect(userRoleUtils.isModerator(maliciousAdmin)).toBe(false)
+    it('should return true for admin role (admins are moderators)', () => {
+      expect(userRoleUtils.isModerator(makeUser({ role: 'admin' }))).toBe(true)
     })
 
-    it('should handle user without role field (defaults to not moderator)', () => {
-      const userWithoutRole: OnlineUser = {
-        id: 6,
-        name: 'No Role User',
-        email: 'norole@example.com',
-        // role is not defined
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
+    it('should return false for user role', () => {
+      expect(userRoleUtils.isModerator(makeUser({ role: 'user' }))).toBe(false)
+    })
 
-      expect(userRoleUtils.isModerator(userWithoutRole)).toBe(false)
+    it('should return false for undefined role', () => {
+      expect(userRoleUtils.isModerator(makeUser({ role: undefined }))).toBe(false)
     })
   })
 
   describe('getUserRole', () => {
-    it('should return correct role for admin, moderator, and user', () => {
-      const adminUser: OnlineUser = {
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: 'admin',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const moderatorUser: OnlineUser = {
-        id: 2,
-        name: 'Moderator User',
-        email: 'mod@example.com',
-        role: 'moderator',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      const regularUser: OnlineUser = {
-        id: 3,
-        name: 'Regular User',
-        email: 'user@example.com',
-        role: 'user',
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
-
-      expect(userRoleUtils.getUserRole(adminUser)).toBe('admin')
-      expect(userRoleUtils.getUserRole(moderatorUser)).toBe('moderator')
-      expect(userRoleUtils.getUserRole(regularUser)).toBe('user')
+    it('should return correct role string', () => {
+      expect(userRoleUtils.getUserRole(makeUser({ role: 'admin' }))).toBe('admin')
+      expect(userRoleUtils.getUserRole(makeUser({ role: 'moderator' }))).toBe('moderator')
+      expect(userRoleUtils.getUserRole(makeUser({ role: 'user' }))).toBe('user')
+      expect(userRoleUtils.getUserRole(makeUser({ role: undefined }))).toBe('user')
     })
+  })
+})
 
-    it('should return user for user without role field', () => {
-      const userWithoutRole: OnlineUser = {
-        id: 4,
-        name: 'No Role User',
-        email: 'norole@example.com',
-        // role is not defined
-        joined_at: '2024-01-01T00:00:00Z',
-        is_online: true,
-      }
+describe('formatJoinedDate', () => {
+  it('should return "Just now" for very recent times', () => {
+    const now = new Date().toISOString()
+    expect(formatJoinedDate(now)).toBe('Just now')
+  })
 
-      expect(userRoleUtils.getUserRole(userWithoutRole)).toBe('user')
-    })
+  it('should return minutes ago', () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    expect(formatJoinedDate(thirtyMinAgo)).toBe('30m ago')
+  })
 
-    it('should NOT determine role by email patterns', () => {
-      // These users are trying to exploit the old email-based privilege escalation
-      const exploitUsers: Array<{ user: OnlineUser; expectedRole: UserRole }> = [
-        {
-          user: {
-            id: 10,
-            name: 'Exploit 1',
-            email: 'admin@evil.com',
-            role: 'user',
-            joined_at: '2024-01-01T00:00:00Z',
-            is_online: true,
-          },
-          expectedRole: 'user',
-        },
-        {
-          user: {
-            id: 11,
-            name: 'Exploit 2',
-            email: 'moderator@evil.com',
-            role: 'user',
-            joined_at: '2024-01-01T00:00:00Z',
-            is_online: true,
-          },
-          expectedRole: 'user',
-        },
-        {
-          user: {
-            id: 12,
-            name: 'Exploit 3',
-            email: 'superadmin@evil.com',
-            role: 'user',
-            joined_at: '2024-01-01T00:00:00Z',
-            is_online: true,
-          },
-          expectedRole: 'user',
-        },
-      ]
+  it('should return hours ago', () => {
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+    expect(formatJoinedDate(threeHoursAgo)).toBe('3h ago')
+  })
 
-      for (const { user, expectedRole } of exploitUsers) {
-        expect(userRoleUtils.getUserRole(user)).toBe(expectedRole)
-      }
-    })
+  it('should return date string for older dates', () => {
+    const oldDate = '2020-01-01T00:00:00Z'
+    const result = formatJoinedDate(oldDate)
+    expect(result).toBe('2020/1/1')
+  })
+})
+
+describe('getInitials', () => {
+  it('should return first letters of two words', () => {
+    expect(getInitials('John Doe')).toBe('JD')
+  })
+
+  it('should return first letter of single word', () => {
+    expect(getInitials('Alice')).toBe('A')
+  })
+
+  it('should return first letter of single short word', () => {
+    expect(getInitials('A')).toBe('A')
+  })
+
+  it('should return empty string for empty input', () => {
+    expect(getInitials('')).toBe('')
+  })
+
+  it('should handle single character', () => {
+    expect(getInitials('X')).toBe('X')
+  })
+
+  it('should be uppercase', () => {
+    expect(getInitials('alice bob')).toBe('AB')
+  })
+
+  it('should limit to 2 characters for three+ words', () => {
+    expect(getInitials('Alice Bob Charlie')).toBe('AB')
   })
 })

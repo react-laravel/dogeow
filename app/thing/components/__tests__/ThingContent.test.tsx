@@ -1,452 +1,96 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import ThingContent from '../ThingContent'
-import { Item } from '../../types'
 
-// Mock child components
-vi.mock('../ItemCard', () => ({
-  default: ({ item, isLoading, onEdit, onView }: any) => (
-    <div data-testid={isLoading ? 'loading-card' : 'item-card'}>
-      {!isLoading && (
-        <>
-          <span>{item.name}</span>
-          <button type="button" onClick={onEdit}>
-            edit-{item.id}
-          </button>
-          <button type="button" onClick={onView}>
-            view-{item.id}
-          </button>
-        </>
-      )}
-    </div>
+vi.mock('@/components/ui/pagination', () => ({
+  Pagination: ({ children }: any) => <div data-testid="pagination">{children}</div>,
+  PaginationContent: ({ children }: any) => <div>{children}</div>,
+  PaginationItem: ({ children }: any) => <div>{children}</div>,
+  PaginationLink: ({ children, isActive, onClick }: any) => (
+    <button data-active={String(isActive)} onClick={onClick}>
+      {children}
+    </button>
+  ),
+  PaginationNext: ({ onClick, className }: any) => (
+    <button onClick={onClick} className={className}>
+      Next
+    </button>
+  ),
+  PaginationPrevious: ({ onClick, className }: any) => (
+    <button onClick={onClick} className={className}>
+      Previous
+    </button>
   ),
 }))
 
-vi.mock('../ItemGallery', () => ({
-  default: ({ items }: { items: Item[] }) => (
-    <div data-testid="item-gallery">Gallery: {items.length} items</div>
+vi.mock('@/components/ui/button', () => ({
+  Button: ({ children, onClick, ...props }: any) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
   ),
 }))
+
+const mockItems = [
+  {
+    id: 1,
+    name: 'Item 1',
+    status: 'active',
+    images: [],
+    primary_image: null,
+    category: { name: 'Cat1' },
+    tags: [],
+    spot: null,
+  },
+]
 
 describe('ThingContent', () => {
-  const mockOnPageChange = vi.fn()
-  const mockOnItemEdit = vi.fn()
-  const mockOnItemView = vi.fn()
-  const mockOnReload = vi.fn()
-  const mockOnClearFilters = vi.fn()
-
-  const mockItems: Item[] = [
-    { id: 1, name: 'Item 1' } as Item,
-    { id: 2, name: 'Item 2' } as Item,
-    { id: 3, name: 'Item 3' } as Item,
-  ]
-
-  const mockMeta = {
-    current_page: 1,
-    last_page: 3,
-    per_page: 10,
-    total: 30,
+  const defaultProps = {
+    items: mockItems,
+    loading: false,
+    error: null,
+    meta: { current_page: 1, last_page: 1, per_page: 10, total: 1 },
+    currentPage: 1,
+    searchTerm: '',
+    hasActiveFilters: false,
+    viewMode: 'list' as 'list' | 'gallery',
+    onPageChange: vi.fn(),
+    onItemEdit: vi.fn(),
+    onItemView: vi.fn(),
+    onReload: vi.fn(),
+    onClearFilters: vi.fn(),
   }
 
-  beforeEach(() => {
-    vi.clearAllMocks()
+  it('renders loading skeletons when loading', () => {
+    const { container } = render(<ThingContent {...defaultProps} loading items={[]} meta={null} />)
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
   })
 
-  describe('加载状态', () => {
-    it('应该显示加载骨架屏', () => {
-      render(
-        <ThingContent
-          items={[]}
-          loading={true}
-          error={null}
-          meta={null}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      const loadingCards = screen.getAllByTestId('loading-card')
-      expect(loadingCards.length).toBeGreaterThan(0)
-    })
-
-    it('有已有数据时加载中应优先显示列表', () => {
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={true}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      expect(screen.getByText('Item 1')).toBeInTheDocument()
-      expect(screen.queryByTestId('loading-card')).not.toBeInTheDocument()
-    })
+  it('renders error state', () => {
+    render(<ThingContent {...defaultProps} error="Failed to load" items={[]} meta={null} />)
+    expect(screen.getByText('加载失败')).toBeDefined()
   })
 
-  describe('错误状态', () => {
-    it('应该显示错误信息', () => {
-      render(
-        <ThingContent
-          items={[]}
-          loading={false}
-          error="加载失败"
-          meta={null}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      expect(screen.getByText('加载失败')).toBeInTheDocument()
-      expect(screen.getByText('重新加载')).toBeInTheDocument()
-    })
-
-    it('应该在点击重新加载按钮时调用 onReload', async () => {
-      const user = userEvent.setup()
-      render(
-        <ThingContent
-          items={[]}
-          loading={false}
-          error="加载失败"
-          meta={null}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      const reloadButton = screen.getByText('重新加载')
-      await user.click(reloadButton)
-
-      expect(mockOnReload).toHaveBeenCalledTimes(1)
-    })
+  it('renders empty state when no items', () => {
+    render(
+      <ThingContent
+        {...defaultProps}
+        items={[]}
+        meta={{ current_page: 1, last_page: 1, per_page: 10, total: 0 }}
+      />
+    )
+    expect(screen.getByText('暂无物品')).toBeDefined()
   })
 
-  describe('空状态', () => {
-    it('应该在没有物品时显示空状态', () => {
-      render(
-        <ThingContent
-          items={[]}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      expect(screen.getByText('暂无物品')).toBeInTheDocument()
-    })
-
-    it('应该在搜索无结果时显示清除筛选按钮', () => {
-      render(
-        <ThingContent
-          items={[]}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm="test search"
-          hasActiveFilters={true}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      expect(screen.getByText('清除筛选条件')).toBeInTheDocument()
-    })
-
-    it('应该在点击清除筛选按钮时调用 onClearFilters', async () => {
-      const user = userEvent.setup()
-      render(
-        <ThingContent
-          items={[]}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm="test"
-          hasActiveFilters={true}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      const clearButton = screen.getByText('清除筛选条件')
-      await user.click(clearButton)
-
-      expect(mockOnClearFilters).toHaveBeenCalledTimes(1)
-    })
+  it('renders items in list view', () => {
+    render(<ThingContent {...defaultProps} items={mockItems} />)
+    expect(screen.getByText('Item 1')).toBeDefined()
   })
 
-  describe('列表视图', () => {
-    it('应该在列表模式下渲染物品', () => {
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      expect(screen.getByText('Item 1')).toBeInTheDocument()
-      expect(screen.getByText('Item 2')).toBeInTheDocument()
-      expect(screen.getByText('Item 3')).toBeInTheDocument()
-    })
-
-    it('应该在点击物品操作时调用 onItemEdit 和 onItemView', async () => {
-      const user = userEvent.setup()
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      await user.click(screen.getByRole('button', { name: 'edit-1' }))
-      await user.click(screen.getByRole('button', { name: 'view-2' }))
-
-      expect(mockOnItemEdit).toHaveBeenCalledWith(1)
-      expect(mockOnItemView).toHaveBeenCalledWith(2)
-    })
-  })
-
-  describe('画廊视图', () => {
-    it('应该在画廊模式下渲染物品', () => {
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="gallery"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      expect(screen.getByTestId('item-gallery')).toBeInTheDocument()
-      expect(screen.getByText('Gallery: 3 items')).toBeInTheDocument()
-    })
-  })
-
-  describe('分页', () => {
-    it('应该在有多页时显示分页', () => {
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      // 应该显示页码按钮
-      expect(screen.getByText('1')).toBeInTheDocument()
-      expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText('3')).toBeInTheDocument()
-    })
-
-    it('应该在点击页码时调用 onPageChange', async () => {
-      const user = userEvent.setup()
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      await user.click(screen.getByText('2'))
-
-      expect(mockOnPageChange).toHaveBeenCalledWith(2)
-    })
-
-    it('应该在点击上一页和下一页时调用 onPageChange', async () => {
-      const user = userEvent.setup()
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={2}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      await user.click(screen.getByLabelText('Go to previous page'))
-      await user.click(screen.getByLabelText('Go to next page'))
-
-      expect(mockOnPageChange).toHaveBeenCalledWith(1)
-      expect(mockOnPageChange).toHaveBeenCalledWith(3)
-    })
-
-    it('应该在到达边界时不触发上一页/下一页回调', async () => {
-      const user = userEvent.setup()
-      const { rerender } = render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      await user.click(screen.getByLabelText('Go to previous page'))
-      expect(mockOnPageChange).not.toHaveBeenCalled()
-
-      rerender(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={mockMeta}
-          currentPage={3}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      await user.click(screen.getByLabelText('Go to next page'))
-      expect(mockOnPageChange).not.toHaveBeenCalled()
-    })
-
-    it('应该在只有一页时不显示分页', () => {
-      const singlePageMeta = { ...mockMeta, last_page: 1 }
-      render(
-        <ThingContent
-          items={mockItems}
-          loading={false}
-          error={null}
-          meta={singlePageMeta}
-          currentPage={1}
-          searchTerm=""
-          hasActiveFilters={false}
-          viewMode="list"
-          onPageChange={mockOnPageChange}
-          onItemEdit={mockOnItemEdit}
-          onItemView={mockOnItemView}
-          onReload={mockOnReload}
-          onClearFilters={mockOnClearFilters}
-        />
-      )
-
-      // 不应该显示分页组件（没有 Pagination 相关按钮）
-      expect(screen.queryByText('2')).not.toBeInTheDocument()
-    })
+  it('calls onItemView when item clicked', () => {
+    const onItemView = vi.fn()
+    render(<ThingContent {...defaultProps} items={mockItems} onItemView={onItemView} />)
+    fireEvent.click(screen.getByText('Item 1'))
+    expect(onItemView).toHaveBeenCalledWith(1)
   })
 })

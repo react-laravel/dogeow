@@ -102,6 +102,7 @@ export const CategoryParentRow = memo<CategoryParentRowProps>(
                 onClick={onDelete}
                 disabled={loading}
                 className="h-8 w-8"
+                aria-label="删除"
               >
                 <Trash2 className="text-destructive h-4 w-4" />
               </Button>

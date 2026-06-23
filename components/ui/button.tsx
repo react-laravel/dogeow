@@ -51,15 +51,20 @@ function Button({
 }: ButtonProps) {
   const Comp = asChild ? Slot : 'button'
   const isDisabled = disabled || loading
+  const resolvedTabIndex = isDisabled ? -1 : props.tabIndex
 
   // 当使用 asChild 时，不能添加额外的元素，直接传递 children
   if (asChild) {
     return (
       <Comp
-        data-slot="button"
-        className={cn(buttonVariants({ variant, size, className }))}
-        disabled={isDisabled}
         {...props}
+        data-slot="button"
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          isDisabled && 'pointer-events-none opacity-50'
+        )}
+        disabled={isDisabled}
+        tabIndex={resolvedTabIndex}
       >
         {children}
       </Comp>
@@ -69,10 +74,14 @@ function Button({
   // 正常的 button 元素可以包含多个子元素
   return (
     <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      disabled={isDisabled}
       {...props}
+      data-slot="button"
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        isDisabled && 'pointer-events-none opacity-50'
+      )}
+      disabled={isDisabled}
+      tabIndex={resolvedTabIndex}
     >
       {loading && <LoadingSpinner size="sm" className="mr-2" aria-label="加载中" />}
       {loading && loadingText ? loadingText : children}

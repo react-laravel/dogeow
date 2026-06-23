@@ -17,7 +17,7 @@ export class StoredPreferenceStrategy {
     }
 
     try {
-      const stored = localStorage.getItem('dogeow-language-preference')
+      const stored = window.localStorage.getItem('dogeow-language-preference')
       if (stored && this.isSupportedLanguage(stored)) {
         return {
           language: stored,

@@ -22,6 +22,10 @@ export function getApiBaseUrl(): string {
     return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
   }
 
+  if (!window.location) {
+    return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+  }
+
   const hostname = window.location.hostname
   if (isIpAddress(hostname)) {
     return window.location.origin.replace(':3000', ':8000')

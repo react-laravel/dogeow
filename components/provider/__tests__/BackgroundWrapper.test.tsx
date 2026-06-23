@@ -50,7 +50,8 @@ describe('BackgroundWrapper', () => {
 
     const wrapper = container.firstChild as HTMLElement
     expect(wrapper).toHaveClass('flex')
-    expect(wrapper).toHaveClass('min-h-[calc(100vh-var(--navbar-height,64px))]')
+    expect(wrapper).toHaveClass('min-h-0')
+    expect(wrapper).toHaveClass('flex-1')
     expect(wrapper).toHaveClass('flex-col')
     expect(wrapper).not.toHaveClass('bg-cover')
     expect(wrapper).not.toHaveClass('bg-fixed')
@@ -73,7 +74,8 @@ describe('BackgroundWrapper', () => {
 
     const wrapper = container.firstChild as HTMLElement
     expect(wrapper).toHaveClass('flex')
-    expect(wrapper).toHaveClass('min-h-[calc(100vh-var(--navbar-height,64px))]')
+    expect(wrapper).toHaveClass('min-h-0')
+    expect(wrapper).toHaveClass('flex-1')
     expect(wrapper).toHaveClass('flex-col')
     expect(wrapper).toHaveClass('bg-cover')
     expect(wrapper).toHaveClass('bg-fixed')

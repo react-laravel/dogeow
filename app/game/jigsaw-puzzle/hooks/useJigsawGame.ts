@@ -17,8 +17,10 @@ export const useJigsawGame = (
   puzzleSize: number,
   onComplete: () => void
 ) => {
-  const [pieces, setPieces] = useState<PuzzlePiece[]>([])
-  const [slots, setSlots] = useState<PuzzleSlot[]>([])
+  const [pieces, setPieces] = useState<PuzzlePiece[]>(() =>
+    initializePuzzlePieces(size, imageUrl, puzzleSize)
+  )
+  const [slots, setSlots] = useState<PuzzleSlot[]>(() => initializePuzzleSlots(size))
   const [startTime, setStartTime] = useState(new Date())
   const [isComplete, setIsComplete] = useState(false)
   const [draggedPiece, setDraggedPiece] = useState<number | null>(null)

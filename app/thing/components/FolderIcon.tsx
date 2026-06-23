@@ -18,6 +18,15 @@ const FolderIcon: React.FC<FolderIconProps> = ({ isOpen, onClick, className, siz
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={event => {
+        if (!onClick) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick(event as unknown as React.MouseEvent)
+        }
+      }}
       className={cn(
         'relative cursor-pointer transition-colors',
         isOpen ? 'text-primary' : 'text-muted-foreground hover:text-primary/80',

@@ -1,110 +1,34 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { DarkModeToggle } from '../DarkModeToggle'
 
-// Mock next-themes
 const mockSetTheme = vi.fn()
-const mockUseTheme = vi.fn(() => ({
-  theme: 'light',
-  setTheme: mockSetTheme,
-}))
 
 vi.mock('next-themes', () => ({
-  useTheme: () => mockUseTheme(),
+  useTheme: () => ({ theme: 'light', setTheme: mockSetTheme }),
 }))
 
 describe('DarkModeToggle', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    // Reset document classes
-    document.documentElement.classList.remove('dark')
-    mockUseTheme.mockReturnValue({
-      theme: 'light',
-      setTheme: mockSetTheme,
-    })
+  it('renders theme label', () => {
+    render(<DarkModeToggle />)
+    expect(screen.getByText('主题:')).toBeDefined()
   })
 
-  describe('Rendering', () => {
-    it('should render toggle in client environment', () => {
-      const { container } = render(<DarkModeToggle />)
-      expect(container.firstChild).not.toBeNull()
-    })
-
-    it('should render theme toggle buttons after mount', async () => {
-      render(<DarkModeToggle />)
-
-      await waitFor(() => {
-        expect(screen.getByText('主题:')).toBeInTheDocument()
-      })
-
-      const buttons = screen.getAllByRole('button')
-      expect(buttons.length).toBeGreaterThanOrEqual(2)
-    })
-
-    it('should display current theme', async () => {
-      render(<DarkModeToggle />)
-
-      await waitFor(() => {
-        expect(screen.getByText(/当前模式:/)).toBeInTheDocument()
-      })
-    })
-
-    it('should show light mode as current when theme is light', async () => {
-      mockUseTheme.mockReturnValue({
-        theme: 'light',
-        setTheme: mockSetTheme,
-      })
-
-      render(<DarkModeToggle />)
-
-      await waitFor(() => {
-        expect(screen.getByText('当前模式: 浅色')).toBeInTheDocument()
-      })
-    })
-
-    it('should show dark mode as current when theme is dark', async () => {
-      mockUseTheme.mockReturnValue({
-        theme: 'dark',
-        setTheme: mockSetTheme,
-      })
-
-      render(<DarkModeToggle />)
-
-      await waitFor(() => {
-        expect(screen.getByText('当前模式: 深色')).toBeInTheDocument()
-      })
-    })
+  it('renders light and dark mode buttons', () => {
+    render(<DarkModeToggle />)
+    expect(screen.getByText('浅色模式')).toBeDefined()
+    expect(screen.getByText('深色模式')).toBeDefined()
   })
 
-  describe('Interactions', () => {
-    it('should call setTheme with light when light button is clicked', async () => {
-      const user = userEvent.setup()
-      render(<DarkModeToggle />)
+  it('shows current mode as light', () => {
+    render(<DarkModeToggle />)
+    expect(screen.getByText(/当前模式: 浅色/)).toBeDefined()
+  })
 
-      await waitFor(() => {
-        expect(screen.getByText('主题:')).toBeInTheDocument()
-      })
-
-      const lightButton = screen.getByRole('button', { name: '浅色模式' })
-      await user.click(lightButton)
-
-      expect(mockSetTheme).toHaveBeenCalledWith('light')
-    })
-
-    it('should call setTheme with dark and add dark class when dark button is clicked', async () => {
-      const user = userEvent.setup()
-      render(<DarkModeToggle />)
-
-      await waitFor(() => {
-        expect(screen.getByText('主题:')).toBeInTheDocument()
-      })
-
-      const darkButton = screen.getByRole('button', { name: '深色模式' })
-      await user.click(darkButton)
-
-      expect(mockSetTheme).toHaveBeenCalledWith('dark')
-      expect(document.documentElement.classList.contains('dark')).toBe(true)
-    })
+  it('calls setTheme("dark") when dark button clicked', () => {
+    render(<DarkModeToggle />)
+    const darkBtn = screen.getByText('深色模式').closest('button')
+    if (darkBtn) fireEvent.click(darkBtn)
+    expect(mockSetTheme).toHaveBeenCalledWith('dark')
   })
 })

@@ -32,6 +32,7 @@ export default function ItemFormLayout({
     <PageContainer className="py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <h1 className="text-lg font-semibold">{title}</h1>
           {autoSaving !== undefined && lastSaved !== undefined && (
             <AutoSaveStatus autoSaving={autoSaving} lastSaved={lastSaved} />
           )}

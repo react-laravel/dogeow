@@ -11,7 +11,6 @@ vi.mock('../utils', () => ({
 import { validateTranslations, getAllTranslationKeys, hasTranslationKey } from '../utils'
 
 describe('dev-tools', () => {
-  let originalNodeEnv: string | undefined
   let consoleSpy: {
     log: ReturnType<typeof vi.spyOn>
     group: ReturnType<typeof vi.spyOn>
@@ -20,55 +19,36 @@ describe('dev-tools', () => {
   }
 
   beforeEach(() => {
-    originalNodeEnv = process.env.NODE_ENV
     consoleSpy = {
       log: vi.spyOn(console, 'log').mockImplementation(() => {}),
       group: vi.spyOn(console, 'group').mockImplementation(() => {}),
       groupEnd: vi.spyOn(console, 'groupEnd').mockImplementation(() => {}),
       warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),
     }
-    Object.defineProperty(process.env, 'NODE_ENV', {
-      value: 'development',
-      writable: true,
-      configurable: true,
-    })
+    vi.stubEnv('NODE_ENV', 'development')
     Object.values(consoleSpy).forEach(spy => spy.mockClear())
   })
 
   afterEach(() => {
-    Object.defineProperty(process.env, 'NODE_ENV', {
-      value: originalNodeEnv,
-      writable: true,
-      configurable: true,
-    })
+    vi.unstubAllEnvs()
     Object.values(consoleSpy).forEach(spy => spy.mockRestore())
     vi.clearAllMocks()
   })
 
   describe('validateAllTranslations', () => {
     it('should skip validation in production', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'production',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'production')
 
       const result = validateAllTranslations()
 
-      expect(consoleSpy.log).toHaveBeenCalledWith(
-        '[i18n] Translation validation skipped in production'
-      )
+      expect(consoleSpy.log).toHaveBeenCalledWith('[i18n] 生产环境下跳过翻译校验')
       expect(getAllTranslationKeys).not.toHaveBeenCalled()
       expect(validateTranslations).not.toHaveBeenCalled()
       expect(result).toBeUndefined()
     })
 
     it('should validate all translations in development with valid results', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const mockKeys = ['nav.home', 'nav.about', 'common.save']
       const mockValidation = {
         isValid: true,
@@ -80,9 +60,9 @@ describe('dev-tools', () => {
 
       const result = validateAllTranslations()
 
-      expect(consoleSpy.group).toHaveBeenCalledWith('[i18n] Full Translation Validation')
-      expect(consoleSpy.log).toHaveBeenCalledWith('Found 3 translation keys to validate')
-      expect(consoleSpy.log).toHaveBeenCalledWith('✅ All translations are complete!')
+      expect(consoleSpy.group).toHaveBeenCalledWith('[i18n] 全量翻译校验')
+      expect(consoleSpy.log).toHaveBeenCalledWith('发现 3 个待校验的翻译 key')
+      expect(consoleSpy.log).toHaveBeenCalledWith('✅ 所有翻译均已完成！')
       expect(consoleSpy.groupEnd).toHaveBeenCalled()
       expect(getAllTranslationKeys).toHaveBeenCalled()
       expect(validateTranslations).toHaveBeenCalledWith(mockKeys)
@@ -90,11 +70,7 @@ describe('dev-tools', () => {
     })
 
     it('should report missing translations in development', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const mockKeys = ['nav.home', 'nav.about']
       const mockValidation = {
         isValid: false,
@@ -110,11 +86,11 @@ describe('dev-tools', () => {
 
       const result = validateAllTranslations()
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('❌ Found 3 missing translations')
-      expect(consoleSpy.group).toHaveBeenCalledWith('Missing in en (2 keys):')
+      expect(consoleSpy.log).toHaveBeenCalledWith('❌ 发现 3 处缺失翻译')
+      expect(consoleSpy.group).toHaveBeenCalledWith('在 en 缺失 (2 个 key):')
       expect(consoleSpy.log).toHaveBeenCalledWith('  - nav.home')
       expect(consoleSpy.log).toHaveBeenCalledWith('  - nav.about')
-      expect(consoleSpy.group).toHaveBeenCalledWith('Missing in ja (1 keys):')
+      expect(consoleSpy.group).toHaveBeenCalledWith('在 ja 缺失 (1 个 key):')
       expect(consoleSpy.log).toHaveBeenCalledWith('  - nav.home')
       expect(result).toEqual(mockValidation)
     })
@@ -122,11 +98,7 @@ describe('dev-tools', () => {
 
   describe('checkTranslationKeys', () => {
     it('should skip check in production and return all keys as existing', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'production',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'production')
       const keys = ['nav.home', 'nav.about']
 
       const result = checkTranslationKeys(keys)
@@ -139,11 +111,7 @@ describe('dev-tools', () => {
     })
 
     it('should check translation keys in development with all existing', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const keys = ['nav.home', 'nav.about']
 
       vi.mocked(hasTranslationKey).mockReturnValue(true)
@@ -161,11 +129,7 @@ describe('dev-tools', () => {
     })
 
     it('should report missing keys in development', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const keys = ['nav.home', 'nav.missing', 'nav.about']
 
       vi.mocked(hasTranslationKey)
@@ -175,8 +139,8 @@ describe('dev-tools', () => {
 
       const result = checkTranslationKeys(keys)
 
-      expect(consoleSpy.group).toHaveBeenCalledWith('[i18n] Translation Key Check')
-      expect(consoleSpy.warn).toHaveBeenCalledWith('1 translation keys are missing:')
+      expect(consoleSpy.group).toHaveBeenCalledWith('[i18n] 翻译 Key 检查')
+      expect(consoleSpy.warn).toHaveBeenCalledWith('有 1 个翻译 key 缺失:')
       expect(consoleSpy.warn).toHaveBeenCalledWith('  - nav.missing')
       expect(consoleSpy.groupEnd).toHaveBeenCalled()
       expect(result).toEqual([
@@ -187,18 +151,14 @@ describe('dev-tools', () => {
     })
 
     it('should handle multiple missing keys', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const keys = ['nav.missing1', 'nav.missing2']
 
       vi.mocked(hasTranslationKey).mockReturnValue(false)
 
       const result = checkTranslationKeys(keys)
 
-      expect(consoleSpy.warn).toHaveBeenCalledWith('2 translation keys are missing:')
+      expect(consoleSpy.warn).toHaveBeenCalledWith('有 2 个翻译 key 缺失:')
       expect(consoleSpy.warn).toHaveBeenCalledWith('  - nav.missing1')
       expect(consoleSpy.warn).toHaveBeenCalledWith('  - nav.missing2')
       expect(result).toEqual([
@@ -210,11 +170,7 @@ describe('dev-tools', () => {
 
   describe('logTranslationStats', () => {
     it('should skip logging in production', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'production',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'production')
 
       logTranslationStats()
 
@@ -223,11 +179,7 @@ describe('dev-tools', () => {
     })
 
     it('should log translation statistics in development', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const mockKeys = [
         'nav.home',
         'nav.about',
@@ -242,39 +194,31 @@ describe('dev-tools', () => {
 
       logTranslationStats()
 
-      expect(consoleSpy.group).toHaveBeenCalledWith('[i18n] Translation Statistics')
-      expect(consoleSpy.log).toHaveBeenCalledWith('Total translation keys: 7')
-      expect(consoleSpy.log).toHaveBeenCalledWith('Keys by namespace:')
-      expect(consoleSpy.log).toHaveBeenCalledWith('  nav: 3 keys')
-      expect(consoleSpy.log).toHaveBeenCalledWith('  common: 2 keys')
-      expect(consoleSpy.log).toHaveBeenCalledWith('  settings: 2 keys')
+      expect(consoleSpy.group).toHaveBeenCalledWith('[i18n] 翻译统计信息')
+      expect(consoleSpy.log).toHaveBeenCalledWith('翻译 key 总数: 7')
+      expect(consoleSpy.log).toHaveBeenCalledWith('各命名空间下的 key 数量:')
+      expect(consoleSpy.log).toHaveBeenCalledWith('  nav: 3 个 key')
+      expect(consoleSpy.log).toHaveBeenCalledWith('  common: 2 个 key')
+      expect(consoleSpy.log).toHaveBeenCalledWith('  settings: 2 个 key')
       expect(consoleSpy.groupEnd).toHaveBeenCalled()
     })
 
     it('should handle keys without namespaces', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const mockKeys = ['standalone', 'nav.home', 'another']
 
       vi.mocked(getAllTranslationKeys).mockReturnValue(mockKeys)
 
       logTranslationStats()
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('Total translation keys: 3')
-      expect(consoleSpy.log).toHaveBeenCalledWith('  standalone: 1 keys')
-      expect(consoleSpy.log).toHaveBeenCalledWith('  nav: 1 keys')
-      expect(consoleSpy.log).toHaveBeenCalledWith('  another: 1 keys')
+      expect(consoleSpy.log).toHaveBeenCalledWith('翻译 key 总数: 3')
+      expect(consoleSpy.log).toHaveBeenCalledWith('  standalone: 1 个 key')
+      expect(consoleSpy.log).toHaveBeenCalledWith('  nav: 1 个 key')
+      expect(consoleSpy.log).toHaveBeenCalledWith('  another: 1 个 key')
     })
 
     it('should sort namespaces by count in descending order', () => {
-      Object.defineProperty(process.env, 'NODE_ENV', {
-        value: 'development',
-        writable: true,
-        configurable: true,
-      })
+      vi.stubEnv('NODE_ENV', 'development')
       const mockKeys = ['a.1', 'b.1', 'b.2', 'b.3', 'c.1', 'c.2']
 
       vi.mocked(getAllTranslationKeys).mockReturnValue(mockKeys)
@@ -284,7 +228,7 @@ describe('dev-tools', () => {
       // Should be sorted: b (3), c (2), a (1)
       const logCalls = consoleSpy.log.mock.calls as Array<[string]>
       const namespaceCalls = logCalls.filter(
-        call => call[0] && (call[0] as string).includes(' keys')
+        call => call[0] && (call[0] as string).includes(' 个 key')
       )
 
       // Debug what's actually being logged
@@ -299,9 +243,9 @@ describe('dev-tools', () => {
 
       expect(namespaceCalls.length).toBeGreaterThanOrEqual(3)
       // Find the specific namespace calls we expect
-      const bCall = namespaceCalls.find(call => (call[0] as string).includes('b: 3 keys'))
-      const cCall = namespaceCalls.find(call => (call[0] as string).includes('c: 2 keys'))
-      const aCall = namespaceCalls.find(call => (call[0] as string).includes('a: 1 keys'))
+      const bCall = namespaceCalls.find(call => (call[0] as string).includes('b: 3 个 key'))
+      const cCall = namespaceCalls.find(call => (call[0] as string).includes('c: 2 个 key'))
+      const aCall = namespaceCalls.find(call => (call[0] as string).includes('a: 1 个 key'))
 
       expect(bCall).toBeDefined()
       expect(cCall).toBeDefined()

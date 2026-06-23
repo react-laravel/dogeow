@@ -52,6 +52,7 @@ const CategoryRow = memo(
                 onClick={onSaveEdit}
                 disabled={loading}
                 className="h-8 w-8"
+                aria-label="保存"
               >
                 <Check className="h-4 w-4 text-green-500" />
               </Button>
@@ -61,6 +62,7 @@ const CategoryRow = memo(
                 onClick={onCancelEdit}
                 disabled={loading}
                 className="h-8 w-8"
+                aria-label="取消"
               >
                 <X className="h-4 w-4 text-red-500" />
               </Button>
@@ -79,6 +81,7 @@ const CategoryRow = memo(
             onClick={onDelete}
             disabled={loading}
             className="h-8 w-8"
+            aria-label="删除"
           >
             <Trash2 className="text-destructive h-4 w-4" />
           </Button>

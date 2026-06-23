@@ -47,7 +47,7 @@ export class LanguageDetectionCache {
 export const createDefaultResult = (
   method: DetectionMethod = 'default'
 ): LanguageDetectionResult => ({
-  language: 'en',
+  language: 'zh-CN',
   confidence: 0.5,
   method,
   timestamp: Date.now(),

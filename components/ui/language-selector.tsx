@@ -37,7 +37,11 @@ interface LanguageSelectorProps {
 
 // 国旗图标组件
 const FlagIcon = ({ languageCode }: { languageCode: string }) => {
-  return <span className="text-lg">{getLanguageFlag(languageCode)}</span>
+  return (
+    <span aria-label={`${languageCode} flag`} className="text-lg">
+      {getLanguageFlag(languageCode)}
+    </span>
+  )
 }
 
 /**

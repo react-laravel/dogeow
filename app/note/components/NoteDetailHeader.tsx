@@ -45,3 +45,5 @@ export const NoteDetailHeader = memo<NoteDetailHeaderProps>(
 )
 
 NoteDetailHeader.displayName = 'NoteDetailHeader'
+
+export default NoteDetailHeader

@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useState } from 'react'
 import { Plus, Link as LinkIcon } from 'lucide-react'
+import { isAdminSync } from '@/lib/auth'
 
 interface GraphViewToolbarProps {
   onNewNode: () => void
@@ -13,7 +14,6 @@ const GraphViewToolbar = memo(({ onNewNode, onCreateLink }: GraphViewToolbarProp
 
   useEffect(() => {
     const checkAdmin = () => {
-      const { isAdminSync } = require('@/lib/auth')
       setIsAdmin(isAdminSync())
     }
     checkAdmin()

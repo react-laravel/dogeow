@@ -106,7 +106,7 @@ dogeowLogs.reset()      - 重置到默认设置
   // 保存设置到本地存储
   private saveOptions() {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('dogeow-log-control', JSON.stringify(this.options))
+      window.localStorage.setItem('dogeow-log-control', JSON.stringify(this.options))
     }
   }
 
@@ -114,7 +114,7 @@ dogeowLogs.reset()      - 重置到默认设置
   private loadOptions() {
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('dogeow-log-control')
+        const saved = window.localStorage.getItem('dogeow-log-control')
         if (saved) {
           this.options = { ...this.options, ...JSON.parse(saved) }
         }

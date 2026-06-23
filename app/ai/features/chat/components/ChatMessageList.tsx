@@ -28,7 +28,7 @@ export const ChatMessageList = React.memo<ChatMessageListProps>(
       })
     }, [displayMessages, isLoading])
 
-    const hasMessages = displayMessages.length > 0 || (isLoading && completion)
+    const hasMessages = displayMessages.length > 0 || isLoading
 
     const content = hasMessages ? (
       <div className={variant === 'dialog' ? 'space-y-2' : 'space-y-6'}>

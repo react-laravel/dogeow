@@ -256,7 +256,7 @@ export default function NoteNodeEditor({
               {node ? '编辑节点' : isSimpleCreateChild ? '创建子节点' : '新建节点'}
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button className="hover:bg-muted rounded p-1">
+              <button className="hover:bg-muted rounded p-1" aria-label="关闭">
                 <X className="h-5 w-5" />
               </button>
             </Dialog.Close>

@@ -3,7 +3,11 @@
  * 使用多种策略检测用户首选语言，实现缓存和置信度评分
  */
 import type { SupportedLanguage } from './translations'
-import { isSupportedLanguage } from './browser-language-utils'
+import {
+  detectLanguageFromBrowser,
+  isSupportedLanguage,
+  normalizeLanguageCode,
+} from './browser-language-utils'
 import { LanguageDetectionCache, DETECTION_CONFIG, createDefaultResult } from './language-cache'
 import { GeolocationDetector } from './geolocation-detector'
 import { BrowserLanguageStrategy } from './strategies/BrowserLanguageStrategy'
@@ -215,8 +219,64 @@ export class LanguageDetectionService {
     return null
   }
 
+  private detectBrowserLanguage(): LanguageDetectionResult | null {
+    if (typeof window === 'undefined') return null
+
+    const browserLanguages = navigator.languages || [navigator.language]
+    const result = detectLanguageFromBrowser([...browserLanguages])
+    if (!result) return null
+
+    return {
+      ...result,
+      method: 'browser',
+      timestamp: Date.now(),
+    }
+  }
+
+  private detectByGeolocation(): LanguageDetectionResult | null {
+    const result = this.geoStrategy.detect()
+    if (!result) return null
+
+    return {
+      ...result,
+      method: 'geolocation',
+      timestamp: Date.now(),
+    }
+  }
+
+  private getStoredPreference(): SupportedLanguage | null {
+    const result = this.storedStrategy.detect()
+    return result?.language ?? null
+  }
+
+  private isSupportedLanguage(lang: string): lang is SupportedLanguage {
+    return isSupportedLanguage(lang)
+  }
+
+  private normalizeLanguageCode(lang: string): SupportedLanguage | null {
+    return normalizeLanguageCode(lang)
+  }
+
   private detectByUserAgent(): LanguageDetectionResult {
     if (typeof window === 'undefined') return createDefaultResult('user_agent')
+
+    const legacyLanguage =
+      ('userLanguage' in navigator &&
+        (navigator as Navigator & { userLanguage?: string }).userLanguage) ||
+      ('systemLanguage' in navigator &&
+        (navigator as Navigator & { systemLanguage?: string }).systemLanguage)
+
+    if (legacyLanguage) {
+      const language = normalizeLanguageCode(legacyLanguage)
+      if (language) {
+        return {
+          language,
+          confidence: CONFIDENCE_THRESHOLDS.USER_AGENT,
+          method: 'user_agent',
+          timestamp: Date.now(),
+        }
+      }
+    }
 
     const userAgent = navigator.userAgent.toLowerCase()
     const languagePatterns: Array<{ patterns: string[]; language: SupportedLanguage }> = [

@@ -172,7 +172,7 @@ describe('applyFilters edge cases', () => {
     }
     applyFilters(filters, onApply)
     const applied = onApply.mock.calls[0][0] as FilterState
-    expect(applied.tags).toEqual([])
+    expect(applied.tags).toBeUndefined()
   })
 
   it('should handle tags with extra whitespace', () => {

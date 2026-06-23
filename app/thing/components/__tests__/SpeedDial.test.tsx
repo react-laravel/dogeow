@@ -1,85 +1,70 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { SpeedDial } from '../SpeedDial'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import ThingSpeedDial, { SpeedDial } from '../SpeedDial'
 
-// Mock next/navigation
-const mockPush = vi.fn()
+const { mockUseRouter } = vi.hoisted(() => ({
+  mockUseRouter: vi.fn(),
+}))
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
+  useRouter: mockUseRouter,
+}))
+
+vi.mock('@/components/ui/button', () => ({
+  Button: ({ children, onClick, ...props }: any) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
 }))
 
 describe('SpeedDial', () => {
-  const mockOnClick = vi.fn()
-
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockUseRouter.mockReturnValue({ push: vi.fn() })
   })
 
-  describe('Rendering', () => {
-    it('should render speed dial button', () => {
-      render(<SpeedDial />)
-      expect(screen.getByRole('button')).toBeInTheDocument()
-    })
-
-    it('should render with default icon', () => {
-      render(<SpeedDial />)
-      const button = screen.getByRole('button')
-      expect(button).toBeInTheDocument()
-    })
-
-    it('should render with custom icon', () => {
-      render(<SpeedDial icon={<span data-testid="custom-icon">Custom</span>} />)
-      expect(screen.getByTestId('custom-icon')).toBeInTheDocument()
-    })
-
-    it('should apply custom className', () => {
-      render(<SpeedDial className="custom-class" />)
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('custom-class')
-    })
+  it('renders plus icon by default', () => {
+    render(<SpeedDial />)
+    expect(screen.getByRole('button')).toBeDefined()
   })
 
-  describe('Interactions', () => {
-    it('should call onClick when provided', async () => {
-      const user = userEvent.setup()
-      render(<SpeedDial onClick={mockOnClick} />)
-
-      const button = screen.getByRole('button')
-      await user.click(button)
-
-      expect(mockOnClick).toHaveBeenCalledTimes(1)
-      expect(mockPush).not.toHaveBeenCalled()
-    })
-
-    it('should navigate to href when onClick is not provided', async () => {
-      const user = userEvent.setup()
-      render(<SpeedDial href="/custom-path" />)
-
-      const button = screen.getByRole('button')
-      await user.click(button)
-
-      expect(mockPush).toHaveBeenCalledWith('/custom-path')
-      expect(mockOnClick).not.toHaveBeenCalled()
-    })
-
-    it('should use default href when neither onClick nor href is provided', async () => {
-      const user = userEvent.setup()
-      render(<SpeedDial />)
-
-      const button = screen.getByRole('button')
-      await user.click(button)
-
-      expect(mockPush).toHaveBeenCalledWith('/thing/add')
-    })
+  it('calls router.push with default href', () => {
+    const push = vi.fn()
+    mockUseRouter.mockReturnValueOnce({ push })
+    render(<SpeedDial />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(push).toHaveBeenCalledWith('/thing/add')
   })
 
-  describe('Props', () => {
-    it('should use default href when href is not provided', () => {
-      render(<SpeedDial />)
-      expect(screen.getByRole('button')).toBeInTheDocument()
-    })
+  it('calls onClick when provided', () => {
+    const onClick = vi.fn()
+    render(<SpeedDial onClick={onClick} />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(onClick).toHaveBeenCalled()
+  })
+
+  it('does not call router.push when onClick provided', () => {
+    const push = vi.fn()
+    const onClick = vi.fn()
+    mockUseRouter.mockReturnValueOnce({ push })
+    render(<SpeedDial onClick={onClick} />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(push).not.toHaveBeenCalled()
+    expect(onClick).toHaveBeenCalled()
+  })
+
+  it('uses custom href', () => {
+    const push = vi.fn()
+    mockUseRouter.mockReturnValueOnce({ push })
+    render(<SpeedDial href="/custom/path" />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(push).toHaveBeenCalledWith('/custom/path')
+  })
+})
+
+describe('ThingSpeedDial', () => {
+  it('renders default speed dial', () => {
+    render(<ThingSpeedDial />)
+    expect(screen.getByRole('button')).toBeDefined()
   })
 })

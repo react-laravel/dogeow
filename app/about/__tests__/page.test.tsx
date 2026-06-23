@@ -6,21 +6,21 @@ describe('About Page', () => {
   it('should render about page with correct content', () => {
     render(<About />)
 
-    expect(screen.getByText('暂时没有介绍')).toBeInTheDocument()
+    expect(screen.getByText('自言自语')).toBeInTheDocument()
+    expect(screen.getByText('红楼梦对照阅读')).toBeInTheDocument()
   })
 
   it('should have correct container classes', () => {
-    render(<About />)
+    const { container } = render(<About />)
 
-    const container = screen.getByText('暂时没有介绍').parentElement
-    expect(container).toHaveClass('container', 'mx-auto', 'p-4')
+    expect(container.firstChild).toHaveClass('mx-auto', 'w-full')
   })
 
   it('should be accessible', () => {
     render(<About />)
 
     // Check that the content is rendered in a div (which is accessible)
-    const content = screen.getByText('暂时没有介绍')
+    const content = screen.getByText('自言自语')
     expect(content).toBeInTheDocument()
   })
 })

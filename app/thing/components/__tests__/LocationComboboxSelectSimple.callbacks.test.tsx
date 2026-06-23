@@ -11,7 +11,7 @@ const mockHooks = vi.hoisted(() => ({
   setSpots: vi.fn(),
 }))
 
-vi.mock('../location/hooks/useLocationData', () => ({
+vi.mock('@/hooks/useLocationData', () => ({
   useLocationData: () => ({
     areas: [{ id: 1, name: '客厅' }],
     rooms: [{ id: 1, name: '主卧', area_id: 1 }],

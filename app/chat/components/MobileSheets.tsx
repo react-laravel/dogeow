@@ -2,7 +2,8 @@
 
 import { UsersIcon, MessageSquareIcon } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { ChatRoomList, OnlineUsers } from './'
+import { ChatRoomList } from './ChatRoomList'
+import { OnlineUsers } from './OnlineUsers'
 import { useTranslation } from '@/hooks/useTranslation'
 import type { ChatRoom } from '../types'
 
@@ -18,7 +19,7 @@ interface MobileSheetsProps {
   onReportUser?: () => void
 }
 
-export default function MobileSheets({
+function MobileSheets({
   isRoomListOpen,
   isUsersListOpen,
   currentRoom,
@@ -73,3 +74,6 @@ export default function MobileSheets({
     </div>
   )
 }
+
+export { MobileSheets }
+export default MobileSheets

@@ -20,7 +20,7 @@ export class GeolocationStrategy {
     'Australia/Sydney': 'en',
   }
 
-  async detect(): Promise<DetectionResult | null> {
+  detect(): DetectionResult | null {
     if (typeof window === 'undefined') {
       return null
     }
@@ -66,7 +66,7 @@ export class GeolocationStrategy {
 
   private getCachedGeolocationData(): DetectionResult | null {
     try {
-      const cachedGeoData = localStorage.getItem('dogeow-geo-language')
+      const cachedGeoData = window.localStorage.getItem('dogeow-geo-language')
       if (!cachedGeoData) return null
 
       const parsed = JSON.parse(cachedGeoData)
@@ -87,7 +87,7 @@ export class GeolocationStrategy {
 
   private cacheGeolocationData(language: SupportedLanguage): void {
     try {
-      localStorage.setItem(
+      window.localStorage.setItem(
         'dogeow-geo-language',
         JSON.stringify({
           language,

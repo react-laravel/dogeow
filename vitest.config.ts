@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: ['./vitest.setup.tsx'],
     globals: true,
     css: true,
     // Performance optimizations
@@ -35,13 +35,30 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary', 'clover'],
       reportsDirectory: './coverage',
-      // 聚焦已建立测试的组件层级，减少历史目录的覆盖率噪音
+      // 核心业务模块 + 已有测试的组件层级
       include: [
+        // thing 组件（原有）
         'app/thing/components/*.{ts,tsx}',
         'app/thing/components/filters/**/*.{ts,tsx}',
         'app/thing/components/item-detail/*.{ts,tsx}',
         'app/thing/components/location-combobox/**/*.{ts,tsx}',
         'app/thing/components/location-tree/**/*.{ts,tsx}',
+        // chat 模块
+        'app/chat/**/*.{ts,tsx}',
+        // note 模块
+        'app/note/**/*.{ts,tsx}',
+        // file 模块
+        'app/file/**/*.{ts,tsx}',
+        // nav 模块
+        'app/nav/**/*.{ts,tsx}',
+        // game 模块
+        'app/game/**/*.{ts,tsx}',
+        // tool 模块
+        'app/tool/**/*.{ts,tsx}',
+        // 共享 hooks、stores、lib
+        'hooks/**/*.{ts,tsx}',
+        'stores/**/*.{ts,tsx}',
+        'lib/**/*.{ts,tsx}',
       ],
       exclude: [
         '**/__tests__/**',

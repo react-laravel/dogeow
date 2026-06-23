@@ -36,3 +36,5 @@ export const NoteTitleInput = memo<NoteTitleInputProps>(
 )
 
 NoteTitleInput.displayName = 'NoteTitleInput'
+
+export default NoteTitleInput

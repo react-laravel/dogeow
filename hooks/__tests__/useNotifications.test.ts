@@ -2,41 +2,59 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useNotifications } from '../useNotifications'
 
+const { mockUseChatStore, mockNotificationInstance } = vi.hoisted(() => {
+  const mockNotificationInstance = {
+    onVisibilityChange: vi.fn(() => vi.fn()),
+    notifyNewMessage: vi.fn(),
+    notifyMention: vi.fn(),
+    notifyUserJoined: vi.fn(),
+    notifyUserLeft: vi.fn(),
+    playSound: vi.fn(),
+    isNotificationSupported: vi.fn(() => true),
+    isTabInactive: vi.fn(() => false),
+  }
+
+  return {
+    mockUseChatStore: vi.fn(),
+    mockNotificationInstance,
+  }
+})
+
+const defaultChatStoreState = {
+  currentRoom: null,
+  rooms: [],
+  notificationSettings: {
+    soundNotifications: true,
+    browserNotifications: true,
+    roomNotifications: true,
+    mentionNotifications: true,
+  },
+  browserNotificationPermission: 'default',
+  requestBrowserNotificationPermission: vi.fn(),
+  clearRoomNotifications: vi.fn(),
+}
+
 // Mock dependencies
 vi.mock('@/app/chat/chatStore', () => ({
-  default: () => ({
-    currentRoom: null,
-    rooms: [],
-    notificationSettings: {
-      soundNotifications: true,
-      browserNotifications: true,
-      roomNotifications: true,
-      mentionNotifications: true,
-    },
-    browserNotificationPermission: 'default',
-    requestBrowserNotificationPermission: vi.fn(),
-    clearRoomNotifications: vi.fn(),
-  }),
+  default: mockUseChatStore,
 }))
 
 vi.mock('@/lib/services/notificationService', () => ({
   default: {
-    getInstance: vi.fn(() => ({
-      onVisibilityChange: vi.fn(() => vi.fn()),
-      notifyNewMessage: vi.fn(),
-      notifyMention: vi.fn(),
-      notifyUserJoined: vi.fn(),
-      notifyUserLeft: vi.fn(),
-      playSound: vi.fn(),
-      isNotificationSupported: vi.fn(() => true),
-      isTabInactive: vi.fn(() => false),
-    })),
+    getInstance: vi.fn(() => mockNotificationInstance),
   },
 }))
 
 describe('useNotifications', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseChatStore.mockReturnValue({
+      ...defaultChatStoreState,
+      requestBrowserNotificationPermission: vi.fn(),
+      clearRoomNotifications: vi.fn(),
+    })
+    mockNotificationInstance.isNotificationSupported.mockReturnValue(true)
+    mockNotificationInstance.isTabInactive.mockReturnValue(false)
   })
 
   describe('Initialization', () => {
@@ -68,7 +86,7 @@ describe('useNotifications', () => {
 
   describe('Notification Methods', () => {
     it('should notify new message when not in current room', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: { id: 2, name: 'Other Room' },
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -88,13 +106,17 @@ describe('useNotifications', () => {
         result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyNewMessage
-      ).toHaveBeenCalledWith({ roomName: 'Test Room', senderName: 'John', message: 'Hello world', roomId: 1, playSound: true })
+      expect(mockNotificationInstance.notifyNewMessage).toHaveBeenCalledWith({
+        roomName: 'Test Room',
+        senderName: 'John',
+        message: 'Hello world',
+        roomId: 1,
+        playSound: true,
+      })
     })
 
     it('should not notify when in current room and tab is active', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: { id: 1, name: 'Test Room' },
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -108,9 +130,7 @@ describe('useNotifications', () => {
         clearRoomNotifications: vi.fn(),
       })
 
-      vi.mocked(
-        require('@/lib/services/notificationService').default.getInstance().isTabInactive
-      ).mockReturnValue(false)
+      vi.mocked(mockNotificationInstance.isTabInactive).mockReturnValue(false)
 
       const { result } = renderHook(() => useNotifications())
 
@@ -118,13 +138,11 @@ describe('useNotifications', () => {
         result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyNewMessage
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.notifyNewMessage).not.toHaveBeenCalled()
     })
 
     it('should notify mention with browser notification', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -141,16 +159,26 @@ describe('useNotifications', () => {
       const { result } = renderHook(() => useNotifications())
 
       act(() => {
-        result.current.notifyMention({ roomId: 1, messageId: 123, senderName: 'John', message: '@user Hello' })
+        result.current.notifyMention({
+          roomId: 1,
+          messageId: 123,
+          senderName: 'John',
+          message: '@user Hello',
+        })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyMention
-      ).toHaveBeenCalledWith({ roomName: 'Test Room', senderName: 'John', message: '@user Hello', roomId: 1, messageId: 123, playSound: true })
+      expect(mockNotificationInstance.notifyMention).toHaveBeenCalledWith({
+        roomName: 'Test Room',
+        senderName: 'John',
+        message: '@user Hello',
+        roomId: 1,
+        messageId: 123,
+        playSound: true,
+      })
     })
 
     it('should notify user joined in current room', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: { id: 1, name: 'Test Room' },
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -170,13 +198,16 @@ describe('useNotifications', () => {
         result.current.notifyUserJoined({ roomId: 1, userName: 'John' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyUserJoined
-      ).toHaveBeenCalledWith({ roomName: 'Test Room', userName: 'John', roomId: 1, playSound: true })
+      expect(mockNotificationInstance.notifyUserJoined).toHaveBeenCalledWith({
+        roomName: 'Test Room',
+        userName: 'John',
+        roomId: 1,
+        playSound: true,
+      })
     })
 
     it('should notify user left in current room', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: { id: 1, name: 'Test Room' },
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -196,15 +227,18 @@ describe('useNotifications', () => {
         result.current.notifyUserLeft({ roomId: 1, userName: 'John' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyUserLeft
-      ).toHaveBeenCalledWith({ roomName: 'Test Room', userName: 'John', roomId: 1, playSound: true })
+      expect(mockNotificationInstance.notifyUserLeft).toHaveBeenCalledWith({
+        roomName: 'Test Room',
+        userName: 'John',
+        roomId: 1,
+        playSound: true,
+      })
     })
   })
 
   describe('Sound Notifications', () => {
     it('should play sound when sound notifications enabled', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -224,13 +258,11 @@ describe('useNotifications', () => {
         result.current.playSound('message', 0.5)
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().playSound
-      ).toHaveBeenCalledWith('message', { volume: 0.5 })
+      expect(mockNotificationInstance.playSound).toHaveBeenCalledWith('message', { volume: 0.5 })
     })
 
     it('should not play sound when sound notifications disabled', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -250,13 +282,11 @@ describe('useNotifications', () => {
         result.current.playSound('message')
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().playSound
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.playSound).not.toHaveBeenCalled()
     })
 
     it('should not play sound when enableSounds is false', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -276,16 +306,14 @@ describe('useNotifications', () => {
         result.current.playSound('message')
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().playSound
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.playSound).not.toHaveBeenCalled()
     })
   })
 
   describe('Browser Notifications', () => {
     it('should request browser notification permission when enabled', async () => {
       const mockRequestPermission = vi.fn()
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -309,7 +337,7 @@ describe('useNotifications', () => {
     })
 
     it('should not show browser notifications when permission denied', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -329,15 +357,13 @@ describe('useNotifications', () => {
         result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyNewMessage
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.notifyNewMessage).not.toHaveBeenCalled()
     })
   })
 
   describe('Utility Methods', () => {
     it('should check notification support', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -358,7 +384,7 @@ describe('useNotifications', () => {
     })
 
     it('should check tab inactivity', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -381,7 +407,7 @@ describe('useNotifications', () => {
 
   describe('Edge Cases', () => {
     it('should handle room not found', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -401,13 +427,11 @@ describe('useNotifications', () => {
         result.current.notifyNewMessage({ roomId: 999, senderName: 'John', message: 'Hello world' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyNewMessage
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.notifyNewMessage).not.toHaveBeenCalled()
     })
 
     it('should handle empty rooms array', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [],
         notificationSettings: {
@@ -427,13 +451,11 @@ describe('useNotifications', () => {
         result.current.notifyNewMessage({ roomId: 1, senderName: 'John', message: 'Hello world' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyNewMessage
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.notifyNewMessage).not.toHaveBeenCalled()
     })
 
     it('should handle null current room', () => {
-      vi.mocked(require('@/app/chat/chatStore').default).mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         currentRoom: null,
         rooms: [{ id: 1, name: 'Test Room' }],
         notificationSettings: {
@@ -453,9 +475,7 @@ describe('useNotifications', () => {
         result.current.notifyUserJoined({ roomId: 1, userName: 'John' })
       })
 
-      expect(
-        require('@/lib/services/notificationService').default.getInstance().notifyUserJoined
-      ).not.toHaveBeenCalled()
+      expect(mockNotificationInstance.notifyUserJoined).not.toHaveBeenCalled()
     })
   })
 })

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Game2048 from '../page'
+import { useGame2048Store } from '../store'
 
 // Mock dependencies
 vi.mock('@/components/ui/button', () => ({
@@ -36,15 +37,15 @@ vi.mock('sonner', () => ({
   },
 }))
 
-vi.mock('./components/GameBoard', () => ({
+vi.mock('../components/GameBoard', () => ({
   GameBoard: vi.fn(() => <div data-testid="game-board">GameBoard</div>),
 }))
 
-vi.mock('./components/DirectionControls', () => ({
+vi.mock('../components/DirectionControls', () => ({
   DirectionControls: vi.fn(() => <div data-testid="direction-controls">DirectionControls</div>),
 }))
 
-vi.mock('./utils/gameEngine', () => ({
+vi.mock('../utils/gameEngine', () => ({
   initializeBoard: vi.fn(() => [
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -59,7 +60,7 @@ vi.mock('./utils/gameEngine', () => ({
   moveDown: vi.fn(() => ({ moved: false, newBoard: [], scoreGained: 0 })),
 }))
 
-vi.mock('./store', () => ({
+vi.mock('../store', () => ({
   useGame2048Store: vi.fn(() => ({
     bestScore: 0,
     setBestScore: vi.fn(),
@@ -122,13 +123,12 @@ describe('Game2048', () => {
 
     it('should render auto run controls', () => {
       render(<Game2048 />)
-      expect(screen.getByText(/随机自动运行/)).toBeInTheDocument()
+      expect(screen.getByText('🎲')).toBeInTheDocument()
     })
   })
 
   describe('Game Controls', () => {
     it('should start new game when reset button clicked', async () => {
-      const { useGame2048Store } = require('./store')
       const incrementGamesPlayed = vi.fn()
       vi.mocked(useGame2048Store).mockReturnValueOnce({
         bestScore: 0,
@@ -148,7 +148,6 @@ describe('Game2048', () => {
     })
 
     it('should have undo button disabled when canUndo is false', () => {
-      const { useGame2048Store } = require('./store')
       vi.mocked(useGame2048Store).mockReturnValueOnce({
         bestScore: 0,
         setBestScore: vi.fn(),
@@ -218,7 +217,7 @@ describe('Game2048', () => {
   describe('Auto Run Controls', () => {
     it('should render random auto run button', () => {
       render(<Game2048 />)
-      expect(screen.getByText(/随机自动运行/)).toBeInTheDocument()
+      expect(screen.getByText('🎲')).toBeInTheDocument()
     })
 
     it('should render clockwise run button', () => {

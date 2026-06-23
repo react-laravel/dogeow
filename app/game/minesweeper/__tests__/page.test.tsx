@@ -5,21 +5,27 @@ import MinesweeperGame from '../page'
 // Mock dependencies
 vi.mock('@/components/ui/button', () => ({
   Button: vi.fn(({ children, onClick, disabled, variant }) => (
-    <button onClick={onClick} disabled={disabled} data-variant={variant} data-testid="button">{children}</button>
+    <button onClick={onClick} disabled={disabled} data-variant={variant} data-testid="button">
+      {children}
+    </button>
   )),
 }))
 
 vi.mock('@/components/ui/game-rules-dialog', () => ({
   GameRulesDialog: vi.fn(({ title, rules }) => (
     <div data-testid="game-rules-dialog" data-title={title}>
-      {rules.map((rule: string, i: number) => <span key={i}>{rule}</span>)}
+      {rules.map((rule: string, i: number) => (
+        <span key={i}>{rule}</span>
+      ))}
     </div>
   )),
 }))
 
 vi.mock('next/link', () => ({
   default: vi.fn(({ children, href }) => (
-    <a href={href} data-testid="link">{children}</a>
+    <a href={href} data-testid="link">
+      {children}
+    </a>
   )),
 }))
 
@@ -30,7 +36,7 @@ vi.mock('sonner', () => ({
   },
 }))
 
-vi.mock('./store', () => ({
+vi.mock('../store', () => ({
   useMinesweeperStore: vi.fn(() => ({
     stats: {
       easy: { gamesPlayed: 5, gamesWon: 3, bestTime: 45 },
@@ -128,7 +134,10 @@ describe('MinesweeperGame', () => {
       render(<MinesweeperGame />)
 
       const cells = screen.getAllByRole('button')
-      const boardCells = cells.filter(cell => !cell.closest('[data-testid="button"]') || cell.getAttribute('class')?.includes('border'))
+      const boardCells = cells.filter(
+        cell =>
+          !cell.closest('[data-testid="button"]') || cell.getAttribute('class')?.includes('border')
+      )
 
       // Check that some cells exist
       expect(boardCells.length).toBeGreaterThan(0)

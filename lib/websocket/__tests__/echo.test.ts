@@ -14,7 +14,9 @@ const mockEchoInstance = {
   })),
 }
 
-const EchoMock = vi.fn().mockImplementation(() => mockEchoInstance)
+const EchoMock = vi.fn(function () {
+  return mockEchoInstance
+})
 
 vi.mock('laravel-echo', () => ({
   default: EchoMock,
@@ -44,6 +46,7 @@ describe('WebSocket Echo', () => {
       ...global.window,
       Pusher: vi.fn(),
       Echo: undefined,
+      localStorage: global.localStorage,
     } as unknown as typeof window
 
     // Mock environment variables
@@ -104,7 +107,8 @@ describe('WebSocket Echo', () => {
 
   describe('getEchoInstance', () => {
     it('should return null when no instance exists', async () => {
-      const { getEchoInstance } = await import('../echo')
+      const { destroyEchoInstance, getEchoInstance } = await import('../echo')
+      destroyEchoInstance(true)
       const echo = getEchoInstance()
       expect(echo).toBeNull()
     })

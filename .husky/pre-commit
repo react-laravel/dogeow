@@ -1,2 +1,8 @@
-npx lint-staged
+#!/usr/bin/env sh
+set -e
+
+cd "$(dirname "$0")/.."
+. "$(dirname "$0")/ensure-node.sh" "$PWD"
+
+node_modules/.bin/lint-staged
 node scripts/precommit-typecheck-staged.mjs

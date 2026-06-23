@@ -26,3 +26,5 @@ export function NoteGraphLoadingState({ themeColors, isDark }: GraphLoadingState
     </div>
   )
 }
+
+export default NoteGraphLoadingState

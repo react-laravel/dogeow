@@ -43,7 +43,7 @@ export const withAlpha = (color: string, alpha: number, fallback: string): strin
       isShort ? parseInt(value + value, 16) : parseInt(value, 16)
     const r = normalize(hex.slice(0, isShort ? 1 : 2))
     const g = normalize(hex.slice(isShort ? 1 : 2, isShort ? 2 : 4))
-    const b = normalize(hex.slice(isShort ? 2 : 3, isShort ? 3 : 6))
+    const b = normalize(hex.slice(isShort ? 2 : 4, isShort ? 3 : 6))
     return `rgba(${r}, ${g}, ${b}, ${alpha})`
   }
   return fallback

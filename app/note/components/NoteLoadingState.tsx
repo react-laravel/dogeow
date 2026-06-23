@@ -13,3 +13,5 @@ export const NoteLoadingState = memo(() => {
 })
 
 NoteLoadingState.displayName = 'NoteLoadingState'
+
+export default NoteLoadingState

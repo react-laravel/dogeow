@@ -70,7 +70,13 @@ export function ItemDetailModalHeader({
             <AutoSaveStatus autoSaving={autoSaving} lastSaved={lastSaved} />
           ) : canEdit ? (
             <>
-              <Button variant="ghost" size="icon" onClick={onEdit} className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                className="h-8 w-8"
+                aria-label="Edit"
+              >
                 <Edit className="h-4 w-4" />
               </Button>
               <Button
@@ -78,12 +84,19 @@ export function ItemDetailModalHeader({
                 size="icon"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                 onClick={onDelete}
+                aria-label="Delete"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </>
           ) : null}
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8"
+            aria-label="Close"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>

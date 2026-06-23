@@ -45,7 +45,7 @@ export class GeolocationDetector {
   getCachedGeolocationData(): LanguageDetectionResult | null {
     try {
       if (typeof window === 'undefined') return null
-      const cachedGeoData = localStorage.getItem(GEO_CACHE_KEY)
+      const cachedGeoData = window.localStorage.getItem(GEO_CACHE_KEY)
       if (!cachedGeoData) return null
 
       const parsed = JSON.parse(cachedGeoData)
@@ -69,7 +69,10 @@ export class GeolocationDetector {
   cacheGeolocationData(language: SupportedLanguage): void {
     try {
       if (typeof window === 'undefined') return
-      localStorage.setItem(GEO_CACHE_KEY, JSON.stringify({ language, timestamp: Date.now() }))
+      window.localStorage.setItem(
+        GEO_CACHE_KEY,
+        JSON.stringify({ language, timestamp: Date.now() })
+      )
     } catch {
       // ignore storage errors
     }
@@ -81,7 +84,7 @@ export class GeolocationDetector {
   clearCache(): void {
     try {
       if (typeof window === 'undefined') return
-      localStorage.removeItem(GEO_CACHE_KEY)
+      window.localStorage.removeItem(GEO_CACHE_KEY)
     } catch {
       // ignore
     }

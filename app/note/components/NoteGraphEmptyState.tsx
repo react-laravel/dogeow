@@ -25,3 +25,5 @@ export function NoteGraphEmptyState({ isAdmin, themeColors }: GraphEmptyStatePro
     </div>
   )
 }
+
+export default NoteGraphEmptyState

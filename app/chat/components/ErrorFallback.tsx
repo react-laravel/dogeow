@@ -240,6 +240,8 @@ export default function ErrorFallback({
   )
 }
 
+export { ErrorFallback }
+
 /**
  * 专门用于常见场景的错误回退组件
  */

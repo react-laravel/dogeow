@@ -1,40 +1,34 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import LoadingState from '../LoadingState'
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import LoadingState from '../item-detail/LoadingState'
+
+vi.mock('@/components/ui/button', () => ({
+  Button: ({ children, onClick, ...props }: any) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+}))
+
+vi.mock('@/components/layout', () => ({
+  PageContainer: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+}))
 
 describe('LoadingState', () => {
-  const mockOnBack = vi.fn()
-
-  beforeEach(() => {
-    vi.clearAllMocks()
+  it('renders loading text', () => {
+    render(<LoadingState onBack={vi.fn()} />)
+    expect(screen.getByText('加载中...')).toBeDefined()
   })
 
-  describe('Rendering', () => {
-    it('should render loading state with back button', () => {
-      render(<LoadingState onBack={mockOnBack} />)
-
-      expect(screen.getByText('加载中...')).toBeInTheDocument()
-      expect(screen.getByRole('button')).toBeInTheDocument()
-    })
-
-    it('should render back button with arrow icon', () => {
-      render(<LoadingState onBack={mockOnBack} />)
-
-      const button = screen.getByRole('button')
-      expect(button).toBeInTheDocument()
-    })
+  it('renders back button', () => {
+    render(<LoadingState onBack={vi.fn()} />)
+    expect(screen.getByRole('button')).toBeDefined()
   })
 
-  describe('Interactions', () => {
-    it('should call onBack when back button is clicked', async () => {
-      const user = userEvent.setup()
-      render(<LoadingState onBack={mockOnBack} />)
-
-      const backButton = screen.getByRole('button')
-      await user.click(backButton)
-
-      expect(mockOnBack).toHaveBeenCalledTimes(1)
-    })
+  it('calls onBack when back button clicked', () => {
+    const onBack = vi.fn()
+    render(<LoadingState onBack={onBack} />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(onBack).toHaveBeenCalled()
   })
 })

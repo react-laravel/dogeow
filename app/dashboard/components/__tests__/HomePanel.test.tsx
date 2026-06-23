@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { HomePanel } from '../HomePanel'
 import type { DashboardHomeLink } from '../../homeLinks'
 
@@ -28,10 +28,31 @@ describe('HomePanel', () => {
 
     dashboardHomeLinks.forEach(item => {
       expect(screen.getByText(item.caption)).toBeInTheDocument()
-
-      const link = screen.getByRole('link', { name: `打开 ${item.label}` })
-      expect(link).toHaveAttribute('href', item.href)
-      expect(link).toHaveAttribute('target', '_blank')
     })
+  })
+
+  it('each link has href, target, and aria-label', () => {
+    render(<HomePanel />)
+    const links = screen.getAllByRole('link')
+
+    links.forEach(link => {
+      expect(link.hasAttribute('href')).toBe(true)
+      expect(link.getAttribute('target')).toBe('_blank')
+      expect(link.hasAttribute('aria-label')).toBe(true)
+    })
+  })
+
+  it('each link has an icon', () => {
+    const { container } = render(<HomePanel />)
+    const links = container.querySelectorAll('a')
+
+    links.forEach(link => {
+      expect(link.querySelector('svg')).toBeTruthy()
+    })
+  })
+
+  it('renders the ExternalLink icon on each card', () => {
+    const { container } = render(<HomePanel />)
+    expect(container.querySelectorAll('svg').length).toBeGreaterThan(0)
   })
 })

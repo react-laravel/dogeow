@@ -46,23 +46,23 @@ vi.mock('three', () => ({
   Object3D: class {},
 }))
 
-vi.mock('./Target', () => ({
+vi.mock('../Target', () => ({
   Target: vi.fn(() => <div data-testid="target">Target</div>),
 }))
 
-vi.mock('./Bullet', () => ({
+vi.mock('../Bullet', () => ({
   Bullet: vi.fn(() => <div data-testid="bullet">Bullet</div>),
 }))
 
-vi.mock('./FPSWeapon', () => ({
+vi.mock('../FPSWeapon', () => ({
   FPSWeapon: vi.fn(() => <div data-testid="fps-weapon">FPSWeapon</div>),
 }))
 
-vi.mock('./Explosion', () => ({
+vi.mock('../Explosion', () => ({
   Explosion: vi.fn(() => <div data-testid="explosion">Explosion</div>),
 }))
 
-vi.mock('../../utils/gameUtils', () => ({
+vi.mock('../../../utils/gameUtils', () => ({
   difficultySettings: {
     easy: { targetCount: 5, targetSpeed: 0.01, gameAreaSize: 50 },
     medium: { targetCount: 8, targetSpeed: 0.015, gameAreaSize: 60 },
@@ -72,7 +72,7 @@ vi.mock('../../utils/gameUtils', () => ({
   generateRandomDirection: vi.fn(() => [1, 0, 0]),
 }))
 
-vi.mock('../../utils/audioUtils', () => ({
+vi.mock('../../../utils/audioUtils', () => ({
   playShotSound: vi.fn(),
   playHitSound: vi.fn(),
 }))
@@ -247,7 +247,9 @@ describe('GameScene', () => {
       const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
       render(<GameScene {...defaultProps} gameStarted={true} useFallbackControls={false} />)
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function))
+      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), {
+        passive: false,
+      })
     })
   })
 

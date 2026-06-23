@@ -16,7 +16,8 @@ export function useMentions(roomUsers: OnlineUser[]) {
 
   // 过滤用户用于@提及建议
   const mentionSuggestions: MentionSuggestion[] = useMemo(() => {
-    if (!mentionQuery.trim()) return []
+    if (!showMentions) return []
+    if (!mentionQuery.trim()) return roomUsers.slice(0, MAX_MENTION_SUGGESTIONS)
 
     const query = mentionQuery.toLowerCase()
     return roomUsers
@@ -24,7 +25,7 @@ export function useMentions(roomUsers: OnlineUser[]) {
         user => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query)
       )
       .slice(0, MAX_MENTION_SUGGESTIONS)
-  }, [roomUsers, mentionQuery])
+  }, [roomUsers, mentionQuery, showMentions])
 
   // 检查@提及
   const checkForMentions = useCallback((text: string, cursorPos: number) => {
@@ -85,6 +86,7 @@ export function useMentions(roomUsers: OnlineUser[]) {
 
   return {
     showMentions,
+    mentionQuery,
     mentionSuggestions,
     selectedMentionIndex,
     checkForMentions,

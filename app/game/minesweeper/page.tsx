@@ -167,8 +167,17 @@ const MinesweeperCell = memo(function MinesweeperCell({
 }: MinesweeperCellProps) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`扫雷格子 ${rowIndex + 1}-${colIndex + 1}`}
       className={getCellStyle(cell)}
       onClick={() => onCellClick(rowIndex, colIndex)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onCellClick(rowIndex, colIndex)
+        }
+      }}
       onContextMenu={e => onCellRightClick(e, rowIndex, colIndex)}
       onTouchStart={() => onTouchStart(rowIndex, colIndex)}
       onTouchEnd={onTouchEnd}

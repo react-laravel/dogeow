@@ -2,7 +2,8 @@
 
 import * as React from 'react'
 import { UsersIcon, MessageSquareIcon } from 'lucide-react'
-import { ChatRoomList, OnlineUsers } from './'
+import { ChatRoomList } from './ChatRoomList'
+import { OnlineUsers } from './OnlineUsers'
 import ConnectionStatusIndicator from './ConnectionStatusIndicator'
 import { useTranslation } from '@/hooks/useTranslation'
 import type { ConnectionMonitor } from '@/lib/websocket'
@@ -104,4 +105,7 @@ function ChatSidebar({
   )
 }
 
-export default React.memo(ChatSidebar, arePropsEqual)
+const MemoizedChatSidebar = React.memo(ChatSidebar, arePropsEqual)
+
+export { ChatSidebar }
+export default MemoizedChatSidebar

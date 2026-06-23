@@ -164,7 +164,7 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
             <div className="border-border flex items-center justify-between border-b p-4">
               <Dialog.Title className="text-lg font-semibold">创建链接</Dialog.Title>
               <Dialog.Close asChild>
-                <button className="hover:bg-muted rounded p-1">
+                <button aria-label="Close" className="hover:bg-muted rounded p-1">
                   <X className="h-5 w-5" />
                 </button>
               </Dialog.Close>

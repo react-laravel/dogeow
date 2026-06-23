@@ -1,58 +1,35 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TagList } from '../TagList'
-import { Tag } from '@/app/thing/types'
 
-// Mock colorUtils
-vi.mock('@/lib/helpers/colorUtils', () => ({
-  isLightColor: vi.fn((color: string) => {
-    return color.toLowerCase().startsWith('#f')
-  }),
+vi.mock('@/components/ui/badge', () => ({
+  Badge: ({ children, style, ...props }: any) => (
+    <span data-testid="badge" style={style} {...props}>
+      {children}
+    </span>
+  ),
 }))
 
 describe('TagList', () => {
-  const mockTags: Tag[] = [
-    { id: 1, name: 'Tag 1', color: '#3b82f6' },
-    { id: 2, name: 'Tag 2', color: '#10b981' },
-    { id: 3, name: 'Tag 3', color: '#ffffff' },
+  const tags = [
+    { id: 1, name: 'Tag1', color: '#ff0000' },
+    { id: 2, name: 'Tag2', color: '#00ff00' },
   ]
 
-  beforeEach(() => {
-    vi.clearAllMocks()
+  it('renders all tags', () => {
+    render(<TagList tags={tags} />)
+    expect(screen.getByText('Tag1')).toBeDefined()
+    expect(screen.getByText('Tag2')).toBeDefined()
   })
 
-  describe('Rendering', () => {
-    it('should render list of tags', () => {
-      render(<TagList tags={mockTags} />)
-      expect(screen.getByText('Tag 1')).toBeInTheDocument()
-      expect(screen.getByText('Tag 2')).toBeInTheDocument()
-      expect(screen.getByText('Tag 3')).toBeInTheDocument()
-    })
-
-    it('should render empty list when tags array is empty', () => {
-      const { container } = render(<TagList tags={[]} />)
-      expect(container.firstChild).toBeInTheDocument()
-      expect(screen.queryByText('Tag 1')).not.toBeInTheDocument()
-    })
-
-    it('should apply tag colors correctly', () => {
-      render(<TagList tags={mockTags} />)
-      const badges = screen.getAllByText(/Tag \d/)
-      expect(badges.length).toBe(3)
-    })
+  it('renders empty when no tags', () => {
+    const { container } = render(<TagList tags={[]} />)
+    expect(container.firstElementChild).toBeEmptyDOMElement()
   })
 
-  describe('Props', () => {
-    it('should handle tags with default color', () => {
-      const tagsWithDefaultColor: Tag[] = [{ id: 1, name: 'Tag 1', color: undefined }]
-      render(<TagList tags={tagsWithDefaultColor} />)
-      expect(screen.getByText('Tag 1')).toBeInTheDocument()
-    })
-
-    it('should handle single tag', () => {
-      render(<TagList tags={[mockTags[0]]} />)
-      expect(screen.getByText('Tag 1')).toBeInTheDocument()
-      expect(screen.queryByText('Tag 2')).not.toBeInTheDocument()
-    })
+  it('renders default color when no color provided', () => {
+    const tagsNoColor = [{ id: 1, name: 'Tag1' }]
+    render(<TagList tags={tagsNoColor} />)
+    expect(screen.getByText('Tag1')).toBeDefined()
   })
 })

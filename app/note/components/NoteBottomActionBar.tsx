@@ -66,3 +66,5 @@ export function NoteBottomActionBar({
     </div>
   )
 }
+
+export default NoteBottomActionBar

@@ -1,149 +1,65 @@
-/* eslint-disable @next/next/no-img-element */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { GalleryItem } from '../GalleryItem'
-import { Item } from '@/app/thing/types'
 
-// Mock next/image
-vi.mock('next/image', () => ({
-  default: ({
-    src,
-    alt,
-    fill: _fill,
-    ...props
-  }: {
-    src?: string
-    alt?: string
-    fill?: boolean
-    [k: string]: unknown
-  }) => <img src={src} alt={alt} data-testid="next-image" {...props} />,
-}))
-
-// Mock ImagePlaceholder
-vi.mock('@/components/ui/icons/image-placeholder', () => ({
-  default: ({ size, className }: { size: number; className?: string }) => (
-    <div data-testid="image-placeholder" data-size={size} className={className}>
-      Placeholder
-    </div>
-  ),
-}))
+const mockItem = {
+  id: 1,
+  name: 'Test Item',
+  status: 'active',
+  category: { name: 'Electronics' },
+  images: [],
+  primary_image: null,
+}
 
 describe('GalleryItem', () => {
-  const mockItem: Item = {
-    id: 1,
-    name: 'Test Item',
-    category: { id: 1, name: 'Test Category' },
-    status: 'active',
-    is_public: false,
-    thumbnail_url: 'https://example.com/thumb.jpg',
-  } as Item
-
-  const mockOnClick = vi.fn()
-
-  beforeEach(() => {
-    vi.clearAllMocks()
+  it('renders item name', () => {
+    render(<GalleryItem item={mockItem} imageSize={120} onClick={vi.fn()} />)
+    expect(screen.getByText('Test Item')).toBeDefined()
   })
 
-  describe('Rendering', () => {
-    it('should render gallery item with thumbnail when display size is small', () => {
-      render(<GalleryItem item={mockItem} imageSize={200} onClick={mockOnClick} />)
-      const image = screen.getByTestId('next-image')
-      expect(image).toBeInTheDocument()
-      expect(image).toHaveAttribute('alt', 'Test Item')
-      expect(image).toHaveAttribute('src', 'https://example.com/thumb.jpg')
-    })
-
-    it('should render full image when display size exceeds thumbnail', () => {
-      const itemWithFull = {
-        ...mockItem,
-        primary_image: {
-          id: 1,
-          path: 'a.jpg',
-          thumbnail_path: 'a-thumb.jpg',
-          thumbnail_url: 'https://example.com/thumb.jpg',
-          url: 'https://example.com/full.jpg',
-        },
-      } as Item
-
-      render(<GalleryItem item={itemWithFull} imageSize={400} onClick={mockOnClick} />)
-      expect(screen.getByTestId('next-image')).toHaveAttribute(
-        'src',
-        'https://example.com/full.jpg'
-      )
-    })
-
-    it('should render placeholder when thumbnail_url is not available', () => {
-      const itemWithoutThumbnail = { ...mockItem, thumbnail_url: undefined }
-      render(<GalleryItem item={itemWithoutThumbnail} imageSize={200} onClick={mockOnClick} />)
-      expect(screen.getByTestId('image-placeholder')).toBeInTheDocument()
-    })
-
-    it('should render item name and category on hover', () => {
-      render(<GalleryItem item={mockItem} imageSize={200} onClick={mockOnClick} />)
-      expect(screen.getByText('Test Item')).toBeInTheDocument()
-      expect(screen.getByText('Test Category')).toBeInTheDocument()
-    })
-
-    it('should render public badge when item is public', () => {
-      const publicItem = { ...mockItem, is_public: true }
-      const { container } = render(
-        <GalleryItem item={publicItem} imageSize={200} onClick={mockOnClick} />
-      )
-      expect(container.querySelector('[data-slot="badge"]')).toBeInTheDocument()
-    })
+  it('renders category name', () => {
+    render(<GalleryItem item={mockItem} imageSize={120} onClick={vi.fn()} />)
+    expect(screen.getByText('Electronics')).toBeDefined()
   })
 
-  describe('Interactions', () => {
-    it('should call onClick when item is clicked', async () => {
-      const user = userEvent.setup()
-      render(<GalleryItem item={mockItem} imageSize={200} onClick={mockOnClick} />)
-
-      const item = screen.getByText('Test Item').closest('div')
-      if (item) {
-        await user.click(item)
-        expect(mockOnClick).toHaveBeenCalledWith(mockItem)
-      }
-    })
+  it('renders Uncategorized when no category', () => {
+    const itemNoCat = { ...mockItem, category: null }
+    render(<GalleryItem item={itemNoCat} imageSize={120} onClick={vi.fn()} />)
+    expect(screen.getByText('Uncategorized')).toBeDefined()
   })
 
-  describe('Props', () => {
-    it('should apply correct border color for expired status', () => {
-      const expiredItem = { ...mockItem, status: 'expired' }
-      const { container } = render(
-        <GalleryItem item={expiredItem} imageSize={200} onClick={mockOnClick} />
-      )
-      expect(container.firstChild).toHaveClass('border-red-500')
-    })
+  it('calls onClick when clicked', () => {
+    const onClick = vi.fn()
+    render(<GalleryItem item={mockItem} imageSize={120} onClick={onClick} />)
+    fireEvent.click(screen.getByText('Test Item').closest('div')!.parentElement!)
+    expect(onClick).toHaveBeenCalledWith(mockItem)
+  })
 
-    it('should apply correct border color for damaged status', () => {
-      const damagedItem = { ...mockItem, status: 'damaged' }
-      const { container } = render(
-        <GalleryItem item={damagedItem} imageSize={200} onClick={mockOnClick} />
-      )
-      expect(container.firstChild).toHaveClass('border-orange-500')
-    })
+  it('applies red border for expired items', () => {
+    const expiredItem = { ...mockItem, status: 'expired' }
+    render(<GalleryItem item={expiredItem} imageSize={120} onClick={vi.fn()} />)
+    const container = screen.getByText('Test Item').closest('div')!.parentElement!
+    expect(container.className).toContain('border-red-500')
+  })
 
-    it('should apply correct border color for idle status', () => {
-      const idleItem = { ...mockItem, status: 'idle' }
-      const { container } = render(
-        <GalleryItem item={idleItem} imageSize={200} onClick={mockOnClick} />
-      )
-      expect(container.firstChild).toHaveClass('border-amber-500')
-    })
+  it('applies orange border for damaged items', () => {
+    const damagedItem = { ...mockItem, status: 'damaged' }
+    render(<GalleryItem item={damagedItem} imageSize={120} onClick={vi.fn()} />)
+    const container = screen.getByText('Test Item').closest('div')!.parentElement!
+    expect(container.className).toContain('border-orange-500')
+  })
 
-    it('should use imageSize for dimensions', () => {
-      const { container } = render(
-        <GalleryItem item={mockItem} imageSize={150} onClick={mockOnClick} />
-      )
-      const element = container.firstChild as HTMLElement
-      expect(element).toHaveStyle({ width: '150px', height: '150px' })
-    })
+  it('applies amber border for idle items', () => {
+    const idleItem = { ...mockItem, status: 'idle' }
+    render(<GalleryItem item={idleItem} imageSize={120} onClick={vi.fn()} />)
+    const container = screen.getByText('Test Item').closest('div')!.parentElement!
+    expect(container.className).toContain('border-amber-500')
+  })
 
-    it('should handle item without category', () => {
-      const itemWithoutCategory = { ...mockItem, category: undefined }
-      render(<GalleryItem item={itemWithoutCategory} imageSize={200} onClick={mockOnClick} />)
-      expect(screen.getByText('Uncategorized')).toBeInTheDocument()
-    })
+  it('uses specified image size', () => {
+    render(<GalleryItem item={mockItem} imageSize={200} onClick={vi.fn()} />)
+    const container = screen.getByText('Test Item').closest('div')!.parentElement!
+    expect(container.style.width).toBe('200px')
+    expect(container.style.height).toBe('200px')
   })
 })

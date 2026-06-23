@@ -40,6 +40,7 @@ export default function TagCard({ tag, count, onDelete, className }: TagCardProp
 
           {onDelete && (
             <button
+              aria-label="Delete tag"
               onClick={e => {
                 e.preventDefault()
                 e.stopPropagation()

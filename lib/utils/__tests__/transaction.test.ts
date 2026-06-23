@@ -284,11 +284,12 @@ describe('Transaction Utilities', () => {
         },
         { maxAttempts: 3, initialDelayMs: 10 }
       )
+      const rejection = expect(promise).rejects.toThrow('Always fails')
 
       // Advance timers to let retries proceed
       await vi.runAllTimersAsync()
 
-      await expect(promise).rejects.toThrow('Always fails')
+      await rejection
       expect(attempts).toBe(3)
       vi.useRealTimers()
     })
@@ -309,11 +310,12 @@ describe('Transaction Utilities', () => {
           },
         }
       )
+      const rejection = expect(promise).rejects.toThrow()
 
       // Advance timers to let retries proceed
       await vi.runAllTimersAsync()
 
-      await expect(promise).rejects.toThrow()
+      await rejection
       expect(retryAttempts).toEqual([1, 2])
       vi.useRealTimers()
     })
@@ -342,11 +344,12 @@ describe('Transaction Utilities', () => {
           retryableErrors: [SpecificError] as unknown as ErrorClass[],
         }
       )
+      const rejection = expect(promise).rejects.toThrow('Specific error')
 
       // Advance timers to let retries proceed
       await vi.runAllTimersAsync()
 
-      await expect(promise).rejects.toThrow('Specific error')
+      await rejection
       expect(attempts).toBe(3)
       vi.useRealTimers()
     })

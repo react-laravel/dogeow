@@ -91,6 +91,7 @@ class ChatErrorBoundary extends Component<ChatErrorBoundaryProps, ChatErrorBound
 }
 
 export default ChatErrorBoundary
+export { ChatErrorBoundary }
 
 // Hook for handling errors in functional components
 export function useChatErrorHandler() {

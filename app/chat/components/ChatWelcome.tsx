@@ -29,3 +29,5 @@ export default function ChatWelcome({ onOpenRoomList }: ChatWelcomeProps) {
     </div>
   )
 }
+
+export { ChatWelcome }

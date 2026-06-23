@@ -141,7 +141,7 @@ describe('useAudioManager', () => {
       await result.current.fetchAvailableTracks()
     })
 
-    expect(consoleSpy).toHaveBeenCalledWith('加载音频列表失败:', expect.any(Error))
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to load audio list:', expect.any(Error))
     consoleSpy.mockRestore()
   })
 

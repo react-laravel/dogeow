@@ -24,3 +24,5 @@ export const NoteErrorState = memo<NoteErrorStateProps>(({ message, variant = 'e
 })
 
 NoteErrorState.displayName = 'NoteErrorState'
+
+export default NoteErrorState
