@@ -39,6 +39,8 @@ export function BattleSkillBar({
         const remainingRounds = skillCooldowns[def.id] ?? 0
         const onCooldown = remainingRounds > 0
         const enabled = enabledSkillIds.includes(def.id) && !disabled
+        const manaCost = def.mana_cost + (cs.level - 1) * (def.mana_cost_per_level ?? 0)
+        const costLabel = manaCost > 0 ? ` | 消耗 ${manaCost} MP` : ''
         const buttonContent = (
           <>
             <div className="relative">
@@ -71,7 +73,11 @@ export function BattleSkillBar({
             key={cs.id}
             type="button"
             className={btnClass}
-            title={enabled ? `${def.name} 已启用（再点关闭）` : `${def.name} 点击启用`}
+            title={
+              enabled
+                ? `${def.name} 已启用（再点关闭）${costLabel}`
+                : `${def.name} 点击启用${costLabel}`
+            }
             onClick={() => onSkillToggle(def.id)}
           >
             {buttonContent}

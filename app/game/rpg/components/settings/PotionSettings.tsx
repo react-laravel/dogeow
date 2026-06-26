@@ -4,75 +4,43 @@ import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { post } from '@/lib/api'
 
-interface PotionSettings {
-  autoUseHpPotion: boolean
-  hpPotionThreshold: number
-  autoUseMpPotion: boolean
-  mpPotionThreshold: number
-}
-
 interface PotionSettingsResponse {
   character: {
     auto_use_hp_potion: boolean
-    hp_potion_threshold: number
     auto_use_mp_potion: boolean
-    mp_potion_threshold: number
   }
 }
 
 export function PotionSettings() {
   const { inventory, character, setCharacter } = useGameStore()
-  const [settings, setSettings] = useState<PotionSettings>({
-    autoUseHpPotion: character?.auto_use_hp_potion ?? false,
-    hpPotionThreshold: character?.hp_potion_threshold ?? 30,
-    autoUseMpPotion: character?.auto_use_mp_potion ?? false,
-    mpPotionThreshold: character?.mp_potion_threshold ?? 30,
-  })
-  const [hpThresholdInput, setHpThresholdInput] = useState(
-    String(character?.hp_potion_threshold ?? 30)
-  )
-  const [mpThresholdInput, setMpThresholdInput] = useState(
-    String(character?.mp_potion_threshold ?? 30)
-  )
+  const [autoUseHp, setAutoUseHp] = useState(false)
+  const [autoUseMp, setAutoUseMp] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // 当 character 变化时更新设置
   useEffect(() => {
     if (character) {
-      setSettings({
-        autoUseHpPotion: character.auto_use_hp_potion ?? false,
-        hpPotionThreshold: character.hp_potion_threshold ?? 30,
-        autoUseMpPotion: character.auto_use_mp_potion ?? false,
-        mpPotionThreshold: character.mp_potion_threshold ?? 30,
-      })
-      setHpThresholdInput(String(character.hp_potion_threshold ?? 30))
-      setMpThresholdInput(String(character.mp_potion_threshold ?? 30))
+      setAutoUseHp(character.auto_use_hp_potion ?? false)
+      setAutoUseMp(character.auto_use_mp_potion ?? false)
     }
   }, [character])
 
-  // 获取药品（definition 可能为空，如物品未加载或数据异常）
   const potions = inventory.filter(item => item.definition?.type === 'potion')
 
-  // 更新设置到后端（API 使用 snake_case，必须带 character_id 以更新当前角色）
-  const updateSettings = async (newSettings: Partial<PotionSettings>) => {
+  const updateSettings = async (
+    field: 'auto_use_hp_potion' | 'auto_use_mp_potion',
+    value: boolean
+  ) => {
     if (!character?.id) return
     setSaving(true)
     try {
       const payload: Record<string, unknown> = { character_id: character.id }
-      if (newSettings.autoUseHpPotion !== undefined)
-        payload.auto_use_hp_potion = newSettings.autoUseHpPotion
-      if (newSettings.hpPotionThreshold !== undefined)
-        payload.hp_potion_threshold = newSettings.hpPotionThreshold
-      if (newSettings.autoUseMpPotion !== undefined)
-        payload.auto_use_mp_potion = newSettings.autoUseMpPotion
-      if (newSettings.mpPotionThreshold !== undefined)
-        payload.mp_potion_threshold = newSettings.mpPotionThreshold
+      payload[field] = value
       const response = (await post(
         '/rpg/combat/potion-settings',
         payload
       )) as PotionSettingsResponse
-      setSettings(prev => ({ ...prev, ...newSettings }))
-      // 同时更新 store 中的 character 对象
+      if (field === 'auto_use_hp_potion') setAutoUseHp(value)
+      if (field === 'auto_use_mp_potion') setAutoUseMp(value)
       if (response.character && setCharacter) {
         setCharacter(prev => (prev ? { ...prev, ...response.character } : prev))
       }
@@ -83,66 +51,23 @@ export function PotionSettings() {
     }
   }
 
-  // 切换HP药水自动使用
-  const toggleHpPotion = () => {
-    updateSettings({
-      autoUseHpPotion: !settings.autoUseHpPotion,
-      hpPotionThreshold: normalizeThresholdInput(hpThresholdInput, settings.hpPotionThreshold),
-    })
-  }
-
-  // 切换MP药水自动使用
-  const toggleMpPotion = () => {
-    updateSettings({
-      autoUseMpPotion: !settings.autoUseMpPotion,
-      mpPotionThreshold: normalizeThresholdInput(mpThresholdInput, settings.mpPotionThreshold),
-    })
-  }
-
-  // 更新HP阈值
-  const updateHpThreshold = (value: number) => {
-    const threshold = Math.min(100, Math.max(1, value))
-    updateSettings({ hpPotionThreshold: threshold })
-  }
-
-  // 更新MP阈值
-  const updateMpThreshold = (value: number) => {
-    const threshold = Math.min(100, Math.max(1, value))
-    updateSettings({ mpPotionThreshold: threshold })
-  }
-
-  const commitHpThreshold = () => {
-    const threshold = normalizeThresholdInput(hpThresholdInput, settings.hpPotionThreshold)
-    setHpThresholdInput(String(threshold))
-    if (threshold !== settings.hpPotionThreshold) {
-      updateHpThreshold(threshold)
-    }
-  }
-
-  const commitMpThreshold = () => {
-    const threshold = normalizeThresholdInput(mpThresholdInput, settings.mpPotionThreshold)
-    setMpThresholdInput(String(threshold))
-    if (threshold !== settings.mpPotionThreshold) {
-      updateMpThreshold(threshold)
-    }
-  }
-
-  // 按恢复量排序药水（高级优先）
   const hpPotions = potions
     .filter(item => item.definition?.sub_type === 'hp')
-    .sort((a, b) => {
-      const aRestore = a.definition?.base_stats?.max_hp ?? 0
-      const bRestore = b.definition?.base_stats?.max_hp ?? 0
-      return bRestore - aRestore
-    })
+    .sort(
+      (a, b) => (b.definition?.base_stats?.max_hp ?? 0) - (a.definition?.base_stats?.max_hp ?? 0)
+    )
 
   const mpPotions = potions
     .filter(item => item.definition?.sub_type === 'mp')
-    .sort((a, b) => {
-      const aRestore = a.definition?.base_stats?.max_mana ?? 0
-      const bRestore = b.definition?.base_stats?.max_mana ?? 0
-      return bRestore - aRestore
-    })
+    .sort(
+      (a, b) =>
+        (b.definition?.base_stats?.max_mana ?? 0) - (a.definition?.base_stats?.max_mana ?? 0)
+    )
+
+  const totalHpPotions = hpPotions.reduce((sum, p) => sum + p.quantity, 0)
+  const totalMpPotions = mpPotions.reduce((sum, p) => sum + p.quantity, 0)
+  const bestHpRestore = hpPotions[0]?.definition?.base_stats?.max_hp ?? 0
+  const bestMpRestore = mpPotions[0]?.definition?.base_stats?.max_mana ?? 0
 
   return (
     <div className="bg-card border-border rounded-lg border p-3 sm:p-4">
@@ -157,38 +82,25 @@ export function PotionSettings() {
           <div className="mb-2 flex items-center justify-between">
             <span className="text-foreground text-sm font-medium">自动使用HP药水</span>
             <button
-              onClick={toggleHpPotion}
+              onClick={() => updateSettings('auto_use_hp_potion', !autoUseHp)}
               disabled={saving}
               className={`rounded px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 sm:text-sm ${
-                settings.autoUseHpPotion
-                  ? 'bg-green-600 text-white'
-                  : 'bg-muted text-muted-foreground'
+                autoUseHp ? 'bg-green-600 text-white' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {settings.autoUseHpPotion ? '已开启' : '已关闭'}
+              {autoUseHp ? '已开启' : '已关闭'}
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-muted-foreground text-xs sm:text-sm">HP低于</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={hpThresholdInput}
-              onChange={e => setHpThresholdInput(e.target.value)}
-              onBlur={commitHpThreshold}
-              disabled={saving}
-              className="border-input bg-muted text-foreground w-20 rounded border px-2 py-1 text-center text-xs disabled:opacity-50 sm:text-sm"
-            />
-            <span className="text-muted-foreground text-xs">%时自动使用</span>
-          </div>
+          <p className="text-muted-foreground text-xs">
+            开启后，每回合结束后自动使用HP药水（不会超过最大血量）。
+          </p>
 
           <div className="text-muted-foreground mt-2 text-xs">
-            拥有HP药水: {hpPotions.reduce((sum, p) => sum + p.quantity, 0)} 个
-            {hpPotions.length > 0 && (
+            拥有HP药水: {totalHpPotions} 个
+            {bestHpRestore > 0 && (
               <span className="ml-2 text-green-600 dark:text-green-400">
-                (最高恢复 {hpPotions[0].definition?.base_stats?.max_hp ?? 0} HP)
+                (最高恢复 {bestHpRestore} HP)
               </span>
             )}
           </div>
@@ -199,38 +111,25 @@ export function PotionSettings() {
           <div className="mb-2 flex items-center justify-between">
             <span className="text-foreground text-sm font-medium">自动使用MP药水</span>
             <button
-              onClick={toggleMpPotion}
+              onClick={() => updateSettings('auto_use_mp_potion', !autoUseMp)}
               disabled={saving}
               className={`rounded px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 sm:text-sm ${
-                settings.autoUseMpPotion
-                  ? 'bg-green-600 text-white'
-                  : 'bg-muted text-muted-foreground'
+                autoUseMp ? 'bg-green-600 text-white' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {settings.autoUseMpPotion ? '已开启' : '已关闭'}
+              {autoUseMp ? '已开启' : '已关闭'}
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-muted-foreground text-xs sm:text-sm">MP低于</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={mpThresholdInput}
-              onChange={e => setMpThresholdInput(e.target.value)}
-              onBlur={commitMpThreshold}
-              disabled={saving}
-              className="border-input bg-muted text-foreground w-20 rounded border px-2 py-1 text-center text-xs disabled:opacity-50 sm:text-sm"
-            />
-            <span className="text-muted-foreground text-xs">%时自动使用</span>
-          </div>
+          <p className="text-muted-foreground text-xs">
+            开启后，每回合结束后自动使用MP药水（不会超过最大魔力）。
+          </p>
 
           <div className="text-muted-foreground mt-2 text-xs">
-            拥有MP药水: {mpPotions.reduce((sum, p) => sum + p.quantity, 0)} 个
-            {mpPotions.length > 0 && (
+            拥有MP药水: {totalMpPotions} 个
+            {bestMpRestore > 0 && (
               <span className="ml-2 text-blue-600 dark:text-blue-400">
-                (最高恢复 {mpPotions[0].definition?.base_stats?.max_mana ?? 0} MP)
+                (最高恢复 {bestMpRestore} MP)
               </span>
             )}
           </div>
@@ -238,13 +137,4 @@ export function PotionSettings() {
       </div>
     </div>
   )
-}
-
-function normalizeThresholdInput(value: string, fallback: number): number {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) {
-    return fallback
-  }
-
-  return Math.min(100, Math.max(1, Math.trunc(parsed)))
 }

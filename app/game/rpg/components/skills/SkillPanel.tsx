@@ -87,6 +87,10 @@ function SkillNodeCard({
         ? '强化'
         : `专精 ${(skill.spec_branch ?? '').toUpperCase()}`
 
+  const level = skill.level ?? 1
+  const manaCost = skill.mana_cost + (level - 1) * (skill.mana_cost_per_level ?? 0)
+  const hasManaCost = manaCost > 0
+
   let cardClass = 'flex items-start gap-1.5 rounded-lg border p-1.5 transition-all min-w-0 '
   if (isLearned) {
     cardClass += 'border-green-600 bg-green-900/30 shadow-[inset_0_0_0_1px_rgba(22,163,74,0.25)]'
@@ -151,6 +155,11 @@ function SkillNodeCard({
         {!isLearned && !isLocked && (
           <span className="mt-1 inline-block text-[10px] text-yellow-600">
             {skill.skill_points_cost ?? 1} 点
+          </span>
+        )}
+        {hasManaCost && (
+          <span className="ml-1.5 mt-1 inline-block text-[10px] text-blue-600 dark:text-blue-400">
+            {manaCost} MP
           </span>
         )}
       </div>
@@ -419,9 +428,17 @@ export function SkillPanel() {
         <div className="border-border bg-background shrink-0 space-y-2 border-b pb-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground text-sm">技能树</span>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">技能点</span>
-              <span className="text-primary text-lg font-bold">{character.skill_points}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">技能点</span>
+                <span className="text-primary text-lg font-bold">{character.skill_points}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">MP</span>
+                <span className="text-blue-600 dark:text-blue-400 text-lg font-bold">
+                  {character.current_mana}
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
