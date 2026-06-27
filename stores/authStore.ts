@@ -357,12 +357,18 @@ const useAuthStore = create<AuthState>()(
         }
       },
       onRehydrateStorage: () => state => {
-        if (!state || typeof window === 'undefined') {
+        if (typeof window === 'undefined') {
+          return
+        }
+
+        if (!state) {
+          useAuthStore.getState().setLoading(false)
           return
         }
 
         const hasPersistedAuth = Boolean(state.user || state.token)
-        const hasSessionCookie = document.cookie.includes('laravel_session=')
+        const hasSessionCookie =
+          document.cookie.includes('dogeow_session=') || document.cookie.includes('laravel_session=')
 
         if (!hasPersistedAuth && !hasSessionCookie) {
           useAuthStore.getState().setLoading(false)

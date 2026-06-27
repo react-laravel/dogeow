@@ -230,6 +230,15 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     )
   }
 
+  // 未登录时显示注册/登录弹窗，避免 authLoading 结束后 initialFetchDone 永远为 false 导致一直“加载中”。
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-background text-foreground min-h-screen">
+        <RpgRegistrationGate />
+      </div>
+    )
+  }
+
   // 点击角色后正在拉取详情时，先显示加载（避免一直停在选择页）
   if (isLoading && !character) {
     return (

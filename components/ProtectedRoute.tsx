@@ -1,12 +1,11 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useAuthStore from '@/stores/authStore'
 import { isProtectedPath } from '@/lib/constants/protected-routes'
 import { useTranslation } from '@/hooks/useTranslation'
 
-const emptySubscribe = () => () => {}
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -17,17 +16,32 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { isAuthenticated, loading } = useAuthStore()
-  const isClient = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  )
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setIsClient(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   const needsProtection = useMemo(() => isProtectedPath(pathname), [pathname])
 
   useEffect(() => {
+    if (!isClient) return
+
+    if (loading) {
+      const authStorage = window.localStorage.getItem('auth-storage')
+      const hasAuthStorage = Boolean(authStorage && authStorage !== '{}')
+      const hasSessionCookie =
+        document.cookie.includes('dogeow_session=') || document.cookie.includes('laravel_session=')
+
+      if (!hasAuthStorage && !hasSessionCookie) {
+        useAuthStore.getState().setLoading(false)
+        return
+      }
+    }
+
     // 只有需要保护的路径才进行登录检查
-    if (isClient && !loading && needsProtection && !isAuthenticated) {
+    if (!loading && needsProtection && !isAuthenticated) {
       router.push('/')
     }
   }, [isClient, isAuthenticated, loading, router, needsProtection])
