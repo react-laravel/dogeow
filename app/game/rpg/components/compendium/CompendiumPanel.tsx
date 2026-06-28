@@ -8,6 +8,7 @@ import { useMonsterDrops } from '../../hooks/useMonsterDrops'
 import { CompendiumItem, CompendiumMonster, ItemType, STAT_NAMES } from '../../types'
 import { getItemIconFallback, ITEM_TYPE_NAMES } from '../../utils/itemUtils'
 import { getRpgItemImageUrl, getRpgMonsterImageUrl } from '../../utils/assetUrls'
+import { CompendiumItemIcon } from '../shared/CompendiumItemIcon'
 
 type CompendiumTab = 'items' | 'monsters'
 
@@ -195,7 +196,7 @@ export function CompendiumPanel() {
                 >
                   <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
                     {isDiscovered ? (
-                      <ItemIcon item={item} className="drop-shadow-sm" />
+                      <CompendiumItemIcon item={item} className="drop-shadow-sm" />
                     ) : (
                       <span className="text-2xl">❓</span>
                     )}
@@ -424,8 +425,8 @@ export function CompendiumPanel() {
                       <div className="grid grid-cols-4 gap-1">
                         {compendiumMonsterDrops.possible_items.map(item => (
                           <div key={item.id} className="bg-muted rounded p-1 text-center">
-                            <span className="text-lg">
-                              {getItemIconFallback({ definition: item })}
+                            <span className="relative mx-auto flex h-8 w-8 items-center justify-center">
+                              <CompendiumItemIcon item={item} className="drop-shadow-sm" />
                             </span>
                             <p className="truncate text-xs">{item.name}</p>
                             {item.drop_rate !== undefined && (
@@ -477,32 +478,6 @@ function ImageWithFallback({ src, fallback }: { src: string; fallback: string })
         </span>
       )}
     </>
-  )
-}
-
-/** 物品小图标 */
-function ItemIcon({ item, className }: { item: CompendiumItem; className?: string }) {
-  const definitionId = item.id
-  const fallback = getItemIconFallback({ definition: item })
-  const [useImg, setUseImg] = useState(definitionId != null)
-  const src = getRpgItemImageUrl(item.icon, definitionId)
-  return (
-    <span
-      className={`relative inline-flex h-full w-full items-center justify-center ${className ?? ''}`}
-    >
-      {useImg && src ? (
-        <Image
-          src={src}
-          alt=""
-          fill
-          className="object-contain"
-          sizes="48px"
-          onError={() => setUseImg(false)}
-        />
-      ) : (
-        <span className="drop-shadow-sm">{fallback}</span>
-      )}
-    </span>
   )
 }
 

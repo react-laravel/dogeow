@@ -6,6 +6,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useMonsterDrops } from '../../hooks/useMonsterDrops'
 import type { CombatMonster } from '../../types'
 import { getRpgMonsterImageUrl } from '../../utils/assetUrls'
+import { CompendiumItemIcon } from '../shared/CompendiumItemIcon'
 
 type MonsterWithMeta = CombatMonster & { damage_taken?: number }
 
@@ -79,7 +80,9 @@ export function MonsterInfoDialog({ monster, onClose }: MonsterInfoDialogProps) 
                   <div className="grid grid-cols-4 gap-1">
                     {compendiumMonsterDrops.possible_items.map(item => (
                       <div key={item.id} className="bg-muted rounded p-1 text-center">
-                        <span className="text-lg">{getItemEmoji(item.type)}</span>
+                        <span className="relative mx-auto flex h-8 w-8 items-center justify-center">
+                          <CompendiumItemIcon item={item} className="drop-shadow-sm" />
+                        </span>
                         <p className="truncate text-xs">{item.name}</p>
                         {item.drop_rate !== undefined && (
                           <p className="text-muted-foreground text-[10px]">{item.drop_rate}%</p>
@@ -139,20 +142,4 @@ function getMonsterTypeName(type: string): string {
     boss: 'BOSS',
   }
   return names[type] || type
-}
-
-function getItemEmoji(type: string): string {
-  const emojis: Record<string, string> = {
-    weapon: '⚔️',
-    helmet: '🪖',
-    armor: '🛡️',
-    gloves: '🧤',
-    boots: '👢',
-    belt: '🎗️',
-    ring: '💍',
-    amulet: '📿',
-    potion: '🧪',
-    gem: '💎',
-  }
-  return emojis[type] || '📦'
 }
