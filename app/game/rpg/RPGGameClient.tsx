@@ -8,7 +8,6 @@ import { CharacterPanel } from './components/character/CharacterPanel'
 import { InventoryPanel } from './components/inventory/InventoryPanel'
 import { SkillPanel } from './components/skills/SkillPanel'
 import { CombatPanel } from './components/combat/CombatPanel'
-import { ShopPanel } from './components/shop/ShopPanel'
 import { CompendiumPanel } from './components/compendium/CompendiumPanel'
 import { SoundSettings } from './components/settings/SoundSettings'
 import { PotionSettings } from './components/settings/PotionSettings'
@@ -104,9 +103,8 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   // 战斗WebSocket注册：character 未加载时用 selectedCharacterId 订阅，确保一开始就能收战斗推送
   useCombatWebSocket(character?.id ?? selectedCharacterId ?? null)
 
-  const isShopTab = activeTab === 'shop' && resolvedView === 'game' && character != null
   const isSkillsTab = activeTab === 'skills' && resolvedView === 'game' && character != null
-  const usePanelInnerScroll = isShopTab || isSkillsTab
+  const usePanelInnerScroll = isSkillsTab
   useLockAppScroll(usePanelInnerScroll)
 
   // 自动挂机战斗：用 subscribe 避免 HP/战斗推送触发整页重渲染
@@ -292,7 +290,6 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
     { id: 'inventory' as const, name: '背包', icon: '🎒' },
     { id: 'skills' as const, name: '技能', icon: '✨' },
     { id: 'combat' as const, name: '战斗', icon: '⚔️' },
-    { id: 'shop' as const, name: '集市', icon: '🛒' },
     { id: 'compendium' as const, name: '图鉴', icon: '📖' },
     { id: 'settings' as const, name: '设置', icon: '⚙️' },
   ]
@@ -356,9 +353,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
           ref={contentScrollRef}
           className={`flex min-h-0 flex-1 flex-col ${
             usePanelInnerScroll
-              ? isShopTab
-                ? 'overflow-hidden overscroll-none pb-16 lg:pb-4'
-                : 'overflow-hidden overscroll-none pb-28 lg:pb-4'
+              ? 'overflow-hidden overscroll-none pb-28 lg:pb-4'
               : 'overflow-y-auto pb-32 lg:pb-4'
           }`}
         >
@@ -372,7 +367,6 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
               {activeTab === 'inventory' && <InventoryPanel />}
               {activeTab === 'skills' && <SkillPanel />}
               {activeTab === 'combat' && <CombatPanel />}
-              {activeTab === 'shop' && <ShopPanel />}
               {activeTab === 'compendium' && <CompendiumPanel />}
               {activeTab === 'settings' && (
                 <div className="space-y-4">

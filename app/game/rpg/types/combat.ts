@@ -1,7 +1,6 @@
 // Combat types for RPG game
 import type { GameItem } from './item'
 import type { GameCharacter } from './character'
-import type { ActiveMercenary } from './mercenary'
 
 export type MonsterType = 'normal' | 'elite' | 'boss'
 export type SkillType = 'active' | 'passive'
@@ -73,7 +72,6 @@ export interface CombatResult {
   skill_target_positions?: number[] // 技能命中的怪物位置 (0-4)
   /** 技能冷却（回合数） */
   skill_cooldowns?: Record<number, number>
-  mercenary?: ActiveMercenary | null
   /** 自动使用药水记录 */
   potion_used?: {
     before?: Record<string, { name: string; restored: number }>

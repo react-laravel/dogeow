@@ -17,7 +17,6 @@ import {
   MapDefinition,
   CharacterMap,
   EquipmentSlot,
-  ShopItem,
   CompendiumItem,
   CompendiumMonster,
   CompendiumMonsterDrops,
@@ -25,13 +24,6 @@ import {
   GameCombatUpdateEvent,
   GameLootDroppedEvent,
   GameLevelUpEvent,
-  Mercenary,
-  MercenaryRole,
-  createMercenaryForCharacter,
-  syncMercenaryLevel,
-  MercenaryTemplate,
-  ActiveMercenary,
-  MercenaryEquipmentSlot,
 } from '../types'
 import { apiGet, apiRequest, post, put, del } from '@/lib/api'
 import { soundManager } from '../utils/soundManager'
@@ -54,7 +46,6 @@ import {
   withCombatFlag,
   replaceItemInLoadout,
 } from './gameStateHelpers'
-import { normalizeShopItemsWithSystemPotions } from './shopHelpers'
 
 /** 进入/传送地图接口响应 */
 interface EnterMapResponse {
@@ -80,10 +71,6 @@ interface GameState {
   /** 仓库格位数（由后端 /rpg/inventory 返回） */
   storageSize: number
   equipment: Record<string, GameItem | null>
-  mercenariesByCharacter: Record<number, Mercenary | null>
-  mercenary: Mercenary | null
-  mercenaryTemplates: MercenaryTemplate[]
-  activeMercenary: ActiveMercenary | null
   skills: SkillWithLearnedState[]
   maps: MapDefinition[]
   currentMap: MapDefinition | null
@@ -102,24 +89,8 @@ interface GameState {
   // UI状态
   isLoading: boolean
   error: string | null
-  activeTab:
-    | 'character'
-    | 'inventory'
-    | 'skills'
-    | 'maps'
-    | 'combat'
-    | 'shop'
-    | 'settings'
-    | 'compendium'
+  activeTab: 'character' | 'inventory' | 'skills' | 'maps' | 'combat' | 'settings' | 'compendium'
 
-  // 商店状态
-  shopItems: ShopItem[]
-  /** 下次商店装备刷新的时间戳（秒），用于显示"下次刷新" */
-  shopNextRefreshAt: number | null
-  /** 是否允许手动花费银币刷新商店 */
-  shopManualRefreshEnabled: boolean
-
-  /** 装备对比时是否收起左侧「已装备」栏，便于聚焦背包/商店物品 */
   compareEquippedCollapsed: boolean
 
   // 图鉴状态
@@ -129,15 +100,7 @@ interface GameState {
 
   // Actions
   setActiveTab: (
-    tab:
-      | 'character'
-      | 'inventory'
-      | 'skills'
-      | 'maps'
-      | 'combat'
-      | 'shop'
-      | 'settings'
-      | 'compendium'
+    tab: 'character' | 'inventory' | 'skills' | 'maps' | 'combat' | 'settings' | 'compendium'
   ) => void
   setCompareEquippedCollapsed: (collapsed: boolean) => void
   toggleCompareEquippedCollapsed: () => void
@@ -154,9 +117,6 @@ interface GameState {
   setDifficulty: (difficultyTier: number) => Promise<void>
   setDifficultyForCharacter: (characterId: number, difficultyTier: number) => Promise<void>
   setCharacter: (updater: (prev: GameCharacter | null) => GameCharacter | null) => void
-  hireMercenary: (roleOrTemplateId: MercenaryRole | number) => void | Promise<void>
-  dismissMercenary: () => void
-
   // 背包操作
   fetchInventory: () => Promise<void>
   equipItem: (itemId: number) => Promise<void>
@@ -207,16 +167,6 @@ interface GameState {
     storage_size?: number
   }) => void
 
-  // 商店操作
-  fetchShopItems: () => Promise<void>
-  refreshShopItems: () => Promise<void>
-  buyItem: (itemId: number, quantity?: number, listingId?: string) => Promise<void>
-  sellItemToShop: (itemId: number, quantity?: number) => Promise<void>
-  fetchMercenaries: () => Promise<void>
-  fetchActiveMercenary: () => Promise<void>
-  equipMercenaryItem: (itemId: number) => Promise<void>
-  unequipMercenaryItem: (slot: MercenaryEquipmentSlot) => Promise<void>
-
   // 图鉴操作
   fetchCompendiumItems: () => Promise<void>
   fetchCompendiumMonsters: () => Promise<void>
@@ -258,10 +208,6 @@ const initialState = {
   inventorySize: 100,
   storageSize: 100,
   equipment: {},
-  mercenariesByCharacter: {} as Record<number, Mercenary | null>,
-  mercenary: null,
-  mercenaryTemplates: [],
-  activeMercenary: null,
   skills: [],
   availableSkills: [],
   maps: [],
@@ -277,9 +223,6 @@ const initialState = {
   isLoading: false,
   error: null,
   activeTab: 'character' as const,
-  shopItems: [],
-  shopNextRefreshAt: null,
-  shopManualRefreshEnabled: false,
   compareEquippedCollapsed: false,
   compendiumItems: [],
   compendiumMonsters: [],
@@ -347,31 +290,17 @@ const store: StateCreator<GameState> = (set, get) => ({
         stats_breakdown?: CombatStatsBreakdown
         current_hp?: number
         current_mana?: number
-        mercenary?: ActiveMercenary | null
       }
-      set(state => {
-        const character = response.character
-        const storedMercenary = character ? state.mercenariesByCharacter[character.id] : null
-        const mercenary =
-          character && storedMercenary ? syncMercenaryLevel(storedMercenary, character) : null
-
-        return {
-          ...state,
-          character,
-          mercenariesByCharacter:
-            character && storedMercenary && mercenary
-              ? { ...state.mercenariesByCharacter, [character.id]: mercenary }
-              : state.mercenariesByCharacter,
-          mercenary,
-          activeMercenary: response.mercenary ?? state.activeMercenary,
-          experienceTable: response.experience_table ?? state.experienceTable,
-          combatStats: response.combat_stats || null,
-          statsBreakdown: response.stats_breakdown ?? null,
-          currentHp: response.current_hp ?? null,
-          currentMana: response.current_mana ?? null,
-          isLoading: false,
-        }
-      })
+      set(state => ({
+        ...state,
+        character: response.character,
+        experienceTable: response.experience_table ?? state.experienceTable,
+        combatStats: response.combat_stats || null,
+        statsBreakdown: response.stats_breakdown ?? null,
+        currentHp: response.current_hp ?? null,
+        currentMana: response.current_mana ?? null,
+        isLoading: false,
+      }))
     } catch (error) {
       console.error('[GameStore] Fetch character error:', error)
       setRequestError(set, error)
@@ -393,7 +322,6 @@ const store: StateCreator<GameState> = (set, get) => ({
       set(state => ({
         ...state,
         characters: [...(state.characters || []), response.character],
-        mercenary: null,
         combatStats: response.combat_stats,
         statsBreakdown: response.stats_breakdown ?? null,
         isLoading: false,
@@ -423,7 +351,6 @@ const store: StateCreator<GameState> = (set, get) => ({
                 currentMana: null,
                 inventory: [],
                 equipment: {},
-                mercenary: null,
                 skills: [],
                 currentMap: null,
                 combatResult: null,
@@ -432,11 +359,6 @@ const store: StateCreator<GameState> = (set, get) => ({
                 shouldAutoCombat: false,
               }
             : {}),
-          mercenariesByCharacter: Object.fromEntries(
-            Object.entries(state.mercenariesByCharacter).filter(
-              ([id]) => Number(id) !== characterId
-            )
-          ),
           isLoading: false,
         }
       })
@@ -468,13 +390,6 @@ const store: StateCreator<GameState> = (set, get) => ({
       set(state => ({
         ...state,
         character: response.character,
-        mercenary: state.mercenary ? syncMercenaryLevel(state.mercenary, response.character) : null,
-        mercenariesByCharacter: state.mercenary
-          ? {
-              ...state.mercenariesByCharacter,
-              [response.character.id]: syncMercenaryLevel(state.mercenary, response.character),
-            }
-          : state.mercenariesByCharacter,
         combatStats: response.combat_stats,
         statsBreakdown: response.stats_breakdown ?? null,
         currentHp: response.current_hp,
@@ -534,60 +449,6 @@ const store: StateCreator<GameState> = (set, get) => ({
       ...state,
       character: updater(state.character),
     }))
-  },
-
-  hireMercenary: async roleOrTemplateId => {
-    if (typeof roleOrTemplateId !== 'number') {
-      set(state => {
-        if (!state.character) return state
-        const mercenary = createMercenaryForCharacter(state.character, roleOrTemplateId)
-        return {
-          ...state,
-          mercenary,
-          mercenariesByCharacter: {
-            ...state.mercenariesByCharacter,
-            [state.character.id]: mercenary,
-          },
-        }
-      })
-      return
-    }
-
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'hireMercenary',
-        warn: false,
-      })
-      if (!selectedId) return
-      const response = (await post('/rpg/mercenaries/hire', {
-        character_id: selectedId,
-        template_id: roleOrTemplateId,
-      })) as { mercenary: ActiveMercenary; copper: number }
-      soundManager.play('gold')
-      set(state => ({
-        ...state,
-        activeMercenary: response.mercenary,
-        character: withUpdatedCopper(state.character, response.copper),
-        isLoading: false,
-      }))
-    } catch (error) {
-      setRequestError(set, error)
-    }
-  },
-
-  dismissMercenary: () => {
-    set(state => {
-      if (!state.character) return state
-      return {
-        ...state,
-        mercenary: null,
-        mercenariesByCharacter: {
-          ...state.mercenariesByCharacter,
-          [state.character.id]: null,
-        },
-      }
-    })
   },
 
   fetchInventory: async () => {
@@ -1140,7 +1001,6 @@ const store: StateCreator<GameState> = (set, get) => ({
           max_hp: number
         }
         current_combat_monsters?: (CombatMonster | null)[]
-        mercenary?: ActiveMercenary | null
       }
       set(state => ({
         ...state,
@@ -1152,7 +1012,6 @@ const store: StateCreator<GameState> = (set, get) => ({
         statusCombatMonsters: response.is_fighting
           ? (response.current_combat_monsters ?? null)
           : null,
-        activeMercenary: response.mercenary ?? state.activeMercenary,
       }))
     } catch (error) {
       console.error('[GameStore] Fetch combat status error:', error)
@@ -1227,16 +1086,11 @@ const store: StateCreator<GameState> = (set, get) => ({
         characterId: selectedId,
         skillIds: body.skill_ids,
       })
-      const response = await post<{ message?: string }>('/rpg/combat/start', body)
+      await post<{ message?: string }>('/rpg/combat/start', body)
       reportCombatDebug('gameStore.ts:startCombat:after', 'combat/start success', {
         characterId: selectedId,
       })
-      // 如果是复活（角色已死亡），刷新角色数据
-      if (response.message?.includes('复活')) {
-        await get().fetchCharacter()
-      } else {
-        soundManager.play('combat_start')
-      }
+      soundManager.play('combat_start')
       set(state => ({
         ...state,
         ...withCombatFlag(state, true),
@@ -1279,7 +1133,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         warn: false,
       })
       if (!selectedId) return
-      await post('/rpg/combat/start', { character_id: selectedId })
+      await post('/rpg/combat/revive', { character_id: selectedId })
       // 刷新角色数据
       await get().fetchCharacter()
       // 复活后不自动开始战斗，并清空上次战斗结果，避免继续显示怪物头像/HP
@@ -1430,17 +1284,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       return {
         combatResult: typedData,
         pendingCombatLog: pendingCombatLog ?? state.pendingCombatLog,
-        activeMercenary: typedData.mercenary ?? state.activeMercenary,
         character: typedData.character,
-        mercenary: state.mercenary
-          ? syncMercenaryLevel(state.mercenary, typedData.character)
-          : state.mercenary,
-        mercenariesByCharacter: state.mercenary
-          ? {
-              ...state.mercenariesByCharacter,
-              [typedData.character.id]: syncMercenaryLevel(state.mercenary, typedData.character),
-            }
-          : state.mercenariesByCharacter,
         // 只有当新值存在且不为 undefined 时才更新
         ...(newCurrentHp !== undefined && { currentHp: newCurrentHp }),
         ...(newCurrentMana !== undefined && { currentMana: newCurrentMana }),
@@ -1518,13 +1362,6 @@ const store: StateCreator<GameState> = (set, get) => ({
     set(state => ({
       ...state,
       character: typedData.character,
-      mercenary: state.mercenary ? syncMercenaryLevel(state.mercenary, typedData.character) : null,
-      mercenariesByCharacter: state.mercenary
-        ? {
-            ...state.mercenariesByCharacter,
-            [typedData.character.id]: syncMercenaryLevel(state.mercenary, typedData.character),
-          }
-        : state.mercenariesByCharacter,
       currentHp: typedData.character?.current_hp ?? state.currentHp,
       currentMana: typedData.character?.current_mana ?? state.currentMana,
     }))
@@ -1533,259 +1370,6 @@ const store: StateCreator<GameState> = (set, get) => ({
   clearError: () => set(state => ({ ...state, error: null })),
 
   reset: () => set(initialState),
-
-  // 商店操作
-  fetchShopItems: async () => {
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, { context: 'fetchShopItems' })
-      if (!selectedId) return
-      const params = `?character_id=${selectedId}`
-      const [response, compendiumResponse] = await Promise.all([
-        apiGet(`/rpg/shop${params}`) as Promise<{
-          items: ShopItem[]
-          player_copper: number
-          next_refresh_at?: number
-          manual_refresh_enabled?: boolean
-        }>,
-        Promise.resolve(apiGet(`/rpg/compendium/items${params}`)).catch(error => {
-          console.warn('[GameStore] Fetch compendium potions for shop failed:', error)
-          return null
-        }) as Promise<{
-          items: CompendiumItem[]
-          total: number
-          discovered_count: number
-        } | null>,
-      ])
-      const normalizedItems = normalizeShopItemsWithSystemPotions(
-        response.items || [],
-        compendiumResponse?.items
-      )
-      set(state => ({
-        ...state,
-        shopItems: normalizedItems,
-        compendiumItems: compendiumResponse?.items ?? state.compendiumItems,
-        shopNextRefreshAt: response.next_refresh_at ?? null,
-        shopManualRefreshEnabled: response.manual_refresh_enabled ?? false,
-        character: withUpdatedCopper(state.character, response.player_copper),
-        isLoading: false,
-      }))
-    } catch (error) {
-      console.error('[GameStore] Fetch shop items error:', error)
-      setRequestError(set, error)
-    }
-  },
-
-  refreshShopItems: async () => {
-    const selectedId = get().selectedCharacterId
-    if (!selectedId) return
-    startRequest(set)
-    try {
-      const params = `?character_id=${selectedId}`
-      const [response, compendiumResponse] = await Promise.all([
-        post('/rpg/shop/refresh', {
-          character_id: selectedId,
-        }) as Promise<{
-          items: ShopItem[]
-          player_copper: number
-          next_refresh_at?: number
-          manual_refresh_enabled?: boolean
-        }>,
-        Promise.resolve(apiGet(`/rpg/compendium/items${params}`)).catch(error => {
-          console.warn('[GameStore] Fetch compendium potions for refreshed shop failed:', error)
-          return null
-        }) as Promise<{
-          items: CompendiumItem[]
-          total: number
-          discovered_count: number
-        } | null>,
-      ])
-      const normalizedItems = normalizeShopItemsWithSystemPotions(
-        response.items ?? [],
-        compendiumResponse?.items
-      )
-      set(state => ({
-        ...state,
-        shopItems: normalizedItems,
-        compendiumItems: compendiumResponse?.items ?? state.compendiumItems,
-        shopNextRefreshAt: response.next_refresh_at ?? null,
-        shopManualRefreshEnabled: response.manual_refresh_enabled ?? false,
-        character: withUpdatedCopper(state.character, response.player_copper),
-        isLoading: false,
-      }))
-    } catch (error) {
-      console.error('[GameStore] Refresh shop error:', error)
-      setRequestError(set, error)
-    }
-  },
-
-  buyItem: async (itemId: number, quantity = 1, listingId?: string) => {
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'buyItem',
-        warn: false,
-      })
-      if (!selectedId) return
-      const response = (await apiRequest(
-        '/rpg/shop/buy',
-        'POST',
-        {
-          item_id: itemId,
-          quantity,
-          character_id: selectedId,
-          ...(listingId ? { listing_id: listingId } : {}),
-        },
-        { handleError: false }
-      )) as {
-        copper: number
-        total_price: number
-        quantity: number
-        item_name: string
-      }
-      soundManager.play('gold')
-      set(state => {
-        const purchasedItem = state.shopItems.find(
-          item =>
-            item.id === itemId && (listingId ? item.listing_id === listingId : !item.listing_id)
-        )
-        const isRepeatableShopItem = purchasedItem?.type === 'potion'
-
-        return {
-          ...state,
-          character: withUpdatedCopper(state.character, response.copper),
-          shopItems:
-            purchasedItem && !isRepeatableShopItem
-              ? state.shopItems.filter(item =>
-                  listingId ? item.listing_id !== listingId : item.id !== itemId
-                )
-              : state.shopItems,
-          isLoading: false,
-        }
-      })
-      // 背包由 WebSocket inventory.update 推送
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (message.includes('货币不足') || message.includes('余额不足')) {
-        set(state => ({ ...state, error: '需要更多铜币', isLoading: false }))
-      } else if (message.includes('等级不足')) {
-        const requiredLevelMatch = message.match(/(?:需要|需求)?等级\s*(?:Lv\.?\s*)?(\d+)/)
-        const requiredLevel = requiredLevelMatch?.[1]
-        set(state => ({
-          ...state,
-          error: requiredLevel ? `需求等级Lv.${requiredLevel}` : '需求等级未达到',
-          isLoading: false,
-        }))
-      } else {
-        setRequestError(set, error)
-      }
-      throw error
-    }
-  },
-
-  sellItemToShop: async (itemId: number, quantity = 1) => {
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'sellItemToShop',
-        warn: false,
-      })
-      if (!selectedId) return
-      const response = (await post('/rpg/shop/sell', {
-        item_id: itemId,
-        quantity,
-        character_id: selectedId,
-      })) as {
-        copper: number
-        sell_price: number
-        quantity: number
-        item_name: string
-      }
-      soundManager.play('gold')
-      set(state => ({
-        ...state,
-        character: withUpdatedCopper(state.character, response.copper),
-        inventory: state.inventory.filter(i => i.id !== itemId),
-        isLoading: false,
-      }))
-    } catch (error) {
-      setRequestError(set, error)
-    }
-  },
-
-  fetchMercenaries: async () => {
-    try {
-      const response = (await apiGet('/rpg/mercenaries')) as { templates: MercenaryTemplate[] }
-      set(state => ({ ...state, mercenaryTemplates: response.templates ?? [] }))
-    } catch (error) {
-      console.error('[GameStore] Fetch mercenaries error:', error)
-      setRequestError(set, error)
-    }
-  },
-
-  fetchActiveMercenary: async () => {
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'fetchActiveMercenary',
-        stopLoading: false,
-      })
-      if (!selectedId) return
-      const response = (await apiGet(`/rpg/mercenaries/active?character_id=${selectedId}`)) as {
-        mercenary: ActiveMercenary | null
-      }
-      set(state => ({ ...state, activeMercenary: response.mercenary ?? null }))
-    } catch (error) {
-      console.error('[GameStore] Fetch active mercenary error:', error)
-      setRequestError(set, error)
-    }
-  },
-
-  equipMercenaryItem: async (itemId: number) => {
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'equipMercenaryItem',
-        warn: false,
-      })
-      if (!selectedId) return
-      const response = (await post('/rpg/mercenaries/equip', {
-        character_id: selectedId,
-        item_id: itemId,
-      })) as { mercenary: ActiveMercenary }
-      soundManager.play('equip')
-      set(state => ({
-        ...state,
-        activeMercenary: response.mercenary,
-        inventory: state.inventory.filter(item => item.id !== itemId),
-        isLoading: false,
-      }))
-    } catch (error) {
-      setRequestError(set, error)
-    }
-  },
-
-  unequipMercenaryItem: async (slot: MercenaryEquipmentSlot) => {
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'unequipMercenaryItem',
-        warn: false,
-      })
-      if (!selectedId) return
-      const response = (await post('/rpg/mercenaries/unequip', {
-        character_id: selectedId,
-        slot,
-      })) as { mercenary: ActiveMercenary; item?: GameItem | null }
-      set(state => ({
-        ...state,
-        activeMercenary: response.mercenary,
-        inventory: response.item ? [...state.inventory, response.item] : state.inventory,
-        isLoading: false,
-      }))
-    } catch (error) {
-      setRequestError(set, error)
-    }
-  },
 
   // 图鉴操作
   fetchCompendiumItems: async () => {
@@ -1860,8 +1444,17 @@ export const useGameStore = create<GameState>()(
       selectedCharacterId: state.selectedCharacterId,
       activeTab: state.activeTab,
       compareEquippedCollapsed: state.compareEquippedCollapsed,
-      mercenariesByCharacter: state.mercenariesByCharacter,
     }),
+    merge: (persistedState, currentState) => {
+      const merged = {
+        ...currentState,
+        ...(persistedState as Partial<GameState>),
+      }
+      if ((merged.activeTab as string) === 'shop') {
+        merged.activeTab = 'character'
+      }
+      return merged
+    },
     skipHydration: true, // 跳过自动 hydration，手动控制
   })
 )

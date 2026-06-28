@@ -142,30 +142,6 @@ export function CombatPanelSkeleton() {
 }
 
 /**
- * 商店面板骨架屏
- */
-export function ShopPanelSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between">
-        <SkeletonLine width="30%" />
-        <SkeletonLine width="20%" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="h-32 rounded-lg" />
-            <SkeletonLine width="70%" />
-            <SkeletonLine width="40%" />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/**
  * 图鉴面板骨架屏
  */
 export function CompendiumPanelSkeleton() {

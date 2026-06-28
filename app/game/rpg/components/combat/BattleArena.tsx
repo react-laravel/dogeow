@@ -1,6 +1,6 @@
 'use client'
 
-import { type ActiveMercenary, type CombatMonster, type SkillUsedEntry } from '../../types'
+import { type CombatMonster, type SkillUsedEntry } from '../../types'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MonsterIcon } from './MonsterIcon'
 import { MonsterGroup } from './MonsterGroup'
@@ -23,7 +23,6 @@ export function BattleArena({
   isLoading,
   skillUsed,
   skillTargetPositions,
-  mercenary,
   combatLogId,
   onRoundVisualSettled,
 }: {
@@ -46,7 +45,6 @@ export function BattleArena({
   isLoading: boolean
   skillUsed?: SkillUsedEntry | null
   skillTargetPositions?: number[]
-  mercenary?: ActiveMercenary | null
   combatLogId?: number | null
   onRoundVisualSettled?: () => void
 }) {
@@ -333,9 +331,8 @@ export function BattleArena({
           )}
         </div>
 
-        {/* 下侧：用户与雇佣兵 */}
+        {/* 下侧：角色 */}
         <div className="mt-auto flex shrink-0 items-end justify-center gap-3 p-3 sm:gap-4 sm:p-4">
-          {mercenary && <MercenaryCombatCard mercenary={mercenary} />}
           <div className="flex flex-col items-center gap-2">
             <div className="bg-primary/20 text-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl">
               {character?.name?.charAt(0) ?? '?'}
@@ -370,44 +367,6 @@ export function BattleArena({
             )}
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function MercenaryCombatCard({ mercenary }: { mercenary: ActiveMercenary }) {
-  const hpPercent =
-    mercenary.stats.max_hp > 0
-      ? Math.min(100, Math.max(0, (mercenary.current_hp / mercenary.stats.max_hp) * 100))
-      : 0
-  const attacked = (mercenary.last_attack?.damage ?? 0) > 0
-
-  return (
-    <div
-      className={`flex w-24 flex-col items-center gap-2 text-white sm:w-28 ${
-        attacked ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.75)]' : ''
-      }`}
-      title={attacked ? `攻击造成 ${mercenary.last_attack?.damage ?? 0} 伤害` : undefined}
-    >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-lg font-bold sm:h-14 sm:w-14">
-        {mercenary.icon ?? '🛡️'}
-      </div>
-      <div className="w-full max-w-[140px] space-y-1">
-        <div className="text-muted-foreground flex justify-between gap-1 text-[10px] sm:text-xs">
-          <span className="truncate">{mercenary.name}</span>
-          <span className="shrink-0">
-            {mercenary.current_hp}/{mercenary.stats.max_hp}
-          </span>
-        </div>
-        <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-          <div
-            className="h-full rounded-full bg-red-500 transition-[width] duration-300"
-            style={{ width: `${hpPercent}%` }}
-          />
-        </div>
-      </div>
-      <div className="text-muted-foreground text-[9px] sm:text-[10px]">
-        {attacked ? `攻击 -${mercenary.last_attack?.damage ?? 0}` : `Lv.${mercenary.level}`}
       </div>
     </div>
   )

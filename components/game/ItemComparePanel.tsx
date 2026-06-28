@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import type { GameItem, ShopItem, ItemQuality } from '@/app/game/rpg/types'
+import type { GameItem, ItemQuality } from '@/app/game/rpg/types'
 import { QUALITY_COLORS, STAT_NAMES } from '@/app/game/rpg/types'
 import { ItemIcon } from './ItemIcon'
 import { ItemActions, type ItemActionType } from './ItemActions'
@@ -11,7 +11,6 @@ import {
   getDisplayableItemStats,
   getItemDisplayName,
   getItemTotalStats,
-  getShopItemIcon,
   getEquipmentSlot,
 } from '@/app/game/rpg/utils/itemUtils'
 import { CopperDisplay } from '@/app/game/rpg/components/shared/CopperDisplay'
@@ -134,19 +133,13 @@ function CompareStatList({
 }
 
 interface ItemComparePanelProps {
-  newItem: GameItem | ShopItem
+  newItem: GameItem
   equippedItem: GameItem
-  isShop?: boolean
 }
 
 /** 装备对比面板 */
-export function ItemComparePanel({ newItem, equippedItem, isShop = false }: ItemComparePanelProps) {
-  const isShopItem = isShop
-
-  // 计算新物品属性
-  const newStats = getDisplayableItemStats(
-    isShopItem ? (newItem as ShopItem).base_stats || {} : getItemTotalStats(newItem as GameItem)
-  )
+export function ItemComparePanel({ newItem, equippedItem }: ItemComparePanelProps) {
+  const newStats = getDisplayableItemStats(getItemTotalStats(newItem))
 
   // 计算已装备物品属性
   const equippedStats = getDisplayableItemStats(getItemTotalStats(equippedItem))
@@ -206,35 +199,15 @@ export function ItemComparePanel({ newItem, equippedItem, isShop = false }: Item
           className="bg-green-500/10 p-2 text-center font-medium text-green-600 dark:text-green-400"
           style={{ borderBottom: '1px solid rgba(34,197,94,0.3)' }}
         >
-          {isShopItem ? '商店物品' : '背包物品'}
+          背包物品
         </div>
         <div className="p-2">
-          {isShopItem ? (
-            <div className="mb-2 flex items-start gap-2">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border-2 border-green-500">
-                <span className="text-2xl">
-                  {getShopItemIcon((newItem as ShopItem).type, (newItem as ShopItem).sub_type)}
-                </span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="block text-sm leading-tight font-bold break-words text-green-600 dark:text-green-400">
-                  {(newItem as ShopItem).name}
-                </span>
-                {(newItem as ShopItem).required_level > 0 ? (
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    需求等级: {(newItem as ShopItem).required_level}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <CompareItemHeader
-              item={newItem as GameItem}
-              name={getItemDisplayName(newItem as GameItem)}
-              nameColor={QUALITY_COLORS[(newItem as GameItem).quality as ItemQuality]}
-              sizeClass="h-12 w-12"
-            />
-          )}
+          <CompareItemHeader
+            item={newItem}
+            name={getItemDisplayName(newItem)}
+            nameColor={QUALITY_COLORS[newItem.quality as ItemQuality]}
+            sizeClass="h-12 w-12"
+          />
           <CompareStatList
             statKeys={diffStats}
             stats={newStats}
@@ -334,33 +307,24 @@ export function EquipmentComparePanel({
 export function FullComparePanel({
   newItem,
   equippedItem,
-  isShop = false,
   actions,
   onAction,
   footer,
 }: {
   newItem: GameItem
   equippedItem: GameItem
-  isShop?: boolean
   actions?: ItemActionType[]
   onAction?: (action: ItemActionType) => void
   /** @deprecated 宝石仅显示在图标角标，对比弹窗不再重复展示 */
   onUnsocketGem?: (socketIndex: number) => void
-  /** 渲染在右侧物品栏底部（如商店购买按钮） */
   footer?: ReactNode
 }) {
   const newStats = getItemTotalStats(newItem)
   const equippedStats = getItemTotalStats(equippedItem)
   const compareStatKeys = getCompareStatKeys(equippedStats, newStats)
 
-  // 商店对比显示购入价（来自商店列表 buy_price）；背包对比显示卖出价
-  const shopBuyPrice =
-    (newItem as GameItem & { shop_buy_price?: number }).shop_buy_price ??
-    newItem.definition?.buy_price ??
-    0
-  const newItemDisplayPrice = isShop
-    ? shopBuyPrice
-    : (newItem.sell_price ?? Math.floor((newItem.definition?.buy_price ?? 0) / 2))
+  const newItemDisplayPrice =
+    newItem.sell_price ?? Math.floor((newItem.definition?.buy_price ?? 0) / 2)
 
   // 获取已装备物品的价格信息
   const equippedItemBuyPrice = equippedItem.definition?.buy_price ?? 0
@@ -430,7 +394,7 @@ export function FullComparePanel({
         />
         <div className="border-border/50 mt-2 space-y-0.5 border-t pt-1">
           <div className="text-muted-foreground flex justify-between gap-1 text-xs">
-            <span className="shrink-0">{isShop ? '价格' : '卖出'}</span>
+            <span className="shrink-0">卖出</span>
             <CopperDisplay copper={newItemDisplayPrice} size="sm" nowrap className="font-medium" />
           </div>
         </div>

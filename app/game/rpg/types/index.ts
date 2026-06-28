@@ -11,17 +11,6 @@ export type {
 } from './character'
 export { CLASS_NAMES } from './character'
 
-// Mercenary types
-export type {
-  Mercenary,
-  MercenaryDefinition,
-  MercenaryRole,
-  MercenaryEquipmentSlot,
-  MercenaryTemplate,
-  ActiveMercenary,
-} from './mercenary'
-export { MERCENARY_DEFINITIONS, createMercenaryForCharacter, syncMercenaryLevel } from './mercenary'
-
 // Item and equipment types
 export type { ItemQuality, ItemType, EquipmentSlot } from './item'
 export type { ItemDefinition, GameItem, Equipment } from './item'
@@ -44,10 +33,6 @@ export type {
   CombatLogDetail,
 } from './combat'
 
-// Shop types
-export type { ShopItem } from './shop'
-export type { ShopResponse, BuyResponse, SellResponse } from './shop'
-
 // Compendium types
 export type { CompendiumItem, CompendiumMonster, CompendiumMonsterDrops } from './compendium'
 export type { CompendiumItemsResponse, CompendiumMonstersResponse } from './compendium'
@@ -69,7 +54,6 @@ import type { GameCharacter, CombatStats } from './character'
 import type { GameItem, Equipment } from './item'
 import type { CharacterSkill, SkillDefinition } from './skill'
 import type { MapDefinition, CharacterMap } from './map'
-import type { ActiveMercenary } from './mercenary'
 
 export interface CharacterResponse {
   character: GameCharacter | null
@@ -84,7 +68,6 @@ export interface CharacterDetailResponse {
   skills: CharacterSkill[]
   available_skills: SkillDefinition[]
   combat_stats: CombatStats
-  mercenary?: ActiveMercenary | null
 }
 
 export interface InventoryResponse {
@@ -106,5 +89,4 @@ export interface CombatStatusResponse {
   current_map: MapDefinition | null
   combat_stats: CombatStats
   last_combat_at: string | null
-  mercenary?: ActiveMercenary | null
 }

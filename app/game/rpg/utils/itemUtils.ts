@@ -63,17 +63,6 @@ export function getItemIconFallback(item: ItemWithDefinition): string {
 }
 
 /**
- * 获取物品图标：药水按 sub_type 区分 HP❤️/MP💙
- */
-export function getShopItemIcon(type: ItemType, subType?: string): string {
-  if (type === 'potion') {
-    if (subType === 'hp') return '❤️'
-    if (subType === 'mp') return '💙'
-  }
-  return ITEM_TYPE_ICONS[type] ?? '📦'
-}
-
-/**
  * 获取物品显示名称：优先 definition.name，否则用品质+类型
  */
 export function getItemDisplayName(item: GameItem): string {

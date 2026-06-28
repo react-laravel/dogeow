@@ -157,7 +157,7 @@ describe('combat types', () => {
     expect(result.monsters).toHaveLength(1)
   })
 
-  it('should allow CombatResult with skill_cooldowns and mercenary', () => {
+  it('should allow CombatResult with skill_cooldowns', () => {
     const result: CombatResult = {
       victory: true,
       monster: {
@@ -172,15 +172,6 @@ describe('combat types', () => {
       copper_gained: 50,
       loot: {},
       skill_cooldowns: { 1: 2, 2: 0 },
-      mercenary: {
-        id: 1,
-        template_id: 1,
-        name: 'Guard',
-        level: 5,
-        current_hp: 50,
-        stats: { max_hp: 100, attack: 10, defense: 8 },
-        equipment: {},
-      },
       character: {
         id: 1,
         user_id: 1,
@@ -203,7 +194,6 @@ describe('combat types', () => {
       },
     }
     expect(result.skill_cooldowns).toEqual({ 1: 2, 2: 0 })
-    expect(result.mercenary?.name).toBe('Guard')
   })
 
   it('should allow CombatLog', () => {

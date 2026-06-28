@@ -1,12 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useGameStore } from '../gameStore'
-import type {
-  GameCharacter,
-  GameItem,
-  MapDefinition,
-  ShopItem,
-  SkillWithLearnedState,
-} from '../../types'
+import type { GameCharacter, GameItem, MapDefinition, SkillWithLearnedState } from '../../types'
 
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
@@ -56,8 +50,6 @@ describe('GameStore', () => {
       inventorySize: 100,
       storageSize: 100,
       equipment: {},
-      mercenariesByCharacter: {},
-      mercenary: null,
       skills: [],
       maps: [],
       currentMap: null,
@@ -72,8 +64,7 @@ describe('GameStore', () => {
       isLoading: false,
       error: null,
       activeTab: 'character',
-      shopItems: [],
-      shopNextRefreshAt: null,
+      compareEquippedCollapsed: false,
       compendiumItems: [],
       compendiumMonsters: [],
       compendiumMonsterDrops: null,
@@ -89,43 +80,6 @@ describe('GameStore', () => {
     it('should set activeTab to combat', () => {
       useGameStore.getState().setActiveTab('combat')
       expect(useGameStore.getState().activeTab).toBe('combat')
-    })
-  })
-
-  describe('mercenaries', () => {
-    it('should hire and dismiss a mercenary for the active character', () => {
-      useGameStore.setState({
-        character: { id: 1, level: 12 } as GameCharacter,
-      })
-
-      useGameStore.getState().hireMercenary('guard')
-
-      expect(useGameStore.getState().mercenary?.role).toBe('guard')
-      expect(useGameStore.getState().mercenary?.level).toBe(12)
-      expect(useGameStore.getState().mercenariesByCharacter[1]?.name).toBe('铁卫')
-
-      useGameStore.getState().dismissMercenary()
-
-      expect(useGameStore.getState().mercenary).toBeNull()
-      expect(useGameStore.getState().mercenariesByCharacter[1]).toBeNull()
-    })
-
-    it('should sync mercenary level when character data refreshes', async () => {
-      const { apiGet } = await import('@/lib/api')
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        character: { id: 1, level: 5 } as GameCharacter,
-      })
-      useGameStore.getState().hireMercenary('marksman')
-
-      vi.mocked(apiGet).mockResolvedValueOnce({
-        character: { id: 1, name: 'Test', class: 'warrior', level: 8 },
-      })
-
-      await useGameStore.getState().fetchCharacter()
-
-      expect(useGameStore.getState().mercenary?.level).toBe(8)
-      expect(useGameStore.getState().mercenariesByCharacter[1]?.level).toBe(8)
     })
   })
 
@@ -655,214 +609,6 @@ describe('GameStore', () => {
     })
   })
 
-  describe('fetchShopItems', () => {
-    it('should fetch shop items', async () => {
-      const { apiGet } = await import('@/lib/api')
-      vi.mocked(apiGet).mockResolvedValueOnce({
-        items: [{ id: 1, name: 'ShopItem' }],
-        player_copper: 1000,
-      })
-
-      useGameStore.setState({ selectedCharacterId: 1 })
-      await useGameStore.getState().fetchShopItems()
-
-      expect(useGameStore.getState().shopItems).toHaveLength(1)
-    })
-
-    it('should use fixed system potion definitions in shop items', async () => {
-      const { apiGet } = await import('@/lib/api')
-      vi.mocked(apiGet)
-        .mockResolvedValueOnce({
-          items: [
-            {
-              id: 1,
-              listing_id: 'weapon-1',
-              name: 'Iron Sword',
-              type: 'weapon',
-              base_stats: { attack: 3 },
-              quality: 'common',
-              required_level: 1,
-              buy_price: 30,
-              sell_price: 6,
-            },
-            {
-              id: 2,
-              listing_id: 'random-potion-1',
-              name: 'HP Potion',
-              type: 'potion',
-              sub_type: 'hp',
-              base_stats: { max_hp: 999 },
-              quality: 'rare',
-              required_level: 1,
-              buy_price: 90,
-              sell_price: 18,
-            },
-          ],
-          player_copper: 1000,
-        })
-        .mockResolvedValueOnce({
-          items: [
-            {
-              id: 2,
-              name: 'HP Potion',
-              type: 'potion',
-              sub_type: 'hp',
-              base_stats: { max_hp: 50 },
-              required_level: 1,
-              quality: 'common',
-              buy_price: 5,
-              sell_price: 1,
-            },
-            {
-              id: 3,
-              name: 'MP Potion',
-              type: 'potion',
-              sub_type: 'mp',
-              base_stats: { max_mana: 50 },
-              required_level: 1,
-              quality: 'common',
-              buy_price: 5,
-              sell_price: 1,
-            },
-          ],
-          total: 2,
-          discovered_count: 2,
-        })
-
-      useGameStore.setState({ selectedCharacterId: 1 })
-      await useGameStore.getState().fetchShopItems()
-
-      expect(useGameStore.getState().shopItems).toEqual([
-        expect.objectContaining({ id: 1, type: 'weapon' }),
-        expect.objectContaining({
-          id: 2,
-          type: 'potion',
-          base_stats: { max_hp: 50 },
-          buy_price: 5,
-        }),
-        expect.objectContaining({
-          id: 3,
-          type: 'potion',
-          base_stats: { max_mana: 50 },
-          buy_price: 5,
-        }),
-      ])
-    })
-  })
-
-  describe('buyItem', () => {
-    it('should buy an item', async () => {
-      const { apiRequest } = await import('@/lib/api')
-      vi.mocked(apiRequest).mockResolvedValueOnce({
-        copper: 900,
-        total_price: 100,
-        quantity: 1,
-        item_name: 'Item',
-      })
-
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 } as GameCharacter,
-      })
-
-      await useGameStore.getState().buyItem(1, 1)
-
-      expect(useGameStore.getState().character?.copper).toBe(900)
-    })
-
-    it('should remove purchased equipment from shop items', async () => {
-      const { apiRequest } = await import('@/lib/api')
-      vi.mocked(apiRequest).mockResolvedValueOnce({
-        copper: 800,
-        total_price: 200,
-        quantity: 1,
-        item_name: 'Iron Sword',
-      })
-
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 } as GameCharacter,
-        shopItems: [
-          { id: 1, name: 'Iron Sword', type: 'weapon', buy_price: 200 } as ShopItem,
-          { id: 2, name: 'HP Potion', type: 'potion', buy_price: 10 } as ShopItem,
-        ],
-      })
-
-      await useGameStore.getState().buyItem(1, 1)
-
-      expect(useGameStore.getState().shopItems).toHaveLength(1)
-      expect(useGameStore.getState().shopItems[0]?.id).toBe(2)
-    })
-
-    it('should remove purchased gem from shop items', async () => {
-      const { apiRequest } = await import('@/lib/api')
-      vi.mocked(apiRequest).mockResolvedValueOnce({
-        copper: 900,
-        total_price: 100,
-        quantity: 1,
-        item_name: 'Defense Gem',
-      })
-
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 } as GameCharacter,
-        shopItems: [
-          { id: 10, name: 'Defense Gem', type: 'gem', buy_price: 100 } as ShopItem,
-          { id: 11, name: 'Attack Gem', type: 'gem', buy_price: 120 } as ShopItem,
-        ],
-      })
-
-      await useGameStore.getState().buyItem(10, 1)
-
-      expect(useGameStore.getState().shopItems).toHaveLength(1)
-      expect(useGameStore.getState().shopItems[0]?.id).toBe(11)
-    })
-
-    it('should keep potion listings after purchase', async () => {
-      const { apiRequest } = await import('@/lib/api')
-      vi.mocked(apiRequest).mockResolvedValueOnce({
-        copper: 990,
-        total_price: 10,
-        quantity: 1,
-        item_name: 'HP Potion',
-      })
-
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 } as GameCharacter,
-        shopItems: [{ id: 2, name: 'HP Potion', type: 'potion', buy_price: 10 } as ShopItem],
-      })
-
-      await useGameStore.getState().buyItem(2, 1)
-
-      expect(useGameStore.getState().shopItems).toHaveLength(1)
-      expect(useGameStore.getState().shopItems[0]?.id).toBe(2)
-    })
-  })
-
-  describe('sellItemToShop', () => {
-    it('should sell item to shop', async () => {
-      const { post } = await import('@/lib/api')
-      vi.mocked(post).mockResolvedValueOnce({
-        copper: 1100,
-        sell_price: 100,
-        quantity: 1,
-        item_name: 'Item',
-      })
-
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        character: { id: 1, copper: 1000 } as GameCharacter,
-        inventory: [{ id: 1, name: 'Item' } as unknown as GameItem],
-      })
-
-      await useGameStore.getState().sellItemToShop(1, 1)
-
-      expect(useGameStore.getState().character?.copper).toBe(1100)
-      expect(useGameStore.getState().inventory).toHaveLength(0)
-    })
-  })
-
   describe('fetchCompendiumItems', () => {
     it('should fetch compendium items', async () => {
       const { apiGet } = await import('@/lib/api')
@@ -939,6 +685,7 @@ describe('GameStore', () => {
 
       await useGameStore.getState().revive()
 
+      expect(post).toHaveBeenCalledWith('/rpg/combat/revive', { character_id: 1 })
       expect(useGameStore.getState().isFighting).toBe(false)
       expect(useGameStore.getState().shouldAutoCombat).toBe(false)
     })

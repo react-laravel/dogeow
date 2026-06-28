@@ -7,7 +7,6 @@ import {
   InventoryPanelSkeleton,
   SkillPanelSkeleton,
   CombatPanelSkeleton,
-  ShopPanelSkeleton,
   CompendiumPanelSkeleton,
 } from '../Skeleton'
 
@@ -64,13 +63,6 @@ describe('SkillPanelSkeleton', () => {
 describe('CombatPanelSkeleton', () => {
   it('should render without crashing', () => {
     const { container } = render(<CombatPanelSkeleton />)
-    expect(container.firstChild).toBeDefined()
-  })
-})
-
-describe('ShopPanelSkeleton', () => {
-  it('should render without crashing', () => {
-    const { container } = render(<ShopPanelSkeleton />)
     expect(container.firstChild).toBeDefined()
   })
 })
