@@ -101,6 +101,7 @@ export const LoginForm = memo<LoginFormProps>(
             <Input
               id="name"
               type="text"
+              autoComplete="username"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="请输入用户名"
@@ -115,6 +116,7 @@ export const LoginForm = memo<LoginFormProps>(
             <Input
               id="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={e => onEmailChange(e.target.value)}
               placeholder="请输入邮箱"
@@ -129,6 +131,7 @@ export const LoginForm = memo<LoginFormProps>(
             <Input
               id="password"
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={e => onPasswordChange(e.target.value)}
               placeholder="请输入密码（至少8位）"
@@ -143,6 +146,7 @@ export const LoginForm = memo<LoginFormProps>(
             <Input
               id="confirmPassword"
               type="password"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               placeholder="请再次输入密码"
@@ -197,6 +201,7 @@ export const LoginForm = memo<LoginFormProps>(
           <Input
             id="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={e => onEmailChange(e.target.value)}
             placeholder="请输入邮箱"
@@ -212,6 +217,7 @@ export const LoginForm = memo<LoginFormProps>(
           <Input
             id="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={e => onPasswordChange(e.target.value)}
             placeholder="请输入密码"
