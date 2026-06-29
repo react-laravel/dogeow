@@ -14,7 +14,6 @@ type SoundEffect =
   | 'equip'
   | 'gold'
   | 'teleport'
-  | 'potion'
 
 class SoundManager {
   private sounds: Map<SoundEffect, HTMLAudioElement> = new Map()

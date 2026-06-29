@@ -27,7 +27,6 @@ export const ITEM_TYPE_ICONS: Record<string, string> = {
   belt: '🥋',
   ring: '💍',
   amulet: '📿',
-  potion: '🧪',
   gem: '💎',
 }
 
@@ -41,21 +40,16 @@ export const ITEM_TYPE_NAMES: Record<string, string> = {
   belt: '腰带',
   ring: '戒指',
   amulet: '护身符',
-  potion: '药水',
   gem: '宝石',
 }
 
 /**
- * 获取物品图标回退：药水按 sub_type 区分 HP❤️/MP💙，其余按 type 或 definition.icon，最后 📦
+ * 获取物品图标回退：按 type 或 definition.icon，最后 📦
  * 支持 GameItem 或图鉴等仅含 definition 形态的对象
  */
 export function getItemIconFallback(item: ItemWithDefinition): string {
   const def = item.definition
   if (!def) return '📦'
-  if (def.type === 'potion') {
-    if (def.sub_type === 'hp') return '❤️'
-    if (def.sub_type === 'mp') return '💙'
-  }
   const typeIcon = ITEM_TYPE_ICONS[def.type]
   if (typeIcon) return typeIcon
   if (def.icon && !def.icon.includes('.')) return def.icon
@@ -117,14 +111,7 @@ export function stackItems(items: GameItem[]): StackedItem[] {
  */
 export function isEquippable(item: GameItem): boolean {
   const type = item.definition?.type
-  return type !== undefined && type !== 'potion' && type !== 'gem'
-}
-
-/**
- * 检查物品是否是药水
- */
-export function isPotion(item: GameItem): boolean {
-  return item.definition?.type === 'potion'
+  return type !== undefined && type !== 'gem'
 }
 
 /**

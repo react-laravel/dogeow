@@ -8,7 +8,6 @@ import { canSocketItem, useGemManagement } from './useGemManagement'
 import { canUnsocketItem } from './inventoryUtils'
 
 interface UseInventoryPanelActionsParams {
-  consumePotion: (itemId: number) => Promise<unknown>
   equipItem: (itemId: number) => Promise<unknown>
   inventory: GameItem[]
   moveItem: (itemId: number, toStorage: boolean) => Promise<unknown>
@@ -18,7 +17,6 @@ interface UseInventoryPanelActionsParams {
 }
 
 export function useInventoryPanelActions({
-  consumePotion,
   equipItem,
   inventory,
   moveItem,
@@ -96,16 +94,6 @@ export function useInventoryPanelActions({
     [moveItem, selectedItem]
   )
 
-  const handleUsePotion = useCallback(
-    async (item: GameItem | null = selectedItem) => {
-      if (!item) return
-
-      await consumePotion(item.id)
-      setSelectedItem(null)
-    },
-    [consumePotion, selectedItem]
-  )
-
   const handleUnsocketGem = useCallback(
     async (socketIndex: number, item: GameItem | null = selectedItem) => {
       await handleInventoryUnsocketGem(item, socketIndex)
@@ -149,7 +137,6 @@ export function useInventoryPanelActions({
     handleSellConfirm,
     handleSocketGem,
     handleUnsocketGem,
-    handleUsePotion,
     openGemSelector,
     selectedItem,
     selectedItemId: selectedItem?.id ?? null,

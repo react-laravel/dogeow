@@ -31,11 +31,11 @@ describe('inventoryUtils', () => {
       id: 1,
       definition: { id: 1, name: 'Sword', type: 'weapon', base_stats: {}, required_level: 1 },
     })
-    const potion = createItem({
+    const ring = createItem({
       id: 2,
-      definition: { id: 2, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+      definition: { id: 2, name: 'Ring', type: 'ring', base_stats: {}, required_level: 1 },
     })
-    const slots = toSlotCells([weapon, null, potion], 'inventory')
+    const slots = toSlotCells([weapon, null, ring], 'inventory')
 
     expect(filterSlotsByCategory(slots, ['weapon'])).toEqual([
       { item: weapon, source: 'inventory' },
@@ -43,7 +43,7 @@ describe('inventoryUtils', () => {
     expect(filterSlotsByCategory(slots, null)).toEqual(slots)
   })
 
-  it('computes quality stats and excludes potion and gem items', () => {
+  it('computes quality stats and excludes gem items', () => {
     const commonWeapon = createItem({
       id: 1,
       quality: 'common',
@@ -58,16 +58,12 @@ describe('inventoryUtils', () => {
       sell_price: 120,
       definition: { id: 2, name: 'Armor', type: 'armor', base_stats: {}, required_level: 1 },
     })
-    const potion = createItem({
-      id: 3,
-      definition: { id: 3, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
-    })
     const gem = createItem({
       id: 4,
       definition: { id: 4, name: 'Gem', type: 'gem', base_stats: {}, required_level: 1 },
     })
 
-    expect(computeQualityStats([commonWeapon, rareArmor, potion, gem])).toEqual({
+    expect(computeQualityStats([commonWeapon, rareArmor, gem])).toEqual({
       common: { count: 1, totalPrice: 60 },
       rare: { count: 1, totalPrice: 120 },
     })

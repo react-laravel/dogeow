@@ -48,11 +48,11 @@ describe('InventoryPanel', () => {
       sell_price: 20,
       definition: { id: 1, name: 'Sword', type: 'weapon', base_stats: {}, required_level: 1 },
     })
-    const potion = createItem({
+    const ring = createItem({
       id: 2,
       slot_index: 1,
       quality: 'magic',
-      definition: { id: 2, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+      definition: { id: 2, name: 'Ring', type: 'ring', base_stats: {}, required_level: 1 },
     })
     const storedRing = createItem({
       id: 3,
@@ -61,7 +61,7 @@ describe('InventoryPanel', () => {
       definition: { id: 3, name: 'Stored Ring', type: 'ring', base_stats: {}, required_level: 1 },
     })
     const store = createInventoryPanelStoreState({
-      inventory: [sword, potion],
+      inventory: [sword, ring],
       inventorySize: 4,
       storage: [storedRing],
       storageSize: 2,
@@ -71,7 +71,7 @@ describe('InventoryPanel', () => {
     const view = render(<InventoryPanel />)
 
     expect(view.getByRole('button', { name: 'Sword' })).toBeInTheDocument()
-    expect(view.getByRole('button', { name: 'Potion' })).toBeInTheDocument()
+    expect(view.getByRole('button', { name: 'Ring' })).toBeInTheDocument()
     expect(view.queryByRole('button', { name: 'Stored Ring' })).not.toBeInTheDocument()
 
     await user.click(view.getByRole('button', { name: '排序' }))
@@ -90,7 +90,7 @@ describe('InventoryPanel', () => {
 
     await user.click(view.getByRole('button', { name: /武器/ }))
     expect(view.getByRole('button', { name: 'Sword' })).toBeInTheDocument()
-    expect(view.queryByRole('button', { name: 'Potion' })).not.toBeInTheDocument()
+    expect(view.queryByRole('button', { name: 'Ring' })).not.toBeInTheDocument()
 
     await user.click(view.getByRole('button', { name: '全部' }))
     await user.click(view.getByRole('button', { name: /仓库/ }))
@@ -112,28 +112,28 @@ describe('InventoryPanel', () => {
       slot_index: 1,
       definition: { id: 12, name: 'Ruby', type: 'gem', base_stats: {}, required_level: 1 },
     })
-    const potion = createItem({
+    const stackableRing = createItem({
       id: 13,
       slot_index: 2,
       quantity: 5,
-      definition: { id: 13, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+      definition: { id: 13, name: 'Stack Ring', type: 'ring', base_stats: {}, required_level: 1 },
     })
     const store = createInventoryPanelStoreState({
-      inventory: [sword, ruby, potion],
+      inventory: [sword, ruby, stackableRing],
       inventorySize: 4,
     })
     mockUseGameStore.mockReturnValue(store)
 
     const view = render(<InventoryPanel />)
 
-    await user.click(view.getByRole('button', { name: 'Potion' }))
+    await user.click(view.getByRole('button', { name: 'Stack Ring' }))
     await user.click(view.getByRole('button', { name: '出售' }))
     await user.click(view.getByRole('button', { name: '+1' }))
     await user.click(view.getByRole('button', { name: '+1' }))
     await user.click(view.getByRole('button', { name: '确认出售' }))
 
     await waitFor(() => {
-      expect(store.sellItem).toHaveBeenCalledWith(potion.id, 3)
+      expect(store.sellItem).toHaveBeenCalledWith(stackableRing.id, 3)
     })
 
     await user.click(view.getByRole('button', { name: 'Sword' }))

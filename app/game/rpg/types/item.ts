@@ -10,7 +10,6 @@ export type ItemType =
   | 'belt'
   | 'ring'
   | 'amulet'
-  | 'potion'
   | 'gem'
 export type EquipmentSlot =
   | 'weapon'

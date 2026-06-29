@@ -20,7 +20,7 @@ describe('useGemManagement', () => {
       }),
       createItem({
         id: 3,
-        definition: { id: 3, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+        definition: { id: 3, name: 'Armor', type: 'armor', base_stats: {}, required_level: 1 },
       }),
       createItem({
         id: 4,

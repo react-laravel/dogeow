@@ -35,7 +35,6 @@ interface InventoryGridItemProps {
   onSelectedItemChange: (item: GameItem | null) => void
   onSell: () => void
   onUnsocketGem: (socketIndex: number) => void
-  onUsePotion: () => void
   selectedItemId: number | null
 }
 
@@ -56,7 +55,6 @@ export const InventoryGridItem = memo(function InventoryGridItem({
   onSelectedItemChange,
   onSell,
   onUnsocketGem,
-  onUsePotion,
   selectedItemId,
 }: InventoryGridItemProps) {
   const item = cell.item
@@ -108,7 +106,6 @@ export const InventoryGridItem = memo(function InventoryGridItem({
       onOpenGemSelector={onOpenGemSelector}
       onSell={onSell}
       onUnsocketGem={onUnsocketGem}
-      onUsePotion={onUsePotion}
       source={cell.source}
     />
   )

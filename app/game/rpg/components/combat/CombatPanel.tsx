@@ -6,7 +6,6 @@ import {
   type CombatMonster,
   type CombatResult,
   type SkillUsedEntry,
-  type GameItem,
 } from '../../types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CharacterSkill, SkillWithLearnedState } from '../../types'
@@ -24,7 +23,7 @@ import {
 } from '../../utils/combatUtils'
 import { extractCombatLogId } from '../../stores/combatHelpers'
 import { MapCardMonsterAvatar } from './MapCardMonsterAvatar'
-import { GalleryHorizontal, LayoutGrid, Heart, Droplet } from 'lucide-react'
+import { GalleryHorizontal, LayoutGrid } from 'lucide-react'
 import { DIFFICULTY_OPTIONS, DIFFICULTY_COLORS } from '../character/CharacterSelect'
 const SKILL_BAR_LAYOUT_KEY = 'rpg-skill-bar-layout'
 
@@ -55,8 +54,6 @@ export function CombatPanel() {
   const currentMana = useGameStore(state => state.currentMana)
   const enabledSkillIds = useGameStore(state => state.enabledSkillIds)
   const toggleEnabledSkill = useGameStore(state => state.toggleEnabledSkill)
-  const inventory = useGameStore(state => state.inventory)
-  const consumePotion = useGameStore(state => state.consumePotion)
 
   const [mapDropdownOpen, setMapDropdownOpen] = useState(false)
   const [dropdownAct, setDropdownAct] = useState(() => currentMap?.act ?? 1)
@@ -477,64 +474,5 @@ export function CombatPanel() {
         </div>
       )}
     </div>
-  )
-}
-
-/** 药品按钮组件 */
-function PotionButton({
-  type,
-  inventory,
-  onUse,
-  disabled,
-}: {
-  type: 'hp' | 'mp'
-  inventory: GameItem[]
-  onUse: (itemId: number) => Promise<void>
-  disabled: boolean
-}) {
-  // 获取对应类型的药品，按恢复量排序（高级优先）
-  const potions = useMemo(() => {
-    const statKey = type === 'hp' ? 'max_hp' : 'max_mana'
-    return inventory
-      .filter(item => item.definition?.type === 'potion' && item.definition?.sub_type === type)
-      .sort((a, b) => {
-        const aRestore = a.definition?.base_stats?.[statKey] ?? 0
-        const bRestore = b.definition?.base_stats?.[statKey] ?? 0
-        return bRestore - aRestore
-      })
-  }, [inventory, type])
-
-  const bestPotion = potions[0]
-  const quantity = bestPotion?.quantity ?? 0
-  const restoreValue =
-    bestPotion?.definition?.base_stats?.[type === 'hp' ? 'max_hp' : 'max_mana'] ?? 0
-
-  const handleClick = useCallback(() => {
-    if (bestPotion && quantity > 0 && !disabled) {
-      onUse(bestPotion.id)
-    }
-  }, [bestPotion, quantity, disabled, onUse])
-
-  const Icon = type === 'hp' ? Heart : Droplet
-  const colorClass =
-    type === 'hp' ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'
-  const bgClass =
-    type === 'hp' ? 'bg-red-500/20 hover:bg-red-500/30' : 'bg-blue-500/20 hover:bg-blue-500/30'
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={disabled || quantity === 0}
-      className={`flex flex-col items-center gap-0.5 rounded-md p-2 transition-colors disabled:opacity-50 ${bgClass}`}
-      title={
-        bestPotion
-          ? `${bestPotion.definition?.name} (+${restoreValue})`
-          : `无${type === 'hp' ? '血' : '魔'}药`
-      }
-    >
-      <Icon className={`h-5 w-5 ${colorClass}`} />
-      <span className={`text-xs font-medium ${colorClass}`}>{quantity}</span>
-    </button>
   )
 }

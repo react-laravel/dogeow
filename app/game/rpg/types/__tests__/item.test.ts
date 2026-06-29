@@ -116,8 +116,8 @@ describe('item types', () => {
       definition_id: 1,
       definition: {
         id: 1,
-        name: 'Potion',
-        type: 'potion',
+        name: 'Consumable',
+        type: 'gem',
         base_stats: { max_hp: 50 },
         required_level: 1,
       },
@@ -177,7 +177,6 @@ describe('item types', () => {
       'belt',
       'ring',
       'amulet',
-      'potion',
       'gem',
     ]
     types.forEach(type => {

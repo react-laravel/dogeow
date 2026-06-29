@@ -43,7 +43,6 @@ export interface CompendiumMonsterDrops {
   drop_rates: {
     item: number
     gold: number
-    potion: number
   }
   possible_items: CompendiumItem[]
 }

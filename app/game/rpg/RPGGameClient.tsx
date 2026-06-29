@@ -10,7 +10,7 @@ import { SkillPanel } from './components/skills/SkillPanel'
 import { CombatPanel } from './components/combat/CombatPanel'
 import { CompendiumPanel } from './components/compendium/CompendiumPanel'
 import { SoundSettings } from './components/settings/SoundSettings'
-import { PotionSettings } from './components/settings/PotionSettings'
+import { CombatRegenSettings } from './components/settings/CombatRegenSettings'
 import { FloatingTextOverlay } from './components/shared/FloatingTextOverlay'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { useCombatWebSocket } from './hooks/useCombatWebSocket'
@@ -370,7 +370,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
               {activeTab === 'compendium' && <CompendiumPanel />}
               {activeTab === 'settings' && (
                 <div className="space-y-4">
-                  <PotionSettings />
+                  <CombatRegenSettings />
                   <SoundSettings onLogout={handleLogout} />
                 </div>
               )}

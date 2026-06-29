@@ -40,7 +40,7 @@ export const computeQualityStats = (items: GameItem[]) => {
 
   items.forEach(item => {
     const type = item.definition?.type
-    if (type === 'potion' || type === 'gem') return
+    if (type === 'gem') return
 
     const quality = item.quality
     if (!stats[quality]) {

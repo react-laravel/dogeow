@@ -25,7 +25,6 @@ interface InventoryItemDetailContentProps {
   onOpenGemSelector: (item: GameItem) => void
   onSell: () => void
   onUnsocketGem: (socketIndex: number) => void
-  onUsePotion: () => void
   source: InventorySlotCell['source']
 }
 
@@ -56,7 +55,6 @@ export function InventoryItemDetailContent({
   onOpenGemSelector,
   onSell,
   onUnsocketGem,
-  onUsePotion,
   source,
 }: InventoryItemDetailContentProps) {
   const showCompare = isEquippable(item) && source === 'inventory' && hasEquippedItem(item)
@@ -109,7 +107,6 @@ export function InventoryItemDetailContent({
               onOpenGemSelector={onOpenGemSelector}
               onSell={onSell}
               onUnsocketGem={onUnsocketGem}
-              onUsePotion={onUsePotion}
               source={source}
             />
           }

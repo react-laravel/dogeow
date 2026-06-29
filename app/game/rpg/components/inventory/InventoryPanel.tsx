@@ -30,7 +30,6 @@ export function InventoryPanel() {
     character,
     moveItem,
     sortInventory,
-    consumePotion,
     socketGem,
     unsocketGem,
     isLoading,
@@ -48,7 +47,6 @@ export function InventoryPanel() {
       updateAutoRecycleSettings: s.updateAutoRecycleSettings,
       moveItem: s.moveItem,
       sortInventory: s.sortInventory,
-      consumePotion: s.consumePotion,
       socketGem: s.socketGem,
       unsocketGem: s.unsocketGem,
       isLoading: s.isLoading,
@@ -71,7 +69,6 @@ export function InventoryPanel() {
     handleSellConfirm,
     handleSocketGem,
     handleUnsocketGem,
-    handleUsePotion,
     openGemSelector,
     selectedItem,
     selectedItemId,
@@ -82,7 +79,6 @@ export function InventoryPanel() {
     showGemSelector,
     showSellConfirm,
   } = useInventoryPanelActions({
-    consumePotion,
     equipItem,
     inventory,
     moveItem,
@@ -119,7 +115,6 @@ export function InventoryPanel() {
   )
   const onEquip = useCallback(() => void handleEquip(), [handleEquip])
   const onSell = useCallback(() => void handleSell(), [handleSell])
-  const onUsePotion = useCallback(() => void handleUsePotion(), [handleUsePotion])
   const onMove = useCallback((toStorage: boolean) => void handleMove(toStorage), [handleMove])
   const onUnsocketGem = useCallback(
     (socketIndex: number) => void handleUnsocketGem(socketIndex),
@@ -194,7 +189,6 @@ export function InventoryPanel() {
             onSelectedItemChange={setSelectedItem}
             onSell={onSell}
             onUnsocketGem={onUnsocketGem}
-            onUsePotion={onUsePotion}
             selectedItemId={selectedItemId}
           />
         </div>

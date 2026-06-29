@@ -22,7 +22,6 @@ interface InventoryGridProps {
   onSelectedItemChange: (item: GameItem | null) => void
   onSell: () => void
   onUnsocketGem: (socketIndex: number) => void
-  onUsePotion: () => void
   selectedItemId: number | null
 }
 
@@ -43,7 +42,6 @@ export function InventoryGrid({
   onSelectedItemChange,
   onSell,
   onUnsocketGem,
-  onUsePotion,
   selectedItemId,
 }: InventoryGridProps) {
   return (
@@ -73,7 +71,6 @@ export function InventoryGrid({
               onSelectedItemChange={onSelectedItemChange}
               onSell={onSell}
               onUnsocketGem={onUnsocketGem}
-              onUsePotion={onUsePotion}
               selectedItemId={selectedItemId}
             />
           )

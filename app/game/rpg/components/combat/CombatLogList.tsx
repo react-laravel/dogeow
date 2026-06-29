@@ -375,20 +375,16 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
         // 没有回合概念，只显示战斗状态
         const isVictory = 'victory' in log && log.victory === true
 
-        const hasPotionBefore =
-          log.potion_used?.before && Object.keys(log.potion_used.before).length > 0
-        const hasPotionAfter =
-          log.potion_used?.after && Object.keys(log.potion_used.after).length > 0
+        const hasRoundRegen = log.round_regen && Object.keys(log.round_regen).length > 0
         const playerSkillsUsed = filterPlayerSkillsUsed(log.skills_used, playerSkillIds)
 
         return (
           <div key={logKey}>
-            {/* 开战前药水：单独一行 */}
-            {hasPotionBefore && (
+            {hasRoundRegen && (
               <div className="flex flex-wrap items-center gap-1 rounded px-2 py-1 text-xs sm:gap-2 sm:px-3 sm:py-2 sm:text-sm">
-                <span className="font-semibold text-pink-600 dark:text-pink-400">🧪</span>
-                <span className="text-pink-600 dark:text-pink-400">
-                  {Object.entries(log.potion_used!.before!)
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">💚</span>
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  {Object.entries(log.round_regen!)
                     .map(([, data]) => `${data.name}(+${data.restored})`)
                     .join(' ')}
                 </span>
@@ -436,12 +432,6 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                     onClick={() => setSelectedItem(log.loot!.item!)}
                   />
                 )}
-                {log.loot?.potion && (
-                  <CombatLogLootIcon
-                    item={log.loot.potion}
-                    onClick={() => setSelectedItem(log.loot!.potion!)}
-                  />
-                )}
                 {(log.copper_gained ?? 0) > 0 && (
                   <span className="inline-flex items-center text-yellow-600 dark:text-yellow-400">
                     +<CopperDisplay copper={log.copper_gained} size="sm" />
@@ -454,17 +444,6 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                 )}
               </div>
             </div>
-            {/* 战后药水：单独一行 */}
-            {hasPotionAfter && (
-              <div className="flex flex-wrap items-center gap-1 rounded px-2 py-1 text-xs sm:gap-2 sm:px-3 sm:py-2 sm:text-sm">
-                <span className="font-semibold text-rose-500 dark:text-rose-400">🧪</span>
-                <span className="text-rose-500 dark:text-rose-400">
-                  {Object.entries(log.potion_used!.after!)
-                    .map(([, data]) => `${data.name}(+${data.restored})`)
-                    .join(' ')}
-                </span>
-              </div>
-            )}
           </div>
         )
       })}

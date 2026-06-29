@@ -238,7 +238,7 @@ describe('combat types', () => {
       duration_seconds: 30,
       skills_used: [],
       loot_dropped: null,
-      potion_used: null,
+      round_regen: null,
       created_at: '2024-01-01T00:00:00Z',
       character: {
         level: 1,
@@ -293,7 +293,7 @@ describe('combat types', () => {
       duration_seconds: 30,
       skills_used: [],
       loot_dropped: null,
-      potion_used: null,
+      round_regen: null,
       created_at: '2024-01-01T00:00:00Z',
       character: {
         level: 1,

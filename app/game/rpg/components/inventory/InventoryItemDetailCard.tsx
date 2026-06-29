@@ -60,9 +60,7 @@ export function EquipmentDetailBody({
   onUnsocketGem,
   showBuyPrice = false,
 }: EquipmentDetailBodyProps) {
-  const displayStats = getDisplayableItemStats(getItemTotalStats(item), {
-    hideRestore: item.definition?.type === 'potion',
-  })
+  const displayStats = getDisplayableItemStats(getItemTotalStats(item))
 
   return (
     <>

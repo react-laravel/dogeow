@@ -33,7 +33,6 @@ import {
   reportCombatDebug,
   extractCombatLogId,
   mergeCombatLogsWithUpdate,
-  hasPotionUsage,
   type CombatLogEntry,
 } from './combatHelpers'
 import {
@@ -150,7 +149,6 @@ interface GameState {
   /** 已启用的技能 id 列表，可多选；自动战斗时会按顺序尝试施放 */
   enabledSkillIds: number[]
   toggleEnabledSkill: (skillId: number) => void
-  consumePotion: (itemId: number) => Promise<void> // 使用药品
 
   // WebSocket 事件处理
   handleMonstersAppear: (data: unknown) => void // 怪物出现
@@ -687,8 +685,7 @@ const store: StateCreator<GameState> = (set, get) => ({
         ...state,
         character: withUpdatedCopper(state.character, response.copper),
         inventory: state.inventory.filter(
-          i =>
-            i.quality !== quality || i.definition?.type === 'potion' || i.definition?.type === 'gem'
+          i => i.quality !== quality || i.definition?.type === 'gem'
         ),
         isLoading: false,
       }))
@@ -1207,39 +1204,6 @@ const store: StateCreator<GameState> = (set, get) => ({
     }
   },
 
-  consumePotion: async (itemId: number) => {
-    startRequest(set)
-    try {
-      const selectedId = getSelectedCharacterIdOrAbort(get, set, {
-        context: 'consumePotion',
-        warn: false,
-      })
-      if (!selectedId) return
-      const response = (await post('/rpg/inventory/use-potion', {
-        item_id: itemId,
-        character_id: selectedId,
-      })) as {
-        character: GameCharacter
-        combat_stats: CombatStats
-        current_hp: number
-        current_mana: number
-        message: string
-      }
-      soundManager.play('potion')
-      set(state => ({
-        ...state,
-        character: response.character,
-        combatStats: response.combat_stats,
-        currentHp: response.current_hp,
-        currentMana: response.current_mana,
-        isLoading: false,
-      }))
-      // 背包由 WebSocket inventory.update 推送更新
-    } catch (error) {
-      setRequestError(set, error)
-    }
-  },
-
   // WebSocket 事件处理
   // 处理怪物出现事件
   handleMonstersAppear: data => {
@@ -1267,8 +1231,6 @@ const store: StateCreator<GameState> = (set, get) => ({
       soundManager.play('combat_defeat')
     }
 
-    const usedPotion = hasPotionUsage(typedData)
-
     set(state => {
       // 优先使用顶层字段，其次使用 character 对象中的字段
       // 只有当值存在时才更新（避免用 null 覆盖正确的值）
@@ -1288,12 +1250,9 @@ const store: StateCreator<GameState> = (set, get) => ({
         // 只有当新值存在且不为 undefined 时才更新
         ...(newCurrentHp !== undefined && { currentHp: newCurrentHp }),
         ...(newCurrentMana !== undefined && { currentMana: newCurrentMana }),
-        // 使用药水时背包会在后面刷新
-        inventory: usedPotion
-          ? state.inventory
-          : typedData.loot?.item
-            ? [...state.inventory, typedData.loot.item as GameItem]
-            : state.inventory,
+        inventory: typedData.loot?.item
+          ? [...state.inventory, typedData.loot.item as GameItem]
+          : state.inventory,
         // 战败时自动停止战斗（保留技能启用状态，复活后无需重新勾选）
         ...(typedData.auto_stopped && {
           isFighting: false,

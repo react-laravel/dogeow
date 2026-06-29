@@ -48,7 +48,6 @@ const createBaseProps = (overrides: Partial<InventoryGridProps> = {}): Inventory
   onSelectedItemChange: vi.fn<InventoryGridProps['onSelectedItemChange']>(),
   onSell: vi.fn<InventoryGridProps['onSell']>(),
   onUnsocketGem: vi.fn<InventoryGridProps['onUnsocketGem']>(),
-  onUsePotion: vi.fn<InventoryGridProps['onUsePotion']>(),
   selectedItemId: null,
   ...overrides,
 })
@@ -99,33 +98,6 @@ describe('InventoryGrid', () => {
     expect(props.onMove).toHaveBeenCalledWith(true)
     expect(props.onSell).toHaveBeenCalledTimes(1)
     expect(props.onSelectedItemChange).toHaveBeenCalledWith(null)
-  })
-
-  it('renders potion-specific actions without equip', async () => {
-    const user = userEvent.setup()
-    const item = createItem({
-      id: 12,
-      definition: {
-        id: 12,
-        name: 'Potion',
-        type: 'potion',
-        base_stats: {},
-        required_level: 1,
-      },
-    })
-    const props = createBaseProps({
-      displaySlots: [{ item, source: 'inventory' }],
-      selectedItemId: item.id,
-    })
-
-    const view = render(<InventoryGrid {...props} />)
-
-    expect(view.getByRole('button', { name: '使用' })).toBeInTheDocument()
-    expect(view.queryByRole('button', { name: '装备' })).not.toBeInTheDocument()
-
-    await user.click(view.getByRole('button', { name: '使用' }))
-
-    expect(props.onUsePotion).toHaveBeenCalledTimes(1)
   })
 
   it('renders storage actions without inventory-only buttons', async () => {

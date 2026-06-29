@@ -27,7 +27,7 @@ describe('useInventoryPanelView', () => {
       createItem({
         id: 2,
         slot_index: 1,
-        definition: { id: 2, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+        definition: { id: 2, name: 'Ring', type: 'ring', base_stats: {}, required_level: 1 },
       }),
     ]
 
@@ -86,7 +86,7 @@ describe('useInventoryPanelView', () => {
     expect(result.current.displaySlots[0]?.item?.id).toBe(11)
   })
 
-  it('computes quality stats while excluding potion and gem items', () => {
+  it('computes quality stats while excluding gem items', () => {
     const inventory = [
       createItem({ id: 21, quality: 'common', sell_price: 10, quantity: 2 }),
       createItem({
@@ -99,7 +99,7 @@ describe('useInventoryPanelView', () => {
         id: 23,
         quality: 'magic',
         sell_price: 99,
-        definition: { id: 23, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+        definition: { id: 23, name: 'Gem', type: 'gem', base_stats: {}, required_level: 1 },
       }),
     ]
 
@@ -149,7 +149,7 @@ describe('useInventoryPanelView', () => {
     expect(result.current.recyclingQuality).toBeNull()
   })
 
-  it('recycles all non-potion and non-gem qualities with items', async () => {
+  it('recycles all non-gem qualities with items', async () => {
     const sellItemsByQuality = vi.fn(async () => undefined)
     const inventory = [
       createItem({ id: 31, quality: 'common' }),
@@ -157,7 +157,7 @@ describe('useInventoryPanelView', () => {
       createItem({
         id: 33,
         quality: 'magic',
-        definition: { id: 33, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+        definition: { id: 33, name: 'Armor', type: 'armor', base_stats: {}, required_level: 1 },
       }),
       createItem({
         id: 34,
@@ -180,8 +180,9 @@ describe('useInventoryPanelView', () => {
       await result.current.handleRecycleQuality('all')
     })
 
-    expect(sellItemsByQuality).toHaveBeenCalledTimes(2)
+    expect(sellItemsByQuality).toHaveBeenCalledTimes(3)
     expect(sellItemsByQuality).toHaveBeenNthCalledWith(1, 'common')
-    expect(sellItemsByQuality).toHaveBeenNthCalledWith(2, 'rare')
+    expect(sellItemsByQuality).toHaveBeenNthCalledWith(2, 'magic')
+    expect(sellItemsByQuality).toHaveBeenNthCalledWith(3, 'rare')
   })
 })

@@ -24,10 +24,6 @@ export interface GameCharacter {
   difficulty_tier?: number
   current_hp?: number
   current_mana?: number
-  auto_use_hp_potion?: boolean
-  hp_potion_threshold?: number
-  auto_use_mp_potion?: boolean
-  mp_potion_threshold?: number
   /** 自动回收单价上限（铜），null/0 表示关闭 */
   auto_recycle_max_value?: number | null
   created_at: string

@@ -3,8 +3,8 @@ import { INVENTORY_CATEGORIES, RECYCLE_QUALITIES } from '../inventoryConfig'
 
 describe('inventoryConfig', () => {
   describe('INVENTORY_CATEGORIES', () => {
-    it('should have 7 categories', () => {
-      expect(INVENTORY_CATEGORIES).toHaveLength(7)
+    it('should have 6 categories', () => {
+      expect(INVENTORY_CATEGORIES).toHaveLength(6)
     })
 
     it('should have correct category structure', () => {
@@ -36,12 +36,9 @@ describe('inventoryConfig', () => {
       expect(accessory?.types).toEqual(['ring', 'amulet'])
     })
 
-    it('should have potion and gem categories', () => {
-      const potion = INVENTORY_CATEGORIES.find(c => c.id === 'potion')
+    it('should have gem category', () => {
       const gem = INVENTORY_CATEGORIES.find(c => c.id === 'gem')
-      expect(potion).toBeDefined()
       expect(gem).toBeDefined()
-      expect(potion?.types).toEqual(['potion'])
       expect(gem?.types).toEqual(['gem'])
     })
 

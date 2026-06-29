@@ -21,7 +21,7 @@ vi.mock('./combatHelpers', () => ({
   reportCombatDebug: vi.fn(),
   extractCombatLogId: vi.fn(() => null),
   mergeCombatLogsWithUpdate: vi.fn(logs => logs),
-  hasPotionUsage: vi.fn(() => false),
+  hasRoundRegen: vi.fn(() => false),
 }))
 
 vi.mock('./gameStateHelpers', () => ({
@@ -445,36 +445,6 @@ describe('GameStore', () => {
     })
   })
 
-  describe('consumePotion', () => {
-    it('should consume a potion', async () => {
-      const { post } = await import('@/lib/api')
-      vi.mocked(post).mockResolvedValueOnce({
-        character: { id: 1, current_hp: 90 },
-        combat_stats: {
-          max_hp: 100,
-          max_mana: 50,
-          attack: 10,
-          defense: 5,
-          crit_rate: 0.1,
-          crit_damage: 1.5,
-        },
-        current_hp: 90,
-        current_mana: 50,
-        message: 'Used potion',
-      })
-
-      useGameStore.setState({
-        selectedCharacterId: 1,
-        currentHp: 50,
-        currentMana: 30,
-      })
-
-      await useGameStore.getState().consumePotion(1)
-
-      expect(useGameStore.getState().currentHp).toBe(90)
-    })
-  })
-
   describe('handleMonstersAppear', () => {
     it('should handle monsters appear event', () => {
       useGameStore.setState({
@@ -647,7 +617,7 @@ describe('GameStore', () => {
       vi.mocked(apiGet).mockResolvedValueOnce({
         monster: { id: 1, name: 'Monster1' },
         drop_table: {},
-        drop_rates: { item: 0.1, gold: 0.5, potion: 0.2 },
+        drop_rates: { item: 0.1, gold: 0.5 },
         possible_items: [],
       })
 

@@ -4,7 +4,7 @@ import type { GameItem } from '@/app/game/rpg/types'
 import { ItemDetailContent } from './ItemDetailContent'
 import { FullComparePanel } from './ItemComparePanel'
 import { ItemActions, type ItemActionType } from './ItemActions'
-import { isEquippable, isPotion } from '@/app/game/rpg/utils/itemUtils'
+import { isEquippable } from '@/app/game/rpg/utils/itemUtils'
 import { useGameStore } from '@/app/game/rpg/stores/gameStore'
 import { getFullComparePanelWidthClass } from '@/app/game/rpg/utils/comparePanelUtils'
 
@@ -84,9 +84,6 @@ function InventoryItemDetail(props: InventoryItemDetailModalProps) {
     const actions: ItemActionType[] = []
 
     if (source === 'inventory') {
-      if (isPotion(item)) {
-        actions.push('use')
-      }
       if (isEquippable(item)) {
         actions.push('equip')
       }

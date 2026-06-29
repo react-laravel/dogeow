@@ -71,8 +71,7 @@ export function MonsterInfoDialog({ monster, onClose }: MonsterInfoDialogProps) 
                   {compendiumMonsterDrops.drop_rates && (
                     <span className="text-muted-foreground text-xs">
                       装备: {compendiumMonsterDrops.drop_rates.item}% | 金币:{' '}
-                      {compendiumMonsterDrops.drop_rates.gold}% | 药水:{' '}
-                      {compendiumMonsterDrops.drop_rates.potion}%
+                      {compendiumMonsterDrops.drop_rates.gold}%
                     </span>
                   )}
                 </div>

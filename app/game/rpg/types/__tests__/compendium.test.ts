@@ -30,8 +30,8 @@ describe('compendium types', () => {
   it('should allow CompendiumItem with required fields only', () => {
     const item: CompendiumItem = {
       id: 1,
-      name: 'Potion',
-      type: 'potion',
+      name: 'Ruby',
+      type: 'gem',
       base_stats: { max_hp: 50 },
       required_level: 1,
     }
@@ -102,7 +102,6 @@ describe('compendium types', () => {
       drop_rates: {
         item: 0.3,
         gold: 0.5,
-        potion: 0.2,
       },
       possible_items: [],
     }
@@ -128,7 +127,7 @@ describe('compendium types', () => {
         drop_table: {},
       },
       drop_table: {},
-      drop_rates: { item: 0.3, gold: 0.5, potion: 0.2 },
+      drop_rates: { item: 0.3, gold: 0.5 },
       possible_items: [
         {
           id: 1,

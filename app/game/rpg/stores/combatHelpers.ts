@@ -97,13 +97,9 @@ export const mergeCombatLogsWithUpdate = (
   return [normalizedLog, ...logs].slice(0, 100)
 }
 
-export const hasPotionUsage = (update: GameCombatUpdateEvent): boolean => {
-  const potionUsed = update.potion_used
-  return !!(
-    potionUsed &&
-    ((potionUsed.before && Object.keys(potionUsed.before).length > 0) ||
-      (potionUsed.after && Object.keys(potionUsed.after).length > 0))
-  )
+export const hasRoundRegen = (update: GameCombatUpdateEvent): boolean => {
+  const roundRegen = update.round_regen
+  return !!(roundRegen && Object.keys(roundRegen).length > 0)
 }
 
 function isPersistedCombatLog(log: CombatLogEntry): log is CombatLog & PersistedCombatLogFields {
@@ -153,7 +149,7 @@ export function buildCombatLogDetailFromEntry(
       duration_seconds: log.duration_seconds ?? 0,
       skills_used: log.skills_used ?? [],
       loot_dropped: log.loot_dropped ?? log.loot ?? null,
-      potion_used: log.potion_used ?? null,
+      round_regen: log.round_regen ?? null,
       created_at: log.created_at,
       character: {
         level: log.character_level ?? 0,
@@ -216,7 +212,7 @@ export function buildCombatLogDetailFromEntry(
     duration_seconds: 0,
     skills_used: result.skills_used ?? [],
     loot_dropped: result.loot?.item ? { item: result.loot.item } : null,
-    potion_used: result.potion_used ?? null,
+    round_regen: result.round_regen ?? null,
     created_at: new Date().toISOString(),
     character: {
       level: result.character?.level ?? 0,

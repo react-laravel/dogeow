@@ -57,7 +57,6 @@ export const createGemManagementState = (overrides: Record<string, unknown> = {}
 })
 
 export interface InventoryPanelStoreState {
-  consumePotion: ReturnType<typeof vi.fn>
   equipItem: ReturnType<typeof vi.fn>
   equipment: Record<string, GameItem | null>
   inventory: GameItem[]
@@ -76,7 +75,6 @@ export interface InventoryPanelStoreState {
 export const createInventoryPanelStoreState = (
   overrides: Partial<InventoryPanelStoreState> = {}
 ): InventoryPanelStoreState => ({
-  consumePotion: vi.fn(async () => undefined),
   equipItem: vi.fn(async () => undefined),
   equipment: {},
   inventory: [],

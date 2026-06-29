@@ -14,7 +14,6 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
         equipItem: vi.fn(async () => undefined),
         inventory: [],
         moveItem: vi.fn(async () => undefined),
@@ -39,7 +38,6 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
         equipItem: vi.fn(async () => undefined),
         inventory: [item],
         moveItem: vi.fn(async () => undefined),
@@ -75,7 +73,6 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
         equipItem: vi.fn(async () => undefined),
         inventory: [item],
         moveItem: vi.fn(async () => undefined),
@@ -110,7 +107,6 @@ describe('useInventoryPanelActions', () => {
 
     const { result } = renderHook(() =>
       useInventoryPanelActions({
-        consumePotion: vi.fn(async () => undefined),
         equipItem: vi.fn(async () => undefined),
         inventory: [socketableItem, socketedItem],
         moveItem: vi.fn(async () => undefined),

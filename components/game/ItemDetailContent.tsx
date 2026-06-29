@@ -19,8 +19,7 @@ interface ItemDetailContentProps {
 
 export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
   const quality = item.quality
-  const isPotionItem = item.definition?.type === 'potion'
-  const stats = getDisplayableItemStats(getItemTotalStats(item), { hideRestore: isPotionItem })
+  const stats = getDisplayableItemStats(getItemTotalStats(item))
   const displayName = getItemDisplayName(item)
   const typeName = ITEM_TYPE_NAMES[item.definition?.type ?? '']
   const subType = item.definition?.sub_type

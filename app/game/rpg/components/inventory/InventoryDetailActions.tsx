@@ -15,7 +15,6 @@ interface InventoryDetailActionsProps {
   onOpenGemSelector: (item: GameItem) => void
   onSell: () => void
   onUnsocketGem: (socketIndex: number) => void
-  onUsePotion: () => void
   source: InventorySlotCell['source']
 }
 
@@ -30,7 +29,6 @@ export function InventoryDetailActions({
   onOpenGemSelector,
   onSell,
   onUnsocketGem,
-  onUsePotion,
   source,
 }: InventoryDetailActionsProps) {
   const isInventoryItem = source === 'inventory'
@@ -38,12 +36,7 @@ export function InventoryDetailActions({
 
   return (
     <>
-      {isInventoryItem && itemType === 'potion' && (
-        <ItemActionButton onClick={onUsePotion} disabled={isLoading} variant="use">
-          使用
-        </ItemActionButton>
-      )}
-      {isInventoryItem && itemType !== 'potion' && itemType !== 'gem' && (
+      {isInventoryItem && itemType !== 'gem' && (
         <ItemActionButton onClick={onEquip} disabled={isLoading} variant="equip">
           装备
         </ItemActionButton>

@@ -64,7 +64,6 @@ export interface CombatResult {
   loot: {
     copper?: number
     item?: GameItem
-    potion?: GameItem
     item_lost?: boolean
     item_lost_reason?: string
   }
@@ -72,11 +71,8 @@ export interface CombatResult {
   skill_target_positions?: number[] // 技能命中的怪物位置 (0-4)
   /** 技能冷却（回合数） */
   skill_cooldowns?: Record<number, number>
-  /** 自动使用药水记录 */
-  potion_used?: {
-    before?: Record<string, { name: string; restored: number }>
-    after?: Record<string, { name: string; restored: number }>
-  }
+  /** 回合结束自动恢复记录 */
+  round_regen?: Record<string, { name: string; restored: number }> | null
   character: GameCharacter
   /** 仅当本场战斗结束（胜利/失败）时存在 */
   combat_log_id?: number
@@ -104,7 +100,6 @@ export interface CombatLog {
   loot?: {
     copper?: number
     item?: GameItem
-    potion?: GameItem
     item_lost?: boolean
     item_lost_reason?: string
   }
@@ -112,11 +107,8 @@ export interface CombatLog {
   copper_gained: number
   duration_seconds: number
   skills_used?: SkillUsedEntry[]
-  /** 自动使用药水记录 */
-  potion_used?: {
-    before?: Record<string, { name: string; restored: number }>
-    after?: Record<string, { name: string; restored: number }>
-  }
+  /** 回合结束自动恢复记录 */
+  round_regen?: Record<string, { name: string; restored: number }> | null
   created_at: string
 }
 
@@ -139,10 +131,7 @@ export interface CombatLogDetail {
   duration_seconds: number
   skills_used: SkillUsedEntry[]
   loot_dropped: Record<string, unknown> | null
-  potion_used: {
-    before?: Record<string, { name: string; restored: number }>
-    after?: Record<string, { name: string; restored: number }>
-  } | null
+  round_regen?: Record<string, { name: string; restored: number }> | null
   created_at: string
   character: {
     level: number

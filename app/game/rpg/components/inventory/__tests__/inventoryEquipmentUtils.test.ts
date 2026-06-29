@@ -42,7 +42,7 @@ describe('inventoryEquipmentUtils', () => {
       getEquippedItemFor(
         equipment,
         createItem({
-          definition: { id: 23, name: 'Potion', type: 'potion', base_stats: {}, required_level: 1 },
+          definition: { id: 23, name: 'Gem', type: 'gem', base_stats: {}, required_level: 1 },
         })
       )
     ).toBeNull()
@@ -84,12 +84,7 @@ describe('inventoryEquipmentUtils', () => {
     expect(isHigherValueThanEquipped(better, null)).toBe(true)
   })
 
-  it('does not show upgrade indicator for potions or gems', () => {
-    const potion = createItem({
-      id: 38,
-      sell_price: 999,
-      definition: { id: 38, name: 'HP Potion', type: 'potion', base_stats: {}, required_level: 1 },
-    })
+  it('does not show upgrade indicator for gems', () => {
     const gem = createItem({
       id: 39,
       sell_price: 999,
@@ -101,7 +96,6 @@ describe('inventoryEquipmentUtils', () => {
       definition: { id: 40, name: 'Sword', type: 'weapon', base_stats: {}, required_level: 1 },
     })
 
-    expect(shouldShowUpgradeIndicator(potion, null)).toBe(false)
     expect(shouldShowUpgradeIndicator(gem, null)).toBe(false)
     expect(shouldShowUpgradeIndicator(weapon, null)).toBe(true)
   })
