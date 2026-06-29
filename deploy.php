@@ -298,19 +298,49 @@ if pm2_untracked info "$app_name" >/dev/null 2>&1; then
 
   if env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 restart "$ecosystem_path" --only "$app_name" --update-env; then
     pm2_untracked status
+  else
+    echo "[deploy] PM2 restart 失败，尝试重建应用进程表"
+    pm2_untracked delete "$app_name" || true
+
+    if ! pm2_untracked info "$app_name" >/dev/null 2>&1; then
+      echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
+    fi
+
+    env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 start "$ecosystem_path" --only "$app_name" --update-env
+    pm2_untracked status
+  fi
+else
+  echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
+  env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 start "$ecosystem_path" --only "$app_name" --update-env
+  pm2_untracked status
+fi
+
+app_port="${PORT:-3000}"
+for env_file in .env.production.local .env.local .env.production .env; do
+  if [ -f "$runtime_cwd/$env_file" ]; then
+    env_port="$(grep -E "^PORT=" "$runtime_cwd/$env_file" | tail -1 | cut -d= -f2- | xargs || true)"
+    if [ -n "$env_port" ]; then
+      app_port="$env_port"
+    fi
+  fi
+done
+
+wait_attempts="${PM2_READY_MAX_ATTEMPTS:-60}"
+wait_delay="${PM2_READY_DELAY_SECONDS:-1}"
+for attempt in $(seq 1 "$wait_attempts"); do
+  if curl -fsS --max-time 3 "http://127.0.0.1:${app_port}/" >/dev/null 2>&1; then
+    echo "[deploy] Next.js 已在 127.0.0.1:${app_port} 就绪（${attempt}/${wait_attempts}）"
     exit 0
   fi
 
-  echo "[deploy] PM2 restart 失败，尝试重建应用进程表"
-  pm2_untracked delete "$app_name" || true
-fi
+  if [ "$attempt" -eq "$wait_attempts" ]; then
+    echo "[deploy] ERROR: Next.js 在 ${wait_attempts}s 内未在 127.0.0.1:${app_port} 就绪" >&2
+    pm2_untracked logs "$app_name" --lines 80 --nostream >&2 || true
+    exit 1
+  fi
 
-if ! pm2_untracked info "$app_name" >/dev/null 2>&1; then
-  echo "[deploy] PM2 中未找到应用，准备首次启动: $app_name"
-fi
-
-env -u RUNNER_TRACKING_ID PM2_CWD="$runtime_cwd" APP_ROOT="{{deploy_path}}" pm2 start "$ecosystem_path" --only "$app_name" --update-env
-pm2_untracked status
+  sleep "$wait_delay"
+done
 '
 BASH);
 });
@@ -321,9 +351,23 @@ task('deploy:healthcheck', function () {
 bash -lc '
 set -euo pipefail
 
-verify_script="{{current_path}}/scripts/verify-next-assets.sh"
-local_base_url="{{local_healthcheck_base_url}}"
+runtime_cwd="{{current_path}}"
+verify_script="$runtime_cwd/scripts/verify-next-assets.sh"
 public_base_url="{{verify_base_url}}"
+app_port="${PORT:-3000}"
+
+for env_file in .env.production.local .env.local .env.production .env; do
+  if [ -f "$runtime_cwd/$env_file" ]; then
+    env_port="$(grep -E "^PORT=" "$runtime_cwd/$env_file" | tail -1 | cut -d= -f2- | xargs || true)"
+    if [ -n "$env_port" ]; then
+      app_port="$env_port"
+    fi
+  fi
+done
+
+local_base_url="http://127.0.0.1:${app_port}"
+export VERIFY_MAX_ATTEMPTS="${VERIFY_MAX_ATTEMPTS:-30}"
+export VERIFY_RETRY_DELAY_SECONDS="${VERIFY_RETRY_DELAY_SECONDS:-2}"
 
 bash "$verify_script" "$local_base_url" /about
 
@@ -369,11 +413,19 @@ after('rollback', 'pm2:restart');
 
 desc('发送部署完成站内通知');
 task('deploy:notify', function () {
-    $apiPath = getenv('DOGEOW_API_CURRENT_PATH') ?: '/var/www/dogeow-api/current';
+    $apiPath = getenv('DOGEOW_API_CURRENT_PATH');
+    if (! is_string($apiPath) || $apiPath === '') {
+        $deployPath = getenv('DEPLOY_PATH') ?: getenv('APP_ROOT');
+        if (is_string($deployPath) && $deployPath !== '') {
+            $apiPath = dirname(rtrim($deployPath, '/')) . '/' . basename(rtrim($deployPath, '/')) . '-api/current';
+        } else {
+            $apiPath = '/var/www/dogeow-api/current';
+        }
+    }
 
     run(<<<BASH
 if [ -f "{$apiPath}/artisan" ]; then
-  cd "{$apiPath}" && {{bin/php}} artisan notify:deploy dogeow --no-interaction || true
+  cd "{$apiPath}" && {{bin/php}} artisan notify:deploy dogeow --no-interaction || echo "[deploy] notify:deploy 执行失败，已忽略"
 else
   echo "[deploy] 未找到 dogeow-api ({$apiPath})，跳过部署通知"
 fi

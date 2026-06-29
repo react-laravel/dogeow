@@ -146,14 +146,16 @@ dep releases production
 
 ## 7. 故障排查
 
-| 现象                   | 排查                                                                       |
-| ---------------------- | -------------------------------------------------------------------------- |
-| `Deploy is locked`     | 执行 `dep deploy:unlock production`                                        |
-| `deploy:writable` 失败 | 确认 `deploy.php` 已使用 `chmod` 模式                                      |
-| `npm ci` 失败          | 检查 Node / npm 版本，以及服务器本地 `.npmrc`                              |
-| `next build` 失败      | 在 release 目录手动执行 `npm run build` 复现                               |
-| `pm2 reload` 失败      | `pm2 logs dogeow-nextjs`、`pm2 status`；当前策略会直接终止部署，保留旧进程 |
-| 页面没更新             | `readlink /example/dogeow/current` 确认 `current` 是否已切到新 release     |
+| 现象                       | 排查                                                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Deploy is locked`         | 执行 `dep deploy:unlock production`                                                                                                            |
+| `deploy:writable` 失败     | 确认 `deploy.php` 已使用 `chmod` 模式                                                                                                          |
+| `npm ci` 失败              | 检查 Node / npm 版本，以及服务器本地 `.npmrc`                                                                                                  |
+| `next build` 失败          | 在 release 目录手动执行 `npm run build` 复现                                                                                                   |
+| `pm2 reload` 失败          | `pm2 logs dogeow-nextjs`、`pm2 status`；当前策略会直接终止部署，保留旧进程                                                                     |
+| healthcheck 连接 3000 失败 | PM2 重启后 Next.js 需要几秒启动；部署脚本会在 `pm2:restart` 等待本机端口就绪。若仍失败，检查 `current/.env*` 中 `PORT` 是否与 PM2/Nginx 一致   |
+| 部署通知未发送             | 确认 `DEPLOY_PATH` 旁的 `*-api/current/artisan` 存在，或设置 `DOGEOW_API_CURRENT_PATH`；`dogeow-api` 的 `.env` 需配置 `DEPLOY_NOTIFY_USER_IDS` |
+| 页面没更新                 | `readlink /example/dogeow/current` 确认 `current` 是否已切到新 release                                                                         |
 
 查看本次部署详细输出：
 

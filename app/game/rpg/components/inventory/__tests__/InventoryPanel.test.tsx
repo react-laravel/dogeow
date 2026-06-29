@@ -74,9 +74,11 @@ describe('InventoryPanel', () => {
     expect(view.getByRole('button', { name: 'Ring' })).toBeInTheDocument()
     expect(view.queryByRole('button', { name: 'Stored Ring' })).not.toBeInTheDocument()
 
-    await user.click(view.getByRole('button', { name: '排序' }))
     await user.click(view.getByRole('button', { name: '价格' }))
     expect(store.sortInventory).toHaveBeenCalledWith('price')
+
+    await user.click(view.getByRole('button', { name: '时间' }))
+    expect(store.sortInventory).toHaveBeenCalledWith('default')
 
     await user.click(view.getByRole('button', { name: /全部回收/ }))
     await waitFor(() => {

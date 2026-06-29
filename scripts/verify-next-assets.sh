@@ -30,7 +30,7 @@ fetch_url_body() {
   local response
 
   while [ "$attempt" -le "$VERIFY_MAX_ATTEMPTS" ]; do
-    if response="$(curl -fsSL --max-time "$VERIFY_CURL_MAX_TIME_SECONDS" "$url")"; then
+    if response="$(curl -fsSL --max-time "$VERIFY_CURL_MAX_TIME_SECONDS" "$url" 2>/dev/null)"; then
       printf '%s' "$response"
       return 0
     fi

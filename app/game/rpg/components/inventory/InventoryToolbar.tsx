@@ -53,7 +53,7 @@ export function InventoryToolbar({
   storageCount,
   storageSize,
 }: InventoryToolbarProps) {
-  const [sortOpen, setSortOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<'default' | 'quality' | 'price'>('default')
   const recycleAllStats = Object.values(qualityStats).reduce(
     (total, stats) => ({
       count: total.count + stats.count,
@@ -72,6 +72,17 @@ export function InventoryToolbar({
     }
     onAutoRecycleMaxValueChange(Math.min(AUTO_RECYCLE_MAX, next))
   }
+
+  const handleSort = (sortType: 'default' | 'quality' | 'price') => {
+    setSortBy(sortType)
+    onSort(sortType)
+  }
+
+  const sortOptions = [
+    { value: 'default' as const, label: '时间' },
+    { value: 'quality' as const, label: '品质' },
+    { value: 'price' as const, label: '价格' },
+  ]
 
   return (
     <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 sm:mb-4 sm:gap-3">
@@ -256,49 +267,26 @@ export function InventoryToolbar({
             </PopoverContent>
           </Popover>
         )}
-        <Popover open={sortOpen} onOpenChange={setSortOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="bg-muted text-muted-foreground hover:bg-muted/80 flex items-center gap-1 rounded px-2 py-1.5 text-sm transition-colors"
-              title="排序"
-            >
-              <span>排序</span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-24 p-2" align="end">
-            <button
-              type="button"
-              onClick={() => {
-                onSort('default')
-                setSortOpen(false)
-              }}
-              className="hover:bg-muted flex w-full items-center rounded px-2 py-1.5 text-left text-sm"
-            >
-              默认
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onSort('quality')
-                setSortOpen(false)
-              }}
-              className="hover:bg-muted flex w-full items-center rounded px-2 py-1.5 text-left text-sm"
-            >
-              品质
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onSort('price')
-                setSortOpen(false)
-              }}
-              className="hover:bg-muted flex w-full items-center rounded px-2 py-1.5 text-left text-sm"
-            >
-              价格
-            </button>
-          </PopoverContent>
-        </Popover>
+        {!showStorage && (
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground shrink-0 text-xs">排序</span>
+            {sortOptions.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSort(option.value)}
+                disabled={isLoading}
+                className={`rounded px-2 py-1.5 text-xs transition-colors disabled:opacity-50 sm:text-sm ${
+                  sortBy === option.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
