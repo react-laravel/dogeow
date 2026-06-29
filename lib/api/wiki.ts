@@ -61,10 +61,11 @@ export const createNode = async (data: {
   content?: string
   content_markdown?: string
 }): Promise<{ node: WikiNode }> => {
-  return await apiRequest<{ note: WikiNode }>('notes', 'POST', {
+  const note = await apiRequest<WikiNode>('notes', 'POST', {
     ...data,
     is_wiki: true,
-  }).then(response => ({ node: response.note }))
+  })
+  return { node: note }
 }
 
 /**
@@ -81,9 +82,8 @@ export const updateNode = async (
     content_markdown?: string
   }
 ): Promise<{ node: WikiNode }> => {
-  return await apiRequest<{ note: WikiNode }>(`notes/${id}`, 'PUT', data).then(response => ({
-    node: response.note,
-  }))
+  const note = await apiRequest<WikiNode>(`notes/${id}`, 'PUT', data)
+  return { node: note }
 }
 
 /**
