@@ -18,8 +18,10 @@ import { useGameStore } from '../../stores/gameStore'
 import {
   buildCombatLogDetailFromEntry,
   extractCombatLogId,
+  getCombatLogMonsterName,
   type CombatLogEntry,
 } from '../../stores/combatHelpers'
+import { formatItemStatValue } from '../../utils/itemUtils'
 import { X, Swords, Shield, Zap, Target, Skull, Award, Coins } from 'lucide-react'
 import type { SkillUsedEntry } from '../../types'
 
@@ -214,7 +216,7 @@ function CombatLogDetailDialog({
                   </div>
                   <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
                     <Zap className="h-4 w-4 shrink-0 text-yellow-500" />
-                    <span>暴击: {d.character.crit_rate}%</span>
+                    <span>暴击: {formatItemStatValue(d.character.crit_rate, 'crit_rate')}</span>
                   </div>
                 </div>
               ) : (
@@ -375,21 +377,10 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
         // 没有回合概念，只显示战斗状态
         const isVictory = 'victory' in log && log.victory === true
 
-        const hasRoundRegen = log.round_regen && Object.keys(log.round_regen).length > 0
         const playerSkillsUsed = filterPlayerSkillsUsed(log.skills_used, playerSkillIds)
 
         return (
           <div key={logKey}>
-            {hasRoundRegen && (
-              <div className="flex flex-wrap items-center gap-1 rounded px-2 py-1 text-xs sm:gap-2 sm:px-3 sm:py-2 sm:text-sm">
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">💚</span>
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  {Object.entries(log.round_regen!)
-                    .map(([, data]) => `${data.name}(+${data.restored})`)
-                    .join(' ')}
-                </span>
-              </div>
-            )}
             {/* 战斗日志主体 - 可点击 */}
             <div
               role="button"
@@ -422,7 +413,7 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                 >
                   {isVictory ? '✅' : '⚔️'}
                 </span>
-                <span className="text-foreground truncate">{log.monster?.name ?? '?'}</span>
+                <span className="text-foreground truncate">{getCombatLogMonsterName(log)}</span>
                 {playerSkillsUsed.length > 0 && <CombatLogSkillIcons skills={playerSkillsUsed} />}
               </div>
               <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">

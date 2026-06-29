@@ -21,7 +21,6 @@ vi.mock('./combatHelpers', () => ({
   reportCombatDebug: vi.fn(),
   extractCombatLogId: vi.fn(() => null),
   mergeCombatLogsWithUpdate: vi.fn(logs => logs),
-  hasRoundRegen: vi.fn(() => false),
 }))
 
 vi.mock('./gameStateHelpers', () => ({

@@ -97,24 +97,40 @@ export const mergeCombatLogsWithUpdate = (
   return [normalizedLog, ...logs].slice(0, 100)
 }
 
-export const hasRoundRegen = (update: GameCombatUpdateEvent): boolean => {
-  const roundRegen = update.round_regen
-  return !!(roundRegen && Object.keys(roundRegen).length > 0)
-}
-
 function isPersistedCombatLog(log: CombatLogEntry): log is CombatLog & PersistedCombatLogFields {
   return 'created_at' in log && typeof log.created_at === 'string'
 }
 
 function readRelationName(
-  relation: CombatLog['map'] | CombatLog['monster'] | CombatResult['monster']
+  relation:
+    | CombatLog['map']
+    | CombatLog['monster']
+    | CombatResult['monster']
+    | string
+    | null
+    | undefined
 ): string {
   if (relation && typeof relation === 'object' && 'name' in relation && relation.name) {
     return String(relation.name)
   }
-  if (typeof relation === 'string') {
+  if (typeof relation === 'string' && relation.trim().length > 0) {
     return relation
   }
+  return '?'
+}
+
+/** 战斗日志列表/API 与 WebSocket 推送的 monster 字段格式不一致，统一解析怪物名 */
+export function getCombatLogMonsterName(log: CombatLogEntry): string {
+  const name = readRelationName('monster' in log ? log.monster : null)
+  if (name !== '?') return name
+
+  if ('monsters' in log && Array.isArray(log.monsters)) {
+    const firstNamed = log.monsters.find(
+      m => m != null && typeof m.name === 'string' && m.name.trim().length > 0
+    )
+    if (firstNamed?.name) return firstNamed.name
+  }
+
   return '?'
 }
 

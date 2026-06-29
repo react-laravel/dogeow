@@ -83,16 +83,22 @@ export interface CombatLog {
   character_id: number
   map_id: number
   monster_id: number
-  monster: {
-    id?: number
-    name?: string
-    type?: MonsterType
-    level?: number
-  } | null
-  map: {
-    id?: number
-    name?: string
-  } | null
+  monster:
+    | {
+        id?: number
+        name?: string
+        type?: MonsterType
+        level?: number
+      }
+    | string
+    | null
+  map:
+    | {
+        id?: number
+        name?: string
+      }
+    | string
+    | null
   damage_dealt: number
   damage_taken: number
   victory: boolean
