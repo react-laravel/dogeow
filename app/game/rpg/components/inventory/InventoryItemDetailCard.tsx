@@ -5,6 +5,7 @@ import { CopperDisplay } from '../shared/CopperDisplay'
 import { GameItem, QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '../../types'
 import {
   formatItemStatValue,
+  formatAffixLine,
   getDisplayableItemStats,
   getItemDisplayName,
   getItemTotalStats,
@@ -61,50 +62,54 @@ export function EquipmentDetailBody({
   showBuyPrice = false,
 }: EquipmentDetailBodyProps) {
   const displayStats = getDisplayableItemStats(getItemTotalStats(item))
+  const affixLines = (item.affixes ?? [])
+    .map(affix => formatAffixLine(affix))
+    .filter((line): line is string => line != null)
+  const hasBuyPrice =
+    showBuyPrice && item.definition?.buy_price != null && item.definition.buy_price > 0
+  const hasStatBlock = Object.keys(displayStats).length > 0 || affixLines.length > 0 || hasBuyPrice
 
   return (
     <>
       <EquipmentGemSockets item={item} isLoading={isLoading} onUnsocketGem={onUnsocketGem} />
 
-      <div className="mt-1 space-y-0.5 text-xs">
-        {Object.entries(displayStats).map(([stat, value]) => (
-          <p key={stat} className="text-green-600 dark:text-green-400">
-            +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
-          </p>
-        ))}
-        {item.definition?.type !== 'gem' &&
-          item.affixes?.map((affix, idx) => (
-            <p key={idx} className="text-blue-600 dark:text-blue-400">
-              {Object.entries(affix)
-                .map(([key, value]) => {
-                  const num = Number(value)
-                  const display = formatItemStatValue(num, key)
-                  return `+${display} ${STAT_NAMES[key] || key}`
-                })
-                .join(', ')}
+      {hasStatBlock && (
+        <div className="mt-1 space-y-0.5 text-xs">
+          {Object.entries(displayStats).map(([stat, value]) => (
+            <p key={stat} className="text-green-600 dark:text-green-400">
+              +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
             </p>
           ))}
-        {showBuyPrice && item.definition?.buy_price != null && item.definition.buy_price > 0 && (
-          <p className="text-purple-600 dark:text-purple-400">
-            售价:{' '}
-            <CopperDisplay
-              copper={item.definition.buy_price}
-              size="sm"
-              nowrap
-              className="font-medium"
-            />
-          </p>
-        )}
-        <p className="text-muted-foreground flex items-center gap-1">
-          卖出:{' '}
-          <CopperDisplay
-            copper={item.sell_price ?? Math.floor((item.definition?.buy_price ?? 0) / 2)}
-            size="sm"
-            nowrap
-            className="font-medium"
-          />
-        </p>
-      </div>
+          {item.definition?.type !== 'gem' &&
+            affixLines.map((line, idx) => (
+              <p key={idx} className="text-blue-600 dark:text-blue-400">
+                {line}
+              </p>
+            ))}
+          {hasBuyPrice && (
+            <p className="text-purple-600 dark:text-purple-400">
+              售价:{' '}
+              <CopperDisplay
+                copper={item.definition!.buy_price!}
+                size="sm"
+                nowrap
+                className="font-medium"
+              />
+            </p>
+          )}
+        </div>
+      )}
+      <p
+        className={`text-muted-foreground flex items-center gap-1 text-xs ${hasStatBlock ? 'mt-1' : ''}`}
+      >
+        卖出:{' '}
+        <CopperDisplay
+          copper={item.sell_price ?? Math.floor((item.definition?.buy_price ?? 0) / 2)}
+          size="sm"
+          nowrap
+          className="font-medium"
+        />
+      </p>
     </>
   )
 }

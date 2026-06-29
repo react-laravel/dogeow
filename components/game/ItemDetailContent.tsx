@@ -5,6 +5,7 @@ import { QUALITY_COLORS, QUALITY_NAMES, STAT_NAMES } from '@/app/game/rpg/types'
 import { ItemTipIcon } from './ItemTipIcon'
 import {
   formatItemStatValue,
+  formatAffixLine,
   getDisplayableItemStats,
   getItemDisplayName,
   getItemTotalStats,
@@ -20,12 +21,23 @@ interface ItemDetailContentProps {
 export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
   const quality = item.quality
   const stats = getDisplayableItemStats(getItemTotalStats(item))
+  const affixLines =
+    type === 'inventory'
+      ? (item.affixes ?? [])
+          .map(affix => formatAffixLine(affix))
+          .filter((line): line is string => line != null)
+      : []
   const displayName = getItemDisplayName(item)
   const typeName = ITEM_TYPE_NAMES[item.definition?.type ?? '']
   const subType = item.definition?.sub_type
   const requiredLevel = item.definition?.required_level
   const price = item.sell_price
   const buyPrice = item.definition?.buy_price
+  const hasStatBlock =
+    Object.keys(stats).length > 0 ||
+    affixLines.length > 0 ||
+    (buyPrice != null && buyPrice > 0) ||
+    (price != null && price > 0)
 
   return (
     <div
@@ -57,38 +69,33 @@ export function ItemDetailContent({ item, type }: ItemDetailContentProps) {
           </div>
         </div>
 
-        <div className="mt-1 space-y-0.5 text-xs">
-          {Object.entries(stats || {}).map(([stat, value]) => (
-            <p key={stat} className="text-green-600 dark:text-green-400">
-              +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
-            </p>
-          ))}
-
-          {type === 'inventory' &&
-            item.affixes?.map((affix, i) => (
-              <p key={i} className="text-blue-600 dark:text-blue-400">
-                {Object.entries(affix)
-                  .map(([k, v]) => {
-                    const num = Number(v)
-                    const display = formatItemStatValue(num, k)
-                    return `+${display} ${STAT_NAMES[k] || k}`
-                  })
-                  .join(', ')}
+        {hasStatBlock && (
+          <div className="mt-1 space-y-0.5 text-xs">
+            {Object.entries(stats).map(([stat, value]) => (
+              <p key={stat} className="text-green-600 dark:text-green-400">
+                +{formatItemStatValue(Number(value), stat)} {STAT_NAMES[stat] || stat}
               </p>
             ))}
 
-          {buyPrice != null && buyPrice > 0 && (
-            <p className="text-purple-600 dark:text-purple-400">
-              售价: <CopperDisplay copper={buyPrice} size="sm" nowrap className="font-medium" />
-            </p>
-          )}
+            {affixLines.map((line, i) => (
+              <p key={i} className="text-blue-600 dark:text-blue-400">
+                {line}
+              </p>
+            ))}
 
-          {price != null && price > 0 && (
-            <p className="text-muted-foreground">
-              卖出: <CopperDisplay copper={price} size="sm" nowrap className="font-medium" />
-            </p>
-          )}
-        </div>
+            {buyPrice != null && buyPrice > 0 && (
+              <p className="text-purple-600 dark:text-purple-400">
+                售价: <CopperDisplay copper={buyPrice} size="sm" nowrap className="font-medium" />
+              </p>
+            )}
+
+            {price != null && price > 0 && (
+              <p className="text-muted-foreground">
+                卖出: <CopperDisplay copper={price} size="sm" nowrap className="font-medium" />
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

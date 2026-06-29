@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatAffixLine,
   formatItemStatValue,
   getCompareStatKeys,
+  getDisplayableItemStats,
   getEffectiveSocketCount,
   getItemTotalStats,
   MAX_ITEM_SOCKETS,
@@ -88,5 +90,22 @@ describe('itemUtils', () => {
     expect(formatItemStatValue(0.05, 'crit_rate')).toBe('5%')
     expect(formatItemStatValue(0.15, 'crit_damage')).toBe('15%')
     expect(formatItemStatValue(8, 'defense')).toBe(8)
+  })
+
+  it('filters zero and hidden stats from displayable stats', () => {
+    expect(
+      getDisplayableItemStats({
+        attack: 10,
+        defense: 0,
+        price: 100,
+        max_hp: 0,
+      })
+    ).toEqual({ attack: 10 })
+  })
+
+  it('returns null for empty affix lines', () => {
+    expect(formatAffixLine({})).toBeNull()
+    expect(formatAffixLine({ attack: 0 })).toBeNull()
+    expect(formatAffixLine({ attack: 5 })).toBe('+5 攻击力')
   })
 })

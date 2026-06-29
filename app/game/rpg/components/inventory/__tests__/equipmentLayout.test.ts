@@ -49,18 +49,32 @@ describe('equipmentLayout', () => {
       })
     })
 
-    it('should have helmet at top center', () => {
+    it('should have helmet on left column top', () => {
       const helmet = PAPER_DOLL_SLOTS.find(s => s.slot === 'helmet')
       expect(helmet).toBeDefined()
-      expect(helmet?.className).toContain('left-1/2')
-      expect(helmet?.className).toContain('top-2')
+      expect(helmet?.className).toContain('left-2')
+      expect(helmet?.className).toContain('top-[6%]')
     })
 
-    it('should have boots at bottom center', () => {
+    it('should have boots on left column bottom', () => {
       const boots = PAPER_DOLL_SLOTS.find(s => s.slot === 'boots')
       expect(boots).toBeDefined()
-      expect(boots?.className).toContain('bottom-2')
-      expect(boots?.className).toContain('left-1/2')
+      expect(boots?.className).toContain('left-2')
+      expect(boots?.className).toContain('top-[72%]')
+    })
+
+    it('should have amulet on right column top', () => {
+      const amulet = PAPER_DOLL_SLOTS.find(s => s.slot === 'amulet')
+      expect(amulet).toBeDefined()
+      expect(amulet?.className).toContain('right-2')
+      expect(amulet?.className).toContain('top-[6%]')
+    })
+
+    it('should have belt on right column bottom', () => {
+      const belt = PAPER_DOLL_SLOTS.find(s => s.slot === 'belt')
+      expect(belt).toBeDefined()
+      expect(belt?.className).toContain('right-2')
+      expect(belt?.className).toContain('top-[72%]')
     })
 
     it('should have label for amulet and ring slots', () => {

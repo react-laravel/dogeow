@@ -167,12 +167,26 @@ export function getDisplayableItemStats(
   if (!stats) return {}
 
   return Object.fromEntries(
-    Object.entries(stats).filter(([key]) => {
+    Object.entries(stats).filter(([key, value]) => {
       if (HIDDEN_ITEM_STAT_KEYS.has(key)) return false
       if (options.hideRestore && key === 'restore') return false
+      if (value == null || value === 0) return false
       return true
     })
   )
+}
+
+/** 将词缀格式化为展示行；无可展示属性时返回 null */
+export function formatAffixLine(affix: Record<string, number>): string | null {
+  const parts = Object.entries(affix)
+    .filter(([, value]) => value != null && value !== 0)
+    .map(([key, value]) => {
+      const num = Number(value)
+      const display = formatItemStatValue(num, key)
+      return `+${display} ${STAT_NAMES[key] || key}`
+    })
+
+  return parts.length > 0 ? parts.join(', ') : null
 }
 
 /**

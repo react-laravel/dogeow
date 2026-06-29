@@ -53,24 +53,19 @@ export function CharacterPanel() {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* 装备栏 */}
+      {/* 装备栏：立绘背景 + 顶部角色信息 + 左右装备槽 */}
       <div className="bg-card overflow-hidden">
-        <div className="px-2">
-          <div className="min-w-0 flex-1">
-            <div className="text-muted-foreground flex items-center justify-between gap-3 text-xs sm:text-sm">
-              <span className="shrink-0">
-                Lv.{character.level} {CLASS_NAMES[character.class]}
-              </span>
-              <span className="min-w-0 truncate text-right">
-                经验 {character.experience.toLocaleString()} / {expToNext.toLocaleString()}
-              </span>
-            </div>
-            <h3 className="text-foreground mt-1 truncate text-center text-lg font-bold sm:text-xl">
-              {character.name}
-            </h3>
-          </div>
-        </div>
-        <EquipmentGrid equipment={equipment} onUnequip={unequipItem} />
+        <EquipmentGrid
+          equipment={equipment}
+          onUnequip={unequipItem}
+          characterSummary={{
+            name: character.name,
+            level: character.level,
+            classLabel: CLASS_NAMES[character.class],
+            experience: character.experience,
+            expToNext,
+          }}
+        />
       </div>
 
       {/* 战斗属性 - 移动端优化 */}

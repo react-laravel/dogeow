@@ -185,10 +185,10 @@ describe('events types', () => {
       inventory: [],
       storage: [],
       equipment: { weapon: null, helmet: null },
-      inventory_size: 100,
+      inventory_size: 50,
       storage_size: 50,
     }
-    expect(event.inventory_size).toBe(100)
+    expect(event.inventory_size).toBe(50)
     expect(event.storage_size).toBe(50)
   })
 

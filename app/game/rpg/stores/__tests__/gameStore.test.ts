@@ -46,8 +46,8 @@ describe('GameStore', () => {
       currentMana: null,
       inventory: [],
       storage: [],
-      inventorySize: 100,
-      storageSize: 100,
+      inventorySize: 50,
+      storageSize: 50,
       equipment: {},
       skills: [],
       maps: [],
@@ -171,8 +171,8 @@ describe('GameStore', () => {
         inventory: [{ id: 1, name: 'Item1' }],
         storage: [],
         equipment: {},
-        inventory_size: 100,
-        storage_size: 100,
+        inventory_size: 50,
+        storage_size: 50,
       })
 
       useGameStore.setState({ selectedCharacterId: 1 })
@@ -449,6 +449,21 @@ describe('GameStore', () => {
       useGameStore.setState({
         isFighting: true,
         combatResult: { victory: false } as never,
+      })
+
+      useGameStore.getState().handleMonstersAppear({
+        monsters: [{ id: 1, name: 'Monster1', type: 'normal', level: 1, hp: 50, max_hp: 50 }],
+        character: { current_hp: 100, current_mana: 50 },
+      })
+
+      expect(useGameStore.getState().statusCombatMonsters).toHaveLength(1)
+      expect(useGameStore.getState().combatResult).toBeDefined()
+    })
+
+    it('should clear combat result when monsters appear before any round data', () => {
+      useGameStore.setState({
+        isFighting: true,
+        combatResult: null,
       })
 
       useGameStore.getState().handleMonstersAppear({

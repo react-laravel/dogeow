@@ -75,30 +75,24 @@ export function InventoryToolbar({
 
   return (
     <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 sm:mb-4 sm:gap-3">
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex w-full min-w-0 basis-full gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => onShowStorageChange(false)}
-          className={`flex flex-col items-center rounded px-2.5 py-1 text-xs sm:px-3 sm:text-sm ${
+          className={`flex min-w-0 flex-1 items-center justify-center truncate rounded px-2.5 py-2 text-xs whitespace-nowrap sm:px-3 sm:text-sm ${
             !showStorage ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
           }`}
         >
-          <span>背包</span>
-          <span className="text-[10px] opacity-90 sm:text-xs">
-            {inventoryCount}/{inventorySize}
-          </span>
+          背包 {inventoryCount}/{inventorySize}
         </button>
         <button
           type="button"
           onClick={() => onShowStorageChange(true)}
-          className={`flex flex-col items-center rounded px-2.5 py-1 text-xs sm:px-3 sm:text-sm ${
+          className={`flex min-w-0 flex-1 items-center justify-center truncate rounded px-2.5 py-2 text-xs whitespace-nowrap sm:px-3 sm:text-sm ${
             showStorage ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
           }`}
         >
-          <span>仓库</span>
-          <span className="text-[10px] opacity-90 sm:text-xs">
-            {storageCount}/{storageSize}
-          </span>
+          仓库 {storageCount}/{storageSize}
         </button>
       </div>
       <div className="ml-auto flex items-center gap-2 sm:gap-3">

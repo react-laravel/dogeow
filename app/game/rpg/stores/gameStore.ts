@@ -203,8 +203,8 @@ const initialState = {
   currentMana: null,
   inventory: [],
   storage: [],
-  inventorySize: 100,
-  storageSize: 100,
+  inventorySize: 50,
+  storageSize: 50,
   equipment: {},
   skills: [],
   availableSkills: [],
@@ -1216,7 +1216,8 @@ const store: StateCreator<GameState> = (set, get) => ({
     set(state => ({
       ...state,
       statusCombatMonsters: typedData.monsters || [],
-      combatResult: null,
+      // 战斗回合数据优先：刷新推送不应冲掉当前回合的扣血/死亡表现
+      ...(state.combatResult == null ? { combatResult: null } : {}),
       currentHp,
       currentMana,
     }))

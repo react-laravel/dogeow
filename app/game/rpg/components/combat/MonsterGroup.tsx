@@ -172,58 +172,16 @@ export function MonsterGroup({
     onAppearActiveChange?.(appearingMonsters.size > 0)
   }, [appearingMonsters, onAppearActiveChange])
 
-  // 检测怪物掉血、受击与死亡（仅在允许显示扣血后执行）
+  // 检测怪物死亡/复位（与扣血显示解耦，避免技能动画结束后才写入快照）
   useEffect(() => {
-    if (!showDamageAndHp) return
+    const deadEntries = validMonsters
+      .filter(m => (m.hp ?? 0) <= 0)
+      .map(m => [`pos-${m.position}`, m] as const)
+    const aliveKeys = validMonsters.filter(m => (m.hp ?? 0) > 0).map(m => `pos-${m.position}`)
 
-    if (prevMonstersRef.current.length === 0 || validMonsters.length === 0) {
-      prevMonstersRef.current = validMonsters
-      return
-    }
+    if (deadEntries.length === 0 && aliveKeys.length === 0) return
 
-    const newDamage: Record<string, number> = {}
-
-    validMonsters.forEach(m => {
-      // 使用 position 作为 key 来区分同一波中的不同怪物实例
-      const key = `pos-${m.position}`
-      const d = m.damage_taken
-      // damage_taken >= 0 表示本回合被攻击了，-1 表示未受攻击
-      if (d != null && d >= 0) {
-        newDamage[key] = d
-      }
-    })
-
-    if (Object.keys(newDamage).length > 0) {
-      queueMicrotask(() => {
-        setDamageTexts(newDamage)
-        scheduleTimeout(() => setDamageTexts({}), DAMAGE_TEXT_DURATION_MS)
-      })
-      // 触发被攻击后退动画（被攻击且伤害大于0时）
-      const hitPositions = validMonsters
-        .filter(
-          m =>
-            m.damage_taken != null &&
-            m.damage_taken >= 0 &&
-            m.damage_taken > 0 &&
-            m.position != null
-        )
-        .map(m => m.position as number)
-      if (hitPositions.length > 0) {
-        queueMicrotask(() => {
-          setHitMonsters(new Set(hitPositions))
-          // 300ms后清除动画状态（与 monster-hit 动画时长一致）
-          scheduleTimeout(() => setHitMonsters(new Set()), 300)
-        })
-      }
-    }
-
-    // 检测怪物死亡/复位：HP <= 0 时触发死亡动画；该位置出现活怪（新一波）时移除标记
     queueMicrotask(() => {
-      const deadEntries = validMonsters
-        .filter(m => (m.hp ?? 0) <= 0)
-        .map(m => [`pos-${m.position}`, m] as const)
-      const aliveKeys = validMonsters.filter(m => (m.hp ?? 0) > 0).map(m => `pos-${m.position}`)
-
       if (deadEntries.length > 0) {
         setDeadMonsterSnapshots(snapshots => {
           let changed = false
@@ -289,6 +247,52 @@ export function MonsterGroup({
         })
       }
     })
+  }, [validMonsters])
+
+  // 检测怪物掉血、受击（仅在允许显示扣血后执行）
+  useEffect(() => {
+    if (!showDamageAndHp) return
+
+    if (prevMonstersRef.current.length === 0 || validMonsters.length === 0) {
+      prevMonstersRef.current = validMonsters
+      return
+    }
+
+    const newDamage: Record<string, number> = {}
+
+    validMonsters.forEach(m => {
+      // 使用 position 作为 key 来区分同一波中的不同怪物实例
+      const key = `pos-${m.position}`
+      const d = m.damage_taken
+      // damage_taken >= 0 表示本回合被攻击了，-1 表示未受攻击
+      if (d != null && d >= 0) {
+        newDamage[key] = d
+      }
+    })
+
+    if (Object.keys(newDamage).length > 0) {
+      queueMicrotask(() => {
+        setDamageTexts(prev => ({ ...prev, ...newDamage }))
+        scheduleTimeout(() => setDamageTexts({}), DAMAGE_TEXT_DURATION_MS)
+      })
+      // 触发被攻击后退动画（被攻击且伤害大于0时）
+      const hitPositions = validMonsters
+        .filter(
+          m =>
+            m.damage_taken != null &&
+            m.damage_taken >= 0 &&
+            m.damage_taken > 0 &&
+            m.position != null
+        )
+        .map(m => m.position as number)
+      if (hitPositions.length > 0) {
+        queueMicrotask(() => {
+          setHitMonsters(new Set(hitPositions))
+          // 300ms后清除动画状态（与 monster-hit 动画时长一致）
+          scheduleTimeout(() => setHitMonsters(new Set()), 300)
+        })
+      }
+    }
 
     prevMonstersRef.current = validMonsters
   }, [validMonsters, showDamageAndHp])
@@ -325,17 +329,19 @@ export function MonsterGroup({
           }
 
           const displayMonsterKey = `pos-${m.position ?? pos}`
+          const isDead = (m.hp ?? 0) <= 0
           const isDying =
-            (m.hp ?? 0) <= 0 &&
-            (deadMonsters.has(displayMonsterKey) || deadMonsterSnapshots[displayMonsterKey] != null)
-          // 死亡动画结束后不再占位，避免堆叠占满屏幕
-          if ((m.hp ?? 0) <= 0 && !isDying) {
+            isDead &&
+            (deadMonsters.has(displayMonsterKey) ||
+              deadMonsterSnapshots[displayMonsterKey] != null ||
+              showDamageAndHp)
+          // 技能动画期间仍显示扣血前血量；结算后 hp<=0 立即进入死亡展示，不等待异步状态
+          if (isDead && !isDying) {
             return <div key={`slot-${pos}`} className="min-h-px w-full" aria-hidden />
           }
 
           const isNew = m.instance_id ? appearingMonsters.has(m.instance_id) : false
           const damage = showDamageAndHp ? damageTexts[displayMonsterKey] : undefined
-          const isDead = isDying
           const isHit = showDamageAndHp && m.position != null && hitMonsters.has(m.position)
 
           // 使用 instance_id 作为 key，这样新怪物出现时会重新创建元素触发动画
@@ -347,8 +353,8 @@ export function MonsterGroup({
               className={`relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-0.5 transition-opacity hover:opacity-80 ${isNew ? styles['monster-appear'] : ''} ${isDead ? styles['monster-death'] : ''} ${isHit ? styles['monster-hit'] : ''}`}
               title={`点击查看 ${m.name} 详情`}
             >
-              {damage !== undefined && (
-                <span className="pointer-events-none absolute top-1 left-1/2 z-20 -translate-x-1/2 rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
+              {damage !== undefined && damage > 0 && (
+                <span className="pointer-events-none mb-0.5 rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
                   -{damage}
                 </span>
               )}
