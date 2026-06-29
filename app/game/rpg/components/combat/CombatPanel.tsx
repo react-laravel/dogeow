@@ -377,6 +377,8 @@ export function CombatPanel() {
                     skillUsed={combatResult?.skills_used?.[0]}
                     skillTargetPositions={combatResult?.skill_target_positions}
                     combatLogId={combatResult?.combat_log_id ?? null}
+                    damageTaken={combatResult?.damage_taken}
+                    roundRegen={combatResult?.round_regen}
                     onRoundVisualSettled={handleRoundVisualSettled}
                   />
                 </div>

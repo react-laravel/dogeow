@@ -9,6 +9,9 @@ import { soundManager } from '../../utils/soundManager'
 import { getSkillSoundDuration } from '../../utils/skillSoundRegistry'
 import styles from '../../rpg.module.css'
 
+const CHARACTER_DAMAGE_TEXT_MS = 2200
+const CHARACTER_REGEN_STAGGER_MS = 350
+
 /** 战斗对阵：上侧怪物（支持多只），下侧用户，中间 VS 可点击开始/停止挂机 */
 export function BattleArena({
   character,
@@ -24,6 +27,8 @@ export function BattleArena({
   skillUsed,
   skillTargetPositions,
   combatLogId,
+  damageTaken,
+  roundRegen,
   onRoundVisualSettled,
 }: {
   character: { name: string; class: string; level: number } | null
@@ -46,6 +51,8 @@ export function BattleArena({
   skillUsed?: SkillUsedEntry | null
   skillTargetPositions?: number[]
   combatLogId?: number | null
+  damageTaken?: number
+  roundRegen?: Record<string, { name: string; restored: number }> | null
   onRoundVisualSettled?: () => void
 }) {
   const finalMonsterHp = monster?.hp ?? 0
@@ -58,6 +65,39 @@ export function BattleArena({
   const lastPlayedSkillSoundRef = useRef<SkillUsedEntry | null>(null)
   const skillAnimationCompletedRef = useRef(false)
   const lastNotifiedLogIdRef = useRef<number | null>(null)
+  const lastCharacterEffectsLogIdRef = useRef<number | null>(null)
+  const characterTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+  const [displayCharacterHp, setDisplayCharacterHp] = useState<number | null>(null)
+  const [displayCharacterMana, setDisplayCharacterMana] = useState<number | null>(null)
+  const [characterDamageText, setCharacterDamageText] = useState<number | null>(null)
+  const [characterRegenHpText, setCharacterRegenHpText] = useState<number | null>(null)
+  const [characterRegenMpText, setCharacterRegenMpText] = useState<number | null>(null)
+  const [characterHit, setCharacterHit] = useState(false)
+
+  const finalCharacterHp = currentHp ?? 0
+  const finalCharacterMana = currentMana ?? 0
+  const hpRegen = roundRegen?.hp?.restored ?? 0
+  const mpRegen = roundRegen?.mp?.restored ?? 0
+  const hpAfterMonsterHit = finalCharacterHp - hpRegen
+  const hpBeforeMonsterHit = finalCharacterHp + (damageTaken ?? 0) - hpRegen
+  const manaBeforeRegen = finalCharacterMana - mpRegen
+
+  const scheduleCharacterTimeout = useCallback((fn: () => void, ms: number) => {
+    const t = setTimeout(() => {
+      characterTimersRef.current.delete(t)
+      fn()
+    }, ms)
+    characterTimersRef.current.add(t)
+    return t
+  }, [])
+
+  useEffect(() => {
+    const timers = characterTimersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.clear()
+    }
+  }, [])
 
   const notifyRoundVisualSettled = useCallback(() => {
     if (!onRoundVisualSettled) return
@@ -68,12 +108,6 @@ export function BattleArena({
 
   // 检测怪物死亡
   const isMonsterDead = finalMonsterHp <= 0
-  const hpPercent = combatStats?.max_hp
-    ? Math.min(100, Math.max(0, ((currentHp ?? 0) / combatStats.max_hp) * 100))
-    : 0
-  const manaPercent = combatStats?.max_mana
-    ? Math.min(100, Math.max(0, ((currentMana ?? 0) / combatStats.max_mana) * 100))
-    : 0
 
   const hasValidMonsters = monsters?.some(m => m != null) ?? false
 
@@ -108,9 +142,88 @@ export function BattleArena({
   const showDamageAndHp = !deferDamageDisplay
   const activeSkillEffect = skillRoundPending && !monsterAppearBlocking ? computedSkillEffect : null
 
+  const effectiveCharacterHp = deferDamageDisplay
+    ? hpBeforeMonsterHit
+    : (displayCharacterHp ?? finalCharacterHp)
+  const effectiveCharacterMana = deferDamageDisplay
+    ? manaBeforeRegen
+    : (displayCharacterMana ?? finalCharacterMana)
+  const hpPercent = combatStats?.max_hp
+    ? Math.min(100, Math.max(0, (effectiveCharacterHp / combatStats.max_hp) * 100))
+    : 0
+  const manaPercent = combatStats?.max_mana
+    ? Math.min(100, Math.max(0, (effectiveCharacterMana / combatStats.max_mana) * 100))
+    : 0
+
   const handleAppearActiveChange = useCallback((active: boolean) => {
     setMonsterAppearBlocking(active)
   }, [])
+
+  // 新回合到达时重置角色动画状态
+  useEffect(() => {
+    if (combatLogId == null) return
+    queueMicrotask(() => {
+      lastCharacterEffectsLogIdRef.current = null
+      setDisplayCharacterHp(null)
+      setDisplayCharacterMana(null)
+      setCharacterDamageText(null)
+      setCharacterRegenHpText(null)
+      setCharacterRegenMpText(null)
+      setCharacterHit(false)
+    })
+  }, [combatLogId])
+
+  // 与怪物扣血同步：展示角色受击飘字、恢复飘字与血条变化
+  useEffect(() => {
+    if (!showDamageAndHp || combatLogId == null) return
+    if (combatLogId === lastCharacterEffectsLogIdRef.current) return
+
+    const taken = damageTaken ?? 0
+    const regenDelay = taken > 0 ? CHARACTER_REGEN_STAGGER_MS : 0
+    const logId = combatLogId
+
+    queueMicrotask(() => {
+      lastCharacterEffectsLogIdRef.current = logId
+
+      if (taken > 0) {
+        setCharacterDamageText(taken)
+        setCharacterHit(true)
+        setDisplayCharacterHp(hpAfterMonsterHit)
+        scheduleCharacterTimeout(() => setCharacterHit(false), 300)
+        scheduleCharacterTimeout(() => setCharacterDamageText(null), CHARACTER_DAMAGE_TEXT_MS)
+      } else {
+        setDisplayCharacterHp(finalCharacterHp)
+      }
+
+      if (hpRegen > 0) {
+        scheduleCharacterTimeout(() => {
+          setCharacterRegenHpText(hpRegen)
+          setDisplayCharacterHp(finalCharacterHp)
+          scheduleCharacterTimeout(() => setCharacterRegenHpText(null), CHARACTER_DAMAGE_TEXT_MS)
+        }, regenDelay)
+      }
+
+      if (mpRegen > 0) {
+        scheduleCharacterTimeout(() => {
+          setCharacterRegenMpText(mpRegen)
+          setDisplayCharacterMana(finalCharacterMana)
+          scheduleCharacterTimeout(() => setCharacterRegenMpText(null), CHARACTER_DAMAGE_TEXT_MS)
+        }, regenDelay)
+      } else {
+        setDisplayCharacterMana(finalCharacterMana)
+      }
+    })
+  }, [
+    showDamageAndHp,
+    combatLogId,
+    damageTaken,
+    hpRegen,
+    mpRegen,
+    hpAfterMonsterHit,
+    finalCharacterHp,
+    finalCharacterMana,
+    scheduleCharacterTimeout,
+  ])
 
   useLayoutEffect(() => {
     if (!skillRoundKey) {
@@ -334,7 +447,24 @@ export function BattleArena({
         {/* 下侧：角色 */}
         <div className="mt-auto flex shrink-0 items-end justify-center gap-3 p-3 sm:gap-4 sm:p-4">
           <div className="flex flex-col items-center gap-2">
-            <div className="bg-primary/20 text-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl">
+            <div
+              className={`bg-primary/20 text-primary relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl ${characterHit ? styles['character-hit'] : ''}`}
+            >
+              {characterDamageText != null && (
+                <span className="pointer-events-none absolute -top-1 left-1/2 z-20 -translate-x-1/2 rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
+                  -{characterDamageText}
+                </span>
+              )}
+              {characterRegenHpText != null && (
+                <span className="pointer-events-none absolute -top-2 left-[15%] z-20 rounded bg-black/70 px-1 text-xs font-bold text-green-400 drop-shadow sm:text-sm">
+                  +{characterRegenHpText}
+                </span>
+              )}
+              {characterRegenMpText != null && (
+                <span className="pointer-events-none absolute -top-2 right-[15%] z-20 rounded bg-black/70 px-1 text-xs font-bold text-blue-400 drop-shadow sm:text-sm">
+                  +{characterRegenMpText}
+                </span>
+              )}
               {character?.name?.charAt(0) ?? '?'}
             </div>
             {combatStats && (
@@ -342,7 +472,7 @@ export function BattleArena({
                 <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
                   <span>HP</span>
                   <span>
-                    {currentHp ?? 0} / {combatStats.max_hp}
+                    {effectiveCharacterHp} / {combatStats.max_hp}
                   </span>
                 </div>
                 <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
@@ -354,7 +484,7 @@ export function BattleArena({
                 <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
                   <span>MP</span>
                   <span>
-                    {currentMana ?? 0} / {combatStats.max_mana}
+                    {effectiveCharacterMana} / {combatStats.max_mana}
                   </span>
                 </div>
                 <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
