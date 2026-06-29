@@ -428,17 +428,9 @@ export function SkillPanel() {
         <div className="border-border bg-background shrink-0 space-y-2 border-b pb-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground text-sm">技能树</span>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">技能点</span>
-                <span className="text-primary text-lg font-bold">{character.skill_points}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">MP</span>
-                <span className="text-blue-600 dark:text-blue-400 text-lg font-bold">
-                  {character.current_mana}
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">技能点</span>
+              <span className="text-primary text-lg font-bold">{character.skill_points}</span>
             </div>
           </div>
           <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
