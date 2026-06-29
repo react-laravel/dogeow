@@ -6,6 +6,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useMonsterDrops } from '../../hooks/useMonsterDrops'
 import type { CombatMonster } from '../../types'
 import { getRpgMonsterImageUrl } from '../../utils/assetUrls'
+import { getMonsterStatDisplay } from '../../utils/monsterDisplayStats'
 import { CompendiumItemIcon } from '../shared/CompendiumItemIcon'
 
 type MonsterWithMeta = CombatMonster & { damage_taken?: number }
@@ -20,6 +21,10 @@ export function MonsterInfoDialog({ monster, onClose }: MonsterInfoDialogProps) 
   const { data: compendiumMonsterDrops, isLoading } = useMonsterDrops(monster?.id)
 
   if (!monster) return null
+
+  const monsterStats = compendiumMonsterDrops
+    ? getMonsterStatDisplay(monster, compendiumMonsterDrops.monster)
+    : null
 
   return (
     <>
@@ -50,17 +55,19 @@ export function MonsterInfoDialog({ monster, onClose }: MonsterInfoDialogProps) 
                   <div>
                     <h3 className="text-lg font-bold">{compendiumMonsterDrops.monster.name}</h3>
                     <p className="text-muted-foreground text-sm">
-                      Lv.{compendiumMonsterDrops.monster.level} ·{' '}
+                      Lv.{monsterStats?.level ?? compendiumMonsterDrops.monster.level} ·{' '}
                       {getMonsterTypeName(compendiumMonsterDrops.monster.type)}
                     </p>
                   </div>
 
-                  <div className="space-y-1 text-sm">
-                    <p>生命: {compendiumMonsterDrops.monster.hp_base}</p>
-                    <p>攻击: {compendiumMonsterDrops.monster.attack_base}</p>
-                    <p>防御: {compendiumMonsterDrops.monster.defense_base}</p>
-                    <p>经验: {compendiumMonsterDrops.monster.experience_base}</p>
-                  </div>
+                  {monsterStats && (
+                    <div className="space-y-1 text-sm">
+                      <p>生命: {monsterStats.hp}</p>
+                      <p>攻击: {monsterStats.attack}</p>
+                      <p>防御: {monsterStats.defense}</p>
+                      <p>经验: {monsterStats.experience}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
