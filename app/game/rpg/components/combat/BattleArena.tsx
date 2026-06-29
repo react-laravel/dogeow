@@ -450,20 +450,30 @@ export function BattleArena({
             <div
               className={`bg-primary/20 text-primary relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl ${characterHit ? styles['character-hit'] : ''}`}
             >
-              {characterDamageText != null && (
-                <span className="pointer-events-none absolute -top-1 left-1/2 z-20 -translate-x-1/2 rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
-                  -{characterDamageText}
-                </span>
-              )}
-              {characterRegenHpText != null && (
-                <span className="pointer-events-none absolute -top-2 left-[15%] z-20 rounded bg-black/70 px-1 text-xs font-bold text-green-400 drop-shadow sm:text-sm">
-                  +{characterRegenHpText}
-                </span>
-              )}
-              {characterRegenMpText != null && (
-                <span className="pointer-events-none absolute -top-2 right-[15%] z-20 rounded bg-black/70 px-1 text-xs font-bold text-blue-400 drop-shadow sm:text-sm">
-                  +{characterRegenMpText}
-                </span>
+              {(characterDamageText != null ||
+                characterRegenHpText != null ||
+                characterRegenMpText != null) && (
+                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 flex -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap">
+                  {characterDamageText != null && (
+                    <span className="rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
+                      -{characterDamageText}
+                    </span>
+                  )}
+                  {(characterRegenHpText != null || characterRegenMpText != null) && (
+                    <div className="flex items-center gap-2">
+                      {characterRegenHpText != null && (
+                        <span className="rounded bg-black/70 px-1 text-xs font-bold text-green-400 drop-shadow sm:text-sm">
+                          +{characterRegenHpText}
+                        </span>
+                      )}
+                      {characterRegenMpText != null && (
+                        <span className="rounded bg-black/70 px-1 text-xs font-bold text-blue-400 drop-shadow sm:text-sm">
+                          +{characterRegenMpText}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
               {character?.name?.charAt(0) ?? '?'}
             </div>
