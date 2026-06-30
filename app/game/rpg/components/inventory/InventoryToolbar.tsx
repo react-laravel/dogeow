@@ -17,7 +17,7 @@ const AUTO_RECYCLE_BTN_CLASS =
   'bg-muted text-muted-foreground hover:bg-muted/80 rounded px-1 py-1.5 text-xs transition-colors disabled:opacity-50'
 
 const TOOLBAR_ACTION_BTN_CLASS =
-  'flex min-w-0 flex-1 items-center justify-center rounded px-2 py-1.5 text-sm transition-colors'
+  'flex shrink-0 items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm transition-colors'
 
 interface InventoryToolbarProps {
   autoRecycleMaxValue: number | null
@@ -115,7 +115,7 @@ export function InventoryToolbar({
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`${TOOLBAR_ACTION_BTN_CLASS} shrink-0 ${
+              className={`${TOOLBAR_ACTION_BTN_CLASS} ${
                 categoryId
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -161,7 +161,7 @@ export function InventoryToolbar({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`${TOOLBAR_ACTION_BTN_CLASS} shrink-0 bg-muted text-muted-foreground hover:bg-muted/80`}
+                className={`${TOOLBAR_ACTION_BTN_CLASS} bg-muted text-muted-foreground hover:bg-muted/80`}
                 title="回收"
               >
                 <span>回收</span>
@@ -272,16 +272,13 @@ export function InventoryToolbar({
             </PopoverContent>
           </Popover>
         ) : (
-          <div
-            className={`${TOOLBAR_ACTION_BTN_CLASS} invisible pointer-events-none shrink-0`}
-            aria-hidden
-          >
+          <div className={`${TOOLBAR_ACTION_BTN_CLASS} invisible pointer-events-none`} aria-hidden>
             回收
           </div>
         )}
 
         <div
-          className="bg-muted flex min-w-0 flex-1 overflow-hidden rounded"
+          className="bg-muted flex min-w-0 flex-1 basis-0 overflow-hidden rounded"
           role="group"
           aria-label="排序"
         >
@@ -291,7 +288,7 @@ export function InventoryToolbar({
               type="button"
               onClick={() => handleSort(option.value)}
               disabled={isLoading}
-              className={`flex min-w-0 flex-1 items-center justify-center px-2 py-1.5 text-xs transition-colors disabled:opacity-50 sm:text-sm ${
+              className={`flex min-w-0 flex-1 basis-0 items-center justify-center px-1 py-1.5 text-xs whitespace-nowrap transition-colors disabled:opacity-50 sm:px-2 sm:text-sm ${
                 sortBy === option.value
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-muted/80'
