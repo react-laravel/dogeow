@@ -149,7 +149,7 @@ describe('useInventoryPanelView', () => {
     expect(result.current.recyclingQuality).toBeNull()
   })
 
-  it('recycles all non-gem qualities with items', async () => {
+  it('recycles everything in a single request when recycling all', async () => {
     const sellItemsByQuality = vi.fn(async () => undefined)
     const inventory = [
       createItem({ id: 31, quality: 'common' }),
@@ -158,11 +158,6 @@ describe('useInventoryPanelView', () => {
         id: 33,
         quality: 'magic',
         definition: { id: 33, name: 'Armor', type: 'armor', base_stats: {}, required_level: 1 },
-      }),
-      createItem({
-        id: 34,
-        quality: 'legendary',
-        definition: { id: 34, name: 'Gem', type: 'gem', base_stats: {}, required_level: 1 },
       }),
     ]
 
@@ -180,9 +175,7 @@ describe('useInventoryPanelView', () => {
       await result.current.handleRecycleQuality('all')
     })
 
-    expect(sellItemsByQuality).toHaveBeenCalledTimes(3)
-    expect(sellItemsByQuality).toHaveBeenNthCalledWith(1, 'common')
-    expect(sellItemsByQuality).toHaveBeenNthCalledWith(2, 'magic')
-    expect(sellItemsByQuality).toHaveBeenNthCalledWith(3, 'rare')
+    expect(sellItemsByQuality).toHaveBeenCalledTimes(1)
+    expect(sellItemsByQuality).toHaveBeenCalledWith('all')
   })
 })
