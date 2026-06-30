@@ -1,27 +1,48 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import useSWR from 'swr'
 import { get, post } from '@/lib/api'
 import type { UnreadNotificationsResponse } from '@/lib/api'
 import useAuthStore from '@/stores/authStore'
-import { Bell, BellOff, BellRing } from 'lucide-react'
+import usePushSubscriptionStore from '@/stores/pushSubscriptionStore'
+import { Switch } from '@/components/ui/switch'
+import { Bell, BellOff, BellRing, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { isPushSupported, usePushSubscription } from '@/hooks/usePushSubscription'
 
 const fetcher = (url: string) => get<UnreadNotificationsResponse>(url)
 
-type PushPermissionState = NotificationPermission | 'unsupported'
+function getPushControlLabel(
+  permission: ReturnType<typeof usePushSubscriptionStore.getState>['permission'],
+  hasSubscription: boolean,
+  isLoading: boolean
+): string {
+  if (isLoading) {
+    return '正在注册本站推送…'
+  }
+
+  if (hasSubscription) {
+    return '系统通知已开启'
+  }
+
+  if (permission === 'granted') {
+    return '浏览器已授权，本站推送未开启'
+  }
+
+  return '开启系统通知'
+}
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
-  const [pushPermission, setPushPermission] = useState<PushPermissionState>('default')
-  const [hasPushSubscription, setHasPushSubscription] = useState(false)
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
   const ref = useRef<HTMLDivElement>(null)
+  const pushPermission = usePushSubscriptionStore(s => s.permission)
+  const hasPushSubscription = usePushSubscriptionStore(s => s.hasSubscription)
   const {
     register,
     unregister,
+    refreshState,
     isSupported,
     status: pushStatus,
     errorMessage,
@@ -34,29 +55,6 @@ export function NotificationDropdown() {
       revalidateOnMount: false,
     }
   )
-
-  const refreshPushState = useCallback(async () => {
-    if (!isSupported || typeof Notification === 'undefined') {
-      setPushPermission('unsupported')
-      setHasPushSubscription(false)
-      return
-    }
-
-    setPushPermission(Notification.permission)
-
-    if (Notification.permission !== 'granted' || !('serviceWorker' in navigator)) {
-      setHasPushSubscription(false)
-      return
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-      setHasPushSubscription(Boolean(subscription))
-    } catch {
-      setHasPushSubscription(false)
-    }
-  }, [isSupported])
 
   // 点击外部关闭
   useEffect(() => {
@@ -86,13 +84,12 @@ export function NotificationDropdown() {
     const nextOpen = !open
     setOpen(nextOpen)
     if (nextOpen) {
-      void refreshPushState()
+      void refreshState()
     }
   }
 
   const handleEnablePush = async () => {
     if (!isSupported || typeof Notification === 'undefined') {
-      setPushPermission('unsupported')
       toast.error('当前环境不支持系统通知')
       return
     }
@@ -100,29 +97,36 @@ export function NotificationDropdown() {
     let permission = Notification.permission
     if (permission === 'default') {
       permission = await Notification.requestPermission()
-      setPushPermission(permission)
+      usePushSubscriptionStore.setState({ permission })
     }
 
     if (permission !== 'granted') {
       toast.error('请在浏览器或系统设置中允许通知')
-      await refreshPushState()
+      await refreshState()
       return
     }
 
     const ok = await register()
-    await refreshPushState()
     if (ok) {
-      setHasPushSubscription(true)
       toast.success('系统通知已开启')
+    } else {
+      await refreshState()
     }
   }
 
   const handleDisablePush = async () => {
     const ok = await unregister()
-    await refreshPushState()
+    await refreshState()
     if (ok) {
-      setHasPushSubscription(false)
       toast.success('已关闭本站推送')
+    }
+  }
+
+  const handlePushSwitchChange = async (checked: boolean) => {
+    if (checked) {
+      await handleEnablePush()
+    } else {
+      await handleDisablePush()
     }
   }
 
@@ -130,7 +134,6 @@ export function NotificationDropdown() {
     try {
       await post<{ message: string }>(`notifications/${id}/read`, {})
       mutate()
-      // 跳转
       window.location.assign(url)
       setOpen(false)
     } catch {
@@ -152,6 +155,7 @@ export function NotificationDropdown() {
   const count = data?.count ?? 0
   const showPushControl = isAuthenticated && pushPermission !== 'unsupported'
   const pushIsLoading = pushStatus === 'loading'
+  const pushLabel = getPushControlLabel(pushPermission, hasPushSubscription, pushIsLoading)
 
   return (
     <div className="relative" ref={ref}>
@@ -170,23 +174,33 @@ export function NotificationDropdown() {
 
       {open && (
         <div className="bg-background border-border absolute right-0 top-full z-[100] mt-2 w-80 rounded-lg border shadow-lg">
-          <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
             <span className="font-medium">通知</span>
-            {count > 0 && (
+            <div className="flex items-center gap-1">
+              {count > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-muted-foreground hover:text-foreground rounded-md px-2 py-1 text-xs"
+                >
+                  全部已读
+                </button>
+              )}
               <button
-                onClick={handleMarkAllRead}
-                className="text-muted-foreground hover:text-foreground text-xs"
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md transition-colors"
+                aria-label="关闭通知面板"
               >
-                全部已读
+                <X className="h-4 w-4" />
               </button>
-            )}
+            </div>
           </div>
 
           {showPushControl && (
             <div className="border-b px-4 py-3">
               {pushPermission === 'denied' ? (
                 <div className="flex items-start gap-2 text-sm">
-                  <BellOff className="text-muted-foreground mt-0.5 h-4 w-4" />
+                  <BellOff className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                   <div className="space-y-1">
                     <div className="font-medium">系统通知已被阻止</div>
                     <div className="text-muted-foreground text-xs leading-5">
@@ -194,37 +208,24 @@ export function NotificationDropdown() {
                     </div>
                   </div>
                 </div>
-              ) : hasPushSubscription ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <BellRing className="text-primary h-4 w-4" />
-                    <span className="font-medium">系统通知已开启</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDisablePush}
-                    disabled={pushIsLoading}
-                    className="border-border hover:bg-muted disabled:opacity-60 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors"
-                  >
-                    {pushIsLoading ? '关闭中' : '关闭'}
-                  </button>
-                </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Bell className="text-muted-foreground h-4 w-4" />
-                    <span className="font-medium">
-                      {pushPermission === 'granted' ? '系统通知已允许' : '开启系统通知'}
-                    </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                    {pushIsLoading ? (
+                      <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+                    ) : hasPushSubscription ? (
+                      <BellRing className="text-primary h-4 w-4 shrink-0" />
+                    ) : (
+                      <Bell className="text-muted-foreground h-4 w-4 shrink-0" />
+                    )}
+                    <span className="font-medium">{pushLabel}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleEnablePush}
+                  <Switch
+                    checked={hasPushSubscription}
+                    onCheckedChange={handlePushSwitchChange}
                     disabled={pushIsLoading}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-                  >
-                    {pushIsLoading ? '开启中' : '开启'}
-                  </button>
+                    aria-label="系统通知开关"
+                  />
                 </div>
               )}
             </div>

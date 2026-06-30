@@ -1,47 +1,109 @@
-// DogeOW service worker kill-switch.
+// DogeOW push-only service worker.
 //
-// The former PWA service worker cached /offline and intercepted navigations.
-// After transient CDN/network failures, some browsers stayed stuck on the
-// offline page: “正在检查网络... 请稍候”. Keep this file as a no-op unregistering
-// service worker so existing registrations update, delete old DogeOW caches,
-// and stop controlling future navigations.
+// Handles Web Push display/click only. Does not intercept navigations or serve
+// offline fallbacks, so users won't get stuck on the old "正在检查网络..." page.
 
-const DISABLED_CACHE_PREFIX = 'dogeow-'
+const LEGACY_CACHE_PREFIX = 'dogeow-'
 
-async function clearDogeowCaches() {
+async function clearLegacyCaches() {
   if (!self.caches) return
   const cacheNames = await caches.keys()
   await Promise.all(
     cacheNames
-      .filter(cacheName => cacheName.startsWith(DISABLED_CACHE_PREFIX))
+      .filter(cacheName => cacheName.startsWith(LEGACY_CACHE_PREFIX))
       .map(cacheName => caches.delete(cacheName).catch(() => false))
   )
 }
 
-async function unregisterSelf() {
-  await clearDogeowCaches()
-  await self.registration.unregister()
-  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-  for (const client of clients) {
-    client.postMessage({ type: 'SW_DISABLED' })
+function parsePushPayload(event) {
+  const fallback = {
+    title: 'DogeOW',
+    body: '',
+    icon: '/480.png',
+    badge: '/80.png',
+    url: '/',
+    tag: 'dogeow-notification',
+  }
+
+  if (!event.data) {
+    return fallback
+  }
+
+  try {
+    const payload = event.data.json()
+    const data = payload.data && typeof payload.data === 'object' ? payload.data : {}
+
+    return {
+      title: payload.title || fallback.title,
+      body: payload.body || fallback.body,
+      icon: payload.icon || fallback.icon,
+      badge: payload.badge || fallback.badge,
+      url: data.url || payload.url || fallback.url,
+      tag: payload.tag || fallback.tag,
+      notificationId: data.notification_id || payload.notification_id || null,
+    }
+  } catch {
+    return {
+      ...fallback,
+      body: event.data.text(),
+    }
   }
 }
 
 self.addEventListener('install', event => {
   self.skipWaiting()
-  event.waitUntil(clearDogeowCaches())
+  event.waitUntil(clearLegacyCaches())
 })
 
 self.addEventListener('activate', event => {
-  event.waitUntil(unregisterSelf())
+  event.waitUntil(Promise.all([clearLegacyCaches(), self.clients.claim()]))
 })
 
-// Do not call event.respondWith(). Every request must go directly to network/
-// browser HTTP cache, never through a DogeOW SW fallback.
-self.addEventListener('fetch', () => {})
-
 self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING' || event.data?.type === 'DISABLE_SW') {
+  if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }
+})
+
+self.addEventListener('push', event => {
+  const payload = parsePushPayload(event)
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon,
+      badge: payload.badge,
+      tag: payload.tag,
+      data: {
+        url: payload.url,
+        notification_id: payload.notificationId,
+      },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+
+  const targetUrl = event.notification.data?.url || '/'
+  const absoluteUrl = new URL(targetUrl, self.location.origin).href
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          if ('navigate' in client && typeof client.navigate === 'function') {
+            return client.navigate(absoluteUrl).then(() => client.focus())
+          }
+          return client.focus()
+        }
+      }
+
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(absoluteUrl)
+      }
+
+      return undefined
+    })
+  )
 })

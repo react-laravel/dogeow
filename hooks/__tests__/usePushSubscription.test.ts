@@ -2,7 +2,18 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePushSubscription } from '../usePushSubscription'
 import useAuthStore from '@/stores/authStore'
+import usePushSubscriptionStore from '@/stores/pushSubscriptionStore'
 import { getVapidPublicKey, savePushSubscription, subscriptionToPayload } from '@/lib/api/push'
+
+const { mockWaitForPushServiceWorkerReady } = vi.hoisted(() => ({
+  mockWaitForPushServiceWorkerReady: vi.fn(),
+}))
+
+vi.mock('@/lib/push/serviceWorker', () => ({
+  ensurePushServiceWorkerRegistered: vi.fn(async () => mockWaitForPushServiceWorkerReady()),
+  waitForPushServiceWorkerReady: mockWaitForPushServiceWorkerReady,
+  resetPushServiceWorkerRegistrationForTests: vi.fn(),
+}))
 
 vi.mock('@/lib/api/push', () => ({
   base64UrlToUint8Array: vi.fn((value: string) =>
@@ -10,6 +21,7 @@ vi.mock('@/lib/api/push', () => ({
   ),
   getVapidPublicKey: vi.fn(),
   savePushSubscription: vi.fn(),
+  deletePushSubscription: vi.fn(),
   subscriptionToPayload: vi.fn(subscription => ({
     endpoint: subscription.endpoint,
     keys: { p256dh: 'p256dh', auth: 'auth' },
@@ -46,11 +58,14 @@ function installPushEnvironment(pushManager: PushManager) {
       ready: Promise.resolve({ pushManager }),
     },
   })
+  mockWaitForPushServiceWorkerReady.mockResolvedValue({ pushManager })
 }
 
 describe('usePushSubscription', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockWaitForPushServiceWorkerReady.mockReset()
+    usePushSubscriptionStore.getState().reset()
     useAuthStore.setState({
       user: { id: 1, name: 'Sam', email: 'sam@example.com' },
       token: 'token',
@@ -80,6 +95,8 @@ describe('usePushSubscription', () => {
       endpoint: 'https://push.example/existing',
       keys: { p256dh: 'p256dh', auth: 'auth' },
     })
+    expect(result.current.hasSubscription).toBe(true)
+    expect(result.current.status).toBe('done')
   })
 
   it('resubscribes when the existing subscription uses a stale application server key', async () => {
@@ -107,7 +124,7 @@ describe('usePushSubscription', () => {
     })
   })
 
-  it('automatically registers after permission has already been granted', async () => {
+  it('automatically registers through ensureAutoRegister', async () => {
     const existingSubscription = createSubscription('https://push.example/auto', [1, 2, 3])
     const pushManager = {
       getSubscription: vi.fn(async () => existingSubscription),
@@ -117,11 +134,35 @@ describe('usePushSubscription', () => {
 
     renderHook(() => usePushSubscription())
 
+    await act(async () => {
+      await usePushSubscriptionStore.getState().refreshState()
+      usePushSubscriptionStore.getState().ensureAutoRegister()
+    })
+
     await waitFor(() => {
       expect(savePushSubscription).toHaveBeenCalledWith({
         endpoint: 'https://push.example/auto',
         keys: { p256dh: 'p256dh', auth: 'auth' },
       })
     })
+  })
+
+  it('does not start a second register while loading', async () => {
+    const existingSubscription = createSubscription('https://push.example/existing', [1, 2, 3])
+    const pushManager = {
+      getSubscription: vi.fn(async () => existingSubscription),
+      subscribe: vi.fn(),
+    } as unknown as PushManager
+    installPushEnvironment(pushManager)
+
+    const { result } = renderHook(() => usePushSubscription())
+    await act(async () => {
+      usePushSubscriptionStore.setState({ status: 'loading' })
+    })
+
+    const registered = await act(() => result.current.register())
+
+    expect(registered).toBe(false)
+    expect(savePushSubscription).not.toHaveBeenCalled()
   })
 })
