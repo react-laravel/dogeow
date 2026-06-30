@@ -75,10 +75,10 @@ describe('InventoryPanel', () => {
     expect(view.queryByRole('button', { name: 'Stored Ring' })).not.toBeInTheDocument()
 
     await user.click(view.getByRole('button', { name: '价格' }))
-    expect(store.sortInventory).toHaveBeenCalledWith('price')
+    expect(store.sortInventory).toHaveBeenCalledWith('price', false)
 
     await user.click(view.getByRole('button', { name: '时间' }))
-    expect(store.sortInventory).toHaveBeenCalledWith('default')
+    expect(store.sortInventory).toHaveBeenCalledWith('default', false)
 
     await user.click(view.getByRole('button', { name: /全部回收/ }))
     await waitFor(() => {
@@ -99,6 +99,9 @@ describe('InventoryPanel', () => {
 
     expect(view.getByRole('button', { name: 'Stored Ring' })).toBeInTheDocument()
     expect(view.queryByRole('button', { name: 'Sword' })).not.toBeInTheDocument()
+
+    await user.click(view.getByRole('button', { name: '品质' }))
+    expect(store.sortInventory).toHaveBeenCalledWith('quality', true)
   })
 
   it('runs sell confirmation and gem socket flows through the composed panel', async () => {

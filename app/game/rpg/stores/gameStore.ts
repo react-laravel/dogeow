@@ -124,7 +124,7 @@ interface GameState {
   sellItemsByQuality: (quality: string) => Promise<{ count: number; total_price: number }>
   updateAutoRecycleSettings: (maxValue: number | null) => Promise<void>
   moveItem: (itemId: number, toStorage: boolean, slotIndex?: number) => Promise<void>
-  sortInventory: (sortBy: 'quality' | 'price' | 'default') => Promise<void>
+  sortInventory: (sortBy: 'quality' | 'price' | 'default', inStorage?: boolean) => Promise<void>
   socketGem: (itemId: number, gemItemId: number, socketIndex: number) => Promise<void>
   unsocketGem: (itemId: number, socketIndex: number) => Promise<void>
 
@@ -748,7 +748,7 @@ const store: StateCreator<GameState> = (set, get) => ({
     }
   },
 
-  sortInventory: async sortBy => {
+  sortInventory: async (sortBy, inStorage = false) => {
     startRequest(set)
     try {
       const selectedId = getSelectedCharacterIdOrAbort(get, set, {
@@ -758,6 +758,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       if (!selectedId) return
       await post('/rpg/inventory/sort', {
         sort_by: sortBy,
+        to_storage: inStorage,
         character_id: selectedId,
       })
       // 重新获取背包

@@ -16,6 +16,9 @@ const AUTO_RECYCLE_MAX = 99999
 const AUTO_RECYCLE_BTN_CLASS =
   'bg-muted text-muted-foreground hover:bg-muted/80 rounded px-1 py-1.5 text-xs transition-colors disabled:opacity-50'
 
+const TOOLBAR_ACTION_BTN_CLASS =
+  'flex min-w-0 flex-1 items-center justify-center rounded px-2 py-1.5 text-sm transition-colors'
+
 interface InventoryToolbarProps {
   autoRecycleMaxValue: number | null
   categoryId: string
@@ -27,7 +30,7 @@ interface InventoryToolbarProps {
   onCategoryChange: (categoryId: string) => void
   onRecycleQuality: (quality: string) => void
   onShowStorageChange: (showStorage: boolean) => void
-  onSort: (sortType: 'default' | 'quality' | 'price') => void
+  onSort: (sortType: 'default' | 'quality' | 'price', inStorage: boolean) => void
   qualityStats: Record<string, QualityStat>
   recyclingQuality: string | null
   showStorage: boolean
@@ -75,7 +78,7 @@ export function InventoryToolbar({
 
   const handleSort = (sortType: 'default' | 'quality' | 'price') => {
     setSortBy(sortType)
-    onSort(sortType)
+    onSort(sortType, showStorage)
   }
 
   const sortOptions = [
@@ -85,8 +88,8 @@ export function InventoryToolbar({
   ]
 
   return (
-    <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 sm:mb-4 sm:gap-3">
-      <div className="flex w-full min-w-0 basis-full gap-2 sm:gap-3">
+    <div className="mb-3 flex shrink-0 flex-col gap-2 sm:mb-4 sm:gap-3">
+      <div className="flex w-full min-w-0 gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => onShowStorageChange(false)}
@@ -106,12 +109,13 @@ export function InventoryToolbar({
           仓库 {storageCount}/{storageSize}
         </button>
       </div>
-      <div className="ml-auto flex items-center gap-2 sm:gap-3">
+
+      <div className="flex w-full gap-2 sm:gap-3">
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`rounded px-2 py-1.5 text-sm transition-colors ${
+              className={`${TOOLBAR_ACTION_BTN_CLASS} ${
                 categoryId
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -151,12 +155,13 @@ export function InventoryToolbar({
             ))}
           </PopoverContent>
         </Popover>
-        {!showStorage && (
+
+        {!showStorage ? (
           <Popover>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="bg-muted text-muted-foreground hover:bg-muted/80 flex items-center gap-1 rounded px-2 py-1.5 text-sm transition-colors"
+                className={`${TOOLBAR_ACTION_BTN_CLASS} bg-muted text-muted-foreground hover:bg-muted/80`}
                 title="回收"
               >
                 <span>回收</span>
@@ -266,27 +271,29 @@ export function InventoryToolbar({
               </div>
             </PopoverContent>
           </Popover>
-        )}
-        {!showStorage && (
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground shrink-0 text-xs">排序</span>
-            {sortOptions.map(option => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleSort(option.value)}
-                disabled={isLoading}
-                className={`rounded px-2 py-1.5 text-xs transition-colors disabled:opacity-50 sm:text-sm ${
-                  sortBy === option.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+        ) : (
+          <div className={`${TOOLBAR_ACTION_BTN_CLASS} invisible pointer-events-none`} aria-hidden>
+            回收
           </div>
         )}
+      </div>
+
+      <div className="flex w-full gap-2 sm:gap-3">
+        {sortOptions.map(option => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => handleSort(option.value)}
+            disabled={isLoading}
+            className={`flex min-w-0 flex-1 items-center justify-center rounded px-2 py-2 text-xs transition-colors disabled:opacity-50 sm:text-sm ${
+              sortBy === option.value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
     </div>
   )
