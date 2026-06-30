@@ -1228,10 +1228,18 @@ const store: StateCreator<GameState> = (set, get) => ({
 
   handleCombatUpdate: data => {
     const typedData = data as GameCombatUpdateEvent
-    // 复活或停止战斗后可能仍会收到延迟的战斗推送，不再更新 combatResult，避免继续显示怪物
-    if (!get().isFighting) return
+    const isTerminal = Boolean(typedData.defeat || typedData.auto_stopped)
 
-    if (typedData.defeat || typedData.auto_stopped) {
+    // 复活或停止战斗后可能仍会收到延迟的战斗推送，不再更新 combatResult，避免继续显示怪物。
+    // 但死亡/自动停止这类终止事件，若因竞态(看门狗 stopCombat、status 同步等)在事件到达前
+    // 就把 isFighting 置为 false，仍必须应用，否则会出现「界面数据没变，但角色已死亡」。
+    // 复活后 combatResult 已被清空且 HP>0，此时才忽略过期的终止事件。
+    if (!get().isFighting) {
+      const alreadyRevived = get().combatResult == null && (get().currentHp ?? 0) > 0
+      if (!isTerminal || alreadyRevived) return
+    }
+
+    if (isTerminal) {
       soundManager.play('combat_defeat')
     }
 
