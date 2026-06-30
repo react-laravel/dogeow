@@ -67,8 +67,8 @@ export function EquipmentGrid({ equipment, onUnequip, characterSummary }: Equipm
         <Image src={portrait} alt="" fill sizes="100vw" className="object-cover" priority={false} />
         {characterSummary && (
           <>
-            <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/80 via-black/45 to-transparent px-3 pt-2.5 pb-8 sm:px-4 sm:pt-3 sm:pb-10">
-              <p className="truncate text-left text-base font-bold text-white drop-shadow sm:text-lg">
+            <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/80 via-black/45 to-transparent px-4 pt-3 pb-14 sm:pt-4 sm:pb-16">
+              <p className="truncate text-center text-base font-bold text-white drop-shadow sm:text-lg">
                 Lv.{characterSummary.level} {characterSummary.name}
               </p>
             </div>

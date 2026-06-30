@@ -110,12 +110,12 @@ export function InventoryToolbar({
         </button>
       </div>
 
-      <div className="flex w-full gap-2 sm:gap-3">
+      <div className="flex w-full min-w-0 items-stretch gap-2 sm:gap-3">
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`${TOOLBAR_ACTION_BTN_CLASS} ${
+              className={`${TOOLBAR_ACTION_BTN_CLASS} shrink-0 ${
                 categoryId
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -161,7 +161,7 @@ export function InventoryToolbar({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`${TOOLBAR_ACTION_BTN_CLASS} bg-muted text-muted-foreground hover:bg-muted/80`}
+                className={`${TOOLBAR_ACTION_BTN_CLASS} shrink-0 bg-muted text-muted-foreground hover:bg-muted/80`}
                 title="回收"
               >
                 <span>回收</span>
@@ -272,28 +272,35 @@ export function InventoryToolbar({
             </PopoverContent>
           </Popover>
         ) : (
-          <div className={`${TOOLBAR_ACTION_BTN_CLASS} invisible pointer-events-none`} aria-hidden>
+          <div
+            className={`${TOOLBAR_ACTION_BTN_CLASS} invisible pointer-events-none shrink-0`}
+            aria-hidden
+          >
             回收
           </div>
         )}
-      </div>
 
-      <div className="flex w-full gap-2 sm:gap-3">
-        {sortOptions.map(option => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => handleSort(option.value)}
-            disabled={isLoading}
-            className={`flex min-w-0 flex-1 items-center justify-center rounded px-2 py-2 text-xs transition-colors disabled:opacity-50 sm:text-sm ${
-              sortBy === option.value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
+        <div
+          className="bg-muted flex min-w-0 flex-1 overflow-hidden rounded"
+          role="group"
+          aria-label="排序"
+        >
+          {sortOptions.map((option, index) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => handleSort(option.value)}
+              disabled={isLoading}
+              className={`flex min-w-0 flex-1 items-center justify-center px-2 py-1.5 text-xs transition-colors disabled:opacity-50 sm:text-sm ${
+                sortBy === option.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted/80'
+              } ${index > 0 ? 'border-border/60 border-l' : ''}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )

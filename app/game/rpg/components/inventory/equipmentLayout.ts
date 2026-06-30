@@ -16,12 +16,12 @@ export const PAPER_DOLL_SLOTS: Array<{
   label?: string
   className: string
 }> = [
-  { slot: 'helmet', className: 'left-2 top-[6%]' },
-  { slot: 'weapon', className: 'left-2 top-[28%]' },
-  { slot: 'gloves', className: 'left-2 top-[50%]' },
-  { slot: 'boots', className: 'left-2 top-[72%]' },
-  { slot: 'amulet', label: '护符', className: 'right-2 top-[6%]' },
-  { slot: 'armor', className: 'right-2 top-[28%]' },
-  { slot: 'ring', label: '戒指', className: 'right-2 top-[50%]' },
-  { slot: 'belt', className: 'right-2 top-[72%]' },
+  { slot: 'helmet', className: 'left-2 top-[13%]' },
+  { slot: 'weapon', className: 'left-2 top-[34%]' },
+  { slot: 'gloves', className: 'left-2 top-[56%]' },
+  { slot: 'boots', className: 'left-2 top-[76%]' },
+  { slot: 'amulet', label: '护符', className: 'right-2 top-[13%]' },
+  { slot: 'armor', className: 'right-2 top-[34%]' },
+  { slot: 'ring', label: '戒指', className: 'right-2 top-[56%]' },
+  { slot: 'belt', className: 'right-2 top-[76%]' },
 ]
