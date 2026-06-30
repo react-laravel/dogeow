@@ -286,10 +286,10 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   }
 
   const tabs = [
-    { id: 'character' as const, name: '角色', icon: '👤' },
-    { id: 'inventory' as const, name: '背包', icon: '🎒' },
-    { id: 'skills' as const, name: '技能', icon: '✨' },
     { id: 'combat' as const, name: '战斗', icon: '⚔️' },
+    { id: 'inventory' as const, name: '背包', icon: '🎒' },
+    { id: 'character' as const, name: '角色', icon: '👤' },
+    { id: 'skills' as const, name: '技能', icon: '✨' },
     { id: 'compendium' as const, name: '图鉴', icon: '📖' },
     { id: 'settings' as const, name: '设置', icon: '⚙️' },
   ]
