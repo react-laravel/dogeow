@@ -230,6 +230,24 @@ describe('authStore', () => {
     expect(result.current.loading).toBe(true)
   })
 
+  it('should persist github oauth state for csrf protection', async () => {
+    mockGet.mockResolvedValueOnce({
+      url: 'https://github.com/login/oauth/authorize?state=xyz',
+      state: 'xyz',
+    })
+
+    const { result } = renderHook(() => useAuthStore())
+
+    await act(async () => {
+      await result.current.loginWithGithub()
+    })
+
+    expect(window.sessionStorage.getItem('github-oauth-state')).toBe('xyz')
+    expect(mockRedirectTo).toHaveBeenCalledWith(
+      'https://github.com/login/oauth/authorize?state=xyz'
+    )
+  })
+
   it('should handle login failure', async () => {
     const loginError = new Error('Invalid credentials')
     mockApiRequest.mockRejectedValueOnce(loginError)

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useAuthStore from '@/stores/authStore'
+import { GITHUB_OAUTH_STATE_KEY } from '@/lib/utils/authStorage'
 import type { User } from '@/app'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -16,9 +17,17 @@ export default function GithubCallbackPage() {
     const handleCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search)
       const code = urlParams.get('code')
+      const state = urlParams.get('state')
+      const storedState = window.sessionStorage.getItem(GITHUB_OAUTH_STATE_KEY)
 
       if (!code) {
         setError('登录信息不完整')
+        return
+      }
+
+      // 校验 state 与发起授权时保存的一致，防止登录 CSRF / 账号混淆
+      if (!state || !storedState || state !== storedState) {
+        setError('登录校验失败，请重新登录')
         return
       }
 
@@ -26,7 +35,7 @@ export default function GithubCallbackPage() {
         const res = await fetch(`${API_BASE}/api/auth/github/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code }),
+          body: JSON.stringify({ code, state }),
         })
 
         if (!res.ok) {
@@ -40,6 +49,9 @@ export default function GithubCallbackPage() {
         router.push('/')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'GitHub 登录失败')
+      } finally {
+        // 一次性 state 用后即清
+        window.sessionStorage.removeItem(GITHUB_OAUTH_STATE_KEY)
       }
     }
 

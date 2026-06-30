@@ -5,6 +5,7 @@ import { ApiRequestError, apiRequest, get as apiGet, post } from '@/lib/api'
 import { redirectTo } from '@/lib/auth/redirect'
 import {
   AUTH_STORAGE_KEY,
+  GITHUB_OAUTH_STATE_KEY,
   readPersistedAuthToken,
   removeLegacyAuthToken,
 } from '@/lib/utils/authStorage'
@@ -176,10 +177,14 @@ const useAuthStore = create<AuthState>()(
         set({ loading: true })
 
         try {
-          // 获取 GitHub 授权 URL
-          const data = await apiGet<{ url: string }>('/auth/github')
+          // 获取 GitHub 授权 URL 和一次性 state
+          const data = await apiGet<{ url: string; state?: string }>('/auth/github')
           if (!data?.url) {
             throw new Error('未获取到 GitHub 授权 URL')
+          }
+          // 保存 state，回调时回传给后端校验，防止登录 CSRF
+          if (data.state && typeof window !== 'undefined') {
+            window.sessionStorage.setItem(GITHUB_OAUTH_STATE_KEY, data.state)
           }
           redirectTo(data.url)
         } catch (error) {
@@ -368,7 +373,8 @@ const useAuthStore = create<AuthState>()(
 
         const hasPersistedAuth = Boolean(state.user || state.token)
         const hasSessionCookie =
-          document.cookie.includes('dogeow_session=') || document.cookie.includes('laravel_session=')
+          document.cookie.includes('dogeow_session=') ||
+          document.cookie.includes('laravel_session=')
 
         if (!hasPersistedAuth && !hasSessionCookie) {
           useAuthStore.getState().setLoading(false)

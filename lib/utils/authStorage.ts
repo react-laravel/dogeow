@@ -1,5 +1,7 @@
 export const AUTH_STORAGE_KEY = 'auth-storage'
 export const LEGACY_AUTH_TOKEN_KEY = 'auth-token'
+// GitHub OAuth 一次性 state 的 sessionStorage key，用于回调校验防 CSRF
+export const GITHUB_OAUTH_STATE_KEY = 'github-oauth-state'
 
 export interface AuthTokenStorage {
   getItem(key: string): string | null
