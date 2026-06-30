@@ -41,3 +41,4 @@ jobs:
           PM2_APP: ${{ secrets.PM2_APP }}
           DOGEOW_API_CURRENT_PATH: ${{ secrets.DOGEOW_API_CURRENT_PATH }}
           DEPLOY_USER: www-data
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

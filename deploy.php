@@ -165,8 +165,13 @@ bash -lc '
 set -euo pipefail
 build_version="$(git -C "{{workspace_root}}" rev-parse --short=12 HEAD 2>/dev/null || date +%s)"
 echo "[deploy] NEXT_PUBLIC_APP_BUILD_VERSION=$build_version"
+if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
+  echo "[deploy] SENTRY_AUTH_TOKEN 已注入，将上传 source map 到 Sentry"
+else
+  echo "[deploy] 未检测到 SENTRY_AUTH_TOKEN，跳过 Sentry source map 上传"
+fi
 cd "{{release_path}}"
-NEXT_PUBLIC_APP_BUILD_VERSION="$build_version" NEXT_TELEMETRY_DISABLED=1 npm run build
+NEXT_PUBLIC_APP_BUILD_VERSION="$build_version" NEXT_TELEMETRY_DISABLED=1 SENTRY_AUTH_TOKEN="${SENTRY_AUTH_TOKEN:-}" npm run build
 '
 BASH);
 });
