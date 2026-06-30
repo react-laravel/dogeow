@@ -353,12 +353,14 @@ export function MonsterGroup({
               className={`relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-0.5 transition-opacity hover:opacity-80 ${isNew ? styles['monster-appear'] : ''} ${isDead ? styles['monster-death'] : ''} ${isHit ? styles['monster-hit'] : ''}`}
               title={`点击查看 ${m.name} 详情`}
             >
-              {damage !== undefined && damage > 0 && (
-                <span className="pointer-events-none mb-0.5 rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
-                  -{damage}
-                </span>
-              )}
-              <MonsterIcon icon={m.icon} name={m.name} size={iconSize} monsterType={m.type} />
+              <div className="relative flex flex-col items-center">
+                {damage !== undefined && damage > 0 && (
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
+                    -{damage}
+                  </span>
+                )}
+                <MonsterIcon icon={m.icon} name={m.name} size={iconSize} monsterType={m.type} />
+              </div>
               <div className="w-full min-w-0 px-0.5">
                 <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-0.5 text-[7px] leading-none sm:text-[9px]">
                   <span className="shrink-0">HP</span>
