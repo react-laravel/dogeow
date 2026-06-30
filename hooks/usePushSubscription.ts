@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import useAuthStore from '@/stores/authStore'
 import {
   base64UrlToUint8Array,
+  deletePushSubscription,
   getVapidPublicKey,
   savePushSubscription,
   subscriptionToPayload,
@@ -106,6 +107,45 @@ export function usePushSubscription() {
     }
   }, [isAuthenticated])
 
+  const unregister = useCallback(async (): Promise<boolean> => {
+    if (!isPushSupported()) {
+      setErrorMessage('当前环境不支持 Web Push')
+      setStatus('error')
+      return false
+    }
+    if (!isAuthenticated) {
+      setErrorMessage('请先登录')
+      setStatus('error')
+      return false
+    }
+
+    setStatus('loading')
+    setErrorMessage(null)
+
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+
+      if (!subscription) {
+        setStatus('done')
+        return true
+      }
+
+      await deletePushSubscription(subscription.endpoint)
+      await subscription.unsubscribe()
+      setStatus('done')
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '取消订阅失败'
+      setErrorMessage(message)
+      setStatus('error')
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Web Push 取消订阅失败:', err)
+      }
+      return false
+    }
+  }, [isAuthenticated])
+
   // 当用户已登录且已授权通知时，自动尝试注册一次（静默，不打扰用户）
   useEffect(() => {
     if (!isAuthenticated || status !== 'idle' || !isPushSupported()) return
@@ -123,6 +163,7 @@ export function usePushSubscription() {
 
   return {
     register,
+    unregister,
     isSupported: isPushSupported(),
     status,
     errorMessage,

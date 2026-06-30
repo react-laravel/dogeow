@@ -23,6 +23,12 @@ const PushSubscriptionRegister = dynamic(
     ssr: false,
   }
 )
+const PushNotificationPrompt = dynamic(
+  () => import('@/components/app/PushNotificationPrompt').then(mod => mod.PushNotificationPrompt),
+  {
+    ssr: false,
+  }
+)
 const UnreadNotificationFetcher = dynamic(
   () =>
     import('@/components/app/UnreadNotificationFetcher').then(mod => mod.UnreadNotificationFetcher),
@@ -91,6 +97,7 @@ export function DeferredRuntimeClients() {
       <PWAInstallPrompt />
       <PWARegister />
       <PushSubscriptionRegister />
+      <PushNotificationPrompt />
       <UnreadNotificationFetcher />
       <NotificationRealtimeSubscriber />
       <CustomCursorSync />

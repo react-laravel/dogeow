@@ -1,19 +1,31 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { get, post } from '@/lib/api'
 import type { UnreadNotificationsResponse } from '@/lib/api'
 import useAuthStore from '@/stores/authStore'
-import { Bell } from 'lucide-react'
+import { Bell, BellOff, BellRing } from 'lucide-react'
 import { toast } from 'sonner'
+import { isPushSupported, usePushSubscription } from '@/hooks/usePushSubscription'
 
 const fetcher = (url: string) => get<UnreadNotificationsResponse>(url)
 
+type PushPermissionState = NotificationPermission | 'unsupported'
+
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
+  const [pushPermission, setPushPermission] = useState<PushPermissionState>('default')
+  const [hasPushSubscription, setHasPushSubscription] = useState(false)
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
   const ref = useRef<HTMLDivElement>(null)
+  const {
+    register,
+    unregister,
+    isSupported,
+    status: pushStatus,
+    errorMessage,
+  } = usePushSubscription()
 
   const { data, mutate } = useSWR<UnreadNotificationsResponse>(
     isAuthenticated ? 'notifications/unread' : null,
@@ -22,6 +34,29 @@ export function NotificationDropdown() {
       revalidateOnMount: false,
     }
   )
+
+  const refreshPushState = useCallback(async () => {
+    if (!isSupported || typeof Notification === 'undefined') {
+      setPushPermission('unsupported')
+      setHasPushSubscription(false)
+      return
+    }
+
+    setPushPermission(Notification.permission)
+
+    if (Notification.permission !== 'granted' || !('serviceWorker' in navigator)) {
+      setHasPushSubscription(false)
+      return
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+      setHasPushSubscription(Boolean(subscription))
+    } catch {
+      setHasPushSubscription(false)
+    }
+  }, [isSupported])
 
   // 点击外部关闭
   useEffect(() => {
@@ -40,6 +75,56 @@ export function NotificationDropdown() {
     if (!open || !isAuthenticated) return
     void mutate()
   }, [open, isAuthenticated, mutate])
+
+  useEffect(() => {
+    if (pushStatus === 'error' && errorMessage) {
+      toast.error(errorMessage)
+    }
+  }, [pushStatus, errorMessage])
+
+  const handleToggleOpen = () => {
+    const nextOpen = !open
+    setOpen(nextOpen)
+    if (nextOpen) {
+      void refreshPushState()
+    }
+  }
+
+  const handleEnablePush = async () => {
+    if (!isSupported || typeof Notification === 'undefined') {
+      setPushPermission('unsupported')
+      toast.error('当前环境不支持系统通知')
+      return
+    }
+
+    let permission = Notification.permission
+    if (permission === 'default') {
+      permission = await Notification.requestPermission()
+      setPushPermission(permission)
+    }
+
+    if (permission !== 'granted') {
+      toast.error('请在浏览器或系统设置中允许通知')
+      await refreshPushState()
+      return
+    }
+
+    const ok = await register()
+    await refreshPushState()
+    if (ok) {
+      setHasPushSubscription(true)
+      toast.success('系统通知已开启')
+    }
+  }
+
+  const handleDisablePush = async () => {
+    const ok = await unregister()
+    await refreshPushState()
+    if (ok) {
+      setHasPushSubscription(false)
+      toast.success('已关闭本站推送')
+    }
+  }
 
   const handleMarkRead = async (id: string, url: string) => {
     try {
@@ -65,11 +150,13 @@ export function NotificationDropdown() {
   }
 
   const count = data?.count ?? 0
+  const showPushControl = isAuthenticated && pushPermission !== 'unsupported'
+  const pushIsLoading = pushStatus === 'loading'
 
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleToggleOpen}
         className="hover:bg-muted relative flex size-10 items-center justify-center rounded-xl transition-colors"
         aria-label="通知"
       >
@@ -94,6 +181,54 @@ export function NotificationDropdown() {
               </button>
             )}
           </div>
+
+          {showPushControl && (
+            <div className="border-b px-4 py-3">
+              {pushPermission === 'denied' ? (
+                <div className="flex items-start gap-2 text-sm">
+                  <BellOff className="text-muted-foreground mt-0.5 h-4 w-4" />
+                  <div className="space-y-1">
+                    <div className="font-medium">系统通知已被阻止</div>
+                    <div className="text-muted-foreground text-xs leading-5">
+                      请在浏览器或系统设置中允许通知。
+                    </div>
+                  </div>
+                </div>
+              ) : hasPushSubscription ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <BellRing className="text-primary h-4 w-4" />
+                    <span className="font-medium">系统通知已开启</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDisablePush}
+                    disabled={pushIsLoading}
+                    className="border-border hover:bg-muted disabled:opacity-60 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors"
+                  >
+                    {pushIsLoading ? '关闭中' : '关闭'}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Bell className="text-muted-foreground h-4 w-4" />
+                    <span className="font-medium">
+                      {pushPermission === 'granted' ? '系统通知已允许' : '开启系统通知'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleEnablePush}
+                    disabled={pushIsLoading}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+                  >
+                    {pushIsLoading ? '开启中' : '开启'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="max-h-96 overflow-y-auto">
             {!data || data.items.length === 0 ? (
