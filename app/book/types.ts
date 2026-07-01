@@ -49,5 +49,6 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
   renderContent: (ctx: {
     contentRef: RefObject<HTMLDivElement | null>
     settings: Settings
+    themeColor?: string
   }) => ReactNode
 }

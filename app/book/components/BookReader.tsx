@@ -198,7 +198,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
             color: themeStyle?.color,
           }}
         >
-          {config.renderContent({ contentRef, settings })}
+          {config.renderContent({ contentRef, settings, themeColor: themeStyle?.color })}
         </article>
       </div>
     </div>

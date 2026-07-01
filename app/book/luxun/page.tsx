@@ -231,19 +231,27 @@ export default function LuxunBookPage() {
     hasTextSelection: false,
     hasPairDisplayMode: false,
     hasContentMode: false,
-    renderContent: () => (
+    renderContent: ({ themeColor }: { themeColor?: string }) => (
       <>
         {!chapterContent && <p className="text-sm opacity-70">正在加载章节…</p>}
 
         {chapterContent && (
           <>
             <header className="mb-8 border-b border-current/10 pb-6">
-              <h1 className="text-2xl font-semibold">{currentCh?.name ?? ''}</h1>
+              <h1 className="text-2xl font-semibold" style={{ color: themeColor }}>
+                {currentCh?.name ?? ''}
+              </h1>
               {currentVol && (
-                <p className="text-muted-foreground mt-1 text-sm">{currentVol.name}</p>
+                <p className="mt-1 text-sm" style={{ color: themeColor, opacity: 0.6 }}>
+                  {currentVol.name}
+                </p>
               )}
             </header>
-            <div id="luxun-content" className="whitespace-pre-wrap text-base leading-relaxed">
+            <div
+              id="luxun-content"
+              className="whitespace-pre-wrap text-base leading-relaxed"
+              style={{ color: themeColor }}
+            >
               {chapterContent}
             </div>
           </>
