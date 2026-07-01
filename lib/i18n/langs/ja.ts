@@ -25,6 +25,8 @@ export const ja = {
   // Book
   'book.hongloumeng': '紅楼夢',
   'book.hongloumeng.desc': '中国四大古典文学の一つ、曹雪芹著',
+  'book.luxun': '魯迅全集',
+  'book.luxun.desc': '魯迅作品全集、全20巻',
   'book.select_description': '本を選んで読み始めましょう',
   'book.start_reading': '読み始める',
 

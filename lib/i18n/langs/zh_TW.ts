@@ -24,6 +24,8 @@ export const zh_TW = {
   // Book
   'book.hongloumeng': '紅樓夢',
   'book.hongloumeng.desc': '中國古代四大名著之一，曹雪芹著',
+  'book.luxun': '魯迅全集',
+  'book.luxun.desc': '魯迅作品全集，共二十卷',
   'book.select_description': '選擇一本好書開始閱讀',
   'book.start_reading': '開始閱讀',
 

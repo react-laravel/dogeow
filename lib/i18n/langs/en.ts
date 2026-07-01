@@ -26,6 +26,8 @@ export const en = {
   'book.hongloumeng': 'Dream of the Red Chamber',
   'book.hongloumeng.desc':
     'One of the Four Great Classical Novels of Chinese literature by Cao Xueqin',
+  'book.luxun': 'Complete Works of Lu Xun',
+  'book.luxun.desc': 'Complete works of Lu Xun, 20 volumes',
   'book.select_description': 'Select a book and start reading',
   'book.start_reading': 'Start Reading',
 
