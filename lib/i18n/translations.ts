@@ -1,4 +1,4 @@
-import { zh_CN, zh_TW, en, ja } from './langs'
+import { zh_CN, en } from './langs'
 
 export interface Translations {
   [languageCode: string]: {
@@ -8,9 +8,7 @@ export interface Translations {
 
 export const translations: Translations = {
   'zh-CN': zh_CN,
-  'zh-TW': zh_TW,
   en: en,
-  ja: ja,
 }
 
 export { SUPPORTED_LANGUAGES, type SupportedLanguage } from './langs'

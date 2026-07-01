@@ -121,8 +121,7 @@ function getLanguageFromTimezone(timezone: string): SupportedLanguage | null {
   const timezoneMap: Record<string, SupportedLanguage> = {
     'Asia/Shanghai': 'zh-CN',
     'Asia/Hong_Kong': 'zh-CN',
-    'Asia/Taipei': 'zh-TW',
-    'Asia/Tokyo': 'ja',
+    'Asia/Taipei': 'zh-CN',
     'America/New_York': 'en',
     'America/Los_Angeles': 'en',
     'Europe/London': 'en',
@@ -168,12 +167,6 @@ function detectSystemLanguage(): SupportedLanguage | null {
     const userAgent = navigator.userAgent.toLowerCase()
     if (userAgent.includes('zh-cn') || userAgent.includes('zh_cn')) {
       return 'zh-CN'
-    }
-    if (userAgent.includes('zh-tw') || userAgent.includes('zh_tw')) {
-      return 'zh-TW'
-    }
-    if (userAgent.includes('ja') || userAgent.includes('japanese')) {
-      return 'ja'
     }
     if (userAgent.includes('en')) {
       return 'en'

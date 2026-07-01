@@ -130,9 +130,8 @@ export class GeolocationDetector {
     const map: Record<string, SupportedLanguage> = {
       zh: 'zh-CN',
       'zh-cn': 'zh-CN',
-      'zh-tw': 'zh-TW',
+      'zh-tw': 'zh-CN',
       'zh-hk': 'zh-CN',
-      ja: 'ja',
       en: 'en',
     }
     return map[code.toLowerCase()] ?? null

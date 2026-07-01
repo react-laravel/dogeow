@@ -9,7 +9,7 @@ export interface DetectionResult {
 }
 
 export class BrowserLanguageStrategy {
-  private supportedLanguages: SupportedLanguage[] = ['zh-CN', 'zh-TW', 'en', 'ja']
+  private supportedLanguages: SupportedLanguage[] = ['zh-CN', 'en']
 
   detect(): DetectionResult | null {
     if (typeof window === 'undefined') {

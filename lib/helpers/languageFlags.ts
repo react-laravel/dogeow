@@ -8,12 +8,11 @@ const LANGUAGE_FLAG_MAP: Record<string, string> = {
   'zh-CN': '🇨🇳',
   'zh-TW': '🇭🇰',
   en: '🇺🇸',
-  ja: '🇯🇵',
 }
 
 /**
  * 根据语言代码获取对应的国旗
- * @param languageCode 语言代码 (如 'zh-CN', 'en', 'ja')
+ * @param languageCode 语言代码 (如 'zh-CN', 'en')
  * @returns 对应的国旗 emoji，如果未找到则返回默认的🌐
  */
 export function getLanguageFlag(languageCode?: string): string {

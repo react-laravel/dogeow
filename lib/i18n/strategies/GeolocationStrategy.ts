@@ -12,8 +12,7 @@ export class GeolocationStrategy {
   private timezoneMap: Record<string, SupportedLanguage> = {
     'Asia/Shanghai': 'zh-CN',
     'Asia/Hong_Kong': 'zh-CN',
-    'Asia/Taipei': 'zh-TW',
-    'Asia/Tokyo': 'ja',
+    'Asia/Taipei': 'zh-CN',
     'America/New_York': 'en',
     'America/Los_Angeles': 'en',
     'Europe/London': 'en',

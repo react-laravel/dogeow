@@ -10,7 +10,6 @@ import { type SupportedLanguage, SUPPORTED_LANGUAGES } from './translations'
 const LANGUAGE_PREFIX_MAP: Record<string, SupportedLanguage> = {
   en: 'en',
   zh: 'zh-CN',
-  ja: 'ja',
 }
 
 /**

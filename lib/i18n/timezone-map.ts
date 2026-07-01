@@ -13,8 +13,7 @@ export const TIMEZONE_LANGUAGE_MAP: Record<string, SupportedLanguage> = {
   'Asia/Hong_Kong': 'zh-CN',
   'Asia/Chongqing': 'zh-CN',
   'Asia/Urumqi': 'zh-CN',
-  'Asia/Taipei': 'zh-TW',
-  'Asia/Tokyo': 'ja',
+  'Asia/Taipei': 'zh-CN',
   'Asia/Seoul': 'en',
 
   // 美洲时区

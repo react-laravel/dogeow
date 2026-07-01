@@ -281,8 +281,7 @@ export class LanguageDetectionService {
     const userAgent = navigator.userAgent.toLowerCase()
     const languagePatterns: Array<{ patterns: string[]; language: SupportedLanguage }> = [
       { patterns: ['zh-cn', 'zh_cn'], language: 'zh-CN' },
-      { patterns: ['zh-tw', 'zh_tw'], language: 'zh-TW' },
-      { patterns: ['ja', 'japanese'], language: 'ja' },
+      { patterns: ['zh-tw', 'zh_tw'], language: 'zh-CN' },
       { patterns: ['en'], language: 'en' },
     ]
 
