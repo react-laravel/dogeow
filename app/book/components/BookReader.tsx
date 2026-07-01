@@ -9,7 +9,6 @@ import {
   type BookJumpTarget,
   findScrollingAncestor,
   getReadingPosition,
-  getSavedScrollPosition,
   scheduleBookJump,
   useScrollSaver,
 } from '@/app/book/utils/scroll'
@@ -28,7 +27,6 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
   const { settings, patchSettings, hydrated } = config.useSettings()
   const { marks, addPositionBookmark, removeMark } = config.useBookMarks()
 
-  const [chapterContent, setChapterContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,7 +41,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
 
   // ─── Scroll position persistence ──────────────────────────────────
 
-  useScrollSaver(contentRef, config.storageKey, config.currentChapterId)
+  useScrollSaver(contentRef, 'book-reader', config.currentChapterId)
 
   // ─── Chapter loading ──────────────────────────────────────────────
 
@@ -54,11 +52,10 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       try {
         await config.loadChapter(chapterId)
 
-        const saved = getSavedScrollPosition(config.storageKey, chapterId as string | number)
         requestAnimationFrame(() => {
           const scrollEl = contentRef.current ? findScrollingAncestor(contentRef.current) : null
           if (scrollEl) {
-            scrollEl.scrollTop = saved
+            scrollEl.scrollTop = 0
           }
         })
       } catch (loadError) {
@@ -72,15 +69,15 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
 
   // Auto-load chapter when hydrated or chapterId changes
   useEffect(() => {
-    if (!hydrated || loading) return
+    if (!hydrated) return
     loadChapter(config.currentChapterId)
-  }, [hydrated, config.currentChapterId, loadChapter, loading])
+  }, [hydrated, config.currentChapterId, loadChapter])
 
   // ─── Jump to bookmark ─────────────────────────────────────────────
 
   useEffect(() => {
     const pending = pendingJumpRef.current
-    if (!pending || loading || !chapterContent) return
+    if (!pending || loading) return
 
     const container = contentRef.current
     if (!container) return
@@ -90,7 +87,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
         pendingJumpRef.current = null
       }
     })
-  }, [loading, chapterContent, jumpRequest])
+  }, [loading, jumpRequest])
 
   // ─── Handlers ─────────────────────────────────────────────────────
 
@@ -105,11 +102,6 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
   )
 
   const handleAddCurrentBookmark = useCallback(() => {
-    if (!chapterContent) {
-      toast.error('请稍候，正文加载完成后再添加书签')
-      return
-    }
-
     const position = getReadingPosition(contentRef.current)
     const chapter = config.chapters.find((c: any) => c.id === config.currentChapterId)
     const chapterTitle = chapter?.title ?? ''
@@ -118,10 +110,9 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       chapterId: config.currentChapterId,
       chapterTitle,
       scrollTop: position.scrollTop,
-      excerpt: chapterContent.slice(0, 80),
     })
     toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
-  }, [chapterContent, config, addPositionBookmark])
+  }, [config, addPositionBookmark])
 
   const handleJumpToMark = useCallback(
     (mark: any) => {
@@ -206,13 +197,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
             fontFamily: getBookFontFamily((settings as any).fontFamily ?? 'yahei'),
           }}
         >
-          {config.renderContent({
-            contentRef,
-            settings,
-            chapterContent,
-            loading,
-            error,
-          })}
+          {config.renderContent({ contentRef, settings })}
         </article>
       </div>
     </div>

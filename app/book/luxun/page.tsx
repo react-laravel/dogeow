@@ -1,3 +1,5 @@
+'use client'
+
 import { Noto_Serif_SC } from 'next/font/google'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -5,7 +7,7 @@ import { BookReader } from '@/app/book/components/BookReader'
 import { getBookFontFamily, getBookThemeStyle, getBookToolbarTheme } from '@/app/book/utils/theme'
 import { useBookSettings } from '@/app/book/utils/settings'
 import { useBookMarks, type BookMark } from '@/app/book/utils/bookMarks'
-import { getSavedScrollPosition } from '@/app/book/utils/scroll'
+import { getSavedScrollPosition, saveScrollPosition } from '@/app/book/utils/scroll'
 
 const notoSerif = Noto_Serif_SC({
   weight: ['400', '700'],
@@ -50,9 +52,7 @@ export default function LuxunBookPage() {
 
   const [index, setIndex] = useState<BookIndex | null>(null)
   const [chapterContent, setChapterContent] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
   const [selectedVolume, setSelectedVolume] = useState(0)
   const [selectedChapter, setSelectedChapter] = useState(0)
 
@@ -85,8 +85,6 @@ export default function LuxunBookPage() {
       const ch = vol?.chapters[chIdx]
       if (!ch) return
 
-      setLoading(true)
-      setError(null)
       try {
         const res = await fetch(`${BOOK_BASE}/${ch.file}`)
         if (!res.ok) throw new Error('章节加载失败')
@@ -94,16 +92,9 @@ export default function LuxunBookPage() {
         setChapterContent(text)
         setSelectedVolume(volIdx)
         setSelectedChapter(chIdx)
-
-        const saved = getSavedScrollPosition(STORAGE_KEY, chapterId)
-        requestAnimationFrame(() => {
-          const el = document.getElementById('luxun-content')
-          if (el) el.scrollTop = saved
-        })
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : '加载失败')
-      } finally {
-        setLoading(false)
+        console.error('Failed to load chapter:', loadError)
+        throw loadError instanceof Error ? loadError : new Error('加载失败')
       }
     },
     [index]
@@ -116,12 +107,12 @@ export default function LuxunBookPage() {
         return res.json() as Promise<BookIndex>
       })
       .then(setIndex)
-      .catch(err => setError(err.message))
+      .catch(err => console.error('Failed to load index:', err))
   }, [])
 
+  // Auto-load chapter when settings are hydrated and index is ready
   useEffect(() => {
-    if (!hydrated || !index || !chapterContent) return
-    if (loading) return
+    if (!hydrated || !index) return
 
     const savedChapterId = (settings as any).chapterId as string
     const [savedVol, savedCh] = savedChapterId.split('-').map(Number)
@@ -136,7 +127,32 @@ export default function LuxunBookPage() {
     }
 
     loadChapter('0-0')
-  }, [hydrated, index, chapterContent, loading, settings, loadChapter])
+  }, [hydrated, index, settings, loadChapter])
+
+  // Save scroll position
+  useEffect(() => {
+    const el = document.getElementById('luxun-content')
+    if (!el) return
+
+    const onScroll = () => {
+      saveScrollPosition(STORAGE_KEY, currentChapterId, el.scrollTop)
+    }
+
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [currentChapterId, chapterContent])
+
+  // Restore scroll position after chapter loads
+  useEffect(() => {
+    if (!chapterContent) return
+    const saved = getSavedScrollPosition(STORAGE_KEY, currentChapterId)
+    const el = document.getElementById('luxun-content')
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollTop = saved
+      })
+    }
+  }, [chapterContent, currentChapterId])
 
   const navigateChapter = useCallback(
     (direction: -1 | 1) => {
@@ -159,7 +175,7 @@ export default function LuxunBookPage() {
   const hasPrev = currentFlatIdx > 0
   const hasNext = currentFlatIdx >= 0 && currentFlatIdx < flatChapters.length - 1
 
-  const handleAddBookmark = () => {
+  const handleAddBookmark = useCallback(() => {
     if (!chapterContent) {
       toast.error('请稍候，正文加载完成后再添加书签')
       return
@@ -175,12 +191,22 @@ export default function LuxunBookPage() {
       excerpt: chapterContent.slice(0, 80),
     })
     toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
-  }
+  }, [
+    chapterContent,
+    currentVol,
+    selectedChapter,
+    selectedVolume,
+    currentChapterId,
+    addPositionBookmark,
+  ])
 
-  const handleJumpToMark = (mark: BookMark) => {
-    patchSettings({ chapterId: mark.chapterId })
-    loadChapter(mark.chapterId)
-  }
+  const handleJumpToMark = useCallback(
+    (mark: BookMark) => {
+      patchSettings({ chapterId: mark.chapterId })
+      loadChapter(mark.chapterId)
+    },
+    [patchSettings, loadChapter]
+  )
 
   const config = {
     useSettings: () => ({ settings, patchSettings, hydrated }),
@@ -205,14 +231,11 @@ export default function LuxunBookPage() {
     hasTextSelection: false,
     hasPairDisplayMode: false,
     hasContentMode: false,
-    storageKey: STORAGE_KEY,
-    onAddBookmark: handleAddBookmark,
-    onJumpToMark: handleJumpToMark,
     renderContent: () => (
       <>
-        {loading && <p className="text-sm opacity-70">正在加载章节…</p>}
+        {!chapterContent && <p className="text-sm opacity-70">正在加载章节…</p>}
 
-        {!loading && chapterContent && (
+        {chapterContent && (
           <>
             <header className="mb-8 border-b border-current/10 pb-6">
               <h1 className="text-2xl font-semibold text-foreground">{currentCh?.name ?? ''}</h1>
@@ -228,16 +251,14 @@ export default function LuxunBookPage() {
             </div>
           </>
         )}
-
-        {error && index ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
       </>
     ),
   }
 
-  if (error && !index) {
+  if (!index) {
     return (
       <div className="text-destructive flex h-full items-center justify-center p-6 text-sm">
-        {error}
+        {error ?? '正在加载书目…'}
       </div>
     )
   }

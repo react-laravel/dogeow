@@ -17,15 +17,6 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
       chapterId: ChapterId
       chapterTitle: string
       scrollTop: number
-      excerpt?: string
-      pairIndex?: number | null
-      note?: string
-    }) => { mark: BookMarkType; created: boolean }
-    addCollection: (input: {
-      chapterId: ChapterId
-      chapterTitle: string
-      scrollTop: number
-      excerpt?: string
     }) => { mark: BookMarkType; created: boolean }
     removeMark: (id: string) => void
   }
@@ -54,21 +45,9 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
   hasPairDisplayMode: boolean
   hasContentMode: boolean
 
-  /** Storage key for scroll position persistence */
-  storageKey: string
-
-  /** Called when the user clicks the bookmark button in the toolbar */
-  onAddBookmark: () => void
-
-  /** Called when the user clicks a bookmark in the panel to jump to it */
-  onJumpToMark: (mark: BookMarkType) => void
-
   /** Render the book-specific content area */
   renderContent: (ctx: {
     contentRef: RefObject<HTMLDivElement | null>
     settings: Settings
-    chapterContent: string | null
-    loading: boolean
-    error: string | null
   }) => ReactNode
 }
