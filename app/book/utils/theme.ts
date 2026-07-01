@@ -37,7 +37,9 @@ export function getBookFontFamily(font: BookFont): string {
 // ─── Theme styles ────────────────────────────────────────────────────
 
 export function getBookThemeStyle(theme: BookTheme): CSSProperties | undefined {
-  switch (theme) {
+  const resolved = theme === 'auto' ? getSystemTheme() : theme
+
+  switch (resolved) {
     case 'light':
       return { backgroundColor: '#ffffff', color: '#1a1a1a' }
     case 'dark':
@@ -51,12 +53,19 @@ export function getBookThemeStyle(theme: BookTheme): CSSProperties | undefined {
   }
 }
 
+function getSystemTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export function getBookToolbarTheme(theme: BookTheme): {
   headerStyle: CSSProperties
   mutedColor: string
   borderColor: string
 } | null {
-  switch (theme) {
+  const resolved = theme === 'auto' ? getSystemTheme() : theme
+
+  switch (resolved) {
     case 'light':
       return {
         headerStyle: { backgroundColor: 'rgba(255,255,255,0.94)', color: '#1a1a1a' },
