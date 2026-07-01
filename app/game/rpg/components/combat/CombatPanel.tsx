@@ -37,7 +37,6 @@ export function CombatPanel() {
   const maps = useGameStore(state => state.maps)
   const enterMap = useGameStore(state => state.enterMap)
   const fetchMaps = useGameStore(state => state.fetchMaps)
-  const teleportToMap = useGameStore(state => state.teleportToMap)
   const revive = useGameStore(state => state.revive)
   const isFighting = useGameStore(state => state.isFighting)
   const setShouldAutoCombat = useGameStore(state => state.setShouldAutoCombat)
@@ -144,14 +143,6 @@ export function CombatPanel() {
     document.addEventListener('click', onDocClick)
     return () => document.removeEventListener('click', onDocClick)
   }, [mapDropdownOpen])
-
-  useEffect(() => {
-    if (!character?.id || !currentMap?.id || isLoading || isFighting || (currentHp ?? 0) <= 0)
-      return
-    if (!useGameStore.getState().shouldAutoCombat) {
-      setShouldAutoCombat(true)
-    }
-  }, [character?.id, currentMap?.id, isLoading, isFighting, currentHp, setShouldAutoCombat])
 
   const handleSelectMap = useCallback(
     async (mapId: number) => {
@@ -446,19 +437,7 @@ export function CombatPanel() {
             <div className="space-y-3">
               <button
                 onClick={async () => {
-                  // 复活：切换到第一个地图（新手营地）
-                  if (maps.length === 0) {
-                    await fetchMaps()
-                  }
-                  // 获取排序后的第一个地图
-                  const latestMaps = useGameStore.getState().maps
-                  const sorted = [...latestMaps].sort(
-                    (a, b) => (a.act !== b.act ? a.act - b.act : 0) || a.id - b.id
-                  )
-                  const firstMap = sorted[0]
-                  if (firstMap) {
-                    await teleportToMap(firstMap.id)
-                  }
+                  await revive()
                   setShowDeathDialog(false)
                 }}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg py-2.5 font-medium"

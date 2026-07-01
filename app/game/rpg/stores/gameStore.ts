@@ -46,6 +46,8 @@ import {
   replaceItemInLoadout,
 } from './gameStateHelpers'
 
+let startCombatInFlight = false
+
 /** 进入/传送地图接口响应 */
 interface EnterMapResponse {
   character: GameCharacter
@@ -919,6 +921,7 @@ const store: StateCreator<GameState> = (set, get) => ({
       soundManager.play('teleport') // 使用传送音效
       const maps = get().maps
       const currentMap = response.map ?? maps.find(m => m.id === mapId) ?? null
+      const char = response.character
       set(state => ({
         ...state,
         maps:
@@ -926,12 +929,16 @@ const store: StateCreator<GameState> = (set, get) => ({
             ? [...state.maps, currentMap]
             : state.maps,
         currentMap,
-        character: response.character,
+        character: char,
         isFighting: false,
         shouldAutoCombat: true,
         isLoading: false,
         combatResult: null,
         statusCombatMonsters: response.monsters ?? null,
+        // 切图返回的可能是「切图瞬间已死亡」的角色数据，必须同步 HP/MP，
+        // 否则界面会一直显示切图前的旧血量，卡在战斗画面(实际已死亡)
+        currentHp: char?.current_hp ?? state.currentHp,
+        currentMana: char?.current_mana ?? state.currentMana,
       }))
     } catch (error) {
       setRequestError(set, error)
@@ -1069,6 +1076,8 @@ const store: StateCreator<GameState> = (set, get) => ({
   },
 
   startCombat: async () => {
+    if (startCombatInFlight) return
+
     try {
       const selectedId = getSelectedCharacterIdOrAbort(get, set, {
         context: 'startCombat',
@@ -1076,6 +1085,8 @@ const store: StateCreator<GameState> = (set, get) => ({
       })
       const enabledIds = get().enabledSkillIds
       if (!selectedId) return
+
+      startCombatInFlight = true
       startRequest(set, {
         combatResult: null,
         ...withCombatFlag(get(), true),
@@ -1098,11 +1109,12 @@ const store: StateCreator<GameState> = (set, get) => ({
       }))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      if (message.includes('自动战斗已在运行中')) {
+      if (message.includes('自动战斗已在运行中') || message.includes('自动战斗已在进行中')) {
         await get().fetchCombatStatus()
         await get().fetchCombatLogs()
         set(state => ({
           ...state,
+          ...withCombatFlag(state, true),
           error: null,
           isLoading: false,
         }))
@@ -1115,6 +1127,8 @@ const store: StateCreator<GameState> = (set, get) => ({
         error: message,
         isLoading: false,
       }))
+    } finally {
+      startCombatInFlight = false
     }
   },
 
@@ -1133,7 +1147,11 @@ const store: StateCreator<GameState> = (set, get) => ({
         warn: false,
       })
       if (!selectedId) return
-      await post('/rpg/combat/revive', { character_id: selectedId })
+      const response = (await post('/rpg/combat/revive', { character_id: selectedId })) as {
+        character?: GameCharacter
+      }
+      const char = response.character
+      await get().fetchCombatStatus()
       // 刷新角色数据
       await get().fetchCharacter()
       // 复活后不自动开始战斗，并清空上次战斗结果，避免继续显示怪物头像/HP
@@ -1143,6 +1161,9 @@ const store: StateCreator<GameState> = (set, get) => ({
         shouldAutoCombat: false,
         combatResult: null,
         statusCombatMonsters: null,
+        character: char ?? state.character,
+        currentHp: char?.current_hp ?? state.currentHp,
+        currentMana: char?.current_mana ?? state.currentMana,
         enabledSkillIds: resolveEnabledSkillIds(state.skills, state.enabledSkillIds),
         isLoading: false,
       }))
