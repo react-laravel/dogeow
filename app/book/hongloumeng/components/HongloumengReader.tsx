@@ -269,10 +269,10 @@ export function HongloumengReader() {
     >
       {index && (
         <ReaderToolbar
-          chapters={index.chapters}
+          chapters={index.chapters.map(ch => ({ id: String(ch.id), title: ch.title }))}
           settings={settings}
           markCount={marks.length}
-          onChapterChange={handleChapterChange}
+          onChapterChange={chapterId => handleChapterChange(Number(chapterId))}
           onAddBookmark={handleAddCurrentBookmark}
           onOpenMarks={() => setMarksPanelOpen(true)}
           onOpenSettings={() => setSettingsPanelOpen(true)}
@@ -290,7 +290,7 @@ export function HongloumengReader() {
         open={settingsPanelOpen}
         onOpenChange={setSettingsPanelOpen}
         settings={settings}
-        onPatchSettings={patchSettings}
+        onPatchSettings={patchSettings as any}
       />
 
       <BookMarksPanel

@@ -31,8 +31,9 @@ import {
 interface ReaderSettingsPanelProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  settings: ReaderSettings
-  onPatchSettings: (patch: Partial<ReaderSettings>) => void
+  settings: ReaderSettings | any
+  onPatchSettings: (patch: Partial<any>) => void
+  isLuxun?: boolean
 }
 
 export function ReaderSettingsPanel({
@@ -40,6 +41,7 @@ export function ReaderSettingsPanel({
   onOpenChange,
   settings,
   onPatchSettings,
+  isLuxun,
 }: ReaderSettingsPanelProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -55,31 +57,10 @@ export function ReaderSettingsPanel({
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
           <div className="space-y-2">
-            <Label>原文字体</Label>
+            <Label>字体</Label>
             <Select
               value={settings.originalFontFamily}
               onValueChange={value => onPatchSettings({ originalFontFamily: value as ReaderFont })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(READER_FONT_LABELS) as ReaderFont[]).map(key => (
-                  <SelectItem key={key} value={key}>
-                    {READER_FONT_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>译文字体</Label>
-            <Select
-              value={settings.translationFontFamily}
-              onValueChange={value =>
-                onPatchSettings({ translationFontFamily: value as ReaderFont })
-              }
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -143,45 +124,51 @@ export function ReaderSettingsPanel({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>原文译文区分</Label>
-            <Select
-              value={settings.pairDisplayMode}
-              onValueChange={value =>
-                onPatchSettings({ pairDisplayMode: value as PairDisplayMode })
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PAIR_DISPLAY_LABELS) as PairDisplayMode[]).map(key => (
-                  <SelectItem key={key} value={key}>
-                    {PAIR_DISPLAY_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isLuxun && settings.pairDisplayMode && (
+            <div className="space-y-2">
+              <Label>原文译文区分</Label>
+              <Select
+                value={settings.pairDisplayMode}
+                onValueChange={value =>
+                  onPatchSettings({ pairDisplayMode: value as PairDisplayMode })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(PAIR_DISPLAY_LABELS) as PairDisplayMode[]).map(key => (
+                    <SelectItem key={key} value={key}>
+                      {PAIR_DISPLAY_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label>阅读内容</Label>
-            <Select
-              value={settings.contentMode}
-              onValueChange={value => onPatchSettings({ contentMode: value as ReaderContentMode })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(READER_CONTENT_MODE_LABELS) as ReaderContentMode[]).map(key => (
-                  <SelectItem key={key} value={key}>
-                    {READER_CONTENT_MODE_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isLuxun && settings.contentMode && (
+            <div className="space-y-2">
+              <Label>阅读内容</Label>
+              <Select
+                value={settings.contentMode}
+                onValueChange={value =>
+                  onPatchSettings({ contentMode: value as ReaderContentMode })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(READER_CONTENT_MODE_LABELS) as ReaderContentMode[]).map(key => (
+                    <SelectItem key={key} value={key}>
+                      {READER_CONTENT_MODE_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

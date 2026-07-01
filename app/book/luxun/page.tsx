@@ -1,12 +1,24 @@
-'use client'
+import { Noto_Serif_SC } from 'next/font/google'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { BookReader } from '@/app/book/components/BookReader'
+import { getBookFontFamily, getBookThemeStyle, getBookToolbarTheme } from '@/app/book/utils/theme'
+import { useBookSettings } from '@/app/book/utils/settings'
+import { useBookMarks, type BookMark } from '@/app/book/utils/bookMarks'
+import { getSavedScrollPosition } from '@/app/book/utils/scroll'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from '@/hooks/useTranslation'
-import { PageContainer } from '@/components/layout'
-import { ChevronLeft, ChevronRight, BookOpen, Menu, X } from 'lucide-react'
+const notoSerif = Noto_Serif_SC({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+  variable: '--font-noto-serif-sc',
+  display: 'swap',
+  preload: false,
+})
 
-const UPYUN_CDN = process.env.NEXT_PUBLIC_ASSET_BASE_URL?.trim() || 'https://upyun.dogeow.com'
-const BOOK_BASE = `${UPYUN_CDN}/books/luxun`
+const BOOK_BASE =
+  (process.env.NEXT_PUBLIC_ASSET_BASE_URL?.trim() || 'https://upyun.dogeow.com') + '/books/luxun'
+
+const STORAGE_KEY = 'dogeow-luxun-reader'
 
 interface Volume {
   name: string
@@ -21,45 +33,60 @@ interface BookIndex {
 }
 
 export default function LuxunBookPage() {
-  const { t } = useTranslation()
+  const { settings, patchSettings, hydrated } = useBookSettings({
+    storageKey: STORAGE_KEY,
+    defaults: {
+      originalFontFamily: 'yahei',
+      translationFontFamily: 'yahei',
+      fontSize: 20,
+      lineHeight: 1.9,
+      theme: 'sepia',
+      pairDisplayMode: 'muted',
+      contentMode: 'both',
+      chapterId: '0-0',
+    } as any,
+  })
+  const { marks, addPositionBookmark, removeMark } = useBookMarks('luxun')
+
   const [index, setIndex] = useState<BookIndex | null>(null)
+  const [chapterContent, setChapterContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [selectedVolume, setSelectedVolume] = useState<number>(0)
-  const [selectedChapter, setSelectedChapter] = useState<number>(0)
-  const [chapterContent, setChapterContent] = useState<string>('')
-  const [contentLoading, setContentLoading] = useState(false)
+  const [selectedVolume, setSelectedVolume] = useState(0)
+  const [selectedChapter, setSelectedChapter] = useState(0)
 
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const flatChapters = useMemo(() => {
+    if (!index) return []
+    const result: { id: string; name: string; volIdx: number; chIdx: number }[] = []
+    index.volumes.forEach((vol, volIdx) => {
+      vol.chapters.forEach((ch, chIdx) => {
+        result.push({
+          id: `${volIdx}-${chIdx}`,
+          name: ch.name,
+          volIdx,
+          chIdx,
+        })
+      })
+    })
+    return result
+  }, [index])
 
-  // Load index
-  useEffect(() => {
-    fetch(`${BOOK_BASE}/index.json`)
-      .then(res => {
-        if (!res.ok) throw new Error('书目加载失败')
-        return res.json()
-      })
-      .then((data: BookIndex) => {
-        setIndex(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [])
+  const currentChapterId = `${selectedVolume}-${selectedChapter}`
 
-  // Load chapter content
   const loadChapter = useCallback(
-    async (volIdx: number, chIdx: number) => {
+    async (chapterId: string) => {
       if (!index) return
 
+      const [volIdx, chIdx] = chapterId.split('-').map(Number)
+      if (isNaN(volIdx) || isNaN(chIdx)) return
+
       const vol = index.volumes[volIdx]
-      const ch = vol.chapters[chIdx]
+      const ch = vol?.chapters[chIdx]
       if (!ch) return
 
-      setContentLoading(true)
+      setLoading(true)
+      setError(null)
       try {
         const res = await fetch(`${BOOK_BASE}/${ch.file}`)
         if (!res.ok) throw new Error('章节加载失败')
@@ -67,186 +94,157 @@ export default function LuxunBookPage() {
         setChapterContent(text)
         setSelectedVolume(volIdx)
         setSelectedChapter(chIdx)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '加载失败')
+
+        const saved = getSavedScrollPosition(STORAGE_KEY, chapterId)
+        requestAnimationFrame(() => {
+          const el = document.getElementById('luxun-content')
+          if (el) el.scrollTop = saved
+        })
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : '加载失败')
       } finally {
-        setContentLoading(false)
-        setSidebarOpen(false)
+        setLoading(false)
       }
     },
     [index]
   )
 
-  // Auto-load first chapter
   useEffect(() => {
-    if (index && !chapterContent && !loading) {
-      loadChapter(0, 0)
-    }
-  }, [index, loading, chapterContent, loadChapter])
+    fetch(`${BOOK_BASE}/index.json`)
+      .then(res => {
+        if (!res.ok) throw new Error('书目索引加载失败')
+        return res.json() as Promise<BookIndex>
+      })
+      .then(setIndex)
+      .catch(err => setError(err.message))
+  }, [])
 
-  const currentVolume = index?.volumes[selectedVolume]
-  const currentChapter = currentVolume?.chapters[selectedChapter]
+  useEffect(() => {
+    if (!hydrated || !index || !chapterContent) return
+    if (loading) return
 
-  // Find prev/next chapter
-  const navigateChapter = (direction: -1 | 1) => {
-    if (!currentVolume) return
-    const newChIdx = selectedChapter + direction
-    if (newChIdx >= 0 && newChIdx < currentVolume.chapters.length) {
-      loadChapter(selectedVolume, newChIdx)
+    const savedChapterId = (settings as any).chapterId as string
+    const [savedVol, savedCh] = savedChapterId.split('-').map(Number)
+    if (!isNaN(savedVol) && !isNaN(savedCh) && savedVol < index.volumes.length) {
+      const vol = index.volumes[savedVol]
+      if (savedCh < vol.chapters.length) {
+        setSelectedVolume(savedVol)
+        setSelectedChapter(savedCh)
+        loadChapter(savedChapterId)
+        return
+      }
     }
+
+    loadChapter('0-0')
+  }, [hydrated, index, chapterContent, loading, settings, loadChapter])
+
+  const navigateChapter = useCallback(
+    (direction: -1 | 1) => {
+      const currentFlatIdx = flatChapters.findIndex(c => c.id === currentChapterId)
+      if (currentFlatIdx < 0) return
+
+      const newIdx = currentFlatIdx + direction
+      if (newIdx >= 0 && newIdx < flatChapters.length) {
+        const next = flatChapters[newIdx]
+        patchSettings({ chapterId: next.id })
+        loadChapter(next.id)
+      }
+    },
+    [flatChapters, currentChapterId, loadChapter, patchSettings]
+  )
+
+  const currentVol = index?.volumes[selectedVolume]
+  const currentCh = currentVol?.chapters[selectedChapter]
+  const currentFlatIdx = flatChapters.findIndex(c => c.id === currentChapterId)
+  const hasPrev = currentFlatIdx > 0
+  const hasNext = currentFlatIdx >= 0 && currentFlatIdx < flatChapters.length - 1
+
+  const handleAddBookmark = () => {
+    if (!chapterContent) {
+      toast.error('请稍候，正文加载完成后再添加书签')
+      return
+    }
+
+    const ch = currentVol?.chapters[selectedChapter]
+    const chapterTitle = ch?.name ?? `第${selectedVolume + 1}卷`
+
+    const result = addPositionBookmark({
+      chapterId: currentChapterId,
+      chapterTitle,
+      scrollTop: 0,
+      excerpt: chapterContent.slice(0, 80),
+    })
+    toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
   }
 
-  if (loading) {
-    return (
-      <PageContainer className="flex items-center justify-center py-20">
-        <p className="text-muted-foreground">{t('common.loading', '加载中...')}</p>
-      </PageContainer>
-    )
+  const handleJumpToMark = (mark: BookMark) => {
+    patchSettings({ chapterId: mark.chapterId })
+    loadChapter(mark.chapterId)
   }
 
-  if (error || !index) {
+  const config = {
+    useSettings: () => ({ settings, patchSettings, hydrated }),
+    useBookMarks: () => ({
+      marks,
+      addPositionBookmark,
+      addCollection: addPositionBookmark,
+      removeMark,
+    }),
+    loadChapter,
+    chapters: flatChapters,
+    currentChapterId,
+    onChapterIdChange: (id: string) => {
+      patchSettings({ chapterId: id })
+      loadChapter(id)
+    },
+    onPrevChapter: hasPrev ? () => navigateChapter(-1) : undefined,
+    onNextChapter: hasNext ? () => navigateChapter(1) : undefined,
+    hasPrevChapter: hasPrev,
+    hasNextChapter: hasNext,
+    hasNarration: false,
+    hasTextSelection: false,
+    hasPairDisplayMode: false,
+    hasContentMode: false,
+    storageKey: STORAGE_KEY,
+    onAddBookmark: handleAddBookmark,
+    onJumpToMark: handleJumpToMark,
+    renderContent: () => (
+      <>
+        {loading && <p className="text-sm opacity-70">正在加载章节…</p>}
+
+        {!loading && chapterContent && (
+          <>
+            <header className="mb-8 border-b border-current/10 pb-6">
+              <h1 className="text-2xl font-semibold text-foreground">{currentCh?.name ?? ''}</h1>
+              {currentVol && (
+                <p className="text-muted-foreground mt-1 text-sm">{currentVol.name}</p>
+              )}
+            </header>
+            <div
+              id="luxun-content"
+              className="whitespace-pre-wrap text-base leading-relaxed text-foreground/90"
+            >
+              {chapterContent}
+            </div>
+          </>
+        )}
+
+        {error && index ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
+      </>
+    ),
+  }
+
+  if (error && !index) {
     return (
-      <PageContainer className="flex items-center justify-center py-20">
-        <p className="text-destructive">{error || '加载失败'}</p>
-      </PageContainer>
+      <div className="text-destructive flex h-full items-center justify-center p-6 text-sm">
+        {error}
+      </div>
     )
   }
 
   return (
-    <PageContainer className="py-0">
-      <div className="flex h-[calc(100vh-8rem)]">
-        {/* Sidebar */}
-        <aside
-          className={`
-            fixed inset-y-0 left-0 z-50 w-72 transform border-r border-white/10 bg-background/95 backdrop-blur-sm transition-transform lg:relative lg:translate-x-0
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          `}
-        >
-          <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <h2 className="text-lg font-semibold">{index.title}</h2>
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="lg:hidden rounded-lg p-1.5 hover:bg-white/10"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-2">
-              {index.volumes.map((vol, volIdx) => (
-                <div key={vol.name} className="mb-2">
-                  <button
-                    onClick={() => {
-                      setSelectedVolume(volIdx)
-                      if (vol.chapters.length > 0) {
-                        loadChapter(volIdx, 0)
-                      }
-                    }}
-                    className={`
-                      w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors
-                      ${
-                        volIdx === selectedVolume
-                          ? 'bg-primary/10 text-primary'
-                          : 'hover:bg-white/5'
-                      }
-                    `}
-                  >
-                    {vol.name}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({vol.chapters.length})
-                    </span>
-                  </button>
-
-                  {volIdx === selectedVolume && (
-                    <div className="ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-3">
-                      {vol.chapters.map((ch, chIdx) => (
-                        <button
-                          key={ch.file}
-                          onClick={() => loadChapter(volIdx, chIdx)}
-                          className={`
-                            block w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors
-                            ${
-                              chIdx === selectedChapter
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
-                            }
-                          `}
-                        >
-                          {ch.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        {/* Overlay for mobile sidebar */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main content */}
-        <main className="flex min-w-0 flex-1 flex-col">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 hover:bg-white/10 lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <BookOpen className="h-4 w-4" />
-              {currentVolume && currentChapter && (
-                <span>
-                  {currentVolume.name} / {currentChapter.name}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigateChapter(-1)}
-                disabled={selectedChapter <= 0}
-                className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-30"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => navigateChapter(1)}
-                disabled={!currentVolume || selectedChapter >= currentVolume.chapters.length - 1}
-                className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-30"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Chapter content */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 lg:px-12">
-            {contentLoading ? (
-              <p className="text-muted-foreground">{t('common.loading', '加载中...')}</p>
-            ) : (
-              <div className="mx-auto max-w-3xl">
-                <h1 className="mb-8 text-2xl font-semibold text-foreground">
-                  {currentChapter?.name}
-                </h1>
-                <div className="whitespace-pre-wrap text-base leading-relaxed text-foreground/90">
-                  {chapterContent}
-                </div>
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
-    </PageContainer>
+    <div className={`${notoSerif.variable} h-full min-h-0`}>
+      <BookReader config={config as any} />
+    </div>
   )
 }
