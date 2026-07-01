@@ -195,6 +195,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
             fontFamily: getBookFontFamily((settings as any).fontFamily ?? 'yahei'),
+            color: themeStyle?.color,
           }}
         >
           {config.renderContent({ contentRef, settings })}
