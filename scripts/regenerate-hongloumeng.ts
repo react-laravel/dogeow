@@ -5,7 +5,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
-import { parseHongloumengText } from '../app/book/hongloumeng/utils/parseBook'
+import { parseHongloumengText } from '../app/book/utils/bilingualParse'
 
 const SOURCE_FILE = '/Users/sam/Code/DogeOW/红楼梦/红楼梦对照.txt'
 const OUTPUT_DIR = '/Users/sam/Code/DogeOW/dogeow/public/books/hongloumeng/chapters'

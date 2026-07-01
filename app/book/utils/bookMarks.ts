@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { API_URL } from '@/lib/api'
+import { toast } from 'sonner'
 import useAuthStore from '@/stores/authStore'
+import { fetchBookMarks, removeBookMark, storeBookMark } from './bookMarkApi'
 
 export interface BookMark {
   id: string
@@ -27,11 +28,6 @@ export interface CreateBookMarkInput {
   note?: string
 }
 
-interface StoreBookMarkResponse {
-  mark: BookMark
-  created: boolean
-}
-
 function createBookMarkId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -39,12 +35,23 @@ function createBookMarkId(): string {
   return `mark-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+function buildPositionKey(input: CreateBookMarkInput): string | null {
+  if (input.kind !== 'position') return null
+
+  const chapterId = String(input.chapterId)
+  if (input.pairIndex != null) {
+    return `chapter:${chapterId}:pair:${input.pairIndex}`
+  }
+
+  return `chapter:${chapterId}:scroll:${Math.round(input.scrollTop)}`
+}
+
 function buildBookMark(input: CreateBookMarkInput): BookMark {
   return {
     id: createBookMarkId(),
     bookId: '',
     kind: input.kind,
-    chapterId: input.chapterId,
+    chapterId: String(input.chapterId),
     chapterTitle: input.chapterTitle,
     scrollTop: input.scrollTop,
     pairIndex: input.pairIndex ?? null,
@@ -56,66 +63,6 @@ function buildBookMark(input: CreateBookMarkInput): BookMark {
 
 function sortBookMarks(marks: BookMark[]): BookMark[] {
   return [...marks].sort((a, b) => b.createdAt - a.createdAt)
-}
-
-async function requestBookMarks(token: string, bookId: string): Promise<BookMark[]> {
-  const response = await fetch(`${API_URL}/api/books/${bookId}/marks`, {
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`读取书签失败：${response.status}`)
-  }
-
-  return (await response.json()) as BookMark[]
-}
-
-async function createBookMark(
-  token: string,
-  bookId: string,
-  mark: BookMark
-): Promise<StoreBookMarkResponse> {
-  const response = await fetch(`${API_URL}/api/books/${bookId}/marks`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      id: mark.id,
-      kind: mark.kind,
-      chapterId: mark.chapterId,
-      chapterTitle: mark.chapterTitle,
-      scrollTop: mark.scrollTop,
-      excerpt: mark.excerpt,
-      note: mark.note,
-      createdAt: mark.createdAt,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`保存书签失败：${response.status}`)
-  }
-
-  return (await response.json()) as StoreBookMarkResponse
-}
-
-async function deleteBookMark(token: string, bookId: string, id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/api/books/${bookId}/marks/${id}`, {
-    method: 'DELETE',
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`删除书签失败：${response.status}`)
-  }
 }
 
 export function useBookMarks(bookId: string) {
@@ -144,7 +91,7 @@ export function useBookMarks(bookId: string) {
       return
     }
 
-    requestBookMarks(token, bookId)
+    fetchBookMarks(bookId)
       .then(async remoteMarks => {
         if (cancelled) return
         const nextMarks = sortBookMarks(remoteMarks)
@@ -164,9 +111,15 @@ export function useBookMarks(bookId: string) {
   const addMark = useCallback(
     (input: CreateBookMarkInput): { mark: BookMark; created: boolean } => {
       const currentMarks = marksRef.current
-      const duplicate = currentMarks.find(
-        mark => mark.kind === input.kind && mark.chapterId === input.chapterId
-      )
+      const positionKey = buildPositionKey(input)
+      const duplicate =
+        input.kind === 'position' && positionKey
+          ? currentMarks.find(
+              mark => mark.kind === 'position' && buildPositionKey(mark) === positionKey
+            )
+          : currentMarks.find(
+              mark => mark.kind === input.kind && String(mark.chapterId) === String(input.chapterId)
+            )
 
       if (duplicate) {
         return { mark: duplicate, created: false }
@@ -179,15 +132,17 @@ export function useBookMarks(bookId: string) {
 
       const currentToken = tokenRef.current
       if (currentToken) {
-        void createBookMark(currentToken, bookId, mark)
+        void storeBookMark(bookId, mark)
           .then(result => {
             setMarks(current => {
               const withoutOptimistic = current.filter(item => item.id !== mark.id)
               return sortBookMarks([result.mark, ...withoutOptimistic])
             })
           })
-          .catch(() => {
+          .catch(error => {
             setMarks(current => current.filter(item => item.id !== mark.id))
+            const message = error instanceof Error ? error.message : '保存书签失败，请稍后重试'
+            toast.error(message)
           })
       }
 
@@ -206,7 +161,7 @@ export function useBookMarks(bookId: string) {
 
       const currentToken = tokenRef.current
       if (currentToken) {
-        void deleteBookMark(currentToken, bookId, id).catch(() => {
+        void removeBookMark(bookId, id).catch(() => {
           if (removed) {
             setMarks(current => sortBookMarks([removed as BookMark, ...current]))
           }

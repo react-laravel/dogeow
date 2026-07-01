@@ -297,6 +297,8 @@ vi.mock('@/components/ui/select', () => ({
     </SelectMockContext.Provider>
   ),
   SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectGroup: ({ children }: { children: React.ReactNode }) => <div role="group">{children}</div>,
+  SelectLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => {
     const context = React.useContext(SelectMockContext)
     return (
@@ -315,7 +317,7 @@ vi.mock('@/components/ui/select', () => ({
       {children}
     </button>
   ),
-  SelectValue: () => null,
+  SelectValue: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }))
 
 vi.mock('@/components/ui/popover', () => ({

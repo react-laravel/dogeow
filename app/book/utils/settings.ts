@@ -1,13 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import type {
-  ReaderSettings,
-  ReaderTheme,
-  ReaderFont,
-} from '@/app/book/hongloumeng/hooks/useReaderSettings'
+import type { BaseReaderSettings, ReaderTheme, ReaderFont } from '@/app/book/types/reader'
 
-export interface BookSettingsOptions<TSettings extends ReaderSettings> {
+export interface BookSettingsOptions<TSettings extends BaseReaderSettings> {
   storageKey: string
   defaults: TSettings
 }
@@ -23,7 +19,7 @@ function isValidTheme(value: unknown): value is ReaderTheme {
   return THEME_VALUES.includes(value as ReaderTheme)
 }
 
-export function useBookSettings<TSettings extends ReaderSettings>({
+export function useBookSettings<TSettings extends BaseReaderSettings>({
   storageKey,
   defaults,
 }: BookSettingsOptions<TSettings>): {
@@ -66,7 +62,7 @@ export function useBookSettings<TSettings extends ReaderSettings>({
       }
       setHydrated(true)
     })
-  }, [storageKey, defaults])
+  }, [storageKey])
 
   const patchSettings = useCallback(
     (patch: Partial<TSettings>) => {

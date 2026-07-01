@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { ReaderToolbar } from '@/app/book/hongloumeng/components/ReaderToolbar'
-import { ReaderSettingsPanel } from '@/app/book/hongloumeng/components/ReaderSettingsPanel'
-import { BookMarksPanel } from '@/app/book/hongloumeng/components/BookMarksPanel'
+import { ReaderToolbar } from '@/app/book/components/ReaderToolbar'
+import { ReaderSettingsPanel } from '@/app/book/components/ReaderSettingsPanel'
+import { BookMarksPanel } from '@/app/book/components/BookMarksPanel'
 import {
   type BookJumpTarget,
   findScrollingAncestor,
   getReadingPosition,
+  getSavedScrollPosition,
   scheduleBookJump,
   useScrollSaver,
 } from '@/app/book/utils/scroll'
+import { TextSelectionToolbar } from '@/app/book/components/TextSelectionToolbar'
+import { useBookTextSelectionActions } from '@/app/book/hooks/useBookTextSelectionActions'
 import type { BookReaderConfig } from '@/app/book/types'
-import { getBookFontFamily, getBookThemeStyle, getBookToolbarTheme } from '@/app/book/utils/theme'
-import type { BookFont, BookTheme } from '@/app/book/utils/theme'
+import { getBookFontFamily, getBookThemeStyle } from '@/app/book/utils/theme'
+import type { BookTheme } from '@/app/book/utils/theme'
 
 interface BookReaderProps<
   ChapterId,
@@ -25,36 +28,61 @@ interface BookReaderProps<
 
 export function BookReader({ config }: BookReaderProps<any, any>) {
   const { settings, patchSettings, hydrated } = config.useSettings()
-  const { marks, addPositionBookmark, removeMark } = config.useBookMarks()
+  const { marks, addPositionBookmark, addCollection, removeMark } = config.useBookMarks()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [marksPanelOpen, setMarksPanelOpen] = useState(false)
+  const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false)
+  const [collectionsPanelOpen, setCollectionsPanelOpen] = useState(false)
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [jumpRequest, setJumpRequest] = useState(0)
 
   const contentRef = useRef<HTMLDivElement>(null)
   const pendingJumpRef = useRef<BookJumpTarget | null>(null)
 
+  const {
+    loadChapter: loadChapterFromConfig,
+    currentChapterId,
+    chapters,
+    chapterGroups,
+    onChapterIdChange,
+    onPrevChapter,
+    onNextChapter,
+    hasPrevChapter,
+    hasNextChapter,
+    hasNarration,
+    hasTextSelection,
+    hasPairDisplayMode,
+    hasContentMode,
+    chapterSelectPlaceholder,
+    bookTitle,
+    renderContent,
+    scrollStorageKey,
+  } = config
+
   const themeStyle = getBookThemeStyle(settings.theme)
 
   // ─── Scroll position persistence ──────────────────────────────────
 
-  useScrollSaver(contentRef, 'book-reader', config.currentChapterId)
+  useScrollSaver(contentRef, scrollStorageKey ?? 'book-reader', currentChapterId)
 
   // ─── Chapter loading ──────────────────────────────────────────────
 
   const loadChapter = useCallback(
-    async (chapterId: any) => {
+    async (chapterId: typeof currentChapterId) => {
       setLoading(true)
       setError(null)
       try {
-        await config.loadChapter(chapterId)
+        await loadChapterFromConfig(chapterId)
 
         requestAnimationFrame(() => {
           const scrollEl = contentRef.current ? findScrollingAncestor(contentRef.current) : null
-          if (scrollEl) {
+          if (!scrollEl) return
+
+          if (scrollStorageKey) {
+            scrollEl.scrollTop = getSavedScrollPosition(scrollStorageKey, chapterId)
+          } else {
             scrollEl.scrollTop = 0
           }
         })
@@ -64,14 +92,14 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
         setLoading(false)
       }
     },
-    [config]
+    [loadChapterFromConfig, scrollStorageKey]
   )
 
   // Auto-load chapter when hydrated or chapterId changes
   useEffect(() => {
     if (!hydrated) return
-    loadChapter(config.currentChapterId)
-  }, [hydrated, config.currentChapterId, loadChapter])
+    loadChapter(currentChapterId)
+  }, [hydrated, currentChapterId, loadChapter])
 
   // ─── Jump to bookmark ─────────────────────────────────────────────
 
@@ -93,48 +121,73 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
 
   const handleChapterChange = useCallback(
     (chapterId: string) => {
-      const resolvedId = config.chapters.find((c: any) => c.id === chapterId)?.id
+      const resolvedId = chapters.find((c: { id: unknown }) => String(c.id) === chapterId)?.id
       if (resolvedId !== undefined) {
-        config.onChapterIdChange(resolvedId)
+        onChapterIdChange(resolvedId)
       }
     },
-    [config]
+    [chapters, onChapterIdChange]
   )
 
-  const handleAddCurrentBookmark = useCallback(() => {
+  const getChapterContext = useCallback(() => {
     const position = getReadingPosition(contentRef.current)
-    const chapter = config.chapters.find((c: any) => c.id === config.currentChapterId)
-    const chapterTitle = chapter?.title ?? ''
+    const chapter = chapters.find((c: { id: unknown }) => c.id === currentChapterId)
+    const chapterTitle = (chapter as { title?: string })?.title ?? ''
 
-    const result = addPositionBookmark({
-      chapterId: config.currentChapterId,
+    return {
+      chapterId: currentChapterId,
       chapterTitle,
       scrollTop: position.scrollTop,
+      pairIndex: position.pairIndex ?? null,
+    }
+  }, [chapters, currentChapterId])
+
+  const { handleSelectionBookmark, handleAddCollection, handleAskAi, handlePlaySelection } =
+    useBookTextSelectionActions({
+      bookTitle,
+      getContext: getChapterContext,
+      addPositionBookmark,
+      addCollection,
     })
-    toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
-  }, [config, addPositionBookmark])
+
+  const handleAddCurrentBookmark = useCallback(() => {
+    const context = getChapterContext()
+    const result = addPositionBookmark({
+      chapterId: context.chapterId,
+      chapterTitle: context.chapterTitle,
+      scrollTop: context.scrollTop,
+    })
+    toast[result.created ? 'success' : 'info'](result.created ? '已添加展示' : '该位置已有展示')
+  }, [addPositionBookmark, getChapterContext])
 
   const handleJumpToMark = useCallback(
-    (mark: any) => {
+    (mark: {
+      chapterId: typeof currentChapterId
+      scrollTop: number
+      pairIndex?: number | null
+    }) => {
       pendingJumpRef.current = {
         chapterId: mark.chapterId,
         scrollTop: mark.scrollTop,
         pairIndex: mark.pairIndex ?? null,
       }
 
-      if (mark.chapterId !== config.currentChapterId) {
-        config.onChapterIdChange(mark.chapterId)
+      if (mark.chapterId !== currentChapterId) {
+        onChapterIdChange(mark.chapterId)
         return
       }
 
       setJumpRequest(value => value + 1)
     },
-    [config]
+    [currentChapterId, onChapterIdChange]
   )
 
   // ─── Render ───────────────────────────────────────────────────────
 
-  if (error && config.chapters.length === 0) {
+  const positionBookmarks = marks.filter((mark: { kind: string }) => mark.kind === 'position')
+  const collections = marks.filter((mark: { kind: string }) => mark.kind === 'collection')
+
+  if (error && chapters.length === 0) {
     return (
       <div className="text-destructive flex h-full items-center justify-center p-6 text-sm">
         {error}
@@ -148,14 +201,26 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       style={themeStyle}
       data-reader-theme={settings.theme}
     >
-      {config.chapters.length > 0 && (
+      {chapters.length > 0 && (
         <ReaderToolbar
-          chapters={config.chapters.map((c: any) => ({ id: String(c.id), title: c.title }))}
+          chapters={chapters.map((c: { id: unknown; title: string }) => ({
+            id: String(c.id),
+            title: c.title,
+          }))}
+          chapterGroups={chapterGroups?.map(group => ({
+            label: group.label,
+            chapters: group.chapters.map((c: { id: unknown; title: string }) => ({
+              id: String(c.id),
+              title: c.title,
+            })),
+          }))}
+          currentChapterId={String(currentChapterId)}
           settings={settings as any}
-          markCount={marks.length}
+          bookmarkCount={positionBookmarks.length}
+          collectionCount={collections.length}
           onChapterChange={handleChapterChange}
-          onAddBookmark={handleAddCurrentBookmark}
-          onOpenMarks={() => setMarksPanelOpen(true)}
+          onOpenBookmarks={() => setBookmarksPanelOpen(true)}
+          onOpenCollections={() => setCollectionsPanelOpen(true)}
           onOpenSettings={() => setSettingsPanelOpen(true)}
           narrationStatus="idle"
           narrationMode="original"
@@ -164,11 +229,12 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
           onPauseNarration={() => {}}
           onResumeNarration={() => {}}
           onStopNarration={() => {}}
-          hideNarration={!config.hasNarration}
-          onPrevChapter={config.onPrevChapter}
-          onNextChapter={config.onNextChapter}
-          hasPrevChapter={config.hasPrevChapter}
-          hasNextChapter={config.hasNextChapter}
+          hideNarration={!hasNarration}
+          onPrevChapter={onPrevChapter}
+          onNextChapter={onNextChapter}
+          hasPrevChapter={hasPrevChapter}
+          hasNextChapter={hasNextChapter}
+          chapterSelectPlaceholder={chapterSelectPlaceholder}
         />
       )}
 
@@ -177,12 +243,24 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
         onOpenChange={setSettingsPanelOpen}
         settings={settings as any}
         onPatchSettings={patchSettings as any}
-        isLuxun={!config.hasPairDisplayMode}
+        hasPairDisplayMode={hasPairDisplayMode}
+        hasContentMode={hasContentMode}
       />
 
       <BookMarksPanel
-        open={marksPanelOpen}
-        onOpenChange={setMarksPanelOpen}
+        kind="position"
+        open={bookmarksPanelOpen}
+        onOpenChange={setBookmarksPanelOpen}
+        marks={marks as any}
+        onJump={handleJumpToMark}
+        onRemove={removeMark}
+        onAddCurrent={handleAddCurrentBookmark}
+      />
+
+      <BookMarksPanel
+        kind="collection"
+        open={collectionsPanelOpen}
+        onOpenChange={setCollectionsPanelOpen}
         marks={marks as any}
         onJump={handleJumpToMark}
         onRemove={removeMark}
@@ -198,8 +276,19 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
             color: themeStyle?.color,
           }}
         >
-          {config.renderContent({ contentRef, settings, themeColor: themeStyle?.color })}
+          {renderContent({ contentRef, settings, themeColor: themeStyle?.color })}
         </article>
+
+        {hasTextSelection ? (
+          <TextSelectionToolbar
+            containerRef={contentRef}
+            onAddBookmark={handleSelectionBookmark}
+            onAddCollection={handleAddCollection}
+            onAskAi={handleAskAi}
+            onPlaySelection={hasNarration ? handlePlaySelection : undefined}
+            showNarration={hasNarration}
+          />
+        ) : null}
       </div>
     </div>
   )

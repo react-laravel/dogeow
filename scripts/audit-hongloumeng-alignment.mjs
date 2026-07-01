@@ -10,7 +10,7 @@ import {
   splitChineseSentences,
   mergeContinuationSentences,
   alignSentencePairs,
-} from '../app/book/hongloumeng/utils/parseBook.ts'
+} from '../app/book/utils/bilingualParse.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SOURCE = path.resolve(__dirname, '../../红楼梦/红楼梦对照.txt')

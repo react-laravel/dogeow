@@ -50,7 +50,7 @@ next-env.d.ts
 .knowledge/
 
 # 书籍预处理 JSON（部署到又拍云，不纳入前端仓库）
-/public/books/hongloumeng/
+/public/books/
 
 # PM2
 logs/

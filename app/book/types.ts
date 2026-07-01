@@ -1,5 +1,16 @@
 import type { ReactNode, RefObject } from 'react'
 
+export interface BookChapterOption<ChapterId = string | number> {
+  id: ChapterId
+  title: string
+}
+
+/** 多卷书目：按卷分组展示篇目选择器 */
+export interface BookChapterGroup<ChapterId = string | number> {
+  label: string
+  chapters: BookChapterOption<ChapterId>[]
+}
+
 // ─── Generic BookReader Configuration ────────────────────────────────
 
 export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
@@ -17,15 +28,33 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
       chapterId: ChapterId
       chapterTitle: string
       scrollTop: number
+      pairIndex?: number | null
+      excerpt?: string
     }) => { mark: BookMarkType; created: boolean }
+    addCollection: (input: {
+      chapterId: ChapterId
+      chapterTitle: string
+      scrollTop: number
+      pairIndex?: number | null
+      excerpt?: string
+    }) => void
     removeMark: (id: string) => void
   }
+
+  /** 书名，用于滑词问 AI */
+  bookTitle: string
 
   /** Load chapter content by ID */
   loadChapter: (chapterId: ChapterId) => Promise<void>
 
-  /** Flat chapter list for the toolbar dropdown */
-  chapters: { id: ChapterId; title: string }[]
+  /** Flat chapter list（上一章/下一章、书签等） */
+  chapters: BookChapterOption<ChapterId>[]
+
+  /** 按卷分组；有值时篇目选择器显示卷标题 + 章名，否则平铺 chapters */
+  chapterGroups?: BookChapterGroup<ChapterId>[]
+
+  /** Toolbar chapter picker placeholder; default「选择章节」，多卷书目可用「选择篇目」 */
+  chapterSelectPlaceholder?: string
 
   /** Currently active chapter ID */
   currentChapterId: ChapterId
@@ -44,6 +73,9 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
   hasTextSelection: boolean
   hasPairDisplayMode: boolean
   hasContentMode: boolean
+
+  /** sessionStorage key for scroll position; omit to reset scroll on chapter change */
+  scrollStorageKey?: string
 
   /** Render the book-specific content area */
   renderContent: (ctx: {

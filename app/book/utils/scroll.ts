@@ -71,6 +71,38 @@ export function getReadingPosition(
   return result
 }
 
+// ─── Pair index detection (bilingual books) ──────────────────────────
+
+export function findNearestPairIndex(container: HTMLElement): number | null {
+  const scrollContainer = findScrollingAncestor(container) ?? container
+  const viewportRect = scrollContainer.getBoundingClientRect()
+  const viewportHeight = scrollContainer.clientHeight || viewportRect.height
+  const anchorY = viewportRect.top + viewportHeight * READING_ANCHOR_RATIO
+  const pairs = container.querySelectorAll('[data-pair-index]')
+
+  let pairIndex: number | null = null
+  let bestDistance = Infinity
+
+  pairs.forEach(node => {
+    if (!(node instanceof HTMLElement)) return
+
+    const rect = node.getBoundingClientRect()
+    if (rect.bottom < viewportRect.top || rect.top > viewportRect.bottom) return
+
+    const centerY = rect.top + rect.height / 2
+    const distance = Math.abs(centerY - anchorY)
+    if (distance >= bestDistance) return
+
+    const parsed = Number(node.getAttribute('data-pair-index'))
+    if (!Number.isFinite(parsed)) return
+
+    bestDistance = distance
+    pairIndex = parsed
+  })
+
+  return pairIndex
+}
+
 // ─── Element scrolling ───────────────────────────────────────────────
 
 export function scrollElementIntoContainer(
