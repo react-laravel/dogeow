@@ -238,15 +238,12 @@ export default function LuxunBookPage() {
         {chapterContent && (
           <>
             <header className="mb-8 border-b border-current/10 pb-6">
-              <h1 className="text-2xl font-semibold text-foreground">{currentCh?.name ?? ''}</h1>
+              <h1 className="text-2xl font-semibold">{currentCh?.name ?? ''}</h1>
               {currentVol && (
                 <p className="text-muted-foreground mt-1 text-sm">{currentVol.name}</p>
               )}
             </header>
-            <div
-              id="luxun-content"
-              className="whitespace-pre-wrap text-base leading-relaxed text-foreground/90"
-            >
+            <div id="luxun-content" className="whitespace-pre-wrap text-base leading-relaxed">
               {chapterContent}
             </div>
           </>
