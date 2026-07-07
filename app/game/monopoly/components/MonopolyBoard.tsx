@@ -73,16 +73,21 @@ export function chooseBoardLayout(
       const cellSize = Math.floor(Math.min(width / layout.cols, height / layout.rows))
       const boardWidth = layout.cols * cellSize
       const boardHeight = layout.rows * cellSize
+      const boardArea = boardWidth * boardHeight
+      const widthFill = boardWidth / width
+      const heightFill = boardHeight / height
 
-      return { ...layout, cellSize, boardWidth, boardHeight }
+      return { ...layout, cellSize, boardWidth, boardHeight, boardArea, widthFill, heightFill }
     })
     .reduce((best, layout) => {
-      if (isPortrait && layout.boardHeight !== best.boardHeight) {
-        return layout.boardHeight > best.boardHeight ? layout : best
+      if (layout.boardArea !== best.boardArea) {
+        return layout.boardArea > best.boardArea ? layout : best
       }
 
-      if (!isPortrait && layout.boardWidth !== best.boardWidth) {
-        return layout.boardWidth > best.boardWidth ? layout : best
+      const layoutPrimaryFill = isPortrait ? layout.widthFill : layout.heightFill
+      const bestPrimaryFill = isPortrait ? best.widthFill : best.heightFill
+      if (layoutPrimaryFill !== bestPrimaryFill) {
+        return layoutPrimaryFill > bestPrimaryFill ? layout : best
       }
 
       if (layout.cellSize !== best.cellSize) {

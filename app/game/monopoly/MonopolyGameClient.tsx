@@ -610,6 +610,13 @@ export default function MonopolyGameClient() {
                     <div className="grid grid-cols-2 gap-2 [@media_(orientation:landscape)]:grid-cols-2">
                       {playerSummary.map(player => {
                         const isActivePlayer = player.id === currentPlayer?.id
+                        const netWorth = playerNetWorth.get(player.id) ?? player.cash
+                        const playerStatus = [
+                          player.is_in_jail ? '监狱' : null,
+                          player.is_bankrupt ? '破产' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
 
                         return (
                           <button
@@ -624,20 +631,20 @@ export default function MonopolyGameClient() {
                               setSelectedAssetPlayerId(player.id)
                               setCenterView('assets')
                             }}
-                            aria-label={`查看${player.name}资产，总资产${formatMoney(playerNetWorth.get(player.id) ?? player.cash)}`}
+                            aria-label={`查看${player.name}资产，现金${formatMoney(player.cash)}，总资产${formatMoney(netWorth)}`}
                           >
                             <div className="truncate text-xs font-medium text-stone-900 dark:text-stone-100">
                               {player.name}
                               {player.type === 'computer' ? ' · 电脑' : ''}
                             </div>
-                            <div className="mt-0.5 font-mono text-sm font-semibold text-stone-950 dark:text-stone-50">
-                              {formatMoney(player.cash)}
+                            <div className="mt-0.5 truncate font-mono text-sm font-semibold text-stone-950 dark:text-stone-50">
+                              {formatMoney(player.cash)}/{formatMoney(netWorth)}
                             </div>
-                            <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
-                              总资产 {formatMoney(playerNetWorth.get(player.id) ?? player.cash)}
-                              {player.is_in_jail ? ' · 监狱' : ''}
-                              {player.is_bankrupt ? ' · 破产' : ''}
-                            </div>
+                            {playerStatus && (
+                              <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
+                                {playerStatus}
+                              </div>
+                            )}
                           </button>
                         )
                       })}

@@ -86,6 +86,6 @@ describe('MonopolyBoard', () => {
 
   it('chooses a board shape that fills the available viewport while keeping square cells', () => {
     expect(chooseBoardLayout(1270, 510)).toMatchObject({ cols: 11, rows: 5 })
-    expect(chooseBoardLayout(820, 1420)).toMatchObject({ cols: 5, rows: 11 })
+    expect(chooseBoardLayout(820, 1420)).toMatchObject({ cols: 6, rows: 10 })
   })
 })

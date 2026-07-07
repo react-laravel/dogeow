@@ -58,3 +58,6 @@ TODO
 - Delayed event-log updates until movement animations finish and locked player actions while dice/movement animation is running.
 - Enforced the per-turn 2-house build limit in the API and hid frontend build controls once the current player reaches that turn limit.
 - Cleaned up the estate game frontend by centralizing house-limit constants, adding current-player emphasis, exposing remaining build quota on owned tiles, and adding empty states for room/event lists.
+- Updated portrait board layout selection to maximize visible board area so side tiles align closer to screen edges, and compacted player cards to show cash/net worth on one line.
+- Updated backend turn flow so rolls that leave no follow-up action auto-advance the turn, and paying to leave jail immediately ends the current turn.
+- Raised city land prices from 200K through 2.8M and changed city rent to 20% of land plus house value.
