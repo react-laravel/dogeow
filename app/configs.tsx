@@ -142,6 +142,12 @@ const GAMES = [
     icon: '⚔️',
   },
   {
+    id: 'monopoly',
+    nameKey: 'game.monopoly',
+    descriptionKey: 'game.monopoly.desc',
+    icon: '🏙️',
+  },
+  {
     id: 'sliding-puzzle',
     nameKey: 'game.sliding-puzzle',
     descriptionKey: 'game.sliding-puzzle.desc',
