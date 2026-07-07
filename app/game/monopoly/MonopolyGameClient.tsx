@@ -9,26 +9,9 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
-import {
-  ArrowLeft,
-  Bot,
-  HelpCircle,
-  Home,
-  Loader2,
-  Plus,
-  ScrollText,
-  Trophy,
-  UserPlus,
-} from 'lucide-react'
+import { ArrowLeft, Bot, Home, Loader2, Plus, Trophy, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { PageContainer } from '@/components/layout'
 import { createEchoInstance, getEchoInstance } from '@/lib/websocket'
@@ -46,18 +29,8 @@ interface LobbyBroadcastPayload {
   rooms?: MonopolyRoomSummary[]
 }
 
-type CenterView = 'main' | 'assets' | 'events'
+type CenterView = 'main' | 'assets'
 const APP_SCROLL_CONTAINER_IDS = ['main-scroll', 'main-container'] as const
-const MONOPOLY_RULES = [
-  '每名玩家初始资金 8M，经过或回到起点获得 2M。',
-  '单骰 1-6 点，玩家按回合行动；电脑玩家会自动掷骰、买地和盖房。',
-  '城市价格从罗马 100K 起递增，后续城市依次到 1.4M。',
-  '城市可盖房，每栋 500K；单次最多盖 2 栋，单个城市最多 5 栋。',
-  '城市过路费为地皮和房屋总价值的 10%；铁路和航空按拥有数量提高收费。',
-  '机会和公益福利会随机触发奖励、惩罚、移动、进监狱或出狱卡。',
-  '现金不足支付费用时玩家破产，资产释放；只剩一名未破产玩家时获胜。',
-  '默认最多 30 轮；到达轮数上限后按总资产结算，总资产为现金 + 地皮 + 房屋价值。',
-]
 
 function useLockAppScroll(locked: boolean) {
   useEffect(() => {
@@ -97,6 +70,7 @@ export default function MonopolyGameClient() {
   const [error, setError] = useState<string | null>(null)
   const [centerView, setCenterView] = useState<CenterView>('main')
   const [selectedAssetPlayerId, setSelectedAssetPlayerId] = useState<number | null>(null)
+  const [displayedEvents, setDisplayedEvents] = useState<MonopolyState['events']>([])
   const [displayedPlayers, setDisplayedPlayers] = useState<MonopolyState['players']>([])
   const [movingPlayerId, setMovingPlayerId] = useState<number | null>(null)
   const [highlightedPosition, setHighlightedPosition] = useState<number | null>(null)
@@ -114,6 +88,9 @@ export default function MonopolyGameClient() {
     [state, currentUserId]
   )
   const isMyTurn = Boolean(me && currentPlayer?.id === me.id && state?.room.status === 'playing')
+  const isMovementAnimating = movingPlayerId !== null
+  const actionLocked = loading || rolling || isMovementAnimating
+  const remainingBuildsThisTurn = Math.max(0, 2 - (me?.houses_built_this_turn ?? 0))
   const currentProperty = useMemo(() => {
     if (!me || !state) return null
     return state.properties.find(property => property.tile_index === me.position) ?? null
@@ -166,20 +143,9 @@ export default function MonopolyGameClient() {
       ),
     [selectedAssetProperties]
   )
-  const latestCardEvent = useMemo(() => {
-    if (!state) return null
-
-    return (
-      [...state.events]
-        .reverse()
-        .find(event => event.type === 'chance.drawn' || event.type === 'welfare.drawn') ?? null
-    )
-  }, [state])
   const finishedEvent = useMemo(() => {
-    if (!state) return null
-
-    return [...state.events].reverse().find(event => event.type === 'game.finished') ?? null
-  }, [state])
+    return [...displayedEvents].reverse().find(event => event.type === 'game.finished') ?? null
+  }, [displayedEvents])
   const boardPlayers = displayedPlayers.length > 0 ? displayedPlayers : (state?.players ?? [])
 
   useEffect(() => {
@@ -258,6 +224,7 @@ export default function MonopolyGameClient() {
         clearMovementTimers()
         displayedPlayersRef.current = nextState.players
         setDisplayedPlayers(nextState.players)
+        setDisplayedEvents(nextState.events)
         setMovingPlayerId(null)
         setHighlightedPosition(null)
         return
@@ -273,6 +240,7 @@ export default function MonopolyGameClient() {
         if (!change) {
           displayedPlayersRef.current = nextState.players
           setDisplayedPlayers(nextState.players)
+          setDisplayedEvents(nextState.events)
           setMovingPlayerId(null)
           setHighlightedPosition(null)
           return
@@ -432,6 +400,7 @@ export default function MonopolyGameClient() {
     currentProperty.houses < 5 &&
     me &&
     me.cash >= currentProperty.house_price &&
+    remainingBuildsThisTurn > 0 &&
     me.last_roll !== null
   const canEndTurn = isMyTurn && Boolean(me?.last_roll || me?.is_in_jail)
 
@@ -596,163 +565,150 @@ export default function MonopolyGameClient() {
                         </Button>
                       </div>
                     )}
-                    <div className="mt-2 flex justify-center">
-                      <MonopolyRulesDialog />
-                    </div>
                   </div>
                 </div>
               ) : state.room.status === 'finished' && centerView === 'main' ? (
-                <div className="flex size-full flex-col items-center justify-center gap-4 overflow-hidden rounded-md bg-white/75 p-4 text-center dark:bg-stone-950/45">
-                  <Trophy className="size-10 text-amber-500" />
-                  <div className="min-w-0 max-w-full">
-                    <div className="truncate text-lg font-semibold text-stone-950 dark:text-stone-50">
-                      游戏结束
-                    </div>
-                    <div className="mt-2 text-sm text-stone-600 dark:text-stone-300">
-                      {finishedEvent?.message ?? `已完成第 ${state.room.max_rounds} 轮结算`}
+                <div className="flex size-full flex-col gap-3 overflow-hidden rounded-md bg-white/75 p-4 dark:bg-stone-950/45">
+                  <div className="flex shrink-0 flex-col items-center gap-3 text-center">
+                    <Trophy className="size-10 text-amber-500" />
+                    <div className="min-w-0 max-w-full">
+                      <div className="truncate text-lg font-semibold text-stone-950 dark:text-stone-50">
+                        游戏结束
+                      </div>
+                      <div className="mt-2 text-sm text-stone-600 dark:text-stone-300">
+                        {finishedEvent?.message ?? `已完成第 ${state.room.max_rounds} 轮结算`}
+                      </div>
                     </div>
                   </div>
-                  <Button variant="outline" onClick={() => setCenterView('events')}>
-                    <ScrollText /> 事件日志
-                  </Button>
-                  <MonopolyRulesDialog />
+                  <EventLogPanel events={displayedEvents} />
                 </div>
               ) : centerView === 'main' ? (
-                <div className="flex size-full flex-col gap-3 overflow-hidden">
-                  <div className="flex items-center justify-between gap-3 rounded-md bg-white/75 px-3 py-2 dark:bg-stone-950/45">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">
-                        第 {Math.min(state.room.round, state.room.max_rounds)} /{' '}
-                        {state.room.max_rounds} 轮 · {currentPlayer?.name ?? '等待开始'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {playerSummary.map(player => (
-                      <button
-                        type="button"
-                        key={player.id}
-                        className="min-w-0 rounded-md bg-white/75 px-2 py-1.5 text-left transition hover:bg-white focus:ring-2 focus:ring-amber-400 focus:outline-none dark:bg-stone-950/45 dark:hover:bg-stone-900"
-                        onClick={() => {
-                          setSelectedAssetPlayerId(player.id)
-                          setCenterView('assets')
-                        }}
-                      >
-                        <div className="truncate text-xs font-medium text-stone-900 dark:text-stone-100">
-                          {player.name}
-                          {player.type === 'computer' ? ' · 电脑' : ''}
-                        </div>
-                        <div className="mt-0.5 font-mono text-sm font-semibold text-stone-950 dark:text-stone-50">
-                          {formatMoney(playerNetWorth.get(player.id) ?? player.cash)}
-                        </div>
-                        <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
-                          总资产
-                          {player.is_in_jail ? ' · 监狱' : ''}
-                          {player.is_bankrupt ? ' · 破产' : ''}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="min-h-0 flex-1 rounded-md bg-white/75 p-3 dark:bg-stone-950/45">
-                    <div className="flex items-center gap-3">
-                      <Dice value={diceValue} rolling={rolling} />
+                <div className="grid size-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden [@media_(orientation:landscape)]:grid-cols-[minmax(360px,1fr)_minmax(360px,1fr)] [@media_(orientation:landscape)]:grid-rows-1">
+                  <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 rounded-md bg-white/75 px-3 py-2 dark:bg-stone-950/45">
                       <div className="min-w-0">
-                        <div className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">
-                          {isMyTurn ? '轮到你行动' : `等待 ${currentPlayer?.name ?? '玩家'}`}
+                        <div className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">
+                          第 {Math.min(state.room.round, state.room.max_rounds)} /{' '}
+                          {state.room.max_rounds} 轮 · {currentPlayer?.name ?? '等待开始'}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <Button
-                        onClick={roll}
-                        disabled={!isMyTurn || Boolean(me?.last_roll) || rolling || loading}
-                      >
-                        掷骰子
-                      </Button>
-                      {canEndTurn && (
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            runAction(async () =>
-                              applyState((await monopolyApi.endTurn(state.room.id)).state)
-                            )
-                          }
-                          disabled={loading}
+                    <div className="grid grid-cols-2 gap-2 [@media_(orientation:landscape)]:grid-cols-2">
+                      {playerSummary.map(player => (
+                        <button
+                          type="button"
+                          key={player.id}
+                          className="min-w-0 rounded-md bg-white/75 px-2 py-1.5 text-left transition hover:bg-white focus:ring-2 focus:ring-amber-400 focus:outline-none dark:bg-stone-950/45 dark:hover:bg-stone-900"
+                          onClick={() => {
+                            setSelectedAssetPlayerId(player.id)
+                            setCenterView('assets')
+                          }}
                         >
-                          结束回合
-                        </Button>
-                      )}
-                      {canBuy && (
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            runAction(async () =>
-                              applyState((await monopolyApi.buy(state.room.id)).state)
-                            )
-                          }
-                          disabled={loading}
-                        >
-                          购买资产
-                        </Button>
-                      )}
-                      {canBuildCurrent && (
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            runAction(async () =>
-                              applyState(
-                                (await monopolyApi.build(state.room.id, currentProperty.id, 1))
-                                  .state
-                              )
-                            )
-                          }
-                          disabled={loading}
-                        >
-                          <Home /> 盖房
-                        </Button>
-                      )}
-                      {isMyTurn && me?.is_in_jail && (
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            runAction(async () =>
-                              applyState((await monopolyApi.leaveJail(state.room.id, 'pay')).state)
-                            )
-                          }
-                          disabled={loading}
-                        >
-                          支付出狱
-                        </Button>
-                      )}
-                      <Button variant="outline" onClick={() => setCenterView('events')}>
-                        <ScrollText /> 事件日志
-                      </Button>
-                      <MonopolyRulesDialog />
+                          <div className="truncate text-xs font-medium text-stone-900 dark:text-stone-100">
+                            {player.name}
+                            {player.type === 'computer' ? ' · 电脑' : ''}
+                          </div>
+                          <div className="mt-0.5 font-mono text-sm font-semibold text-stone-950 dark:text-stone-50">
+                            {formatMoney(player.cash)}
+                          </div>
+                          <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
+                            总资产 {formatMoney(playerNetWorth.get(player.id) ?? player.cash)}
+                            {player.is_in_jail ? ' · 监狱' : ''}
+                            {player.is_bankrupt ? ' · 破产' : ''}
+                          </div>
+                        </button>
+                      ))}
                     </div>
 
-                    {latestCardEvent && (
-                      <div className="mt-3 rounded-md bg-stone-50 p-2 text-sm text-stone-700 dark:bg-stone-900 dark:text-stone-300">
-                        <div className="font-medium">
-                          {latestCardEvent.type === 'chance.drawn' ? '机会' : '公益福利'}
+                    <div className="flex min-h-0 flex-1 flex-col rounded-md bg-white/75 p-3 dark:bg-stone-950/45">
+                      <div className="grid shrink-0 gap-3 [@media_(orientation:landscape)]:grid-cols-[auto_minmax(0,1fr)] [@media_(orientation:landscape)]:items-center">
+                        <div className="flex justify-center">
+                          <Dice value={diceValue} rolling={rolling} />
                         </div>
-                        <div className="mt-1">{latestCardEvent.message}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={roll}
+                            disabled={!isMyTurn || Boolean(me?.last_roll) || actionLocked}
+                          >
+                            掷骰子
+                          </Button>
+                          {canEndTurn && (
+                            <Button
+                              variant="outline"
+                              onClick={() =>
+                                runAction(async () =>
+                                  applyState((await monopolyApi.endTurn(state.room.id)).state)
+                                )
+                              }
+                              disabled={actionLocked}
+                            >
+                              结束回合
+                            </Button>
+                          )}
+                          {canBuy && (
+                            <Button
+                              variant="outline"
+                              onClick={() =>
+                                runAction(async () =>
+                                  applyState((await monopolyApi.buy(state.room.id)).state)
+                                )
+                              }
+                              disabled={actionLocked}
+                            >
+                              购买资产
+                            </Button>
+                          )}
+                          {canBuildCurrent && (
+                            <Button
+                              variant="outline"
+                              onClick={() =>
+                                runAction(async () =>
+                                  applyState(
+                                    (await monopolyApi.build(state.room.id, currentProperty.id, 1))
+                                      .state
+                                  )
+                                )
+                              }
+                              disabled={actionLocked}
+                            >
+                              <Home /> 盖房
+                            </Button>
+                          )}
+                          {isMyTurn && me?.is_in_jail && (
+                            <Button
+                              variant="outline"
+                              onClick={() =>
+                                runAction(async () =>
+                                  applyState(
+                                    (await monopolyApi.leaveJail(state.room.id, 'pay')).state
+                                  )
+                                )
+                              }
+                              disabled={actionLocked}
+                            >
+                              支付出狱
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {currentProperty && (
-                      <div className="mt-3 rounded-md bg-stone-50 p-2 text-sm text-stone-700 dark:bg-stone-900 dark:text-stone-300">
-                        <div className="font-medium">{currentProperty.name}</div>
-                        <div>
-                          价格 {formatMoney(currentProperty.price)} · 租金{' '}
-                          {formatMoney(currentProperty.current_rent)} · 房屋{' '}
-                          {currentProperty.houses}/5
+                      {currentProperty && (
+                        <div className="mt-3 shrink-0 rounded-md bg-stone-50 p-2 text-sm text-stone-700 dark:bg-stone-900 dark:text-stone-300">
+                          <div className="font-medium">{currentProperty.name}</div>
+                          <div>
+                            价格 {formatMoney(currentProperty.price)} · 租金{' '}
+                            {formatMoney(currentProperty.current_rent)} · 房屋{' '}
+                            {currentProperty.houses}/5
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+                  <EventLogPanel
+                    events={displayedEvents}
+                    className="rounded-md border border-stone-200 bg-white/75 p-2 dark:border-stone-800 dark:bg-stone-950/45"
+                  />
                 </div>
               ) : centerView === 'assets' ? (
                 <CenterPanel
@@ -768,7 +724,15 @@ export default function MonopolyGameClient() {
                         ? (playerNetWorth.get(selectedAssetPlayer.id) ?? selectedAssetPlayer.cash)
                         : 0
                     }
-                    canBuild={Boolean(selectedAssetPlayer && me?.id === selectedAssetPlayer.id)}
+                    canBuild={Boolean(
+                      selectedAssetPlayer &&
+                      me?.id === selectedAssetPlayer.id &&
+                      isMyTurn &&
+                      me.last_roll !== null &&
+                      remainingBuildsThisTurn > 0 &&
+                      !actionLocked
+                    )}
+                    maxBuildHouses={remainingBuildsThisTurn}
                     onBuild={(property, houses) =>
                       runAction(async () =>
                         applyState(
@@ -778,20 +742,7 @@ export default function MonopolyGameClient() {
                     }
                   />
                 </CenterPanel>
-              ) : (
-                <CenterPanel title="事件日志" onBack={() => setCenterView('main')}>
-                  <div className="grid max-h-full gap-2 overflow-auto pr-1 text-sm">
-                    {state.events.map(event => (
-                      <div
-                        key={event.id}
-                        className="rounded-md bg-white/75 px-3 py-2 text-stone-700 dark:bg-stone-950/45 dark:text-stone-300"
-                      >
-                        {event.message}
-                      </div>
-                    ))}
-                  </div>
-                </CenterPanel>
-              )}
+              ) : null}
             </div>
           }
         />
@@ -800,32 +751,40 @@ export default function MonopolyGameClient() {
   )
 }
 
-function MonopolyRulesDialog() {
+function EventLogPanel({
+  events,
+  className = '',
+}: {
+  events: MonopolyState['events']
+  className?: string
+}) {
+  const logContainerRef = useRef<HTMLDivElement | null>(null)
+  const latestEventId = events[events.length - 1]?.id
+
+  useEffect(() => {
+    const element = logContainerRef.current
+    if (!element) return
+
+    element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' })
+  }, [latestEventId])
+
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="whitespace-nowrap">
-          <HelpCircle /> 游戏说明
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[85dvh] max-w-2xl overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HelpCircle className="size-5 text-amber-500" />
-            地产棋局说明
-          </DialogTitle>
-        </DialogHeader>
-        <div className="min-h-0 overflow-auto pr-1">
-          <div className="grid gap-3 text-sm text-stone-700 dark:text-stone-300">
-            {MONOPOLY_RULES.map(rule => (
-              <div key={rule} className="rounded-md bg-stone-50 px-3 py-2 dark:bg-stone-900/80">
-                {rule}
-              </div>
-            ))}
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${className}`}>
+      <div className="shrink-0 text-xs font-medium text-stone-500 dark:text-stone-400">事件</div>
+      <div
+        ref={logContainerRef}
+        className="mt-2 grid min-h-0 flex-1 content-start gap-1.5 overflow-auto pr-1 text-sm leading-snug"
+      >
+        {events.map(event => (
+          <div
+            key={event.id}
+            className="rounded-md bg-stone-50 px-2 py-1.5 text-stone-700 dark:bg-stone-900 dark:text-stone-300"
+          >
+            {event.message}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -859,6 +818,7 @@ function AssetsPanel({
   assetValue,
   netWorth,
   canBuild,
+  maxBuildHouses,
   onBuild,
 }: {
   player: MonopolyPlayer | null
@@ -866,6 +826,7 @@ function AssetsPanel({
   assetValue: number
   netWorth: number
   canBuild: boolean
+  maxBuildHouses: number
   onBuild: (property: MonopolyProperty, houses: number) => void
 }) {
   return (
@@ -908,14 +869,16 @@ function AssetsPanel({
                 <Button size="sm" variant="outline" onClick={() => onBuild(property, 1)}>
                   <Home /> 1
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onBuild(property, 2)}
-                  disabled={property.houses > 3}
-                >
-                  <Home /> 2
-                </Button>
+                {maxBuildHouses >= 2 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onBuild(property, 2)}
+                    disabled={property.houses > 3}
+                  >
+                    <Home /> 2
+                  </Button>
+                )}
               </div>
             )}
           </div>

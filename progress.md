@@ -52,3 +52,8 @@ TODO
 - Removed the separate "我的资产" action button; player asset cards are now clickable and open a per-player asset view with cash, owned asset value, net worth, and per-property total value.
 - Confirmed the property board game appears on `/game` and changed user-facing names from Monopoly/大富翁 to "地产棋局" / "Estate Circuit" to avoid trademarked naming.
 - Removed the lobby refresh button and switched room list/count updates to a `monopoly.lobby` WebSocket broadcast from the API.
+- Removed the separate event-log view/button; the main action panel now shows a scrollable event feed beneath the controls that fills remaining center-panel height.
+- Moved the estate game rules dialog to the `/game` entry card and removed in-game rules/action-status text from the board center panel.
+- Reworked the in-game center panel for landscape: controls/current tile stay on the left while the event feed becomes a dedicated scrollable right-side column; portrait remains stacked.
+- Delayed event-log updates until movement animations finish and locked player actions while dice/movement animation is running.
+- Enforced the per-turn 2-house build limit in the API and hid frontend build controls once the current player reaches that turn limit.

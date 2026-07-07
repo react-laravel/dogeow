@@ -28,6 +28,7 @@ export interface MonopolyPlayer {
   jail_turns: number
   jail_cards: number
   last_roll: number | null
+  houses_built_this_turn: number
 }
 
 export interface MonopolyProperty {
