@@ -57,3 +57,4 @@ TODO
 - Reworked the in-game center panel for landscape: controls/current tile stay on the left while the event feed becomes a dedicated scrollable right-side column; portrait remains stacked.
 - Delayed event-log updates until movement animations finish and locked player actions while dice/movement animation is running.
 - Enforced the per-turn 2-house build limit in the API and hid frontend build controls once the current player reaches that turn limit.
+- Cleaned up the estate game frontend by centralizing house-limit constants, adding current-player emphasis, exposing remaining build quota on owned tiles, and adding empty states for room/event lists.

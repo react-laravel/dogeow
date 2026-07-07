@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PageContainer } from '@/components/layout'
+import { cn } from '@/lib/helpers'
 import { createEchoInstance, getEchoInstance } from '@/lib/websocket'
 import useAuthStore from '@/stores/authStore'
 import { monopolyApi } from './api'
@@ -31,6 +32,8 @@ interface LobbyBroadcastPayload {
 
 type CenterView = 'main' | 'assets'
 const APP_SCROLL_CONTAINER_IDS = ['main-scroll', 'main-container'] as const
+const MAX_HOUSES_PER_TURN = 2
+const MAX_HOUSES_PER_PROPERTY = 5
 
 function useLockAppScroll(locked: boolean) {
   useEffect(() => {
@@ -90,7 +93,10 @@ export default function MonopolyGameClient() {
   const isMyTurn = Boolean(me && currentPlayer?.id === me.id && state?.room.status === 'playing')
   const isMovementAnimating = movingPlayerId !== null
   const actionLocked = loading || rolling || isMovementAnimating
-  const remainingBuildsThisTurn = Math.max(0, 2 - (me?.houses_built_this_turn ?? 0))
+  const remainingBuildsThisTurn = Math.max(
+    0,
+    MAX_HOUSES_PER_TURN - (me?.houses_built_this_turn ?? 0)
+  )
   const currentProperty = useMemo(() => {
     if (!me || !state) return null
     return state.properties.find(property => property.tile_index === me.position) ?? null
@@ -397,7 +403,7 @@ export default function MonopolyGameClient() {
     currentProperty &&
     currentProperty.type === 'city' &&
     currentProperty.owner_player_id === me?.id &&
-    currentProperty.houses < 5 &&
+    currentProperty.houses < MAX_HOUSES_PER_PROPERTY &&
     me &&
     me.cash >= currentProperty.house_price &&
     remainingBuildsThisTurn > 0 &&
@@ -459,6 +465,13 @@ export default function MonopolyGameClient() {
                 </CardContent>
               </Card>
             ))}
+            {rooms.length === 0 && (
+              <Card className="rounded-md sm:col-span-2 lg:col-span-3">
+                <CardContent className="py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+                  暂无房间，创建一个新对局即可开始。
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </PageContainer>
@@ -595,30 +608,39 @@ export default function MonopolyGameClient() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 [@media_(orientation:landscape)]:grid-cols-2">
-                      {playerSummary.map(player => (
-                        <button
-                          type="button"
-                          key={player.id}
-                          className="min-w-0 rounded-md bg-white/75 px-2 py-1.5 text-left transition hover:bg-white focus:ring-2 focus:ring-amber-400 focus:outline-none dark:bg-stone-950/45 dark:hover:bg-stone-900"
-                          onClick={() => {
-                            setSelectedAssetPlayerId(player.id)
-                            setCenterView('assets')
-                          }}
-                        >
-                          <div className="truncate text-xs font-medium text-stone-900 dark:text-stone-100">
-                            {player.name}
-                            {player.type === 'computer' ? ' · 电脑' : ''}
-                          </div>
-                          <div className="mt-0.5 font-mono text-sm font-semibold text-stone-950 dark:text-stone-50">
-                            {formatMoney(player.cash)}
-                          </div>
-                          <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
-                            总资产 {formatMoney(playerNetWorth.get(player.id) ?? player.cash)}
-                            {player.is_in_jail ? ' · 监狱' : ''}
-                            {player.is_bankrupt ? ' · 破产' : ''}
-                          </div>
-                        </button>
-                      ))}
+                      {playerSummary.map(player => {
+                        const isActivePlayer = player.id === currentPlayer?.id
+
+                        return (
+                          <button
+                            type="button"
+                            key={player.id}
+                            className={cn(
+                              'min-w-0 rounded-md bg-white/75 px-2 py-1.5 text-left transition hover:bg-white focus:ring-2 focus:ring-amber-400 focus:outline-none dark:bg-stone-950/45 dark:hover:bg-stone-900',
+                              isActivePlayer &&
+                                'shadow-[inset_0_0_0_1px_rgba(245,158,11,0.75)] bg-amber-50/80 dark:bg-amber-950/25'
+                            )}
+                            onClick={() => {
+                              setSelectedAssetPlayerId(player.id)
+                              setCenterView('assets')
+                            }}
+                            aria-label={`查看${player.name}资产，总资产${formatMoney(playerNetWorth.get(player.id) ?? player.cash)}`}
+                          >
+                            <div className="truncate text-xs font-medium text-stone-900 dark:text-stone-100">
+                              {player.name}
+                              {player.type === 'computer' ? ' · 电脑' : ''}
+                            </div>
+                            <div className="mt-0.5 font-mono text-sm font-semibold text-stone-950 dark:text-stone-50">
+                              {formatMoney(player.cash)}
+                            </div>
+                            <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
+                              总资产 {formatMoney(playerNetWorth.get(player.id) ?? player.cash)}
+                              {player.is_in_jail ? ' · 监狱' : ''}
+                              {player.is_bankrupt ? ' · 破产' : ''}
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
 
                     <div className="flex min-h-0 flex-1 flex-col rounded-md bg-white/75 p-3 dark:bg-stone-950/45">
@@ -699,7 +721,8 @@ export default function MonopolyGameClient() {
                           <div>
                             价格 {formatMoney(currentProperty.price)} · 租金{' '}
                             {formatMoney(currentProperty.current_rent)} · 房屋{' '}
-                            {currentProperty.houses}/5
+                            {currentProperty.houses}/{MAX_HOUSES_PER_PROPERTY}
+                            {canBuildCurrent ? ` · 可建 ${remainingBuildsThisTurn}` : ''}
                           </div>
                         </div>
                       )}
@@ -775,14 +798,20 @@ function EventLogPanel({
         ref={logContainerRef}
         className="mt-2 grid min-h-0 flex-1 content-start gap-1.5 overflow-auto pr-1 text-sm leading-snug"
       >
-        {events.map(event => (
-          <div
-            key={event.id}
-            className="rounded-md bg-stone-50 px-2 py-1.5 text-stone-700 dark:bg-stone-900 dark:text-stone-300"
-          >
-            {event.message}
+        {events.length === 0 ? (
+          <div className="rounded-md bg-stone-50 px-2 py-4 text-center text-stone-500 dark:bg-stone-900 dark:text-stone-400">
+            暂无事件
           </div>
-        ))}
+        ) : (
+          events.map(event => (
+            <div
+              key={event.id}
+              className="rounded-md bg-stone-50 px-2 py-1.5 text-stone-700 dark:bg-stone-900 dark:text-stone-300"
+            >
+              {event.message}
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
@@ -864,7 +893,7 @@ function AssetsPanel({
                 {formatMoney(property.price + property.house_price * property.houses)}
               </div>
             </div>
-            {canBuild && property.type === 'city' && property.houses < 5 && (
+            {canBuild && property.type === 'city' && property.houses < MAX_HOUSES_PER_PROPERTY && (
               <div className="flex gap-1">
                 <Button size="sm" variant="outline" onClick={() => onBuild(property, 1)}>
                   <Home /> 1
@@ -874,7 +903,7 @@ function AssetsPanel({
                     size="sm"
                     variant="outline"
                     onClick={() => onBuild(property, 2)}
-                    disabled={property.houses > 3}
+                    disabled={property.houses > MAX_HOUSES_PER_PROPERTY - 2}
                   >
                     <Home /> 2
                   </Button>
