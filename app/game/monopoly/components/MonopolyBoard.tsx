@@ -1,6 +1,7 @@
 'use client'
 
 import { Building2, Gift, HeartHandshake, Lock, Plane, TrainFront, Trophy } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/helpers'
 import type { MonopolyPlayer, MonopolyProperty, MonopolyTile } from '../types'
 
@@ -38,22 +39,33 @@ export function MonopolyBoard({
   players,
   properties,
   currentPlayerId,
+  center,
 }: {
   board: MonopolyTile[]
   players: MonopolyPlayer[]
   properties: MonopolyProperty[]
   currentPlayerId: number | null
+  center?: ReactNode
 }) {
   const propertiesByTile = new Map(properties.map(property => [property.tile_index, property]))
 
   return (
-    <div className="mx-auto aspect-square w-full max-w-[760px]" data-testid="monopoly-board">
-      <div className="grid size-full grid-cols-6 grid-rows-6 gap-1 rounded-md border bg-stone-100 p-1 shadow-sm">
-        <div className="col-start-2 col-end-6 row-start-2 row-end-6 flex flex-col items-center justify-center rounded-md border border-dashed border-stone-300 bg-white/70 p-4 text-center">
-          <div className="text-xl font-semibold text-stone-900">DogeOW 大富翁</div>
-          <div className="mt-2 max-w-xs text-sm text-stone-600">
-            实时房间 · 城市投资 · 机会与公益福利
-          </div>
+    <div
+      className="mx-auto aspect-[4/5] w-full max-w-[860px] sm:aspect-[5/4] xl:aspect-[16/10]"
+      data-testid="monopoly-board"
+    >
+      <div className="grid size-full grid-cols-6 grid-rows-6 gap-1 rounded-md border bg-stone-100 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-950">
+        <div className="col-start-2 col-end-6 row-start-2 row-end-6 min-h-0 overflow-hidden rounded-md border border-dashed border-stone-300 bg-white/80 p-3 dark:border-stone-700 dark:bg-stone-900/85">
+          {center ?? (
+            <div className="flex size-full flex-col items-center justify-center text-center">
+              <div className="text-xl font-semibold text-stone-900 dark:text-stone-100">
+                DogeOW 大富翁
+              </div>
+              <div className="mt-2 max-w-xs text-sm text-stone-600 dark:text-stone-400">
+                实时对局 · 城市投资 · 机会与公益福利
+              </div>
+            </div>
+          )}
         </div>
         {board.map(tile => {
           const { row, col } = tileGridPosition(tile.index)
@@ -66,7 +78,7 @@ export function MonopolyBoard({
             <div
               key={tile.index}
               className={cn(
-                'relative flex min-h-0 flex-col overflow-hidden rounded-md border bg-white p-1 text-[11px] shadow-xs',
+                'relative flex min-h-0 flex-col overflow-hidden rounded-md border bg-white p-1 text-[11px] shadow-xs dark:border-stone-700 dark:bg-stone-900',
                 currentPlayerId &&
                   tilePlayers.some(player => player.id === currentPlayerId) &&
                   'ring-2 ring-amber-400'
@@ -74,22 +86,27 @@ export function MonopolyBoard({
               style={{ gridRowStart: row, gridColumnStart: col }}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] text-stone-400">{tile.index}</span>
+                <span className="font-mono text-[10px] text-stone-400 dark:text-stone-500">
+                  {tile.index}
+                </span>
                 <TileIcon type={tile.type} />
               </div>
               {tile.color && (
                 <div className="mt-1 h-1 rounded-full" style={{ backgroundColor: tile.color }} />
               )}
-              <div className="mt-1 truncate font-medium text-stone-900" title={tile.name}>
+              <div
+                className="mt-1 truncate font-medium text-stone-900 dark:text-stone-100"
+                title={tile.name}
+              >
                 {tile.name}
               </div>
               {property && (
-                <div className="truncate text-[10px] text-stone-500">
+                <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
                   {property.owner_name ? property.owner_name : `${formatMoney(property.price)}`}
                 </div>
               )}
               {property?.houses ? (
-                <div className="mt-auto text-[10px] text-emerald-700">
+                <div className="mt-auto text-[10px] text-emerald-700 dark:text-emerald-400">
                   {'■'.repeat(property.houses)}
                 </div>
               ) : null}

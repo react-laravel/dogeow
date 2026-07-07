@@ -47,13 +47,13 @@ const properties: MonopolyProperty[] = [
 ]
 
 describe('MonopolyBoard', () => {
-  it('renders a square board with tiles and player markers', () => {
+  it('renders a responsive rectangular board with tiles and player markers', () => {
     render(
       <MonopolyBoard board={board} players={players} properties={properties} currentPlayerId={1} />
     )
 
     const boardElement = screen.getByTestId('monopoly-board')
-    expect(boardElement).toHaveClass('aspect-square')
+    expect(boardElement).toHaveClass('aspect-[4/5]')
     expect(screen.getByText('罗马')).toBeInTheDocument()
     expect(screen.getByText('玩家A')).toBeInTheDocument()
     expect(within(boardElement).getByTitle('玩家A')).toBeInTheDocument()
