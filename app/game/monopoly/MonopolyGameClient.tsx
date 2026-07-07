@@ -16,7 +16,6 @@ import {
   Home,
   Loader2,
   Plus,
-  RefreshCw,
   ScrollText,
   Trophy,
   UserPlus,
@@ -41,6 +40,10 @@ import type { MonopolyPlayer, MonopolyProperty, MonopolyRoomSummary, MonopolySta
 
 interface StateBroadcastPayload {
   state?: MonopolyState
+}
+
+interface LobbyBroadcastPayload {
+  rooms?: MonopolyRoomSummary[]
 }
 
 type CenterView = 'main' | 'assets' | 'events'
@@ -342,6 +345,28 @@ export default function MonopolyGameClient() {
   }, [loadRooms])
 
   useEffect(() => {
+    const echo = getEchoInstance() ?? createEchoInstance()
+    const channel = echo?.channel('monopoly.lobby')
+
+    channel?.listen('.rooms.updated', (payload: LobbyBroadcastPayload) => {
+      if (!payload.rooms) return
+
+      setRooms(previousRooms => {
+        const membershipByRoom = new Map(previousRooms.map(room => [room.id, room.is_member]))
+
+        return payload.rooms!.map(room => ({
+          ...room,
+          is_member: membershipByRoom.get(room.id) ?? room.is_member,
+        }))
+      })
+    })
+
+    return () => {
+      echo?.leave('monopoly.lobby')
+    }
+  }, [])
+
+  useEffect(() => {
     if (!state?.room.id) return
 
     const echo = getEchoInstance() ?? createEchoInstance()
@@ -371,14 +396,12 @@ export default function MonopolyGameClient() {
     runAction(async () => {
       const data = await monopolyApi.createRoom(roomName.trim() || '周末对局')
       applyState(data.state)
-      await loadRooms()
     })
 
   const joinRoom = (roomId: number) =>
     runAction(async () => {
       const data = await monopolyApi.join(roomId)
       applyState(data.state)
-      await loadRooms()
     })
 
   const roll = () =>
@@ -423,9 +446,6 @@ export default function MonopolyGameClient() {
                 创建房间，加入玩家或电脑，开始实时对局。
               </p>
             </div>
-            <Button variant="outline" onClick={() => void loadRooms()} disabled={loading}>
-              <RefreshCw /> 刷新
-            </Button>
           </div>
 
           {error && (

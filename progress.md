@@ -51,3 +51,4 @@ TODO
 - Added a large Monopoly rules dialog from the board center controls and changed in-game player cards to show total assets instead of current tile position.
 - Removed the separate "我的资产" action button; player asset cards are now clickable and open a per-player asset view with cash, owned asset value, net worth, and per-property total value.
 - Confirmed the property board game appears on `/game` and changed user-facing names from Monopoly/大富翁 to "地产棋局" / "Estate Circuit" to avoid trademarked naming.
+- Removed the lobby refresh button and switched room list/count updates to a `monopoly.lobby` WebSocket broadcast from the API.
