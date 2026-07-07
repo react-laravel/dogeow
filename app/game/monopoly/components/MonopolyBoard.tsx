@@ -1,7 +1,7 @@
 'use client'
 
 import { Building2, Gift, HeartHandshake, Lock, Plane, TrainFront, Trophy } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/helpers'
 import type { MonopolyPlayer, MonopolyProperty, MonopolyTile } from '../types'
 
@@ -16,11 +16,96 @@ const playerColors = [
   '#475569',
 ]
 
-function tileGridPosition(index: number): { row: number; col: number } {
-  if (index <= 5) return { row: 6, col: 6 - index }
-  if (index <= 10) return { row: 11 - index, col: 1 }
-  if (index <= 15) return { row: 1, col: index - 10 }
-  return { row: index - 15, col: 6 }
+interface BoardLayout {
+  cols: number
+  rows: number
+  cellSize: number
+}
+
+const DEFAULT_LAYOUT: BoardLayout = { cols: 9, rows: 7, cellSize: 0 }
+const DEFAULT_TILE_COUNT = 28
+const MIN_BOARD_SIDE = 5
+
+function perimeterCapacity(cols: number, rows: number): number {
+  return cols * 2 + rows * 2 - 4
+}
+
+function buildBoardLayoutCandidates(tileCount: number): Array<{ cols: number; rows: number }> {
+  const requiredTiles = Math.max(tileCount, DEFAULT_TILE_COUNT)
+  const maxSide = Math.max(requiredTiles, DEFAULT_TILE_COUNT)
+  const exactLayouts: Array<{ cols: number; rows: number }> = []
+  const fallbackLayouts: Array<{ cols: number; rows: number; extraTiles: number }> = []
+
+  for (let cols = MIN_BOARD_SIDE; cols <= maxSide; cols += 1) {
+    for (let rows = MIN_BOARD_SIDE; rows <= maxSide; rows += 1) {
+      const capacity = perimeterCapacity(cols, rows)
+      if (capacity < requiredTiles) continue
+
+      const layout = { cols, rows }
+      if (capacity === requiredTiles) {
+        exactLayouts.push(layout)
+      } else {
+        fallbackLayouts.push({ ...layout, extraTiles: capacity - requiredTiles })
+      }
+    }
+  }
+
+  if (exactLayouts.length > 0) return exactLayouts
+
+  const leastExtraTiles = Math.min(...fallbackLayouts.map(layout => layout.extraTiles))
+
+  return fallbackLayouts
+    .filter(layout => layout.extraTiles === leastExtraTiles)
+    .map(({ cols, rows }) => ({ cols, rows }))
+}
+
+export function chooseBoardLayout(
+  width: number,
+  height: number,
+  tileCount = DEFAULT_TILE_COUNT
+): BoardLayout {
+  if (width <= 0 || height <= 0) return DEFAULT_LAYOUT
+
+  const isPortrait = height > width
+
+  return buildBoardLayoutCandidates(tileCount)
+    .map(layout => {
+      const cellSize = Math.floor(Math.min(width / layout.cols, height / layout.rows))
+      const boardWidth = layout.cols * cellSize
+      const boardHeight = layout.rows * cellSize
+
+      return { ...layout, cellSize, boardWidth, boardHeight }
+    })
+    .reduce((best, layout) => {
+      if (isPortrait && layout.boardHeight !== best.boardHeight) {
+        return layout.boardHeight > best.boardHeight ? layout : best
+      }
+
+      if (!isPortrait && layout.boardWidth !== best.boardWidth) {
+        return layout.boardWidth > best.boardWidth ? layout : best
+      }
+
+      if (layout.cellSize !== best.cellSize) {
+        return layout.cellSize > best.cellSize ? layout : best
+      }
+
+      if (isPortrait && layout.cols !== best.cols) return layout.cols < best.cols ? layout : best
+      if (!isPortrait && layout.rows !== best.rows) return layout.rows < best.rows ? layout : best
+
+      return layout
+    })
+}
+
+function tileGridPosition(index: number, layout: BoardLayout): { row: number; col: number } {
+  const lastBottomIndex = layout.cols - 1
+  const lastLeftIndex = lastBottomIndex + layout.rows - 1
+  const lastTopIndex = lastLeftIndex + layout.cols - 1
+
+  if (index <= lastBottomIndex) return { row: layout.rows, col: layout.cols - index }
+  if (index <= lastLeftIndex) return { row: layout.rows - (index - lastBottomIndex), col: 1 }
+  if (index <= lastTopIndex) return { row: 1, col: index - lastLeftIndex + 1 }
+
+  return { row: index - lastTopIndex + 1, col: layout.cols }
 }
 
 function TileIcon({ type }: { type: MonopolyTile['type'] }) {
@@ -39,27 +124,78 @@ export function MonopolyBoard({
   players,
   properties,
   currentPlayerId,
+  movingPlayerId,
+  highlightedPosition,
   center,
 }: {
   board: MonopolyTile[]
   players: MonopolyPlayer[]
   properties: MonopolyProperty[]
   currentPlayerId: number | null
+  movingPlayerId?: number | null
+  highlightedPosition?: number | null
   center?: ReactNode
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [layout, setLayout] = useState<BoardLayout>(DEFAULT_LAYOUT)
   const propertiesByTile = new Map(properties.map(property => [property.tile_index, property]))
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateLayout = () => {
+      const rect = container.getBoundingClientRect()
+      setLayout(chooseBoardLayout(rect.width, rect.height, board.length))
+    }
+
+    updateLayout()
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateLayout)
+
+      return () => window.removeEventListener('resize', updateLayout)
+    }
+
+    const observer = new ResizeObserver(updateLayout)
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [board.length])
+
+  const boardSizeStyle =
+    layout.cellSize > 0
+      ? {
+          width: layout.cols * layout.cellSize,
+          height: layout.rows * layout.cellSize,
+        }
+      : {
+          width: '100%',
+          height: '100%',
+        }
 
   return (
     <div
-      className="mx-auto aspect-[4/5] w-full max-w-[860px] sm:aspect-[5/4] xl:aspect-[16/10]"
+      ref={containerRef}
+      className="flex size-full items-center justify-center overflow-hidden"
       data-testid="monopoly-board"
     >
-      <div className="grid size-full grid-cols-6 grid-rows-6 gap-1 rounded-md border bg-stone-100 p-1 shadow-sm dark:border-stone-700 dark:bg-stone-950">
-        <div className="col-start-2 col-end-6 row-start-2 row-end-6 min-h-0 overflow-hidden rounded-md border border-dashed border-stone-300 bg-white/80 p-3 dark:border-stone-700 dark:bg-stone-900/85">
+      <div
+        className="grid gap-1"
+        style={{
+          ...boardSizeStyle,
+          gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
+        }}
+      >
+        <div
+          className="min-h-0 overflow-hidden rounded-md bg-white/80 p-3 dark:bg-stone-900/85"
+          style={{ gridColumn: `2 / ${layout.cols}`, gridRow: `2 / ${layout.rows}` }}
+        >
           {center ?? (
             <div className="flex size-full flex-col items-center justify-center text-center">
               <div className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-                DogeOW 大富翁
+                DogeOW 地产棋局
               </div>
               <div className="mt-2 max-w-xs text-sm text-stone-600 dark:text-stone-400">
                 实时对局 · 城市投资 · 机会与公益福利
@@ -68,7 +204,7 @@ export function MonopolyBoard({
           )}
         </div>
         {board.map(tile => {
-          const { row, col } = tileGridPosition(tile.index)
+          const { row, col } = tileGridPosition(tile.index, layout)
           const property = propertiesByTile.get(tile.index)
           const tilePlayers = players.filter(
             player => player.position === tile.index && !player.is_bankrupt
@@ -79,17 +215,20 @@ export function MonopolyBoard({
               key={tile.index}
               className={cn(
                 'relative flex min-h-0 flex-col overflow-hidden rounded-md border bg-white p-1 text-[11px] shadow-xs dark:border-stone-700 dark:bg-stone-900',
+                highlightedPosition === tile.index && 'shadow-[inset_0_0_0_2px_rgb(56_189_248)]',
                 currentPlayerId &&
                   tilePlayers.some(player => player.id === currentPlayerId) &&
-                  'ring-2 ring-amber-400'
+                  'shadow-[inset_0_0_0_2px_rgb(251_191_36)]'
               )}
               style={{ gridRowStart: row, gridColumnStart: col }}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] text-stone-400 dark:text-stone-500">
-                  {tile.index}
-                </span>
                 <TileIcon type={tile.type} />
+                {property && (
+                  <span className="truncate font-mono text-[10px] text-stone-500 dark:text-stone-400">
+                    {formatMoney(property.price)}
+                  </span>
+                )}
               </div>
               {tile.color && (
                 <div className="mt-1 h-1 rounded-full" style={{ backgroundColor: tile.color }} />
@@ -100,9 +239,9 @@ export function MonopolyBoard({
               >
                 {tile.name}
               </div>
-              {property && (
+              {property?.owner_name && (
                 <div className="truncate text-[10px] text-stone-500 dark:text-stone-400">
-                  {property.owner_name ? property.owner_name : `${formatMoney(property.price)}`}
+                  {property.owner_name}
                 </div>
               )}
               {property?.houses ? (
@@ -115,7 +254,10 @@ export function MonopolyBoard({
                   <span
                     key={player.id}
                     title={player.name}
-                    className="grid size-4 place-items-center rounded-full border border-white text-[9px] font-bold text-white shadow"
+                    className={cn(
+                      'grid size-4 place-items-center rounded-full border border-white text-[9px] font-bold text-white shadow',
+                      movingPlayerId === player.id && 'animate-bounce'
+                    )}
                     style={{
                       backgroundColor: playerColors[player.turn_order % playerColors.length],
                     }}

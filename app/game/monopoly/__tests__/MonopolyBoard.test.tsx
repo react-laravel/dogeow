@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { MonopolyBoard } from '../components/MonopolyBoard'
+import { MonopolyBoard, chooseBoardLayout } from '../components/MonopolyBoard'
 import type { MonopolyPlayer, MonopolyProperty, MonopolyTile } from '../types'
 
 const board: MonopolyTile[] = [
@@ -10,6 +10,10 @@ const board: MonopolyTile[] = [
   { index: 3, type: 'city', name: '东京', color: '#2563eb' },
   { index: 4, type: 'rail', name: '铁路' },
   { index: 5, type: 'air', name: '航空' },
+  { index: 6, type: 'welfare', name: '公益福利' },
+  { index: 7, type: 'city', name: '巴黎', color: '#e0a83a' },
+  { index: 8, type: 'city', name: '伦敦', color: '#e0a83a' },
+  { index: 9, type: 'city', name: '纽约', color: '#2563eb' },
 ]
 
 const players: MonopolyPlayer[] = [
@@ -19,7 +23,7 @@ const players: MonopolyPlayer[] = [
     name: '玩家A',
     type: 'human',
     turn_order: 0,
-    cash: 800000,
+    cash: 8000000,
     position: 1,
     tile_name: '罗马',
     is_host: true,
@@ -37,9 +41,10 @@ const properties: MonopolyProperty[] = [
     tile_index: 1,
     type: 'city',
     name: '罗马',
-    price: 180000,
-    base_rent: 28000,
-    house_price: 90000,
+    price: 100000,
+    base_rent: 10000,
+    current_rent: 10000,
+    house_price: 500000,
     owner_player_id: 1,
     owner_name: '玩家A',
     houses: 2,
@@ -53,9 +58,34 @@ describe('MonopolyBoard', () => {
     )
 
     const boardElement = screen.getByTestId('monopoly-board')
-    expect(boardElement).toHaveClass('aspect-[4/5]')
+    expect(boardElement).toHaveClass('size-full')
     expect(screen.getByText('罗马')).toBeInTheDocument()
     expect(screen.getByText('玩家A')).toBeInTheDocument()
     expect(within(boardElement).getByTitle('玩家A')).toBeInTheDocument()
+  })
+
+  it('marks the moving player and highlighted tile during movement animation', () => {
+    render(
+      <MonopolyBoard
+        board={board}
+        players={players}
+        properties={properties}
+        currentPlayerId={null}
+        movingPlayerId={1}
+        highlightedPosition={1}
+      />
+    )
+
+    const boardElement = screen.getByTestId('monopoly-board')
+    const tile = screen.getByText('罗马').closest('div.relative')
+    const marker = within(boardElement).getByTitle('玩家A')
+
+    expect(tile).toHaveClass('shadow-[inset_0_0_0_2px_rgb(56_189_248)]')
+    expect(marker).toHaveClass('animate-bounce')
+  })
+
+  it('chooses a board shape that fills the available viewport while keeping square cells', () => {
+    expect(chooseBoardLayout(1270, 510)).toMatchObject({ cols: 11, rows: 5 })
+    expect(chooseBoardLayout(820, 1420)).toMatchObject({ cols: 5, rows: 11 })
   })
 })

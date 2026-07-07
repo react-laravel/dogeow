@@ -18,6 +18,7 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
   const theme = useUITheme()
   const { backgroundImage } = useBackgroundStore()
   const isStandaloneRpgRoute = pathname.startsWith('/rpg-host')
+  const isMonopolyRoute = pathname.startsWith('/game/monopoly')
 
   // 动态加载 Header 组件
   const HeaderComponent = useMemo(() => {
@@ -78,7 +79,7 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
   }
 
   if (!theme) {
-    return <DefaultLayout>{children}</DefaultLayout>
+    return <DefaultLayout wide={isMonopolyRoute}>{children}</DefaultLayout>
   }
 
   const Header = HeaderComponent
@@ -128,8 +129,11 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
           data-scroll-container
           className="mx-auto min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto"
           style={{
-            maxWidth: theme.layout.main.maxWidth === '100%' ? '100%' : theme.layout.main.maxWidth,
-            padding: theme.layout.main.padding,
+            maxWidth:
+              isMonopolyRoute || theme.layout.main.maxWidth === '100%'
+                ? '100%'
+                : theme.layout.main.maxWidth,
+            padding: isMonopolyRoute ? 0 : theme.layout.main.padding,
           }}
         >
           {children}
@@ -161,7 +165,7 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
 }
 
 // 默认布局回退（当前布局）
-function DefaultLayout({ children }: { children: React.ReactNode }) {
+function DefaultLayout({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="flex h-full flex-col">
       <div
@@ -177,7 +181,14 @@ function DefaultLayout({ children }: { children: React.ReactNode }) {
         data-scroll-container
         className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
       >
-        <div className="mx-auto flex h-full w-full max-w-7xl flex-col p-0">{children}</div>
+        <div
+          className={cn(
+            'mx-auto flex h-full w-full flex-col p-0',
+            wide ? 'max-w-none' : 'max-w-7xl'
+          )}
+        >
+          {children}
+        </div>
       </div>
       <ScrollButton />
     </div>

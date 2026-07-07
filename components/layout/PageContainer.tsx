@@ -4,6 +4,8 @@ interface PageContainerProps {
   children: React.ReactNode
   /** 额外的 className */
   className?: string
+  /** 额外的内联样式 */
+  style?: React.CSSProperties
   /** 是否全屏（不加内边距），用于游戏等全屏页面 */
   fullScreen?: boolean
   /** 限制最大宽度，默认不额外限制（由 layout 的 max-w-7xl 控制） */
@@ -34,11 +36,16 @@ const maxWidthMap = {
 export function PageContainer({
   children,
   className,
+  style,
   fullScreen = false,
   maxWidth = 'none',
 }: PageContainerProps) {
   if (fullScreen) {
-    return <div className={cn('h-full w-full', className)}>{children}</div>
+    return (
+      <div className={cn('h-full w-full', className)} style={style}>
+        {children}
+      </div>
+    )
   }
 
   return (
@@ -48,6 +55,7 @@ export function PageContainer({
         maxWidth !== 'none' && maxWidthMap[maxWidth],
         className
       )}
+      style={style}
     >
       {children}
     </div>

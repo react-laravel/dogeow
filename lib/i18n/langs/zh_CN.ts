@@ -75,7 +75,7 @@ export const zh_CN = {
   // Games
   'game.rpg': '挂机RPG',
   'game.rpg.desc': '挂机RPG游戏，创建角色、打怪升级、收集装备',
-  'game.monopoly': '大富翁',
+  'game.monopoly': '地产棋局',
   'game.monopoly.desc': '实时多人地产棋盘游戏，支持电脑玩家、买地、收租和建房',
   'game.sliding-puzzle': '滑块拼图',
   'game.sliding-puzzle.desc': '经典的数字滑块拼图游戏，通过移动数字方块来排列顺序',

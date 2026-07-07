@@ -37,6 +37,7 @@ export interface MonopolyProperty {
   name: string
   price: number
   base_rent: number
+  current_rent: number
   house_price: number
   owner_player_id: number | null
   owner_name: string | null
@@ -58,6 +59,7 @@ export interface MonopolyState {
     name: string
     status: MonopolyRoomStatus
     max_players: number
+    max_rounds: number
     current_turn_order: number
     round: number
     created_by: number

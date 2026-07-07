@@ -78,7 +78,7 @@ export const en = {
   // Games
   'game.rpg': 'Idle RPG',
   'game.rpg.desc': 'Idle RPG with characters, combat, leveling, and equipment',
-  'game.monopoly': 'Monopoly',
+  'game.monopoly': 'Estate Circuit',
   'game.monopoly.desc': 'Realtime multiplayer property board game with computer players and houses',
   'game.sliding-puzzle': 'Sliding Puzzle',
   'game.sliding-puzzle.desc':
