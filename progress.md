@@ -101,3 +101,33 @@ TODO
 TODO
 
 - Re-run the `/game/monopoly` browser pass in an authenticated session if visual confirmation of the refactored panels is required.
+
+2026-07-10
+
+- Current prompt: 其他功能也可以看看，提取下，改进下代码。
+- Selected `/game/2048` as the next refactor target because its page duplicated the keyboard, swipe, gyroscope, sound, and auto-play behavior already available under `hooks/`.
+- Rewired the page to use the shared control hooks and extracted the header/stats, game status, and auto-play controls into presentational components.
+- Moved tile color ownership into `GameBoard`, centralized speed options, and added `render_game_to_text` plus a no-animation time-step hook for browser inspection.
+- Reworked `useAutoPlay` so interval lifetime follows mode/speed declaratively and always invokes the latest move callback, preventing stale game state during long-running auto-play.
+- Reduced `app/game/2048/page.tsx` from 679 lines to 245 lines.
+- Verified all 70 focused 2048 tests, targeted ESLint/Prettier, and zero type errors under `app/game/2048`.
+- Ran the required Playwright game client with left/up input and inspected its screenshot; the fresh browser was redirected to the public home page because it was unauthenticated, so no game state snapshot was produced. The observed 404 is the existing missing public Books image.
+
+TODO
+
+- Re-run `/game/2048` in an authenticated browser session for visual and multi-step interaction confirmation.
+- Consider applying the same state/engine/presentation split to `app/game/minesweeper/page.tsx` next.
+
+2026-07-10
+
+- Split `/game/minesweeper` domain types, responsive difficulty calculation, empty-board creation, board/cell rendering, header, and statistics out of the page component.
+- Replaced state-backed long-press timers with a ref and scoped context-menu prevention to the game board instead of blocking right-click across the entire document.
+- Added guarded viewport minimums so short landscape screens cannot generate zero or negative board dimensions.
+- Added player-safe `render_game_to_text` output that hides unrevealed mine locations and deterministic timer stepping for automated inspection.
+- Fixed the Minesweeper stats store to update nested difficulty records immutably; the previous shallow copy could mutate the reusable initial-state object and make reset behavior unreliable.
+- Verified 38 focused Minesweeper tests, targeted ESLint/Prettier, and zero type errors under `app/game/minesweeper`.
+- The required Playwright client was run and its screenshot inspected, but the fresh browser again redirected to the public home page because it was unauthenticated.
+
+TODO
+
+- Re-run `/game/2048` and `/game/minesweeper` in an authenticated browser session for full visual and multi-step interaction confirmation.

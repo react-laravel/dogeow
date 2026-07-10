@@ -132,6 +132,19 @@ describe('useMinesweeperStore', () => {
       expect(state.stats.medium.gamesPlayed).toBe(0)
       expect(state.stats.hard.gamesPlayed).toBe(0)
     })
+
+    it('does not mutate the initial stats while recording games', () => {
+      act(() => {
+        useMinesweeperStore.getState().updateStats('easy', true, 30)
+        useMinesweeperStore.getState().resetStats()
+      })
+
+      expect(useMinesweeperStore.getState().stats.easy).toEqual({
+        gamesPlayed: 0,
+        gamesWon: 0,
+        bestTime: 0,
+      })
+    })
   })
 
   describe('persistence', () => {

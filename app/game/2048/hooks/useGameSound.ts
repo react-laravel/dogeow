@@ -67,7 +67,9 @@ export function useGameSound({
   const initialize = useCallback(() => {
     if (isInitializedRef.current || typeof window === 'undefined') return
 
-    const AudioCtx = window.AudioContext ?? (window as any).webkitAudioContext
+    const AudioCtx =
+      window.AudioContext ??
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioCtx) {
       logger.debug('useGameSound: Web Audio API not supported')
       return
@@ -171,7 +173,12 @@ export function useGameSound({
 
   return {
     playSound,
-    isSupported: typeof window !== 'undefined' && typeof AudioContext !== 'undefined',
+    isSupported:
+      typeof window !== 'undefined' &&
+      Boolean(
+        window.AudioContext ??
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      ),
     isInitialized,
   }
 }

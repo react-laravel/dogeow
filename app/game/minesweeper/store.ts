@@ -13,35 +13,40 @@ interface MinesweeperState {
   resetStats: () => void
 }
 
-const initialStats: MinesweeperStats = {
+const createInitialStats = (): MinesweeperStats => ({
   easy: { gamesPlayed: 0, gamesWon: 0, bestTime: 0 },
   medium: { gamesPlayed: 0, gamesWon: 0, bestTime: 0 },
   hard: { gamesPlayed: 0, gamesWon: 0, bestTime: 0 },
-}
+})
 
 export const useMinesweeperStore = create<MinesweeperState>()(
   persist(
     set => ({
-      stats: initialStats,
+      stats: createInitialStats(),
       updateStats: (difficulty: 'easy' | 'medium' | 'hard', won: boolean, time?: number) => {
         set(state => {
-          const newStats = { ...state.stats }
-          newStats[difficulty].gamesPlayed += 1
+          const current = state.stats[difficulty]
+          const nextBestTime =
+            won &&
+            time !== undefined &&
+            time > 0 &&
+            (current.bestTime === 0 || time < current.bestTime)
+              ? time
+              : current.bestTime
 
-          if (won) {
-            newStats[difficulty].gamesWon += 1
-            if (
-              time &&
-              (newStats[difficulty].bestTime === 0 || time < newStats[difficulty].bestTime)
-            ) {
-              newStats[difficulty].bestTime = time
-            }
+          return {
+            stats: {
+              ...state.stats,
+              [difficulty]: {
+                gamesPlayed: current.gamesPlayed + 1,
+                gamesWon: current.gamesWon + (won ? 1 : 0),
+                bestTime: nextBestTime,
+              },
+            },
           }
-
-          return { stats: newStats }
         })
       },
-      resetStats: () => set({ stats: initialStats }),
+      resetStats: () => set({ stats: createInitialStats() }),
     }),
     {
       name: 'minesweeper-storage',

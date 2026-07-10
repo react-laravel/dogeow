@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAutoPlay } from '../useAutoPlay'
 
@@ -13,6 +13,10 @@ vi.mock('sonner', () => ({
 describe('useAutoPlay', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('should initialize with default state', () => {
@@ -207,6 +211,40 @@ describe('useAutoPlay', () => {
       result.current.changeSpeed(200)
     })
 
+    expect(result.current.speed).toBe(200)
+  })
+
+  it('uses the latest move callback and restarts the interval at the new speed', () => {
+    vi.useFakeTimers()
+    const firstOnMove = vi.fn()
+    const latestOnMove = vi.fn()
+    const { result, rerender } = renderHook(({ onMove }) => useAutoPlay({ onMove }), {
+      initialProps: { onMove: firstOnMove },
+    })
+
+    act(() => result.current.startRandom())
+    act(() => vi.advanceTimersByTime(500))
+    expect(firstOnMove).toHaveBeenCalledOnce()
+
+    rerender({ onMove: latestOnMove })
+    act(() => result.current.changeSpeed(200))
+    act(() => vi.advanceTimersByTime(199))
+    expect(latestOnMove).not.toHaveBeenCalled()
+
+    act(() => vi.advanceTimersByTime(1))
+    expect(latestOnMove).toHaveBeenCalledOnce()
+  })
+
+  it('resets mode, direction, and speed together', () => {
+    const { result } = renderHook(() => useAutoPlay({ onMove: vi.fn(), speed: 200 }))
+
+    act(() => result.current.startDirectional(false))
+    act(() => result.current.changeSpeed(1000))
+    act(() => result.current.reset())
+
+    expect(result.current.isRunning).toBe(false)
+    expect(result.current.isClockwise).toBe(true)
+    expect(result.current.currentDirection).toBe('down')
     expect(result.current.speed).toBe(200)
   })
 

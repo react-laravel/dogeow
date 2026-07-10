@@ -260,18 +260,14 @@ describe('MinesweeperGame', () => {
   })
 
   describe('Context Menu Prevention', () => {
-    it('should prevent default context menu on game area', () => {
+    it('should prevent default context menu on the board only', () => {
       render(<MinesweeperGame />)
 
-      const container = document.querySelector('.container')
-      if (container) {
-        const event = new MouseEvent('contextmenu', { bubbles: true })
-        Object.defineProperty(event, 'target', { value: container })
-        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+      const board = screen.getByTestId('minesweeper-board')
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+      board.dispatchEvent(event)
 
-        container.dispatchEvent(event)
-        expect(preventDefaultSpy).toHaveBeenCalled()
-      }
+      expect(event.defaultPrevented).toBe(true)
     })
   })
 })

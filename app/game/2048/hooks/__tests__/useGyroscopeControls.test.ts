@@ -30,13 +30,11 @@ describe('useGyroscopeControls', () => {
   })
 
   it('should detect gyroscope support when DeviceOrientationEvent exists', () => {
-    ;(
-      global as unknown as {
-        DeviceOrientationEvent: { requestPermission?: () => Promise<'granted'> }
-      }
-    ).DeviceOrientationEvent = {
-      requestPermission: undefined,
-    } as unknown as typeof DeviceOrientationEvent
+    Object.defineProperty(globalThis, 'DeviceOrientationEvent', {
+      configurable: true,
+      writable: true,
+      value: { requestPermission: undefined },
+    })
 
     const { result } = renderHook(() =>
       useGyroscopeControls({
@@ -48,13 +46,11 @@ describe('useGyroscopeControls', () => {
   })
 
   it('should not enable without permission on iOS', async () => {
-    ;(
-      global as unknown as {
-        DeviceOrientationEvent: { requestPermission: () => Promise<'denied'> }
-      }
-    ).DeviceOrientationEvent = {
-      requestPermission: () => Promise.resolve('denied'),
-    } as unknown as typeof DeviceOrientationEvent
+    Object.defineProperty(globalThis, 'DeviceOrientationEvent', {
+      configurable: true,
+      writable: true,
+      value: { requestPermission: () => Promise.resolve('denied') },
+    })
 
     const { result } = renderHook(() =>
       useGyroscopeControls({

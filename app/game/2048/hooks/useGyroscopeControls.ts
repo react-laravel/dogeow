@@ -42,18 +42,14 @@ export function useGyroscopeControls({
   threshold = DEFAULT_THRESHOLD,
   throttleMs = DEFAULT_THROTTLE_MS,
 }: UseGyroscopeControlsOptions) {
-  const [isSupported, setIsSupported] = useState(false)
+  const [isSupported, setIsSupported] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof DeviceOrientationEvent !== 'undefined' &&
+      'ontouchstart' in window
+  )
   const [isEnabled, setIsEnabled] = useState(false)
   const lastMoveTimeRef = useRef<number>(0)
-
-  // Check gyroscope support on mount
-  useEffect(() => {
-    const supported =
-      typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof window !== 'undefined' &&
-      'ontouchstart' in window
-    setIsSupported(supported)
-  }, [])
 
   /**
    * Request permission for gyroscope access (iOS 13+)
@@ -76,12 +72,12 @@ export function useGyroscopeControls({
           setIsSupported(true)
           return true
         } else {
-          toast.error('Gyroscope permission denied')
+          toast.error('陀螺仪权限被拒绝')
           setIsSupported(false)
           return false
         }
       } catch (error) {
-        toast.error('Failed to request gyroscope permission')
+        toast.error('请求陀螺仪权限失败')
         setIsSupported(false)
         return false
       }
@@ -100,12 +96,12 @@ export function useGyroscopeControls({
       // Enable gyroscope
       if (await requestPermission()) {
         setIsEnabled(true)
-        toast.success('Gyroscope enabled')
+        toast.success('陀螺仪已启用')
       }
     } else {
       // Disable gyroscope
       setIsEnabled(false)
-      toast.success('Gyroscope disabled')
+      toast.success('陀螺仪已关闭')
     }
   }, [isEnabled, requestPermission])
 
