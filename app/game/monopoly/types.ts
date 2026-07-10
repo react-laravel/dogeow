@@ -72,6 +72,12 @@ export interface MonopolyState {
   events: MonopolyEvent[]
 }
 
+export interface MonopolyRollAnimation {
+  player_id: number
+  roll: number
+  state: MonopolyState
+}
+
 export interface MonopolyRoomSummary {
   id: number
   name: string

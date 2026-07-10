@@ -81,7 +81,7 @@ describe('MonopolyBoard', () => {
     const marker = within(boardElement).getByTitle('玩家A')
 
     expect(tile).toHaveClass('shadow-[inset_0_0_0_2px_rgb(56_189_248)]')
-    expect(marker).toHaveClass('animate-bounce')
+    expect(marker.getAttribute('class')).toContain('monopoly-token-hop')
   })
 
   it('chooses a board shape that fills the available viewport while keeping square cells', () => {

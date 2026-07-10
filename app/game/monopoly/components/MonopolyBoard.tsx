@@ -219,13 +219,15 @@ export function MonopolyBoard({
             <div
               key={tile.index}
               className={cn(
-                'relative flex min-h-0 flex-col overflow-hidden rounded-md border bg-white p-1 text-[11px] shadow-xs dark:border-stone-700 dark:bg-stone-900',
-                highlightedPosition === tile.index && 'shadow-[inset_0_0_0_2px_rgb(56_189_248)]',
+                'relative flex min-h-0 flex-col overflow-hidden rounded-md border bg-white p-1 text-[11px] shadow-xs transition-[background-color,box-shadow,transform] duration-150 dark:border-stone-700 dark:bg-stone-900',
+                highlightedPosition === tile.index &&
+                  'animate-[monopoly-tile-pulse_0.5s_ease-in-out_infinite] shadow-[inset_0_0_0_2px_rgb(56_189_248)]',
                 currentPlayerId &&
                   tilePlayers.some(player => player.id === currentPlayerId) &&
                   'shadow-[inset_0_0_0_2px_rgb(251_191_36)]'
               )}
               style={{ gridRowStart: row, gridColumnStart: col }}
+              data-highlighted={highlightedPosition === tile.index ? 'true' : undefined}
             >
               <div className="flex items-center justify-between gap-1">
                 <TileIcon type={tile.type} />
@@ -250,8 +252,13 @@ export function MonopolyBoard({
                 </div>
               )}
               {property?.houses ? (
-                <div className="mt-auto text-[10px] text-emerald-700 dark:text-emerald-400">
-                  {'■'.repeat(property.houses)}
+                <div className="mt-auto flex gap-0.5" aria-label={`${property.houses} 套房`}>
+                  {Array.from({ length: property.houses }, (_, index) => (
+                    <span
+                      key={index}
+                      className="size-1.5 rounded-[2px] bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.45)]"
+                    />
+                  ))}
                 </div>
               ) : null}
               <div className="absolute right-1 bottom-1 flex max-w-[70%] flex-wrap justify-end gap-0.5">
@@ -260,8 +267,10 @@ export function MonopolyBoard({
                     key={player.id}
                     title={player.name}
                     className={cn(
-                      'grid size-4 place-items-center rounded-full border border-white text-[9px] font-bold text-white shadow',
-                      movingPlayerId === player.id && 'animate-bounce'
+                      'grid size-[clamp(14px,2.2vmin,20px)] place-items-center rounded-full border border-white text-[9px] font-bold text-white shadow-md transition-transform',
+                      player.id === currentPlayerId && 'ring-1 ring-amber-300 ring-offset-1',
+                      movingPlayerId === player.id &&
+                        'animate-[monopoly-token-hop_0.19s_ease-out] ring-2 ring-sky-300 ring-offset-1'
                     )}
                     style={{
                       backgroundColor: playerColors[player.turn_order % playerColors.length],

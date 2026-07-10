@@ -22,7 +22,7 @@ import {
   type CombatLogEntry,
 } from '../../stores/combatHelpers'
 import { formatItemStatValue } from '../../utils/itemUtils'
-import { X, Swords, Shield, Zap, Target, Skull, Award, Coins } from 'lucide-react'
+import { Award, CircleCheckBig, Coins, Shield, Skull, Swords, Target, X, Zap } from 'lucide-react'
 import type { SkillUsedEntry } from '../../types'
 
 function CombatLogSkillIcons({ skills }: { skills: SkillUsedEntry[] }) {
@@ -401,18 +401,18 @@ export function CombatLogList({ logs }: { logs: (CombatResult | CombatLogType)[]
                   }
                 }
               }}
-              className="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm"
+              className={`flex min-h-9 w-full cursor-pointer items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-xs transition-colors sm:px-3 sm:py-2 sm:text-sm ${
+                isVictory
+                  ? 'border-l-emerald-500 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.09]'
+                  : 'border-l-orange-500 bg-orange-500/[0.04] hover:bg-orange-500/[0.09]'
+              }`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden sm:gap-2">
-                <span
-                  className={`shrink-0 font-semibold ${
-                    isVictory
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-orange-500 dark:text-orange-400'
-                  }`}
-                >
-                  {isVictory ? '✅' : '⚔️'}
-                </span>
+                {isVictory ? (
+                  <CircleCheckBig className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                ) : (
+                  <Swords className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                )}
                 <span className="text-foreground truncate">{getCombatLogMonsterName(log)}</span>
                 {playerSkillsUsed.length > 0 && <CombatLogSkillIcons skills={playerSkillsUsed} />}
               </div>

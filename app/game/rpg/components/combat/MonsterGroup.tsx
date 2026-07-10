@@ -315,7 +315,7 @@ export function MonsterGroup({
   return (
     <>
       <div
-        className="grid w-full max-w-[18rem] grid-cols-5 items-end justify-items-center gap-x-0.5 gap-y-1 overflow-hidden sm:max-w-[20rem]"
+        className="grid w-full max-w-[22rem] grid-cols-5 items-end justify-items-center gap-x-1 gap-y-1.5 overflow-visible px-1 sm:max-w-[26rem] sm:gap-x-2"
         style={{ gridTemplateRows: `repeat(${COMBAT_MONSTER_MAX_ROWS}, minmax(0, auto))` }}
       >
         {slotPositions.map(pos => {
@@ -350,27 +350,32 @@ export function MonsterGroup({
               key={m.instance_id ?? monsterKey}
               type="button"
               onClick={() => handleMonsterClick(m)}
-              className={`relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-0.5 transition-opacity hover:opacity-80 ${isNew ? styles['monster-appear'] : ''} ${isDead ? styles['monster-death'] : ''} ${isHit ? styles['monster-hit'] : ''}`}
+              className={`focus-visible:ring-primary relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-1 rounded-md px-0.5 pb-1 transition-[background-color,opacity] hover:bg-black/20 focus:outline-none focus-visible:ring-2 ${isNew ? styles['monster-appear'] : ''} ${isDead ? styles['monster-death'] : ''} ${isHit ? styles['monster-hit'] : ''}`}
               title={`点击查看 ${m.name} 详情`}
+              aria-label={`${m.name}，生命 ${m.hp ?? 0}/${m.max_hp ?? 0}`}
             >
               <div className="relative flex flex-col items-center">
                 {damage !== undefined && damage > 0 && (
-                  <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
+                  <span
+                    className={`${styles['damage-number']} pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 -translate-x-1/2 whitespace-nowrap`}
+                  >
                     -{damage}
                   </span>
                 )}
-                <MonsterIcon icon={m.icon} name={m.name} size={iconSize} monsterType={m.type} />
+                <span className={!isDead && !isHit && !isNew ? styles['monster-idle'] : undefined}>
+                  <MonsterIcon icon={m.icon} name={m.name} size={iconSize} monsterType={m.type} />
+                </span>
               </div>
-              <div className="w-full min-w-0 px-0.5">
-                <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-0.5 text-[7px] leading-none sm:text-[9px]">
+              <div className="w-full min-w-0 rounded bg-black/45 px-1 py-1 backdrop-blur-sm">
+                <div className="flex min-w-0 items-center justify-between gap-0.5 text-[9px] leading-none text-white/80 sm:text-[10px]">
                   <span className="shrink-0">HP</span>
                   <span className="truncate tabular-nums" title={`${m.hp ?? 0}/${m.max_hp ?? 0}`}>
                     {formatMonsterHp(m.hp, m.max_hp)}
                   </span>
                 </div>
-                <div className="bg-muted mt-0.5 h-1.5 overflow-hidden rounded-full">
+                <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-black/60 ring-1 ring-white/10">
                   <div
-                    className="h-full rounded-full bg-red-600 transition-all duration-300"
+                    className={`${styles['health-bar-fill']} h-full bg-gradient-to-r from-red-700 to-rose-400 transition-[width] duration-300`}
                     style={{
                       width: `${
                         m.max_hp && m.max_hp > 0
@@ -381,7 +386,7 @@ export function MonsterGroup({
                   />
                 </div>
               </div>
-              <p className="text-muted-foreground w-full truncate px-0.5 text-center text-[9px] sm:text-[10px]">
+              <p className="w-full truncate px-0.5 text-center text-[9px] font-medium text-white/90 drop-shadow sm:text-[11px]">
                 {m.name}
               </p>
             </button>

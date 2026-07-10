@@ -46,8 +46,9 @@ export function Dice({ value, rolling = false }: { value: number; rolling?: bool
       aria-label={`骰子 ${safeValue} 点`}
       data-testid="monopoly-dice"
       className={cn(
-        'size-16 rounded-lg drop-shadow-sm transition-transform',
-        rolling && 'animate-[monopoly-dice-roll_0.55s_ease-in-out_infinite]'
+        'size-16 rounded-lg drop-shadow-sm transition-[transform,filter] duration-200',
+        rolling &&
+          'animate-[monopoly-dice-roll_0.55s_cubic-bezier(0.4,0,0.2,1)_infinite] drop-shadow-[0_8px_8px_rgba(15,23,42,0.28)]'
       )}
     >
       <rect

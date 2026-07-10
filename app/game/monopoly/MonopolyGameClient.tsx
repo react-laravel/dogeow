@@ -9,7 +9,16 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
-import { ArrowLeft, Bot, Home, Loader2, Plus, Trophy, UserPlus } from 'lucide-react'
+import {
+  ArrowLeft,
+  Bot,
+  CircleDollarSign,
+  Home,
+  Loader2,
+  Plus,
+  Trophy,
+  UserPlus,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,7 +29,13 @@ import useAuthStore from '@/stores/authStore'
 import { monopolyApi } from './api'
 import { Dice } from './components/Dice'
 import { MonopolyBoard, formatMoney } from './components/MonopolyBoard'
-import type { MonopolyPlayer, MonopolyProperty, MonopolyRoomSummary, MonopolyState } from './types'
+import type {
+  MonopolyPlayer,
+  MonopolyProperty,
+  MonopolyRollAnimation,
+  MonopolyRoomSummary,
+  MonopolyState,
+} from './types'
 
 interface StateBroadcastPayload {
   state?: MonopolyState
@@ -31,6 +46,12 @@ interface LobbyBroadcastPayload {
 }
 
 type CenterView = 'main' | 'assets'
+type AnimationPhase = 'idle' | 'rolling' | 'moving' | 'settling'
+interface AnimationWaiter {
+  remaining: number
+  timer: number
+  resolve: () => void
+}
 const APP_SCROLL_CONTAINER_IDS = ['main-scroll', 'main-container'] as const
 const MAX_HOUSES_PER_TURN = 2
 const MAX_HOUSES_PER_PROPERTY = 5
@@ -75,9 +96,18 @@ export default function MonopolyGameClient() {
   const [selectedAssetPlayerId, setSelectedAssetPlayerId] = useState<number | null>(null)
   const [displayedEvents, setDisplayedEvents] = useState<MonopolyState['events']>([])
   const [displayedPlayers, setDisplayedPlayers] = useState<MonopolyState['players']>([])
+  const [displayedProperties, setDisplayedProperties] = useState<MonopolyState['properties']>([])
+  const [displayedRoom, setDisplayedRoom] = useState<MonopolyState['room'] | null>(null)
+  const [displayedCurrentPlayerId, setDisplayedCurrentPlayerId] = useState<number | null>(null)
   const [movingPlayerId, setMovingPlayerId] = useState<number | null>(null)
   const [highlightedPosition, setHighlightedPosition] = useState<number | null>(null)
+  const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('idle')
   const displayedPlayersRef = useRef<MonopolyState['players']>([])
+  const animationPhaseRef = useRef<AnimationPhase>('idle')
+  const animationQueueRef = useRef<MonopolyRollAnimation[]>([])
+  const animationRunningRef = useRef(false)
+  const queuedFinalStateRef = useRef<MonopolyState | null>(null)
+  const animationWaitersRef = useRef<AnimationWaiter[]>([])
   const movementTimersRef = useRef<number[]>([])
   const diceTimersRef = useRef<number[]>([])
   useLockAppScroll(Boolean(state))
@@ -91,8 +121,7 @@ export default function MonopolyGameClient() {
     [state, currentUserId]
   )
   const isMyTurn = Boolean(me && currentPlayer?.id === me.id && state?.room.status === 'playing')
-  const isMovementAnimating = movingPlayerId !== null
-  const actionLocked = loading || rolling || isMovementAnimating
+  const actionLocked = loading || animationPhase !== 'idle'
   const remainingBuildsThisTurn = Math.max(
     0,
     MAX_HOUSES_PER_TURN - (me?.houses_built_this_turn ?? 0)
@@ -104,14 +133,16 @@ export default function MonopolyGameClient() {
   const playerSummary = useMemo(() => {
     if (!state) return []
 
-    return [...state.players].sort((a, b) => a.turn_order - b.turn_order)
-  }, [state])
+    const players = displayedPlayers.length > 0 ? displayedPlayers : state.players
+    return [...players].sort((a, b) => a.turn_order - b.turn_order)
+  }, [displayedPlayers, state])
   const playerNetWorth = useMemo(() => {
     if (!state) return new Map<number, number>()
 
     const totals = new Map<number, number>()
-    state.players.forEach(player => totals.set(player.id, player.cash))
-    state.properties.forEach(property => {
+    playerSummary.forEach(player => totals.set(player.id, player.cash))
+    const properties = displayedProperties.length > 0 ? displayedProperties : state.properties
+    properties.forEach(property => {
       if (!property.owner_player_id) return
 
       totals.set(
@@ -123,23 +154,25 @@ export default function MonopolyGameClient() {
     })
 
     return totals
-  }, [state])
+  }, [displayedProperties, playerSummary, state])
   const selectedAssetPlayer = useMemo(() => {
     if (!state) return null
 
     return (
-      state.players.find(player => player.id === selectedAssetPlayerId) ??
+      playerSummary.find(player => player.id === selectedAssetPlayerId) ??
       me ??
-      state.players[0] ??
+      playerSummary[0] ??
       null
     )
-  }, [me, selectedAssetPlayerId, state])
+  }, [me, playerSummary, selectedAssetPlayerId, state])
   const selectedAssetProperties = useMemo(
     () =>
       selectedAssetPlayer && state
-        ? state.properties.filter(property => property.owner_player_id === selectedAssetPlayer.id)
+        ? (displayedProperties.length > 0 ? displayedProperties : state.properties).filter(
+            property => property.owner_player_id === selectedAssetPlayer.id
+          )
         : [],
-    [selectedAssetPlayer, state]
+    [displayedProperties, selectedAssetPlayer, state]
   )
   const selectedAssetValue = useMemo(
     () =>
@@ -152,22 +185,95 @@ export default function MonopolyGameClient() {
   const finishedEvent = useMemo(() => {
     return [...displayedEvents].reverse().find(event => event.type === 'game.finished') ?? null
   }, [displayedEvents])
-  const boardPlayers = displayedPlayers.length > 0 ? displayedPlayers : (state?.players ?? [])
+  const boardPlayers = useMemo(
+    () => (displayedPlayers.length > 0 ? displayedPlayers : (state?.players ?? [])),
+    [displayedPlayers, state?.players]
+  )
+  const boardProperties = useMemo(
+    () => (displayedProperties.length > 0 ? displayedProperties : (state?.properties ?? [])),
+    [displayedProperties, state?.properties]
+  )
+  const visualRoom = displayedRoom ?? state?.room ?? null
+  const visualCurrentPlayer =
+    boardPlayers.find(player => player.id === displayedCurrentPlayerId) ?? currentPlayer
+  const visualMe = boardPlayers.find(player => player.user_id === currentUserId) ?? me
+  const visualCurrentProperty = visualMe
+    ? (boardProperties.find(property => property.tile_index === visualMe.position) ?? null)
+    : null
+
+  useEffect(() => {
+    const gameWindow = window as Window & {
+      advanceTime?: (milliseconds: number) => void
+      render_game_to_text?: () => string
+    }
+
+    gameWindow.render_game_to_text = () =>
+      JSON.stringify({
+        mode: visualRoom?.status ?? 'lobby',
+        round: visualRoom?.round ?? 0,
+        currentPlayer: visualCurrentPlayer?.name ?? null,
+        animationPhase,
+        dice: diceValue,
+        highlightedPosition,
+        players: boardPlayers.map(player => ({
+          id: player.id,
+          name: player.name,
+          cash: player.cash,
+          position: player.position,
+          bankrupt: player.is_bankrupt,
+          inJail: player.is_in_jail,
+        })),
+      })
+
+    gameWindow.advanceTime = milliseconds => {
+      const elapsed = Math.max(0, milliseconds)
+      const ready: AnimationWaiter[] = []
+      animationWaitersRef.current.forEach(waiter => {
+        waiter.remaining -= elapsed
+        if (waiter.remaining <= 0) ready.push(waiter)
+      })
+      ready.forEach(waiter => {
+        window.clearTimeout(waiter.timer)
+        animationWaitersRef.current = animationWaitersRef.current.filter(
+          candidate => candidate !== waiter
+        )
+        waiter.resolve()
+      })
+    }
+
+    return () => {
+      delete gameWindow.render_game_to_text
+      delete gameWindow.advanceTime
+    }
+  }, [
+    animationPhase,
+    boardPlayers,
+    diceValue,
+    highlightedPosition,
+    visualCurrentPlayer?.name,
+    visualRoom?.round,
+    visualRoom?.status,
+  ])
 
   useEffect(() => {
     displayedPlayersRef.current = displayedPlayers
   }, [displayedPlayers])
 
   useEffect(() => {
+    const movementTimers = movementTimersRef.current
+
     return () => {
-      movementTimersRef.current.forEach(timer => window.clearTimeout(timer))
+      movementTimers.forEach(timer => window.clearTimeout(timer))
       diceTimersRef.current.forEach(timer => window.clearTimeout(timer))
+      animationWaitersRef.current = []
+      animationQueueRef.current = []
+      animationRunningRef.current = false
     }
   }, [])
 
-  const clearMovementTimers = useCallback(() => {
-    movementTimersRef.current.forEach(timer => window.clearTimeout(timer))
-    movementTimersRef.current = []
+  const changeAnimationPhase = useCallback((phase: AnimationPhase) => {
+    animationPhaseRef.current = phase
+    setAnimationPhase(phase)
   }, [])
 
   const stopDiceRolling = useCallback(() => {
@@ -189,104 +295,141 @@ export default function MonopolyGameClient() {
     tick()
   }, [])
 
-  const animateDiceTo = useCallback(
-    (finalValue: number) => {
-      startDiceRolling()
-      diceTimersRef.current.push(
-        window.setTimeout(() => {
-          diceTimersRef.current.forEach(timer => window.clearTimeout(timer))
-          diceTimersRef.current = []
-          setDiceValue(finalValue)
-          setRolling(false)
-        }, 650)
-      )
+  const commitDisplayedState = useCallback((nextState: MonopolyState) => {
+    displayedPlayersRef.current = nextState.players
+    setState(nextState)
+    setDisplayedPlayers(nextState.players)
+    setDisplayedProperties(nextState.properties)
+    setDisplayedEvents(nextState.events)
+    setDisplayedRoom(nextState.room)
+    setDisplayedCurrentPlayerId(nextState.current_player_id)
+    setMovingPlayerId(null)
+    setHighlightedPosition(null)
+  }, [])
+
+  const waitForAnimation = useCallback(
+    (duration: number) =>
+      new Promise<void>(resolve => {
+        const waiter: AnimationWaiter = {
+          remaining: duration,
+          timer: 0,
+          resolve,
+        }
+        waiter.timer = window.setTimeout(() => {
+          animationWaitersRef.current = animationWaitersRef.current.filter(
+            candidate => candidate !== waiter
+          )
+          resolve()
+        }, duration)
+        movementTimersRef.current.push(waiter.timer)
+        animationWaitersRef.current.push(waiter)
+      }),
+    []
+  )
+
+  const animatePlayerToState = useCallback(
+    async (step: MonopolyRollAnimation) => {
+      const previousPlayers =
+        displayedPlayersRef.current.length > 0 ? displayedPlayersRef.current : step.state.players
+      const previousPlayer = previousPlayers.find(player => player.id === step.player_id)
+      const nextPlayer = step.state.players.find(player => player.id === step.player_id)
+
+      if (!previousPlayer || !nextPlayer || previousPlayer.position === nextPlayer.position) {
+        await waitForAnimation(180)
+        return
+      }
+
+      changeAnimationPhase('moving')
+      setMovingPlayerId(step.player_id)
+      const boardSize = Math.max(step.state.board.length, 1)
+      const totalSteps = (nextPlayer.position - previousPlayer.position + boardSize) % boardSize
+      let position = previousPlayer.position
+      let workingPlayers = previousPlayers.map(player => ({ ...player }))
+
+      for (let completedSteps = 0; completedSteps < totalSteps; completedSteps += 1) {
+        position = (position + 1) % boardSize
+        setHighlightedPosition(position)
+        workingPlayers = workingPlayers.map(player =>
+          player.id === step.player_id ? { ...player, position } : player
+        )
+        displayedPlayersRef.current = workingPlayers
+        setDisplayedPlayers(workingPlayers)
+        await waitForAnimation(190)
+      }
     },
-    [startDiceRolling]
+    [changeAnimationPhase, waitForAnimation]
+  )
+
+  const runAnimationQueue = useCallback(async () => {
+    if (animationRunningRef.current) return
+
+    animationRunningRef.current = true
+    while (animationQueueRef.current.length > 0) {
+      const step = animationQueueRef.current.shift()
+      if (!step) continue
+
+      setState(step.state)
+      setDisplayedRoom(step.state.room)
+      setDisplayedCurrentPlayerId(step.player_id)
+      changeAnimationPhase('rolling')
+      startDiceRolling()
+      await waitForAnimation(540)
+      stopDiceRolling()
+      setDiceValue(step.roll)
+      await waitForAnimation(180)
+      await animatePlayerToState(step)
+
+      displayedPlayersRef.current = step.state.players
+      setDisplayedPlayers(step.state.players)
+      setDisplayedProperties(step.state.properties)
+      setDisplayedEvents(step.state.events)
+      setMovingPlayerId(null)
+      setHighlightedPosition(null)
+      changeAnimationPhase('settling')
+      await waitForAnimation(260)
+    }
+
+    const finalState = queuedFinalStateRef.current
+    queuedFinalStateRef.current = null
+    if (finalState) commitDisplayedState(finalState)
+
+    animationRunningRef.current = false
+    changeAnimationPhase('idle')
+  }, [
+    animatePlayerToState,
+    changeAnimationPhase,
+    commitDisplayedState,
+    startDiceRolling,
+    stopDiceRolling,
+    waitForAnimation,
+  ])
+
+  const enqueueRollAnimations = useCallback(
+    (animations: MonopolyRollAnimation[], finalState: MonopolyState) => {
+      if (animations.length === 0) {
+        commitDisplayedState(finalState)
+        changeAnimationPhase('idle')
+        return
+      }
+
+      animationQueueRef.current.push(...animations)
+      queuedFinalStateRef.current = finalState
+      void runAnimationQueue()
+    },
+    [changeAnimationPhase, commitDisplayedState, runAnimationQueue]
   )
 
   const applyState = useCallback(
     (nextState: MonopolyState) => {
-      const previousPlayers =
-        displayedPlayersRef.current.length > 0 ? displayedPlayersRef.current : nextState.players
-      const boardSize = Math.max(nextState.board.length, 1)
-      const changes = nextState.players
-        .map(nextPlayer => {
-          const previousPlayer = previousPlayers.find(player => player.id === nextPlayer.id)
-          if (!previousPlayer || previousPlayer.position === nextPlayer.position) return null
-
-          return {
-            playerId: nextPlayer.id,
-            from: previousPlayer.position,
-            to: nextPlayer.position,
-          }
-        })
-        .filter((change): change is { playerId: number; from: number; to: number } =>
-          Boolean(change)
-        )
-
-      setState(nextState)
-
-      if (changes.length === 0) {
-        clearMovementTimers()
-        displayedPlayersRef.current = nextState.players
-        setDisplayedPlayers(nextState.players)
-        setDisplayedEvents(nextState.events)
-        setMovingPlayerId(null)
-        setHighlightedPosition(null)
+      if (animationRunningRef.current || animationPhaseRef.current !== 'idle') {
+        setState(nextState)
+        queuedFinalStateRef.current = nextState
         return
       }
 
-      clearMovementTimers()
-      let workingPlayers = previousPlayers.map(player => ({ ...player }))
-      displayedPlayersRef.current = workingPlayers
-      setDisplayedPlayers(workingPlayers)
-
-      const animateChange = (changeIndex: number) => {
-        const change = changes[changeIndex]
-        if (!change) {
-          displayedPlayersRef.current = nextState.players
-          setDisplayedPlayers(nextState.players)
-          setDisplayedEvents(nextState.events)
-          setMovingPlayerId(null)
-          setHighlightedPosition(null)
-          return
-        }
-
-        setMovingPlayerId(change.playerId)
-        let position = change.from
-        const totalSteps = (change.to - change.from + boardSize) % boardSize
-        let completedSteps = 0
-
-        const step = () => {
-          if (completedSteps >= totalSteps) {
-            workingPlayers = workingPlayers.map(player =>
-              player.id === change.playerId
-                ? (nextState.players.find(nextPlayer => nextPlayer.id === change.playerId) ??
-                  player)
-                : player
-            )
-            setDisplayedPlayers(workingPlayers)
-            animateChange(changeIndex + 1)
-            return
-          }
-
-          position = (position + 1) % boardSize
-          completedSteps += 1
-          setHighlightedPosition(position)
-          workingPlayers = workingPlayers.map(player =>
-            player.id === change.playerId ? { ...player, position } : player
-          )
-          displayedPlayersRef.current = workingPlayers
-          setDisplayedPlayers(workingPlayers)
-          movementTimersRef.current.push(window.setTimeout(step, 240))
-        }
-
-        movementTimersRef.current.push(window.setTimeout(step, 120))
-      }
-
-      animateChange(0)
+      commitDisplayedState(nextState)
     },
-    [clearMovementTimers]
+    [commitDisplayedState]
   )
 
   const runAction = useCallback(async (action: () => Promise<void>) => {
@@ -355,8 +498,21 @@ export default function MonopolyGameClient() {
     channel?.listen('.turn.advanced', update)
     channel?.listen(
       '.dice.rolled',
-      (payload: StateBroadcastPayload & { payload?: { roll?: number } }) => {
-        if (payload.payload?.roll) animateDiceTo(payload.payload.roll)
+      (payload: StateBroadcastPayload & { payload?: { player_id?: number; roll?: number } }) => {
+        if (payload.state && payload.payload?.player_id && payload.payload.roll) {
+          enqueueRollAnimations(
+            [
+              {
+                player_id: payload.payload.player_id,
+                roll: payload.payload.roll,
+                state: payload.state,
+              },
+            ],
+            payload.state
+          )
+          return
+        }
+
         update(payload)
       }
     )
@@ -364,7 +520,7 @@ export default function MonopolyGameClient() {
     return () => {
       echo?.leave(`monopoly.room.${state.room.id}`)
     }
-  }, [animateDiceTo, applyState, state?.room.id])
+  }, [applyState, enqueueRollAnimations, state?.room.id])
 
   const createRoom = () =>
     runAction(async () => {
@@ -381,12 +537,13 @@ export default function MonopolyGameClient() {
   const roll = () =>
     runAction(async () => {
       try {
+        changeAnimationPhase('rolling')
         startDiceRolling()
         const data = await monopolyApi.roll(state!.room.id)
-        animateDiceTo(data.roll)
-        applyState(data.state)
+        enqueueRollAnimations(data.animations, data.state)
       } catch (err) {
         stopDiceRolling()
+        changeAnimationPhase('idle')
         throw err
       }
     })
@@ -492,13 +649,39 @@ export default function MonopolyGameClient() {
       <style jsx global>{`
         @keyframes monopoly-dice-roll {
           0% {
-            transform: rotate(0deg) scale(1);
+            transform: translateY(0) rotate(0deg) scale(1);
           }
-          50% {
-            transform: rotate(18deg) scale(1.08);
+          35% {
+            transform: translateY(-7px) rotate(110deg) scale(1.08);
+          }
+          70% {
+            transform: translateY(2px) rotate(250deg) scale(0.96);
           }
           100% {
-            transform: rotate(360deg) scale(1);
+            transform: translateY(0) rotate(360deg) scale(1);
+          }
+        }
+        @keyframes monopoly-token-hop {
+          0% {
+            transform: translateY(5px) scale(0.72);
+            opacity: 0.3;
+          }
+          55% {
+            transform: translateY(-5px) scale(1.18);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        @keyframes monopoly-tile-pulse {
+          0%,
+          100% {
+            background-color: rgba(14, 165, 233, 0.08);
+          }
+          50% {
+            background-color: rgba(14, 165, 233, 0.22);
           }
         }
       `}</style>
@@ -512,13 +695,13 @@ export default function MonopolyGameClient() {
         <MonopolyBoard
           board={state.board}
           players={boardPlayers}
-          properties={state.properties}
-          currentPlayerId={state.current_player_id}
+          properties={boardProperties}
+          currentPlayerId={displayedCurrentPlayerId ?? state.current_player_id}
           movingPlayerId={movingPlayerId}
           highlightedPosition={highlightedPosition}
           center={
             <div className="flex size-full flex-col gap-3 overflow-hidden">
-              {state.room.status === 'waiting' ? (
+              {visualRoom?.status === 'waiting' ? (
                 <div className="flex size-full flex-col items-center justify-center gap-4 overflow-hidden rounded-md bg-white/75 p-3 text-center dark:bg-stone-950/45">
                   <div className="min-w-0 max-w-full">
                     <div className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">
@@ -580,7 +763,7 @@ export default function MonopolyGameClient() {
                     )}
                   </div>
                 </div>
-              ) : state.room.status === 'finished' && centerView === 'main' ? (
+              ) : visualRoom?.status === 'finished' && centerView === 'main' ? (
                 <div className="flex size-full flex-col gap-3 overflow-hidden rounded-md bg-white/75 p-4 dark:bg-stone-950/45">
                   <div className="flex shrink-0 flex-col items-center gap-3 text-center">
                     <Trophy className="size-10 text-amber-500" />
@@ -601,15 +784,16 @@ export default function MonopolyGameClient() {
                     <div className="flex items-center justify-between gap-3 rounded-md bg-white/75 px-3 py-2 dark:bg-stone-950/45">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">
-                          第 {Math.min(state.room.round, state.room.max_rounds)} /{' '}
-                          {state.room.max_rounds} 轮 · {currentPlayer?.name ?? '等待开始'}
+                          第 {Math.min(visualRoom?.round ?? 1, visualRoom?.max_rounds ?? 30)} /{' '}
+                          {visualRoom?.max_rounds ?? 30} 轮 ·{' '}
+                          {visualCurrentPlayer?.name ?? '等待开始'}
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 [@media_(orientation:landscape)]:grid-cols-2">
                       {playerSummary.map(player => {
-                        const isActivePlayer = player.id === currentPlayer?.id
+                        const isActivePlayer = player.id === visualCurrentPlayer?.id
                         const netWorth = playerNetWorth.get(player.id) ?? player.cash
                         const playerStatus = [
                           player.is_in_jail ? '监狱' : null,
@@ -623,9 +807,9 @@ export default function MonopolyGameClient() {
                             type="button"
                             key={player.id}
                             className={cn(
-                              'min-w-0 rounded-md bg-white/75 px-2 py-1.5 text-left transition hover:bg-white focus:ring-2 focus:ring-amber-400 focus:outline-none dark:bg-stone-950/45 dark:hover:bg-stone-900',
+                              'relative min-w-0 overflow-hidden rounded-md bg-white/75 px-2 py-1.5 text-left transition-all duration-200 hover:bg-white focus:ring-2 focus:ring-amber-400 focus:outline-none dark:bg-stone-950/45 dark:hover:bg-stone-900',
                               isActivePlayer &&
-                                'shadow-[inset_0_0_0_1px_rgba(245,158,11,0.75)] bg-amber-50/80 dark:bg-amber-950/25'
+                                'bg-amber-50/80 shadow-[inset_3px_0_0_rgb(245,158,11)] dark:bg-amber-950/25'
                             )}
                             onClick={() => {
                               setSelectedAssetPlayerId(player.id)
@@ -652,11 +836,44 @@ export default function MonopolyGameClient() {
 
                     <div className="flex min-h-0 flex-1 flex-col rounded-md bg-white/75 p-3 dark:bg-stone-950/45">
                       <div className="grid shrink-0 gap-3 [@media_(orientation:landscape)]:grid-cols-[auto_minmax(0,1fr)] [@media_(orientation:landscape)]:items-center">
-                        <div className="flex justify-center">
-                          <Dice value={diceValue} rolling={rolling} />
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div
+                            className={cn(
+                              'rounded-xl p-1.5 transition-all duration-300',
+                              animationPhase === 'rolling' &&
+                                'bg-sky-100 shadow-[0_0_24px_rgba(14,165,233,0.35)] dark:bg-sky-950/50',
+                              animationPhase === 'settling' &&
+                                'bg-emerald-100 dark:bg-emerald-950/50'
+                            )}
+                          >
+                            <Dice value={diceValue} rolling={rolling} />
+                          </div>
+                          <div className="flex gap-1" aria-hidden="true">
+                            {(['rolling', 'moving', 'settling'] as const).map(phase => (
+                              <span
+                                key={phase}
+                                className={cn(
+                                  'h-1 w-4 rounded-full bg-stone-200 transition-colors dark:bg-stone-700',
+                                  animationPhase === phase && 'bg-sky-500 dark:bg-sky-400'
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <span className="sr-only" aria-live="polite">
+                            {animationPhase === 'rolling'
+                              ? '正在掷骰子'
+                              : animationPhase === 'moving'
+                                ? '棋子正在移动'
+                                : animationPhase === 'settling'
+                                  ? '正在结算落地结果'
+                                  : '等待操作'}
+                          </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <Button
+                            className={cn(
+                              !canEndTurn && !canBuy && !canBuildCurrent && 'col-span-2'
+                            )}
                             onClick={roll}
                             disabled={!isMyTurn || Boolean(me?.last_roll) || actionLocked}
                           >
@@ -666,9 +883,10 @@ export default function MonopolyGameClient() {
                             <Button
                               variant="outline"
                               onClick={() =>
-                                runAction(async () =>
-                                  applyState((await monopolyApi.endTurn(state.room.id)).state)
-                                )
+                                runAction(async () => {
+                                  const data = await monopolyApi.endTurn(state.room.id)
+                                  enqueueRollAnimations(data.animations, data.state)
+                                })
                               }
                               disabled={actionLocked}
                             >
@@ -708,11 +926,10 @@ export default function MonopolyGameClient() {
                             <Button
                               variant="outline"
                               onClick={() =>
-                                runAction(async () =>
-                                  applyState(
-                                    (await monopolyApi.leaveJail(state.room.id, 'pay')).state
-                                  )
-                                )
+                                runAction(async () => {
+                                  const data = await monopolyApi.leaveJail(state.room.id, 'pay')
+                                  enqueueRollAnimations(data.animations, data.state)
+                                })
                               }
                               disabled={actionLocked}
                             >
@@ -722,14 +939,21 @@ export default function MonopolyGameClient() {
                         </div>
                       </div>
 
-                      {currentProperty && (
-                        <div className="mt-3 shrink-0 rounded-md bg-stone-50 p-2 text-sm text-stone-700 dark:bg-stone-900 dark:text-stone-300">
-                          <div className="font-medium">{currentProperty.name}</div>
-                          <div>
-                            价格 {formatMoney(currentProperty.price)} · 租金{' '}
-                            {formatMoney(currentProperty.current_rent)} · 房屋{' '}
-                            {currentProperty.houses}/{MAX_HOUSES_PER_PROPERTY}
-                            {canBuildCurrent ? ` · 可建 ${remainingBuildsThisTurn}` : ''}
+                      {visualCurrentProperty && (
+                        <div className="mt-3 shrink-0 rounded-md bg-stone-50 p-2.5 text-sm text-stone-700 dark:bg-stone-900 dark:text-stone-300">
+                          <div className="flex items-center gap-2">
+                            <CircleDollarSign className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <div className="min-w-0">
+                              <div className="truncate font-medium">
+                                {visualCurrentProperty.name}
+                              </div>
+                              <div className="truncate text-xs text-stone-500 dark:text-stone-400">
+                                {formatMoney(visualCurrentProperty.price)} · 过路费{' '}
+                                {formatMoney(visualCurrentProperty.current_rent)} · 房屋{' '}
+                                {visualCurrentProperty.houses}/{MAX_HOUSES_PER_PROPERTY}
+                                {canBuildCurrent ? ` · 可建 ${remainingBuildsThisTurn}` : ''}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -810,11 +1034,28 @@ function EventLogPanel({
             暂无事件
           </div>
         ) : (
-          events.map(event => (
+          events.map((event, index) => (
             <div
               key={event.id}
-              className="rounded-md bg-stone-50 px-2 py-1.5 text-stone-700 dark:bg-stone-900 dark:text-stone-300"
+              className={cn(
+                'relative rounded-md bg-stone-50 py-1.5 pr-2 pl-3 text-stone-700 transition-colors dark:bg-stone-900 dark:text-stone-300',
+                index === events.length - 1 &&
+                  'animate-in fade-in slide-in-from-bottom-1 bg-amber-50 dark:bg-amber-950/25'
+              )}
+              data-latest={index === events.length - 1 ? 'true' : undefined}
             >
+              <span
+                className={cn(
+                  'absolute top-2 bottom-2 left-1 w-0.5 rounded-full bg-stone-300 dark:bg-stone-700',
+                  event.type.startsWith('property.') && 'bg-emerald-500',
+                  (event.type.startsWith('chance.') || event.type.startsWith('welfare.')) &&
+                    'bg-sky-500',
+                  (event.type.startsWith('rent.') || event.type.startsWith('cash.')) &&
+                    'bg-amber-500',
+                  (event.type.startsWith('jail.') || event.type === 'player.bankrupt') &&
+                    'bg-red-500'
+                )}
+              />
               {event.message}
             </div>
           ))

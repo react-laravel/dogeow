@@ -19,6 +19,7 @@ import { RpgRegistrationGate } from './components/auth/RpgRegistrationGate'
 import useAuthStore from '@/stores/authStore'
 import { RpgStatusHeader } from './components/shared/RpgStatusHeader'
 import { soundManager } from './utils/soundManager'
+import { Backpack, BookOpen, Settings, Sparkles, Swords, UserRound } from 'lucide-react'
 
 import './rpg.module.css'
 
@@ -286,12 +287,12 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
   }
 
   const tabs = [
-    { id: 'combat' as const, name: '战斗', icon: '⚔️' },
-    { id: 'inventory' as const, name: '背包', icon: '🎒' },
-    { id: 'character' as const, name: '角色', icon: '👤' },
-    { id: 'skills' as const, name: '技能', icon: '✨' },
-    { id: 'compendium' as const, name: '图鉴', icon: '📖' },
-    { id: 'settings' as const, name: '设置', icon: '⚙️' },
+    { id: 'combat' as const, name: '战斗', icon: Swords },
+    { id: 'inventory' as const, name: '背包', icon: Backpack },
+    { id: 'character' as const, name: '角色', icon: UserRound },
+    { id: 'skills' as const, name: '技能', icon: Sparkles },
+    { id: 'compendium' as const, name: '图鉴', icon: BookOpen },
+    { id: 'settings' as const, name: '设置', icon: Settings },
   ]
 
   return (
@@ -337,7 +338,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
                   : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
               }`}
             >
-              <span className="mr-2">{tab.icon}</span>
+              <tab.icon className="mr-2 inline h-4 w-4" />
               {tab.name}
             </button>
           ))}
@@ -392,7 +393,7 @@ export default function RPGGameClient({ requireRegistration = false }: RPGGameCl
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <div className="mb-1 text-xl">{tab.icon}</div>
+              <tab.icon className="mb-1 h-5 w-5" />
               <div className="text-xs">{tab.name}</div>
             </button>
           ))}

@@ -61,3 +61,29 @@ TODO
 - Updated portrait board layout selection to maximize visible board area so side tiles align closer to screen edges, and compacted player cards to show cash/net worth on one line.
 - Updated backend turn flow so rolls that leave no follow-up action auto-advance the turn, and paying to leave jail immediately ends the current turn.
 - Raised city land prices from 200K through 2.8M and changed city rent to 20% of land plus house value.
+
+2026-07-10
+
+- Reworked estate-game turn presentation into a queued sequence: each player now rolls first, moves one tile at a time, then reveals cash, property, event-log, and next-player updates after landing.
+- Added API animation snapshots for human and computer rolls; ending a turn or paying to leave jail now returns all following computer roll steps instead of only the final state.
+- Broadcast every computer dice roll and turn advance so all connected players see the same ordered animation flow.
+- Improved dice motion, moving-token hop/highlight effects, landing feedback, active-player cards, event accents, and compact property information.
+- Added `render_game_to_text` and deterministic animation stepping hooks for automated game inspection.
+- Verified 390x844 portrait and 1180x720 landscape layouts with no document overflow; completed a human plus three-computer round with no new browser console errors.
+- Verified frontend ESLint and 5 focused Vitest assertions; verified backend Pint, PHPStan, and 9 Monopoly feature tests with 76 assertions.
+
+TODO
+
+- Consider adding optional sound effects once final audio assets are available.
+
+2026-07-10
+
+- Reworked the RPG combat screen into a responsive battlefield plus operations sidebar, keeping the arena compact on desktop and readable on mobile.
+- Added clearer combat state, round, map, character HP/MP, skill enable/cooldown, and combat-log hierarchy.
+- Added battlefield depth, idle motion, hit/regen number animation, skill-cast feedback, cooldown motion, bar sheen, and reduced-motion fallbacks.
+- Replaced RPG tab emoji with consistent Lucide icons.
+- Added battle-control regression coverage and verified the resulting layout at 1440px desktop and 390px mobile viewports with Playwright screenshots.
+
+TODO
+
+- Verify the authenticated live combat data flow in a signed-in browser, including repeated use of the same skill on consecutive rounds.

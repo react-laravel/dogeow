@@ -1,7 +1,17 @@
 'use client'
 
 import { del, get, post } from '@/lib/api'
-import type { MonopolyProperty, MonopolyRoomSummary, MonopolyState } from './types'
+import type {
+  MonopolyProperty,
+  MonopolyRollAnimation,
+  MonopolyRoomSummary,
+  MonopolyState,
+} from './types'
+
+interface AnimatedStateResponse {
+  animations: MonopolyRollAnimation[]
+  state: MonopolyState
+}
 
 export const monopolyApi = {
   rooms: () => get<{ rooms: MonopolyRoomSummary[] }>('/monopoly/rooms'),
@@ -16,7 +26,7 @@ export const monopolyApi = {
     del<{ state: MonopolyState }>(`/monopoly/rooms/${roomId}/computers/${playerId}`),
   start: (roomId: number) => post<{ state: MonopolyState }>(`/monopoly/rooms/${roomId}/start`, {}),
   roll: (roomId: number) =>
-    post<{ roll: number; state: MonopolyState }>(`/monopoly/rooms/${roomId}/roll`, {}),
+    post<AnimatedStateResponse & { roll: number }>(`/monopoly/rooms/${roomId}/roll`, {}),
   buy: (roomId: number) =>
     post<{ property: MonopolyProperty; state: MonopolyState }>(`/monopoly/rooms/${roomId}/buy`, {}),
   build: (roomId: number, propertyId: number, houses: number) =>
@@ -25,7 +35,7 @@ export const monopolyApi = {
       houses,
     }),
   endTurn: (roomId: number) =>
-    post<{ state: MonopolyState }>(`/monopoly/rooms/${roomId}/end-turn`, {}),
+    post<AnimatedStateResponse>(`/monopoly/rooms/${roomId}/end-turn`, {}),
   leaveJail: (roomId: number, method: 'pay' | 'card') =>
-    post<{ state: MonopolyState }>(`/monopoly/rooms/${roomId}/leave-jail`, { method }),
+    post<AnimatedStateResponse>(`/monopoly/rooms/${roomId}/leave-jail`, { method }),
 }

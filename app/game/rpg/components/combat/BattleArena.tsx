@@ -402,6 +402,9 @@ export function BattleArena({
 
   return (
     <div className="absolute inset-0 isolate flex flex-col items-stretch">
+      <div className={styles['battlefield-vignette']} aria-hidden />
+      <div className={styles['battlefield-ground']} aria-hidden />
+
       {/* 技能特效层：冰河世纪在底层（地面冰面，延伸到怪物身后），其它技能在顶层 */}
       {activeSkillEffect && skillRoundKey && (
         <SkillEffect
@@ -417,9 +420,22 @@ export function BattleArena({
       )}
 
       {/* 内容层：怪物、VS、玩家叠在特效之上，形成立体场景 */}
-      <div className="relative z-10 flex flex-1 flex-col min-h-0">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        {activeSkillEffect && skillUsed && (
+          <div
+            className={`${styles['skill-cast-banner']} pointer-events-none absolute top-[46%] left-1/2 z-30 -translate-x-1/2`}
+          >
+            <span className="text-[10px] font-semibold tracking-normal text-white/70">
+              释放技能
+            </span>
+            <strong className="block text-sm tracking-normal text-white sm:text-base">
+              {skillUsed.name}
+            </strong>
+          </div>
+        )}
+
         {/* 上侧：怪物区限高最多三排，给下方角色留出空间 */}
-        <div className="flex max-h-[min(46%,13.5rem)] flex-none flex-col items-center justify-end gap-1 overflow-hidden px-2 pt-4 sm:max-h-[min(48%,15rem)] sm:px-3 sm:pt-6">
+        <div className="flex max-h-[min(52%,16rem)] min-h-[42%] flex-none flex-col items-center justify-end gap-1 overflow-hidden px-2 pt-5 sm:px-4 sm:pt-7">
           {!isLoading && isFighting && hasValidMonsters ? (
             <MonsterGroup
               monsters={displayMonsters}
@@ -433,11 +449,14 @@ export function BattleArena({
               <MonsterIcon key={monsterId} icon={monster.icon} name={monster.name} size="lg" />
             </div>
           ) : isFighting && isLoading ? (
-            <div className="text-muted-foreground flex h-20 w-20 items-center justify-center text-xs sm:h-24 sm:w-24 sm:text-sm">
-              进入战斗中
+            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-xs text-white/80 backdrop-blur-sm sm:text-sm">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+              正在寻找敌人
             </div>
           ) : (
-            <div className="h-20 w-20 sm:h-24 sm:w-24" />
+            <div className="rounded-full border border-white/15 bg-black/35 px-4 py-2 text-xs text-white/75 backdrop-blur-sm sm:text-sm">
+              战斗已暂停
+            </div>
           )}
           {!isLoading && isFighting && !hasValidMonsters && !monster && !monsterId && (
             <div className="text-muted-foreground flex-1 text-xs">战斗中</div>
@@ -445,29 +464,27 @@ export function BattleArena({
         </div>
 
         {/* 下侧：角色 */}
-        <div className="mt-auto flex shrink-0 items-end justify-center gap-3 p-3 sm:gap-4 sm:p-4">
-          <div className="flex flex-col items-center gap-2">
+        <div className="mt-auto flex shrink-0 items-end justify-center p-3 sm:p-5">
+          <div className="border-white/15 bg-black/55 flex w-full max-w-md items-center gap-3 rounded-lg border p-2.5 shadow-lg backdrop-blur-md sm:gap-4 sm:p-3">
             <div
-              className={`bg-primary/20 text-primary relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold sm:h-16 sm:w-16 sm:text-2xl ${characterHit ? styles['character-hit'] : ''}`}
+              className={`border-primary/60 bg-primary/25 text-primary relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 text-xl font-bold shadow-[0_0_18px_rgba(59,130,246,0.28)] sm:h-16 sm:w-16 sm:text-2xl ${characterHit ? styles['character-hit'] : isFighting ? styles['character-idle'] : ''}`}
             >
               {(characterDamageText != null ||
                 characterRegenHpText != null ||
                 characterRegenMpText != null) && (
                 <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 flex -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap">
                   {characterDamageText != null && (
-                    <span className="rounded bg-black/70 px-1 text-xs font-bold text-red-400 drop-shadow sm:text-sm">
-                      -{characterDamageText}
-                    </span>
+                    <span className={styles['damage-number']}>-{characterDamageText}</span>
                   )}
                   {(characterRegenHpText != null || characterRegenMpText != null) && (
                     <div className="flex items-center gap-2">
                       {characterRegenHpText != null && (
-                        <span className="rounded bg-black/70 px-1 text-xs font-bold text-green-400 drop-shadow sm:text-sm">
+                        <span className={`${styles['regen-number']} text-emerald-300`}>
                           +{characterRegenHpText}
                         </span>
                       )}
                       {characterRegenMpText != null && (
-                        <span className="rounded bg-black/70 px-1 text-xs font-bold text-blue-400 drop-shadow sm:text-sm">
+                        <span className={`${styles['regen-number']} text-sky-300`}>
                           +{characterRegenMpText}
                         </span>
                       )}
@@ -477,34 +494,50 @@ export function BattleArena({
               )}
               {character?.name?.charAt(0) ?? '?'}
             </div>
-            {combatStats && (
-              <div className="w-full max-w-[140px] space-y-1 sm:max-w-[160px]">
-                <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
-                  <span>HP</span>
-                  <span>
-                    {effectiveCharacterHp} / {combatStats.max_hp}
+            <div className="min-w-0 flex-1">
+              <div className="mb-1.5 flex items-baseline justify-between gap-2 text-white">
+                <span className="truncate text-sm font-semibold sm:text-base">
+                  {character?.name ?? '冒险者'}
+                </span>
+                {character && (
+                  <span className="shrink-0 text-[10px] text-white/60 sm:text-xs">
+                    Lv.{character.level} {character.class}
                   </span>
-                </div>
-                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                  <div
-                    className="h-full rounded-full bg-red-500 transition-[width] duration-300"
-                    style={{ width: `${hpPercent}%` }}
-                  />
-                </div>
-                <div className="text-muted-foreground flex justify-between text-[10px] sm:text-xs">
-                  <span>MP</span>
-                  <span>
-                    {effectiveCharacterMana} / {combatStats.max_mana}
-                  </span>
-                </div>
-                <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                  <div
-                    className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
-                    style={{ width: `${manaPercent}%` }}
-                  />
-                </div>
+                )}
               </div>
-            )}
+              {combatStats && (
+                <div className="space-y-1.5">
+                  <div>
+                    <div className="mb-0.5 flex justify-between text-[10px] font-medium text-white/75 sm:text-xs">
+                      <span>生命</span>
+                      <span className="tabular-nums">
+                        {effectiveCharacterHp} / {combatStats.max_hp}
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-sm bg-black/45 ring-1 ring-white/10">
+                      <div
+                        className={`${styles['health-bar-fill']} h-full bg-gradient-to-r from-red-700 via-red-500 to-rose-400 transition-[width] duration-300`}
+                        style={{ width: `${hpPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-0.5 flex justify-between text-[10px] font-medium text-white/75 sm:text-xs">
+                      <span>魔法</span>
+                      <span className="tabular-nums">
+                        {effectiveCharacterMana} / {combatStats.max_mana}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-sm bg-black/45 ring-1 ring-white/10">
+                      <div
+                        className={`${styles['mana-bar-fill']} h-full bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-300 transition-[width] duration-300`}
+                        style={{ width: `${manaPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

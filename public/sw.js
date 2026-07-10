@@ -89,18 +89,30 @@ self.addEventListener('notificationclick', event => {
   const absoluteUrl = new URL(targetUrl, self.location.origin).href
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async clientList => {
+      const matchingClient = clientList.find(client => client.url === absoluteUrl)
+      if (matchingClient && 'focus' in matchingClient) {
+        return matchingClient.focus()
+      }
+
       for (const client of clientList) {
-        if ('focus' in client) {
-          if ('navigate' in client && typeof client.navigate === 'function') {
-            return client.navigate(absoluteUrl).then(() => client.focus())
+        if ('focus' in client && 'navigate' in client && typeof client.navigate === 'function') {
+          try {
+            await client.navigate(absoluteUrl)
+            return client.focus()
+          } catch {
+            // Safari/iOS 可能不支持导航现有 PWA 窗口，继续尝试 openWindow。
           }
-          return client.focus()
         }
       }
 
       if (self.clients.openWindow) {
         return self.clients.openWindow(absoluteUrl)
+      }
+
+      const focusableClient = clientList.find(client => 'focus' in client)
+      if (focusableClient) {
+        return focusableClient.focus()
       }
 
       return undefined
