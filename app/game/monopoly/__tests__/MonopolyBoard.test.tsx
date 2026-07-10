@@ -32,6 +32,7 @@ const players: MonopolyPlayer[] = [
     jail_turns: 0,
     jail_cards: 0,
     last_roll: null,
+    houses_built_this_turn: 0,
   },
 ]
 

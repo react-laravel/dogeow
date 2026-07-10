@@ -87,3 +87,17 @@ TODO
 TODO
 
 - Verify the authenticated live combat data flow in a signed-in browser, including repeated use of the same skill on consecutive rounds.
+
+2026-07-10
+
+- Current prompt: 改进代码，提取组件化。
+- Split `/game/monopoly` presentation into dedicated lobby, waiting-room, active-game, finished-game, asset, event-log, and animation-style components.
+- Kept API calls, WebSocket subscriptions, state ownership, and animation sequencing in `MonopolyGameClient` so the extracted panels remain presentational.
+- Centralized the house-limit constants and reduced `MonopolyGameClient.tsx` from 1,166 to 686 lines.
+- Added panel interaction coverage; all 9 focused Monopoly tests and targeted ESLint checks pass.
+- The full repository type-check remains blocked by pre-existing test typing failures outside `app/game/monopoly`; no Monopoly type errors were reported.
+- Ran the required Playwright game client and inspected its screenshot. The fresh browser was redirected to the public home page because it was unauthenticated, so authenticated board visuals could not be re-captured in this run.
+
+TODO
+
+- Re-run the `/game/monopoly` browser pass in an authenticated session if visual confirmation of the refactored panels is required.
