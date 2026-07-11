@@ -57,7 +57,10 @@ const CODEX_REASONING_EFFORTS: Array<{
   { value: 'medium', label: 'Medium', desc: '默认' },
   { value: 'high', label: 'High', desc: '复杂' },
   { value: 'xhigh', label: 'XHigh', desc: '最深' },
+  { value: 'ultra', label: 'Ultra', desc: '自动任务委派' },
 ]
+
+const CODEX_ULTRA_MODELS = new Set(['gpt-5.6-sol', 'gpt-5.6-terra'])
 
 export function getModelLabel(provider: AIProvider | undefined, model: string | undefined): string {
   if (!provider || !model) return ''
@@ -286,14 +289,18 @@ export const CodexModelSelector = React.memo<CodexModelSelectorProps>(
 CodexModelSelector.displayName = 'CodexModelSelector'
 
 interface CodexReasoningEffortSelectorProps {
+  model: string
   effort: CodexReasoningEffort
   onEffortChange: (value: CodexReasoningEffort) => void
   isLoading: boolean
 }
 
 export const CodexReasoningEffortSelector = React.memo<CodexReasoningEffortSelectorProps>(
-  ({ effort, onEffortChange, isLoading }) => {
+  ({ model, effort, onEffortChange, isLoading }) => {
     const [open, setOpen] = React.useState(false)
+    const availableEfforts = CODEX_ULTRA_MODELS.has(model)
+      ? CODEX_REASONING_EFFORTS
+      : CODEX_REASONING_EFFORTS.filter(item => item.value !== 'ultra')
 
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -313,7 +320,7 @@ export const CodexReasoningEffortSelector = React.memo<CodexReasoningEffortSelec
             value={effort}
             onValueChange={value => onEffortChange(value as CodexReasoningEffort)}
           >
-            {CODEX_REASONING_EFFORTS.map(item => (
+            {availableEfforts.map(item => (
               <DropdownMenuRadioItem key={item.value} value={item.value} className="cursor-pointer">
                 <div className="flex flex-col">
                   <span>{item.label}</span>

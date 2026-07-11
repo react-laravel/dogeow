@@ -122,7 +122,10 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     })
   }, [open, consumeSeedPrompt, aiChat])
 
-  const { provider, setProvider, ollamaModels, isLoadingOllamaModels, supportsImages } = aiChat
+  const { ollamaModels, isLoadingOllamaModels, supportsImages } = aiChat
+  const currentProvider = chatMode === 'knowledge' ? knowledgeChat.provider : aiChat.provider
+  const setCurrentProvider =
+    chatMode === 'knowledge' ? knowledgeChat.setProvider : aiChat.setProvider
   const currentOllamaModels = chatMode === 'knowledge' ? knowledgeChat.ollamaModels : ollamaModels
   const currentIsLoadingOllamaModels =
     chatMode === 'knowledge' ? knowledgeChat.isLoadingOllamaModels : isLoadingOllamaModels
@@ -161,12 +164,18 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           supportsImages={chatMode === 'ai' ? supportsImages : false}
           model={model}
           onModelChange={setModel}
-          codexReasoningEffort={chatMode === 'ai' ? aiChat.codexReasoningEffort : undefined}
-          onCodexReasoningEffortChange={
-            chatMode === 'ai' ? aiChat.setCodexReasoningEffort : undefined
+          codexReasoningEffort={
+            chatMode === 'knowledge'
+              ? knowledgeChat.codexReasoningEffort
+              : aiChat.codexReasoningEffort
           }
-          provider={provider}
-          onProviderChange={setProvider}
+          onCodexReasoningEffortChange={
+            chatMode === 'knowledge'
+              ? knowledgeChat.setCodexReasoningEffort
+              : aiChat.setCodexReasoningEffort
+          }
+          provider={currentProvider}
+          onProviderChange={setCurrentProvider}
           chatMode={chatMode}
           onChatModeChange={value => setChatMode(value as 'ai' | 'knowledge')}
           images={chatMode === 'ai' ? aiChat.images : []}

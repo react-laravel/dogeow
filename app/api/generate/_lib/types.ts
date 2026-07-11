@@ -2,7 +2,7 @@ export type GenerateOption = 'improve' | 'fix' | 'shorter' | 'longer' | 'continu
 
 export type AIProvider = 'ollama' | 'codex'
 
-export type CodexReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+export type CodexReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'ultra'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'

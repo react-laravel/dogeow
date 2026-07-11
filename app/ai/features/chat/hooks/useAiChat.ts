@@ -376,6 +376,17 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     setStoredCodexReasoningEffort(codexReasoningEffort)
   }, [codexReasoningEffort])
 
+  useEffect(() => {
+    if (
+      provider === 'codex' &&
+      codexReasoningEffort === 'ultra' &&
+      model !== 'gpt-5.6-sol' &&
+      model !== 'gpt-5.6-terra'
+    ) {
+      setCodexReasoningEffort('medium')
+    }
+  }, [codexReasoningEffort, model, provider])
+
   return {
     prompt,
     setPrompt,

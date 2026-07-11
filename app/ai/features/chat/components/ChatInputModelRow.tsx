@@ -24,7 +24,6 @@ interface ChatInputModelRowProps {
 
 export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
   ({
-    chatMode,
     provider,
     onProviderChange,
     model,
@@ -37,7 +36,7 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
   }) => {
     const selectedModel = model ?? ''
 
-    if (chatMode === 'ai' && provider && onProviderChange) {
+    if (provider && onProviderChange) {
       return (
         <div className="mb-2 flex items-center gap-1.5 text-sm">
           <ProviderSelector
@@ -68,6 +67,7 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
                     <>
                       <span className="text-muted-foreground">·</span>
                       <CodexReasoningEffortSelector
+                        model={selectedModel}
                         effort={codexReasoningEffort}
                         onEffortChange={onCodexReasoningEffortChange}
                         isLoading={isLoading}
@@ -78,22 +78,6 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
               )}
             </>
           )}
-        </div>
-      )
-    }
-
-    if (chatMode === 'knowledge' && onModelChange) {
-      return (
-        <div className="mb-2 flex items-center gap-1.5 text-sm">
-          <span className="px-0 py-1 text-muted-foreground">Ollama</span>
-          <span className="text-muted-foreground">·</span>
-          <OllamaModelSelector
-            model={selectedModel}
-            onModelChange={onModelChange}
-            ollamaModels={ollamaModels}
-            isLoading={isLoading}
-            isLoadingOllamaModels={isLoadingOllamaModels}
-          />
         </div>
       )
     }

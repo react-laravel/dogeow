@@ -5,10 +5,15 @@ import type { ChatMessage } from '../../chat/types'
 import { callBrowserLocalOllamaChatAPI } from '../../chat/hooks/browserOllama'
 import { readAiChatStream, readOllamaChatStream } from '../../chat/hooks/chatStream'
 import {
+  getStoredCodexModel,
+  getStoredCodexReasoningEffort,
   getStoredOllamaModel,
   resolveOllamaModelSelection,
+  setStoredCodexModel,
+  setStoredCodexReasoningEffort,
   setStoredOllamaModel,
 } from '../../chat/hooks/modelStorage'
+import type { AIProvider, CodexReasoningEffort } from '../../chat/request-model'
 import { useOllamaAccessMode } from '../../chat/hooks/ollamaAccessMode'
 import { useOllamaModels, type OllamaModelListItem } from '../../chat/hooks/useOllamaModels'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
@@ -28,7 +33,8 @@ interface KnowledgeChatRequestPayload {
   useContext: boolean
   searchMethod: SearchMethod
   model: string
-  provider: 'ollama'
+  provider: AIProvider
+  codexReasoningEffort: CodexReasoningEffort
 }
 
 interface UseKnowledgeChatReturn {
@@ -47,8 +53,10 @@ interface UseKnowledgeChatReturn {
   setSearchMethod: (value: SearchMethod) => void
   model: string
   setModel: (value: string) => void
-  provider: 'ollama'
-  setProvider: (value: 'ollama') => void
+  provider: AIProvider
+  setProvider: (value: AIProvider) => void
+  codexReasoningEffort: CodexReasoningEffort
+  setCodexReasoningEffort: (value: CodexReasoningEffort) => void
   stop: () => void
   handleSend: () => void
   handleClear: () => void
@@ -103,8 +111,18 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
   const [isLoading, setIsLoading] = useState(false)
   const [useContext, setUseContext] = useState(true)
   const [searchMethod, setSearchMethod] = useState<SearchMethod>('rag')
-  const [provider, setProvider] = useState<'ollama'>('ollama')
-  const [model, setModel] = useState<string>(() => getStoredOllamaModel())
+  const [provider, setProvider] = useState<AIProvider>(() => {
+    if (typeof window === 'undefined') return 'ollama'
+    return localStorage.getItem('knowledge_provider') === 'codex' ? 'codex' : 'ollama'
+  })
+  const [model, setModel] = useState<string>(() =>
+    typeof window !== 'undefined' && localStorage.getItem('knowledge_provider') === 'codex'
+      ? getStoredCodexModel()
+      : getStoredOllamaModel()
+  )
+  const [codexReasoningEffort, setCodexReasoningEffort] = useState<CodexReasoningEffort>(() =>
+    getStoredCodexReasoningEffort()
+  )
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const hasAppliedInitialMessagesRef = useRef(false)
@@ -207,6 +225,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
         searchMethod,
         model,
         provider,
+        codexReasoningEffort,
       }
 
       let response: Response
@@ -301,12 +320,36 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     model,
     provider,
     effectiveOllamaAccessMode,
+    codexReasoningEffort,
   ])
 
   // 当 model 改变时保存到 localStorage
   useEffect(() => {
-    setStoredOllamaModel(model)
-  }, [model])
+    setModel(provider === 'codex' ? getStoredCodexModel() : getStoredOllamaModel())
+  }, [provider])
+
+  useEffect(() => {
+    if (provider === 'codex') {
+      setStoredCodexModel(model)
+    } else {
+      setStoredOllamaModel(model)
+    }
+  }, [model, provider])
+
+  useEffect(() => {
+    setStoredCodexReasoningEffort(codexReasoningEffort)
+  }, [codexReasoningEffort])
+
+  useEffect(() => {
+    if (
+      provider === 'codex' &&
+      codexReasoningEffort === 'ultra' &&
+      model !== 'gpt-5.6-sol' &&
+      model !== 'gpt-5.6-terra'
+    ) {
+      setCodexReasoningEffort('medium')
+    }
+  }, [codexReasoningEffort, model, provider])
 
   // 保存 provider 到 localStorage
   useEffect(() => {
@@ -333,6 +376,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     setModel,
     provider,
     setProvider,
+    codexReasoningEffort,
+    setCodexReasoningEffort,
     stop,
     handleSend,
     handleClear,

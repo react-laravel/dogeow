@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchDocuments, loadAllDocuments } from '@/lib/knowledge/search'
 import { searchWithRAG } from '@/lib/knowledge/rag-search'
 import { getKnowledgeConfig, type KnowledgeSearchMethod } from '@/lib/knowledge/config'
+import { callCodexExecAPI } from '@/app/api/generate/_lib/clients'
+import { createCodexExecStreamResponse } from '@/app/api/generate/_lib/streams'
+import type { CodexReasoningEffort } from '@/app/api/generate/_lib/types'
 import { requireAuth } from '../../_lib/auth-guard'
 
-type AIProvider = 'ollama'
+type AIProvider = 'ollama' | 'codex'
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -18,6 +21,7 @@ interface KnowledgeChatRequestBody {
   searchMethod?: KnowledgeSearchMethod // 搜索方法：'simple' 或 'rag'
   model?: string // Ollama 模型名称
   provider?: AIProvider
+  codexReasoningEffort?: CodexReasoningEffort
   prepareOnly?: boolean
 }
 
@@ -278,6 +282,7 @@ export async function POST(request: NextRequest) {
     searchMethod,
     model,
     provider = 'ollama',
+    codexReasoningEffort,
     prepareOnly = false,
   }: KnowledgeChatRequestBody = await request.json()
 
@@ -331,21 +336,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ messages: chatMessages })
     }
 
+    const promptTokens = Math.ceil(chatMessages.reduce((acc, m) => acc + m.content.length, 0) / 4)
+
+    if (provider === 'codex') {
+      console.log('[知识库] 使用 ChatGPT AI')
+      const codexProcess = callCodexExecAPI(chatMessages, model, codexReasoningEffort)
+      return createCodexExecStreamResponse(codexProcess, promptTokens)
+    }
+
     // 默认使用 Ollama
     console.log('[知识库] 使用 Ollama AI')
     const ollamaResponse = await callOllamaChatAPI(chatMessages, model)
-
-    // 计算 prompt tokens
-    const promptTokens = Math.ceil(chatMessages.reduce((acc, m) => acc + m.content.length, 0) / 4)
 
     return createStreamResponse(ollamaResponse, promptTokens)
   } catch (error: unknown) {
     console.error('知识库问答API错误:', error)
     let errorMessage = 'AI服务发生未知错误'
     if (error instanceof Error) {
-      errorMessage = error.message.includes('fetch')
-        ? 'Ollama 服务暂时不可用，请确保 Ollama 正在运行'
-        : error.message
+      errorMessage =
+        provider === 'codex'
+          ? error.message
+          : error.message.includes('fetch')
+            ? 'Ollama 服务暂时不可用，请确保 Ollama 正在运行'
+            : error.message
     }
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

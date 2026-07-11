@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import Link from 'next/link'
 import type { OllamaModelListItem } from '@/lib/utils/ollama-models'
+import type { AIProvider } from '../../chat/request-model'
 
 type SearchMethod = 'simple' | 'rag'
 
@@ -30,8 +31,8 @@ interface KnowledgeChatHeaderProps {
   onModelChange?: (value: string) => void
   ollamaModels?: OllamaModelListItem[]
   isLoadingOllamaModels?: boolean
-  provider?: 'ollama'
-  onProviderChange?: (value: 'ollama') => void
+  provider?: AIProvider
+  onProviderChange?: (value: AIProvider) => void
   onClear: () => void
   onClose?: () => void
   hideUseContext?: boolean
@@ -98,6 +99,7 @@ export function KnowledgeChatHeader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ollama">Ollama (本地)</SelectItem>
+                <SelectItem value="codex">ChatGPT</SelectItem>
               </SelectContent>
             </Select>
           </div>

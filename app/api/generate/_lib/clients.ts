@@ -16,6 +16,7 @@ const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>([
   'medium',
   'high',
   'xhigh',
+  'ultra',
 ])
 
 const CODEX_RUNTIME_HOME = process.env.CODEX_HOME_DIR?.trim() || '/home/actions-runner'

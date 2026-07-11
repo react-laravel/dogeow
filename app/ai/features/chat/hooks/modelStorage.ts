@@ -13,6 +13,7 @@ const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>([
   'medium',
   'high',
   'xhigh',
+  'ultra',
 ])
 
 export const getStoredProvider = (): AIProvider => {
