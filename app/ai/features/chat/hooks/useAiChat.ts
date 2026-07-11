@@ -6,9 +6,7 @@ import { getRequestModel, type AIProvider, type CodexReasoningEffort } from '../
 import { readAiChatStream, readOllamaChatStream } from './chatStream'
 import { useAiChatImages, type ImageItem } from './useAiChatImages'
 import { useOllamaModels, type OllamaModelListItem } from './useOllamaModels'
-import { useMediaGenerators } from './useMediaGenerators'
 import { uploadImageToServer } from './uploadImage'
-import { generateTtsForMessage } from './ttsHandlers'
 import { callBrowserLocalOllamaChatAPI } from './browserOllama'
 import { useOllamaAccessMode } from './ollamaAccessMode'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
@@ -18,12 +16,10 @@ import {
   resolveOllamaModelSelection,
   getStoredCodexModel,
   getStoredCodexReasoningEffort,
-  getStoredZhipuaiModel,
   setStoredProvider,
   setStoredCodexModel,
   setStoredCodexReasoningEffort,
   setStoredOllamaModel,
-  setStoredZhipuaiModel,
 } from './modelStorage'
 import { toast } from 'sonner'
 
@@ -58,32 +54,13 @@ interface UseAiChatReturn {
   handleSend: () => void
   handleClear: () => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
-  ttsEnabled: boolean
-  setTtsEnabled: (value: boolean) => void
-  isGeneratingMedia: boolean
-  generationError: string | undefined
-  handleGenerateImage: (
-    prompt: string,
-    onImageGenerated?: (url: string, prompt: string) => void
-  ) => void
-  handleGenerateVideo: (
-    prompt: string,
-    onVideoGenerated?: (fileId: string, url: string, prompt: string) => void
-  ) => void
-  handleGenerateMusic: (prompt: string, lyrics: string) => void
 }
-
-const ZHIPUAI_VISION_MODELS = new Set(['glm-4.6v-flash', 'glm-4.6v'])
 
 function supportsImagesForSelection(
   provider: AIProvider,
   model: string,
   ollamaModels: OllamaModelListItem[]
 ): boolean {
-  if (provider === 'zhipuai') {
-    return ZHIPUAI_VISION_MODELS.has(model)
-  }
-
   if (provider === 'ollama') {
     return ollamaModels.find(item => item.name === model)?.supportsVision ?? false
   }
@@ -138,7 +115,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const [model, setModel] = useState<string>(() => {
     const initialProvider = getStoredProvider()
     if (initialProvider === 'codex') return getStoredCodexModel()
-    return initialProvider === 'zhipuai' ? getStoredZhipuaiModel() : getStoredOllamaModel()
+    return getStoredOllamaModel()
   })
   const [codexReasoningEffort, setCodexReasoningEffort] = useState<CodexReasoningEffort>(() =>
     getStoredCodexReasoningEffort()
@@ -146,13 +123,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // TTS state
-  const [ttsEnabled, setTtsEnabled] = useState(false)
-
-  // Media generation state
-  const [isGeneratingMedia, setIsGeneratingMedia] = useState(false)
-  const [generationError, setGenerationError] = useState<string | undefined>(undefined)
 
   // Ollama models loading - extracted to hook
   const { ollamaModels, isLoadingOllamaModels } = useOllamaModels({
@@ -194,13 +164,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       clearImages()
     }
   }, [open, supportsImages, hasImages, clearImages])
-
-  // Media generators - extracted to hook
-  const { handleGenerateImage, handleGenerateVideo, handleGenerateMusic } = useMediaGenerators({
-    setMessages,
-    setGenerationError,
-    setIsGeneratingMedia,
-  })
 
   // Stop generation
   const stop = useCallback(() => {
@@ -337,11 +300,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
           content: accumulatedContent,
         }
         setMessages(prev => [...prev, assistantMsg])
-
-        // TTS: generate audio for the response
-        if (ttsEnabled) {
-          await generateTtsForMessage(accumulatedContent, setMessages)
-        }
       }
       setCompletion('')
       setIsLoading(false)
@@ -383,7 +341,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     codexReasoningEffort,
     effectiveOllamaAccessMode,
     clearImages,
-    ttsEnabled,
   ])
 
   // When provider changes, persist to localStorage
@@ -398,11 +355,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       return
     }
 
-    if (provider === 'zhipuai') {
-      setModel(getStoredZhipuaiModel())
-      return
-    }
-
     if (provider === 'codex') {
       setModel(getStoredCodexModel())
     }
@@ -412,11 +364,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   useEffect(() => {
     if (provider === 'ollama') {
       setStoredOllamaModel(model)
-      return
-    }
-
-    if (provider === 'zhipuai') {
-      setStoredZhipuaiModel(model)
       return
     }
 
@@ -456,13 +403,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     handleSend,
     handleClear,
     messagesEndRef,
-    ttsEnabled,
-    setTtsEnabled,
-    isGeneratingMedia,
-    generationError,
-    handleGenerateImage,
-    handleGenerateVideo,
-    handleGenerateMusic,
   }
 }
 

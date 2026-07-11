@@ -352,24 +352,4 @@ describe('ChatInput', () => {
       expect(images.length).toBeGreaterThanOrEqual(2)
     }
   })
-
-  it('shows generation buttons when callbacks are provided', () => {
-    render(
-      <ChatInput
-        {...defaultProps}
-        onGenerateImage={vi.fn()}
-        onGenerateVideo={vi.fn()}
-        onGenerateMusic={vi.fn()}
-        chatMode="ai"
-      />
-    )
-    expect(screen.getByRole('button', { name: '生成图片' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '生成视频' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '生成音乐' })).toBeInTheDocument()
-  })
-
-  it('shows image history button when onOpenImageHistory is provided', () => {
-    render(<ChatInput {...defaultProps} onOpenImageHistory={vi.fn()} chatMode="ai" />)
-    expect(screen.getByRole('button', { name: '图片历史' })).toBeInTheDocument()
-  })
 })

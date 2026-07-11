@@ -5,21 +5,8 @@ import {
   getAIProvider,
   getProviderFallbackMessage,
 } from './_lib/config'
-import {
-  callCodexExecAPI,
-  callGitHubModelsAPI,
-  callMiniMaxAPI,
-  callOllamaChatAPI,
-  callOllamaGenerateAPI,
-  callZhipuAIAPI,
-} from './_lib/clients'
-import {
-  createCodexExecStreamResponse,
-  createGitHubStreamResponse,
-  createMiniMaxStreamResponse,
-  createStreamResponse,
-  createZhipuAIStreamResponse,
-} from './_lib/streams'
+import { callCodexExecAPI, callOllamaChatAPI, callOllamaGenerateAPI } from './_lib/clients'
+import { createCodexExecStreamResponse, createStreamResponse } from './_lib/streams'
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
 import { requireAuth } from '../_lib/auth-guard'
 import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
@@ -55,24 +42,9 @@ async function handleChatRequest(
   chatMessages: ChatMessage[],
   requestId: string
 ) {
-  const { provider, images, imageUrl, model, codexReasoningEffort } = body
+  const { provider, model, codexReasoningEffort } = body
   const actualProvider = getAIProvider(provider)
   const promptTokens = getPromptTokens(chatMessages)
-
-  if (actualProvider === 'github') {
-    const githubResponse = await callGitHubModelsAPI(chatMessages)
-    return createGitHubStreamResponse(githubResponse, promptTokens)
-  }
-
-  if (actualProvider === 'minimax') {
-    const minimaxResponse = await callMiniMaxAPI(chatMessages, images)
-    return createMiniMaxStreamResponse(minimaxResponse)
-  }
-
-  if (actualProvider === 'zhipuai') {
-    const zhipuaiResponse = await callZhipuAIAPI(chatMessages, images, imageUrl, model)
-    return createZhipuAIStreamResponse(zhipuaiResponse)
-  }
 
   if (actualProvider === 'codex') {
     const codexProcess = callCodexExecAPI(chatMessages, model, codexReasoningEffort)

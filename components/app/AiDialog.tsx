@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -8,15 +8,9 @@ import useSWR from 'swr'
 import { MessageSquarePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAiChat } from '@/app/ai/features/chat/hooks/useAiChat'
-import { useImageHistory } from '@/app/ai/features/chat/hooks/useImageHistory'
 import { useKnowledgeChat } from '@/app/ai/features/knowledge/hooks/useKnowledgeChat'
 import { useKnowledgeIndexStatus } from '@/app/ai/features/knowledge/hooks/useKnowledgeIndexStatus'
-import {
-  ChatHeader,
-  ChatMessageList,
-  ChatInput,
-  ImageHistoryModal,
-} from '@/app/ai/features/chat/components'
+import { ChatHeader, ChatMessageList, ChatInput } from '@/app/ai/features/chat/components'
 import type { ChatMessage } from '@/app/ai/features/chat/types'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { useAiDialogStore } from '@/stores/aiDialogStore'
@@ -47,7 +41,6 @@ const docsFetcher = async (url: string): Promise<KnowledgeDocumentsResponse> => 
 export function AiDialog({ open, onOpenChange }: AiDialogProps) {
   const consumeSeedPrompt = useAiDialogStore(state => state.consumeSeedPrompt)
   const [chatMode, setChatMode] = useState<'ai' | 'knowledge'>('ai')
-  const [imageHistoryOpen, setImageHistoryOpen] = useState(false)
 
   const shouldFetchDocs = open && chatMode === 'knowledge'
   const { data: docsData, error: docsError } = useSWR(
@@ -79,7 +72,6 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
   }, [shouldFetchDocs, docsData, docsError])
 
   const aiChat = useAiChat({ open })
-  const imageHistory = useImageHistory()
   const knowledgeChat = useKnowledgeChat({ open, initialMessages: knowledgeInitialMessages })
   const knowledgeIndexEnabled = open && chatMode === 'knowledge'
   const { updatedAt: knowledgeUpdatedAt } = useKnowledgeIndexStatus(knowledgeIndexEnabled)
@@ -130,35 +122,10 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     })
   }, [open, consumeSeedPrompt, aiChat])
 
-  const {
-    provider,
-    setProvider,
-    ollamaModels,
-    isLoadingOllamaModels,
-    supportsImages,
-    ttsEnabled,
-    setTtsEnabled,
-    isGeneratingMedia,
-    generationError,
-    handleGenerateMusic,
-  } = aiChat
+  const { provider, setProvider, ollamaModels, isLoadingOllamaModels, supportsImages } = aiChat
   const currentOllamaModels = chatMode === 'knowledge' ? knowledgeChat.ollamaModels : ollamaModels
   const currentIsLoadingOllamaModels =
     chatMode === 'knowledge' ? knowledgeChat.isLoadingOllamaModels : isLoadingOllamaModels
-
-  const handleGenerateImage = useCallback(
-    (prompt: string) => {
-      return aiChat.handleGenerateImage(prompt, imageHistory.addImage)
-    },
-    [aiChat, imageHistory.addImage]
-  )
-
-  const handleGenerateVideo = useCallback(
-    (prompt: string) => {
-      return aiChat.handleGenerateVideo(prompt, imageHistory.addVideo)
-    },
-    [aiChat, imageHistory.addVideo]
-  )
 
   const chatBody = (
     <>
@@ -208,22 +175,6 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           onRemoveImage={chatMode === 'ai' ? aiChat.removeImage : undefined}
           variant="dialog"
           placeholder={chatMode === 'knowledge' ? '与知识库AI对话' : '与通用AI对话'}
-          ttsEnabled={chatMode === 'ai' && provider === 'minimax' ? ttsEnabled : undefined}
-          onTtsEnabledChange={
-            chatMode === 'ai' && provider === 'minimax' ? setTtsEnabled : undefined
-          }
-          onGenerateImage={
-            chatMode === 'ai' && provider === 'minimax' ? handleGenerateImage : undefined
-          }
-          onGenerateVideo={
-            chatMode === 'ai' && provider === 'minimax' ? handleGenerateVideo : undefined
-          }
-          onGenerateMusic={
-            chatMode === 'ai' && provider === 'minimax' ? handleGenerateMusic : undefined
-          }
-          isGeneratingMedia={chatMode === 'ai' ? isGeneratingMedia : false}
-          generationError={chatMode === 'ai' ? generationError : undefined}
-          onOpenImageHistory={chatMode === 'ai' ? () => setImageHistoryOpen(true) : undefined}
         />
       </div>
     </>
@@ -266,11 +217,5 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     </div>
   )
 
-  return createPortal(
-    <>
-      {panelEl}
-      <ImageHistoryModal open={imageHistoryOpen} onOpenChange={setImageHistoryOpen} />
-    </>,
-    document.body
-  )
+  return createPortal(panelEl, document.body)
 }

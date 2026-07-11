@@ -28,7 +28,7 @@ interface KnowledgeChatRequestPayload {
   useContext: boolean
   searchMethod: SearchMethod
   model: string
-  provider: 'ollama' | 'minimax'
+  provider: 'ollama'
 }
 
 interface UseKnowledgeChatReturn {
@@ -47,8 +47,8 @@ interface UseKnowledgeChatReturn {
   setSearchMethod: (value: SearchMethod) => void
   model: string
   setModel: (value: string) => void
-  provider: 'ollama' | 'minimax'
-  setProvider: (value: 'ollama' | 'minimax') => void
+  provider: 'ollama'
+  setProvider: (value: 'ollama') => void
   stop: () => void
   handleSend: () => void
   handleClear: () => void
@@ -103,14 +103,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
   const [isLoading, setIsLoading] = useState(false)
   const [useContext, setUseContext] = useState(true)
   const [searchMethod, setSearchMethod] = useState<SearchMethod>('rag')
-  const [provider, setProvider] = useState<'ollama' | 'minimax'>(() => {
-    // 从 localStorage 读取，默认使用 ollama
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('knowledge_provider')
-      return (saved as 'ollama' | 'minimax') || 'ollama'
-    }
-    return 'ollama'
-  })
+  const [provider, setProvider] = useState<'ollama'>('ollama')
   const [model, setModel] = useState<string>(() => getStoredOllamaModel())
 
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -206,8 +199,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
 
     try {
       // 检索/embedding 模型只发当前一条用户消息，减少请求体
-      const messagesToSend =
-        provider === 'minimax' ? newMessages : isEmbeddingModel(model) ? [userMessage] : newMessages
+      const messagesToSend = isEmbeddingModel(model) ? [userMessage] : newMessages
 
       const payload: KnowledgeChatRequestPayload = {
         messages: messagesToSend,

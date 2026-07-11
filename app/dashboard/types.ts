@@ -23,61 +23,12 @@ export interface LogFile {
   modified: number
 }
 
-export const DASHBOARD_SECTIONS = [
-  'home',
-  'location',
-  'logs',
-  'cache',
-  'minimax',
-  'ollama',
-] as const
+export const DASHBOARD_SECTIONS = ['home', 'location', 'logs', 'cache', 'ollama'] as const
 
 export type DashboardSection = (typeof DASHBOARD_SECTIONS)[number]
 
 export function isDashboardSection(value: string | null): value is DashboardSection {
   return value != null && DASHBOARD_SECTIONS.includes(value as DashboardSection)
-}
-
-export interface MiniMaxModelRemain {
-  model_name: string
-  remains_time: number
-  current_interval_total_count: number
-  current_interval_usage_count: number
-  current_weekly_total_count: number
-  current_weekly_usage_count: number
-  weekly_remains_time: number
-  start_time: number
-  end_time: number
-  weekly_start_time: number
-  weekly_end_time: number
-}
-
-export interface MiniMaxSubscriptionResponse {
-  model_remains: MiniMaxModelRemain[]
-  base_resp?: { status_code: number; status_msg: string }
-}
-
-export interface MiniMaxSubscriptionDetailResponse {
-  current_subscribe?: {
-    current_subscribe_end_time?: string
-    current_subscribe_title?: string
-    current_credit_reload_time?: string
-    [key: string]: unknown
-  }
-  [key: string]: unknown
-}
-
-export interface MiniMaxBillingRecord {
-  consume_token: string | number
-  created_at: number
-  consume_time?: string
-  [key: string]: unknown
-}
-
-export interface MiniMaxBillingResponse {
-  charge_records?: MiniMaxBillingRecord[]
-  total_cnt?: number
-  [key: string]: unknown
 }
 
 export interface DashboardCacheItem {

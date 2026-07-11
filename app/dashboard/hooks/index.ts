@@ -1,1 +1,0 @@
-export { useMiniMaxSubscription } from './useMiniMaxSubscription'

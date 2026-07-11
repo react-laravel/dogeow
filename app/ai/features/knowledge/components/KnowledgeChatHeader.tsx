@@ -30,8 +30,8 @@ interface KnowledgeChatHeaderProps {
   onModelChange?: (value: string) => void
   ollamaModels?: OllamaModelListItem[]
   isLoadingOllamaModels?: boolean
-  provider?: 'ollama' | 'minimax'
-  onProviderChange?: (value: 'ollama' | 'minimax') => void
+  provider?: 'ollama'
+  onProviderChange?: (value: 'ollama') => void
   onClear: () => void
   onClose?: () => void
   hideUseContext?: boolean
@@ -98,7 +98,6 @@ export function KnowledgeChatHeader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ollama">Ollama (本地)</SelectItem>
-                <SelectItem value="minimax">MiniMax (云端)</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -6,7 +6,6 @@ import {
   type OllamaModelListItem,
   OllamaModelSelector,
   ProviderSelector,
-  ZhipuaiModelSelector,
 } from './ChatInputModelSelector'
 import type { CodexReasoningEffort } from '../request-model'
 
@@ -46,47 +45,39 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
             onProviderChange={onProviderChange}
             isLoading={isLoading}
           />
-          {onModelChange &&
-            (provider === 'ollama' || provider === 'zhipuai' || provider === 'codex') && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                {provider === 'ollama' && (
-                  <OllamaModelSelector
+          {onModelChange && (provider === 'ollama' || provider === 'codex') && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              {provider === 'ollama' && (
+                <OllamaModelSelector
+                  model={selectedModel}
+                  onModelChange={onModelChange}
+                  ollamaModels={ollamaModels}
+                  isLoading={isLoading}
+                  isLoadingOllamaModels={isLoadingOllamaModels}
+                />
+              )}
+              {provider === 'codex' && (
+                <>
+                  <CodexModelSelector
                     model={selectedModel}
                     onModelChange={onModelChange}
-                    ollamaModels={ollamaModels}
-                    isLoading={isLoading}
-                    isLoadingOllamaModels={isLoadingOllamaModels}
-                  />
-                )}
-                {provider === 'zhipuai' && (
-                  <ZhipuaiModelSelector
-                    model={selectedModel}
-                    onModelChange={onModelChange}
                     isLoading={isLoading}
                   />
-                )}
-                {provider === 'codex' && (
-                  <>
-                    <CodexModelSelector
-                      model={selectedModel}
-                      onModelChange={onModelChange}
-                      isLoading={isLoading}
-                    />
-                    {codexReasoningEffort && onCodexReasoningEffortChange && (
-                      <>
-                        <span className="text-muted-foreground">·</span>
-                        <CodexReasoningEffortSelector
-                          effort={codexReasoningEffort}
-                          onEffortChange={onCodexReasoningEffortChange}
-                          isLoading={isLoading}
-                        />
-                      </>
-                    )}
-                  </>
-                )}
-              </>
-            )}
+                  {codexReasoningEffort && onCodexReasoningEffortChange && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <CodexReasoningEffortSelector
+                        effort={codexReasoningEffort}
+                        onEffortChange={onCodexReasoningEffortChange}
+                        isLoading={isLoading}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       )
     }

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { FileText, MapPin, CreditCard, Menu, House, Bot, Database } from 'lucide-react'
+import { FileText, MapPin, Menu, House, Bot, Database } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { PageContainer, PageTitle } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -14,9 +14,7 @@ import {
   HomePanel,
   LocationPanel,
   LogPanel,
-  MiniMaxPanel,
   OllamaPanel,
-  MiniMaxRefreshButton,
 } from './components'
 import { isAdminSync } from '@/lib/auth'
 import useAuthStore from '@/stores/authStore'
@@ -31,7 +29,6 @@ const NAV_ITEMS: Array<{
   { key: 'location', icon: MapPin, label: '我的位置' },
   { key: 'logs', icon: FileText, label: 'Laravel 日志' },
   { key: 'cache', icon: Database, label: '缓存管理' },
-  { key: 'minimax', icon: CreditCard, label: 'MiniMax 订阅' },
   { key: 'ollama', icon: Bot, label: 'Ollama' },
 ]
 
@@ -74,8 +71,6 @@ export default function Dashboard() {
         return <LogPanel />
       case 'cache':
         return <CachePanel />
-      case 'minimax':
-        return <MiniMaxPanel />
       case 'ollama':
         return <OllamaPanel />
     }
@@ -117,7 +112,6 @@ export default function Dashboard() {
             </SheetContent>
           </Sheet>
           <PageTitle className="flex-1 text-2xl sm:text-3xl">{activeNavLabel}</PageTitle>
-          {activeSection === 'minimax' && <MiniMaxRefreshButton />}
         </header>
 
         {/* 内容区 */}
