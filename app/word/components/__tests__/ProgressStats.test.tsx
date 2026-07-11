@@ -2,10 +2,20 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ProgressStats } from '../ProgressStats'
 
+interface MockWordStatsReturn {
+  data: unknown
+  isLoading: boolean
+  error: unknown
+}
+
 const { mockUseSWR, setWordStatsReturn } = vi.hoisted(() => {
-  let wordStatsReturn = { data: undefined, isLoading: true, error: undefined }
+  let wordStatsReturn: MockWordStatsReturn = {
+    data: undefined,
+    isLoading: true,
+    error: undefined,
+  }
   const mockUseSWR = vi.fn(() => wordStatsReturn)
-  const setWordStatsReturn = (val: { data: unknown; isLoading: boolean; error?: unknown }) => {
+  const setWordStatsReturn = (val: MockWordStatsReturn) => {
     wordStatsReturn = val
   }
   return { mockUseSWR, setWordStatsReturn }
@@ -88,9 +98,10 @@ describe('ProgressStats', () => {
       error: undefined,
     })
 
-    const { container } = render(<ProgressStats />)
+    render(<ProgressStats />)
 
-    const fill = container.querySelector('[style*="width"]')
+    const progressBar = screen.getByRole('progressbar', { name: '单词学习进度' })
+    const fill = progressBar.firstElementChild
     expect(fill).toBeTruthy()
     expect(fill?.getAttribute('style')).toContain('50%')
   })
@@ -107,10 +118,9 @@ describe('ProgressStats', () => {
       error: undefined,
     })
 
-    const { container } = render(<ProgressStats />)
+    render(<ProgressStats />)
 
-    const progressBar = container.querySelector('[class*="h-1.5"]')
-    expect(progressBar).toBeFalsy()
+    expect(screen.queryByRole('progressbar')).toBeFalsy()
   })
 
   it('clamps progress_percentage to 100% in bar width', () => {
@@ -125,11 +135,12 @@ describe('ProgressStats', () => {
       error: undefined,
     })
 
-    const { container } = render(<ProgressStats />)
+    render(<ProgressStats />)
 
     expect(screen.getByText('150%')).toBeTruthy()
 
-    const fill = container.querySelector('[style*="width"]')
+    const progressBar = screen.getByRole('progressbar', { name: '单词学习进度' })
+    const fill = progressBar.firstElementChild
     expect(fill?.getAttribute('style')).toContain('100%')
   })
 })
