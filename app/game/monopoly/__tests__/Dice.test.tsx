@@ -13,8 +13,8 @@ describe('Dice', () => {
   it('adds rolling animation class while rolling', () => {
     render(<Dice value={6} rolling />)
 
-    expect(screen.getByTestId('monopoly-dice').getAttribute('class')).toContain(
-      'monopoly-dice-roll'
-    )
+    const dice = screen.getByTestId('monopoly-dice')
+    expect(dice).toHaveClass('monopoly-dice-roll')
+    expect(dice.getAttribute('class')).not.toContain('0_8px_8px')
   })
 })

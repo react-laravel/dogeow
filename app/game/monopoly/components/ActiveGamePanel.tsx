@@ -113,14 +113,7 @@ export function ActiveGamePanel({
         <div className="flex min-h-0 flex-1 flex-col rounded-md bg-white/75 p-3 dark:bg-stone-950/45">
           <div className="grid shrink-0 gap-3 [@media_(orientation:landscape)]:grid-cols-[auto_minmax(0,1fr)] [@media_(orientation:landscape)]:items-center">
             <div className="flex flex-col items-center justify-center gap-2">
-              <div
-                className={cn(
-                  'rounded-xl p-1.5 transition-all duration-300',
-                  animationPhase === 'rolling' &&
-                    'bg-sky-100 shadow-[0_0_24px_rgba(14,165,233,0.35)] dark:bg-sky-950/50',
-                  animationPhase === 'settling' && 'bg-emerald-100 dark:bg-emerald-950/50'
-                )}
-              >
+              <div className="p-1.5">
                 <Dice value={diceValue} rolling={rolling} />
               </div>
               <div className="flex gap-1" aria-hidden="true">
@@ -129,7 +122,7 @@ export function ActiveGamePanel({
                     key={phase}
                     className={cn(
                       'h-1 w-4 rounded-full bg-stone-200 transition-colors dark:bg-stone-700',
-                      animationPhase === phase && 'bg-sky-500 dark:bg-sky-400'
+                      animationPhase === phase && 'bg-amber-500 dark:bg-amber-400'
                     )}
                   />
                 ))}

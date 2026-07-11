@@ -3,16 +3,31 @@ export function MonopolyAnimationStyles() {
     <style jsx global>{`
       @keyframes monopoly-dice-roll {
         0% {
-          transform: translateY(0) rotate(0deg) scale(1);
+          transform: translateY(0) rotate(-2deg) scale(1);
         }
-        35% {
-          transform: translateY(-7px) rotate(110deg) scale(1.08);
+        22% {
+          transform: translateY(-4px) rotate(5deg) scale(1.025);
         }
-        70% {
-          transform: translateY(2px) rotate(250deg) scale(0.96);
+        48% {
+          transform: translateY(-1px) rotate(-5deg) scale(0.99);
+        }
+        72% {
+          transform: translateY(-3px) rotate(3deg) scale(1.015);
         }
         100% {
-          transform: translateY(0) rotate(360deg) scale(1);
+          transform: translateY(0) rotate(-2deg) scale(1);
+        }
+      }
+      .monopoly-dice {
+        transform-origin: center;
+        will-change: transform;
+      }
+      .monopoly-dice-roll {
+        animation: monopoly-dice-roll 680ms cubic-bezier(0.37, 0, 0.2, 1) infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .monopoly-dice-roll {
+          animation: none;
         }
       }
       @keyframes monopoly-token-hop {

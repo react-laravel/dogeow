@@ -46,9 +46,8 @@ export function Dice({ value, rolling = false }: { value: number; rolling?: bool
       aria-label={`骰子 ${safeValue} 点`}
       data-testid="monopoly-dice"
       className={cn(
-        'size-16 rounded-lg drop-shadow-sm transition-[transform,filter] duration-200',
-        rolling &&
-          'animate-[monopoly-dice-roll_0.55s_cubic-bezier(0.4,0,0.2,1)_infinite] drop-shadow-[0_8px_8px_rgba(15,23,42,0.28)]'
+        'monopoly-dice size-16 drop-shadow-[0_2px_2px_rgba(28,25,23,0.18)]',
+        rolling && 'monopoly-dice-roll'
       )}
     >
       <rect
@@ -57,12 +56,12 @@ export function Dice({ value, rolling = false }: { value: number; rolling?: bool
         width="84"
         height="84"
         rx="14"
-        fill="#f8fafc"
-        stroke="#111827"
-        strokeWidth="5"
+        fill="#fffdf8"
+        stroke="#292524"
+        strokeWidth="4"
       />
       {DOTS[safeValue].map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="7.5" fill="#111827" />
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="7.5" fill="#292524" />
       ))}
     </svg>
   )

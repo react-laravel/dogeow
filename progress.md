@@ -131,3 +131,15 @@ TODO
 TODO
 
 - Re-run `/game/2048` and `/game/minesweeper` in an authenticated browser session for full visual and multi-step interaction confirmation.
+
+2026-07-11
+
+- Current prompt: `/game/monopoly` 骰子动画比较丑，而且有蓝色光晕。
+- Removed the blue rolling background/glow around the Monopoly die and changed phase indicators from blue to amber.
+- Replaced the full 360-degree spin with a restrained bounce-and-wobble animation, softened the die border/shadow, and added reduced-motion handling.
+- Verified all 9 focused Monopoly tests, targeted ESLint/Prettier, and zero Monopoly type errors.
+- Both the required Playwright client and the in-app browser redirected the fresh unauthenticated session to the public home page, so the signed-in rolling animation still needs visual confirmation.
+
+TODO
+
+- Re-check one live dice roll in an authenticated `/game/monopoly` session.
