@@ -36,13 +36,14 @@ export default function LearnPage() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [sessionKey, setSessionKey] = useState(0)
   const [isContinuing, setIsContinuing] = useState(false)
+  const [hasConfirmedContinue, setHasConfirmedContinue] = useState(false)
   const [cardNonce, setCardNonce] = useState(0)
   const [hasPreparedSession, setHasPreparedSession] = useState(false)
 
   const isLoading = settingsLoading || statsLoading || wordsLoading || !hasPreparedSession
   const hasSelectedBook = !!settings?.current_book_id
   const todayCheckedIn = stats?.today_checked_in ?? false
-  const shouldPromptContinue = wantsContinue || todayCheckedIn
+  const shouldPromptContinue = !hasConfirmedContinue && (wantsContinue || todayCheckedIn)
 
   const beginSession = useCallback(
     (wordsArray: ReturnType<typeof normalizeWordsResponse>) => {
@@ -101,14 +102,20 @@ export default function LearnPage() {
 
   const handleContinue = async () => {
     setIsContinuing(true)
+    // URL 参数和「今日已打卡」会在整个页面生命周期内保持为 true。
+    // 用户确认后必须显式解除拦截，否则重置队列后仍会回到确认页。
+    setHasConfirmedContinue(true)
     reset()
     setSessionKey(key => key + 1)
     try {
       const nextWords = await mutate(undefined, { revalidate: true })
-      const wordsArray = normalizeWordsResponse(nextWords)
+      const wordsArray = normalizeWordsResponse(nextWords ?? words)
       if (wordsArray.length > 0) {
         beginSession(wordsArray)
       }
+    } catch (error) {
+      toast.error('加载下一组失败，请重试')
+      console.error('加载下一组单词失败:', error)
     } finally {
       setIsContinuing(false)
     }

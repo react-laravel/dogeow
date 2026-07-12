@@ -13,9 +13,11 @@ const book: Book = {
 
 describe('LearningHero', () => {
   it('makes the first study action prominent before check-in', () => {
-    render(<LearningHero todayCheckedIn={false} currentBook={book} />)
+    const { container } = render(<LearningHero todayCheckedIn={false} currentBook={book} />)
 
     expect(screen.getByText('开始今天的学习')).toBeInTheDocument()
+    expect(container.firstElementChild).toHaveClass('bg-card', 'border')
+    expect(container.firstElementChild).not.toHaveClass('from-amber-500', 'via-orange-500')
     expect(screen.getByRole('link', { name: /开始学习/ })).toHaveAttribute('href', '/word/learn')
     expect(screen.getByRole('link', { name: /英语四级词汇/ })).toHaveAttribute(
       'href',
