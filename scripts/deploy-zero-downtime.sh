@@ -286,7 +286,7 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
   log "已切换 current -> $NEW_RELEASE"
 
   # 只保留最近 5 个发布（仅删除时间戳目录，不删 .staging.*）
-  KEEP=5
+  KEEP=2
   (cd "$RELEASES_DIR" && ls -1t | grep -E '^[0-9]{14}$' | tail -n +$((KEEP + 1)) | while read -r d; do [ -n "$d" ] && rm -rf "$RELEASES_DIR/$d"; done)
   rm -rf "${RELEASES_DIR}"/.staging.* 2>/dev/null || true
 
