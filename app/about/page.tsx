@@ -1,14 +1,5 @@
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
-import { Long_Cang } from 'next/font/google'
-
-const longCang = Long_Cang({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-long-cang',
-  display: 'swap',
-  preload: false,
-})
 
 const QUOTES = [
   '世界需要更多的英雄。有时候英雄可能为了一辆摩托车而死，但英雄不论成败，只要是对面邪恶，绝不袖手旁观，那就是英雄。',
@@ -46,7 +37,7 @@ const QUOTES = [
 
 export default function AboutPage() {
   return (
-    <PageContainer className={`${longCang.variable} flex h-full min-h-0 flex-col`}>
+    <PageContainer className="flex h-full min-h-0 flex-col">
       <div className="flex flex-1 flex-col gap-8 overflow-auto p-6">
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">

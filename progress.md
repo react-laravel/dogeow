@@ -143,3 +143,18 @@ TODO
 TODO
 
 - Re-check one live dice roll in an authenticated `/game/monopoly` session.
+
+2026-07-15
+
+- Current prompt: 除了 RPG，迁移其余 `/game/**` 小游戏及测试到独立仓库，统一使用 `game.dogeow.com`；同时迁移 `/tool?tool=moon-dice`。
+- Inventory in progress across the frontend and backend; RPG remains in its existing standalone repositories.
+- Logo source and the site PNG/ICO assets were changed to transparent backgrounds and committed as `91d6e9c7a`.
+- Main-site deployment is currently blocked by a reproducible Next 16 `next/font/google` Turbopack resolver failure.
+- Removed the two `next/font/google` imports in favor of the existing Chinese system-font variables; the full Turbopack production build passed locally (59 pages).
+
+TODO
+
+- Finish the frontend/backend game dependency inventory and select the exact standalone repository boundaries.
+- Create the standalone game repository/repositories, migrate implementation and tests, then run unit and browser regressions.
+- Replace central `/game/**` and moon-dice entries with redirects to `game.dogeow.com` after cutover.
+- Commit and deploy the Google-font build unblock before central cleanup.
