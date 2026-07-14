@@ -14,9 +14,9 @@ export default function FooterLinks() {
         {t('footer.terms_of_service', '用户协议')}
       </Link>
       <span className="text-muted-foreground/50">|</span>
-      <Link href="/about/site" className="hover:text-foreground transition-colors">
+      <a href="https://status.dogeow.com/" className="hover:text-foreground transition-colors">
         {t('footer.site_info', '网站信息')}
-      </Link>
+      </a>
       <span className="text-muted-foreground/50">|</span>
       <Link href="/about/contact" className="hover:text-foreground transition-colors">
         {t('footer.contact_us', '联系我们')}

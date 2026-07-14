@@ -44,6 +44,15 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_BUILD_VERSION: APP_BUILD_VERSION,
   },
   generateBuildId: async () => APP_BUILD_VERSION,
+  async redirects() {
+    return [
+      {
+        source: '/about/site',
+        destination: 'https://status.dogeow.com/',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {
