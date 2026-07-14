@@ -6,7 +6,6 @@ import WorldClock from './components/WorldClock'
 import Base64Image from './components/Base64Image'
 import TextDiff from './components/TextDiff'
 import ToolPlaceholder from './components/ToolPlaceholder'
-import MoonDiceGame from './components/MoonDiceGame'
 import RepoWatchTool from './components/RepoWatchTool'
 
 // 工具类别定义
@@ -65,14 +64,6 @@ export const tools: Tool[] = [
     component: RepoWatchTool,
     category: '开发辅助',
     tags: ['GitHub', 'composer', 'package.json', '依赖更新', 'npm', 'packagist'],
-  },
-  {
-    id: 'moon-dice',
-    title: '月饼骰子',
-    description: '双方轮流摇六颗骰子，按博饼（月饼）规则判定奖项并对比',
-    component: MoonDiceGame,
-    category: '其他',
-    tags: ['游戏', '骰子', '博饼', '月饼'],
   },
 ]
 

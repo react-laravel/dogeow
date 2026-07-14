@@ -21,14 +21,30 @@ function addNoStoreHeadersForHtml(request: NextRequest, response: NextResponse):
 }
 
 export function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname === '/game/rpg') {
-    return NextResponse.redirect('https://rpg.dogeow.com/', 308)
+  const { pathname, searchParams } = request.nextUrl
+
+  if (pathname === '/game/rpg' || pathname.startsWith('/game/rpg/')) {
+    const suffix = pathname.slice('/game/rpg'.length) || '/'
+    const target = new URL(suffix, 'https://rpg.dogeow.com')
+    target.search = request.nextUrl.search
+    return NextResponse.redirect(target, 308)
   }
 
-  return addNoStoreHeadersForHtml(
-    request,
-    NextResponse.next()
-  )
+  if (pathname === '/tool' && searchParams.get('tool') === 'moon-dice') {
+    const target = new URL('/moon-dice', 'https://game.dogeow.com')
+    target.search = request.nextUrl.search
+    target.searchParams.delete('tool')
+    return NextResponse.redirect(target, 308)
+  }
+
+  if (pathname === '/game' || pathname.startsWith('/game/')) {
+    const suffix = pathname.slice('/game'.length) || '/'
+    const target = new URL(suffix, 'https://game.dogeow.com')
+    target.search = request.nextUrl.search
+    return NextResponse.redirect(target, 308)
+  }
+
+  return addNoStoreHeadersForHtml(request, NextResponse.next())
 }
 
 export const config = {

@@ -40,7 +40,7 @@ npm run test:coverage    # 生成测试覆盖率报告
 - `app/chat/` - 基于 WebSocket 的实时聊天（stores、components、hooks）
 - `app/note/` - Slate 编辑器笔记（stores、components、hooks、utils）
 - `app/file/` - 文件管理（store、components）
-- `app/game/` - 各类游戏（2048、俄罗斯方块、贪吃蛇、保龄球、射击场、拼图等）
+- `react-laravel/game` - 独立游戏中心；中央站的 `/game/**` 仅负责跳转
 - `app/word/` - 单词学习
 - `app/thing/` - 物品/地点管理
 - `app/nav/` - 导航管理

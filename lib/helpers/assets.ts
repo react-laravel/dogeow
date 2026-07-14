@@ -23,7 +23,3 @@ export function asset(path: string): string {
 export function imageAsset(path: string): string {
   return asset(path.startsWith('/images/') ? path : `/images/${path.replace(/^\/+/, '')}`)
 }
-
-export function gameAsset(path: string): string {
-  return asset(path.startsWith('/game/') ? path : `/game/${path.replace(/^\/+/, '')}`)
-}

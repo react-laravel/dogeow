@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { asset, imageAsset, gameAsset } from '../assets'
+import { asset, imageAsset } from '../assets'
 
 describe('assets', () => {
   const originalEnv = process.env.NEXT_PUBLIC_ASSET_BASE_URL
@@ -75,29 +75,6 @@ describe('assets', () => {
     it('should combine with base URL', () => {
       process.env.NEXT_PUBLIC_ASSET_BASE_URL = 'https://cdn.example.com'
       expect(imageAsset('photo.jpg')).toBe('https://cdn.example.com/images/photo.jpg')
-    })
-  })
-
-  describe('gameAsset', () => {
-    it('should add /game prefix if not present', () => {
-      process.env.NEXT_PUBLIC_ASSET_BASE_URL = ''
-      expect(gameAsset('sprite.png')).toBe('/game/sprite.png')
-    })
-
-    it('should not double-add /game prefix', () => {
-      process.env.NEXT_PUBLIC_ASSET_BASE_URL = ''
-      expect(gameAsset('/game/sprite.png')).toBe('/game/sprite.png')
-    })
-
-    it('should strip leading slashes from path', () => {
-      process.env.NEXT_PUBLIC_ASSET_BASE_URL = ''
-      // '//game/sprite.png' doesn't startWith('/game/'), so /game/ is added
-      expect(gameAsset('//game/sprite.png')).toBe('/game/game/sprite.png')
-    })
-
-    it('should combine with base URL', () => {
-      process.env.NEXT_PUBLIC_ASSET_BASE_URL = 'https://cdn.example.com'
-      expect(gameAsset('sprite.png')).toBe('https://cdn.example.com/game/sprite.png')
     })
   })
 })

@@ -12,7 +12,7 @@ export default defineConfig({
     // Performance optimizations
     pool: 'threads',
     // Optimize test discovery and execution
-    include: ['**/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    include: ['**/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}', 'proxy.test.ts'],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -51,8 +51,6 @@ export default defineConfig({
         'app/file/**/*.{ts,tsx}',
         // nav 模块
         'app/nav/**/*.{ts,tsx}',
-        // game 模块
-        'app/game/**/*.{ts,tsx}',
         // tool 模块
         'app/tool/**/*.{ts,tsx}',
         // 共享 hooks、stores、lib

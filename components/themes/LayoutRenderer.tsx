@@ -3,7 +3,6 @@
 import { useUITheme } from './UIThemeProvider'
 import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
 import dynamic from 'next/dynamic'
-import { usePathname } from 'next/navigation'
 import { useMemo } from 'react'
 import { useBackgroundStore } from '@/stores/backgroundStore'
 import { cn } from '@/lib/helpers'
@@ -14,10 +13,8 @@ import { ScrollButton } from '@/components/display/ScrollButton'
  * 根据当前选择的 UI 主题动态加载和渲染对应的布局组件
  */
 export function LayoutRenderer({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
   const theme = useUITheme()
   const { backgroundImage } = useBackgroundStore()
-  const isMonopolyRoute = pathname.startsWith('/game/monopoly')
 
   // 动态加载 Header 组件
   const HeaderComponent = useMemo(() => {
@@ -74,7 +71,7 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
   }, [theme])
 
   if (!theme) {
-    return <DefaultLayout wide={isMonopolyRoute}>{children}</DefaultLayout>
+    return <DefaultLayout>{children}</DefaultLayout>
   }
 
   const Header = HeaderComponent
@@ -124,11 +121,8 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
           data-scroll-container
           className="mx-auto min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto"
           style={{
-            maxWidth:
-              isMonopolyRoute || theme.layout.main.maxWidth === '100%'
-                ? '100%'
-                : theme.layout.main.maxWidth,
-            padding: isMonopolyRoute ? 0 : theme.layout.main.padding,
+            maxWidth: theme.layout.main.maxWidth,
+            padding: theme.layout.main.padding,
           }}
         >
           {children}
@@ -160,7 +154,7 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
 }
 
 // 默认布局回退（当前布局）
-function DefaultLayout({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+function DefaultLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-full flex-col">
       <div
@@ -176,14 +170,7 @@ function DefaultLayout({ children, wide = false }: { children: React.ReactNode; 
         data-scroll-container
         className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
       >
-        <div
-          className={cn(
-            'mx-auto flex h-full w-full flex-col p-0',
-            wide ? 'max-w-none' : 'max-w-7xl'
-          )}
-        >
-          {children}
-        </div>
+        <div className="mx-auto flex h-full w-full max-w-7xl flex-col p-0">{children}</div>
       </div>
       <ScrollButton />
     </div>
