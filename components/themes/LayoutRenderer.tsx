@@ -17,7 +17,6 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const theme = useUITheme()
   const { backgroundImage } = useBackgroundStore()
-  const isStandaloneRpgRoute = pathname.startsWith('/rpg-host')
   const isMonopolyRoute = pathname.startsWith('/game/monopoly')
 
   // 动态加载 Header 组件
@@ -73,10 +72,6 @@ export function LayoutRenderer({ children }: { children: React.ReactNode }) {
       return null
     }
   }, [theme])
-
-  if (isStandaloneRpgRoute) {
-    return <div className="flex h-full flex-col">{children}</div>
-  }
 
   if (!theme) {
     return <DefaultLayout wide={isMonopolyRoute}>{children}</DefaultLayout>

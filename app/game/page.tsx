@@ -52,6 +52,7 @@ const isValidGame = (item: TranslatableItem): item is Game => {
 const GameCard = memo(({ game }: { game: Game }) => {
   const cardClassName = `${GAME_CARD_CLASSES.CONTAINER} ${game.hideOnMobile ? 'hidden md:block' : ''}`
   const isEstateGame = game.id === 'monopoly'
+  const gameHref = game.id === 'rpg' ? 'https://rpg.dogeow.com/' : `/game/${game.id}`
 
   if (isEstateGame) {
     return (
@@ -77,7 +78,7 @@ const GameCard = memo(({ game }: { game: Game }) => {
   }
 
   return (
-    <Link href={`/game/${game.id}`} key={game.id} className={cardClassName}>
+    <Link href={gameHref} key={game.id} className={cardClassName}>
       <Card className={GAME_CARD_CLASSES.CARD}>
         <div
           className={GAME_CARD_CLASSES.ICON}
