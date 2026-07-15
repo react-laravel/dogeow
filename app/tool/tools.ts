@@ -6,7 +6,6 @@ import WorldClock from './components/WorldClock'
 import Base64Image from './components/Base64Image'
 import TextDiff from './components/TextDiff'
 import ToolPlaceholder from './components/ToolPlaceholder'
-import RepoWatchTool from './components/RepoWatchTool'
 
 // 工具类别定义
 export type ToolCategory = '日期时间' | '文本处理' | '编码转换' | '开发辅助' | '其他'
@@ -56,14 +55,6 @@ export const tools: Tool[] = [
     component: Base64Image,
     category: '编码转换',
     tags: ['Base64', '图片', '编码', '解码'],
-  },
-  {
-    id: 'repo-watch',
-    title: '依赖更新追踪',
-    description: '',
-    component: RepoWatchTool,
-    category: '开发辅助',
-    tags: ['GitHub', 'composer', 'package.json', '依赖更新', 'npm', 'packagist'],
   },
 ]
 

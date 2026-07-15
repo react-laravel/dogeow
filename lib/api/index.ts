@@ -3,7 +3,6 @@
 export * from './core'
 export * from './url'
 export * from './errors'
-export * from './repo-watch'
 export * from './user'
 export * from './notifications'
 
