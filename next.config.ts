@@ -47,6 +47,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/chat',
+        destination: 'https://chat.dogeow.com/chat',
+        permanent: true,
+      },
+      {
         source: '/about/site',
         destination: 'https://status.dogeow.com/',
         permanent: true,
