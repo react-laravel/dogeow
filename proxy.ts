@@ -37,6 +37,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(target, 308)
   }
 
+  if (pathname === '/tool' && searchParams.get('tool') === 'repo-watch') {
+    return NextResponse.redirect(new URL('/', 'https://repo-watch.dogeow.com'), 308)
+  }
+
   if (pathname === '/game' || pathname.startsWith('/game/')) {
     const suffix = pathname.slice('/game'.length) || '/'
     const target = new URL(suffix, 'https://game.dogeow.com')
