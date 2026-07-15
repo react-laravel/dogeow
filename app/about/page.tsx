@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
 
 const QUOTES = [
@@ -40,15 +39,7 @@ export default function AboutPage() {
     <PageContainer className="flex h-full min-h-0 flex-col">
       <div className="flex flex-1 flex-col gap-8 overflow-auto p-6">
         <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-medium text-foreground">自言自语</h2>
-            <Link
-              href="/book/hongloumeng"
-              className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
-            >
-              红楼梦对照阅读
-            </Link>
-          </div>
+          <h2 className="text-lg font-medium text-foreground">自言自语</h2>
           <ul
             className="flex flex-col gap-3 text-2xl text-muted-foreground"
             style={{ fontFamily: 'var(--font-long-cang, serif)' }}

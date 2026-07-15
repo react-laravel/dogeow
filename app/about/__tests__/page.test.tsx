@@ -7,7 +7,7 @@ describe('About Page', () => {
     render(<About />)
 
     expect(screen.getByText('自言自语')).toBeInTheDocument()
-    expect(screen.getByText('红楼梦对照阅读')).toBeInTheDocument()
+    expect(screen.queryByText('红楼梦对照阅读')).not.toBeInTheDocument()
   })
 
   it('should have correct container classes', () => {
