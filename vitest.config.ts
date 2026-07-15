@@ -44,7 +44,6 @@ export default defineConfig({
         'app/thing/components/location-combobox/**/*.{ts,tsx}',
         'app/thing/components/location-tree/**/*.{ts,tsx}',
         // chat 模块
-        'app/chat/**/*.{ts,tsx}',
         // note 模块
         'app/note/**/*.{ts,tsx}',
         // file 模块

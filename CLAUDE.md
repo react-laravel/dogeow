@@ -37,7 +37,6 @@ npm run test:coverage    # 生成测试覆盖率报告
 
 代码按功能模块组织在 `app/` 目录下：
 
-- `app/chat/` - 基于 WebSocket 的实时聊天（stores、components、hooks）
 - `app/note/` - Slate 编辑器笔记（stores、components、hooks、utils）
 - `app/file/` - 文件管理（store、components）
 - `react-laravel/game` - 独立游戏中心；中央站的 `/game/**` 仅负责跳转
