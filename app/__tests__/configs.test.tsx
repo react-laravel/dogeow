@@ -78,12 +78,13 @@ describe('App Configs', () => {
     })
 
     it('should have all expected tile names', () => {
-      const expectedNames = ['thing', 'file', 'tool', 'nav', 'note', 'game', 'chat']
+      const expectedNames = ['thing', 'file', 'tool', 'nav', 'note', 'chat']
       const actualNames = configs.tiles.map(tile => tile.name)
 
       expectedNames.forEach(name => {
         expect(actualNames).toContain(name)
       })
+      expect(actualNames).not.toContain('game')
     })
 
     it('should have correct nameKey format', () => {

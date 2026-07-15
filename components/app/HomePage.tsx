@@ -56,7 +56,7 @@ function MagazineSkeleton() {
 
 function IconSkeleton() {
   return (
-    <div className="animate-pulse grid grid-cols-4 gap-4 sm:grid-cols-6 md:grid-cols-8">
+    <div className="animate-pulse grid grid-cols-3 gap-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="flex flex-col items-center gap-2">
           <div className="bg-white/20 h-12 w-12 rounded-xl" />

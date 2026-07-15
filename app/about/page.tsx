@@ -1,4 +1,9 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { PageContainer } from '@/components/layout'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
 
 const QUOTES = [
   '世界需要更多的英雄。有时候英雄可能为了一辆摩托车而死，但英雄不论成败，只要是对面邪恶，绝不袖手旁观，那就是英雄。',
@@ -34,18 +39,133 @@ const QUOTES = [
   '',
 ]
 
+const STORAGE_KEY = 'dogeow:about-reading-settings'
+const DEFAULT_SETTINGS = {
+  fontSize: 24,
+  color: '#737373',
+  direction: 'horizontal' as const,
+}
+
+type ReadingDirection = 'horizontal' | 'vertical'
+
+interface ReadingSettings {
+  fontSize: number
+  color: string
+  direction: ReadingDirection
+}
+
+function parseSettings(value: string | null): ReadingSettings | null {
+  if (!value) return null
+
+  try {
+    const settings = JSON.parse(value) as Partial<ReadingSettings>
+    if (
+      typeof settings.fontSize !== 'number' ||
+      settings.fontSize < 18 ||
+      settings.fontSize > 48 ||
+      typeof settings.color !== 'string' ||
+      !/^#[0-9a-f]{6}$/i.test(settings.color) ||
+      (settings.direction !== 'horizontal' && settings.direction !== 'vertical')
+    ) {
+      return null
+    }
+
+    return settings as ReadingSettings
+  } catch {
+    return null
+  }
+}
+
 export default function AboutPage() {
+  const [settings, setSettings] = useState<ReadingSettings>(DEFAULT_SETTINGS)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+
+  useEffect(() => {
+    const savedSettings = parseSettings(window.localStorage.getItem(STORAGE_KEY))
+    // localStorage 只能在客户端挂载后读取，需要在此恢复用户偏好。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (savedSettings) setSettings(savedSettings)
+    setSettingsLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (!settingsLoaded) return
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  }, [settings, settingsLoaded])
+
+  const isVertical = settings.direction === 'vertical'
+
   return (
     <PageContainer className="flex h-full min-h-0 flex-col">
       <div className="flex flex-1 flex-col gap-8 overflow-auto p-6">
         <section className="space-y-4">
-          <h2 className="text-lg font-medium text-foreground">自言自语</h2>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-lg font-medium text-foreground">自言自语</h2>
+            <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-3">
+              <label className="grid min-w-40 gap-2 text-sm text-foreground">
+                <span>字体大小：{settings.fontSize}px</span>
+                <Slider
+                  aria-label="字体大小"
+                  min={18}
+                  max={48}
+                  step={1}
+                  value={[settings.fontSize]}
+                  onValueChange={([fontSize]) => setSettings(current => ({ ...current, fontSize }))}
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm text-foreground">
+                <span>文字颜色</span>
+                <input
+                  aria-label="文字颜色"
+                  type="color"
+                  value={settings.color}
+                  onChange={event =>
+                    setSettings(current => ({ ...current, color: event.target.value }))
+                  }
+                  className="h-8 w-14 cursor-pointer rounded border border-input bg-background p-1"
+                />
+              </label>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setSettings(current => ({
+                    ...current,
+                    direction: current.direction === 'horizontal' ? 'vertical' : 'horizontal',
+                  }))
+                }
+              >
+                {isVertical ? '切换为横排' : '切换为竖排'}
+              </Button>
+            </div>
+          </div>
           <ul
-            className="flex flex-col gap-3 text-2xl text-muted-foreground"
-            style={{ fontFamily: 'var(--font-long-cang, serif)' }}
+            aria-label="自言自语内容"
+            className={
+              isVertical
+                ? 'flex h-[min(70dvh,720px)] flex-row-reverse gap-4 overflow-x-auto overflow-y-hidden py-2'
+                : 'flex flex-col gap-3'
+            }
+            style={{
+              color: settings.color,
+              fontFamily: 'var(--font-long-cang, serif)',
+              fontSize: `${settings.fontSize}px`,
+              writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
+              textOrientation: 'mixed',
+            }}
           >
             {QUOTES.map(q => (
-              <li key={q.slice(0, 20)} className="border-b border-border/50 pb-2 last:border-0">
+              <li
+                key={q.slice(0, 20)}
+                className={
+                  isVertical
+                    ? 'border-l border-border/50 px-2 last:border-0'
+                    : 'border-b border-border/50 pb-2 last:border-0'
+                }
+              >
                 {q}
               </li>
             ))}

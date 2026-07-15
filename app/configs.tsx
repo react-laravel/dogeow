@@ -4,7 +4,6 @@ import {
   Wrench,
   Compass,
   NotebookPen,
-  Gamepad2,
   MessageSquare,
   Languages,
   ListTodo,
@@ -96,14 +95,6 @@ const TILES = [
     icon: <ListTodo />,
     href: '/todos',
     color: '#2E7D32',
-    needLogin: true,
-  },
-  {
-    name: 'game',
-    nameKey: 'nav.game',
-    icon: <Gamepad2 />,
-    href: '/game',
-    color: '#424242',
     needLogin: true,
   },
   {
@@ -224,8 +215,7 @@ export const configs = {
     templateAreas: `
       "thing word file"
       "chat tool nav"
-      "note todos game"
-      "book . ."
+      "note todos book"
     `,
   },
   games: GAMES,

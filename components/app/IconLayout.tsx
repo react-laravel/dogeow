@@ -110,7 +110,7 @@ IconTile.displayName = 'IconTile'
 
 export const IconLayout = memo(
   ({ tiles, projectCoverMode, getTileStatus, handleTileClick }: IconLayoutProps) => (
-    <div className="grid grid-cols-4 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
+    <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
       {tiles.map(tile => {
         const tileStatus = getTileStatus(tile)
 
