@@ -146,15 +146,13 @@ export default function AboutPage() {
             aria-label="自言自语内容"
             className={
               isVertical
-                ? 'flex h-[min(70dvh,720px)] flex-row-reverse gap-4 overflow-x-auto overflow-y-hidden py-2'
+                ? 'flex h-[calc(100dvh-14rem)] min-h-[28rem] flex-row-reverse items-stretch gap-5 overflow-x-auto overflow-y-hidden py-2'
                 : 'flex flex-col gap-3'
             }
             style={{
               color: settings.color,
               fontFamily: 'var(--font-long-cang, serif)',
               fontSize: `${settings.fontSize}px`,
-              writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
-              textOrientation: 'mixed',
             }}
           >
             {QUOTES.map(q => (
@@ -162,9 +160,13 @@ export default function AboutPage() {
                 key={q.slice(0, 20)}
                 className={
                   isVertical
-                    ? 'border-l border-border/50 px-2 last:border-0'
+                    ? 'h-full shrink-0 border-l border-border/50 px-3 leading-relaxed last:border-0'
                     : 'border-b border-border/50 pb-2 last:border-0'
                 }
+                style={{
+                  writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
+                  textOrientation: 'mixed',
+                }}
               >
                 {q}
               </li>

@@ -45,7 +45,12 @@ describe('About Page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '切换为竖排' }))
 
-    expect(screen.getByLabelText('自言自语内容')).toHaveStyle({ writingMode: 'vertical-rl' })
+    const quoteList = screen.getByLabelText('自言自语内容')
+    const firstQuote = screen.getByText(/世界需要更多的英雄/)
+
+    expect(quoteList).not.toHaveStyle({ writingMode: 'vertical-rl' })
+    expect(firstQuote).toHaveClass('h-full', 'shrink-0')
+    expect(firstQuote).toHaveStyle({ writingMode: 'vertical-rl' })
     expect(screen.getByRole('button', { name: '切换为横排' })).toBeInTheDocument()
   })
 })
