@@ -132,9 +132,9 @@ export function ReaderSettingsPanel({
               <span className="text-muted-foreground text-xs">{settings.fontSize}px</span>
             </div>
             <Slider
-              min={14}
-              max={32}
-              step={1}
+              min={16}
+              max={64}
+              step={2}
               value={[settings.fontSize]}
               onValueChange={([fontSize]) => onPatchSettings({ fontSize })}
             />

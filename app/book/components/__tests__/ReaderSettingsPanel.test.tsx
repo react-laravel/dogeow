@@ -58,9 +58,11 @@ describe('ReaderSettingsPanel', () => {
     const onPatchSettings = vi.fn()
     render(<ReaderSettingsPanel {...defaultProps} onPatchSettings={onPatchSettings} />)
 
-    // Find the font size slider (second slider on the page)
     const sliders = screen.getAllByRole('slider')
-    // First slider is font size
+    expect(sliders[0]).toHaveAttribute('min', '16')
+    expect(sliders[0]).toHaveAttribute('max', '64')
+    expect(sliders[0]).toHaveAttribute('step', '2')
+
     fireEvent.change(sliders[0], { target: { value: '20' } })
     expect(onPatchSettings).toHaveBeenCalledWith({ fontSize: 20 })
   })
