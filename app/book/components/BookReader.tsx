@@ -293,7 +293,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
           style={{
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
-            fontFamily: getBookFontFamily((settings as any).fontFamily ?? 'yahei'),
+            fontFamily: getBookFontFamily((settings as any).originalFontFamily ?? 'yahei'),
             color: themeStyle?.color,
           }}
         >

@@ -180,7 +180,7 @@ export function VolumeBookReader({
                 </p>
               )}
             </header>
-            <div className="text-base leading-relaxed" style={{ color: themeColor }}>
+            <div style={{ color: themeColor }}>
               {contentParagraphs.map((paragraph, index) => (
                 <p
                   key={index}
