@@ -199,4 +199,59 @@ describe('useAudioVisualizer', () => {
     expect(gainConnect).toHaveBeenCalledWith(destinationNode)
     expect(result.current.analyserNode).toBe(analyserNode)
   })
+
+  it('rebinds a captureStream source after the audio track changes', () => {
+    const firstSource = { connect: vi.fn(), disconnect: vi.fn() }
+    const nextSource = { connect: vi.fn(), disconnect: vi.fn() }
+    const analyserNode = {
+      connect: vi.fn(),
+      fftSize: 0,
+      smoothingTimeConstant: 0,
+      frequencyBinCount: 32,
+      getByteFrequencyData: vi.fn(),
+    } as unknown as AnalyserNode
+    const createMediaStreamSource = vi
+      .fn()
+      .mockReturnValueOnce(firstSource)
+      .mockReturnValueOnce(nextSource)
+
+    class MockAudioContext {
+      public readonly state: AudioContextState = 'running'
+      public readonly destination = {} as AudioDestinationNode
+      public readonly createAnalyser = vi.fn(() => analyserNode)
+      public readonly createGain = vi.fn(() => ({ connect: vi.fn(), gain: { value: 1 } }))
+      public readonly createMediaElementSource = vi.fn()
+      public readonly createMediaStreamSource = createMediaStreamSource
+      public readonly resume = vi.fn(() => Promise.resolve())
+    }
+
+    Object.defineProperty(window, 'AudioContext', {
+      configurable: true,
+      writable: true,
+      value: MockAudioContext,
+    })
+
+    const firstStream = {} as MediaStream
+    const nextStream = {} as MediaStream
+    const captureStream = vi.fn().mockReturnValueOnce(firstStream).mockReturnValueOnce(nextStream)
+    const audioElement = document.createElement('audio') as HTMLAudioElement & {
+      captureStream: () => MediaStream
+    }
+    audioElement.captureStream = captureStream
+
+    const { result } = renderHook(() =>
+      useAudioVisualizer({ volume: 0.7, isMuted: false, playbackMode: 'auto' })
+    )
+
+    act(() => {
+      result.current.initAudioContext(audioElement)
+      result.current.refreshAudioSource(audioElement)
+    })
+
+    expect(createMediaStreamSource).toHaveBeenNthCalledWith(1, firstStream)
+    expect(createMediaStreamSource).toHaveBeenNthCalledWith(2, nextStream)
+    expect(nextSource.connect).toHaveBeenCalledWith(analyserNode)
+    expect(firstSource.disconnect).toHaveBeenCalled()
+    expect(result.current.sourceRef.current).toBe(nextSource)
+  })
 })

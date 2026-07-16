@@ -219,6 +219,13 @@ export const useAudioManager = () => {
     setUserInteracted(true)
   }, [])
 
+  const handlePlaybackLoadedMetadata = playback.handleLoadedMetadata
+  const refreshAudioSource = visualizer.refreshAudioSource
+  const handleLoadedMetadata = useCallback(() => {
+    handlePlaybackLoadedMetadata()
+    refreshAudioSource(audioRef.current)
+  }, [handlePlaybackLoadedMetadata, refreshAudioSource])
+
   return {
     // State
     isPlaying,
@@ -243,6 +250,7 @@ export const useAudioManager = () => {
     handoffAudioRef,
     // Audio controller
     ...playback,
+    handleLoadedMetadata,
     analyserNode: visualizer.analyserNode,
   }
 }

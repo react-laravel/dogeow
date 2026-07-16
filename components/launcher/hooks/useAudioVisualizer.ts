@@ -20,6 +20,7 @@ interface UseAudioVisualizerReturn {
   gainNodeRef: React.MutableRefObject<GainNode | null>
   analyserNode: AnalyserNode | null
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
+  refreshAudioSource: (audioElement: HTMLAudioElement | null) => void
   teardownAudioContext: () => boolean
   routesPlaybackThroughWebAudio: () => boolean
 }
@@ -27,6 +28,7 @@ interface UseAudioVisualizerReturn {
 interface AudioSourceSetup {
   source: AudioVisualizerSourceNode
   shouldRouteToDestination: boolean
+  usesCaptureStream: boolean
 }
 
 function supportsCaptureStream(audioElement: HTMLAudioElement): boolean {
@@ -81,6 +83,7 @@ function createVisualizerSource(
       return {
         source: audioContext.createMediaStreamSource(stream),
         shouldRouteToDestination: false,
+        usesCaptureStream: true,
       }
     } catch (error) {
       console.warn('captureStream 初始化失败，切换到 MediaElementAudioSource:', error)
@@ -90,6 +93,7 @@ function createVisualizerSource(
   return {
     source: audioContext.createMediaElementSource(audioElement),
     shouldRouteToDestination: true,
+    usesCaptureStream: false,
   }
 }
 
@@ -104,6 +108,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   // 仅当播放音频经由 AudioContext 路由到扬声器时为 true（createMediaElementSource 路径）。
   // captureStream 路径下声音由 <audio> 元素直接输出，AudioContext 只做频谱分析。
   const routesPlaybackRef = useRef(false)
+  const usesCaptureStreamRef = useRef(false)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
 
   const shouldUseWebAudio = useCallback(() => {
@@ -141,7 +146,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
         const audioContext = new AudioContextClass()
         const analyser = audioContext.createAnalyser()
         const gainNode = audioContext.createGain()
-        const { source, shouldRouteToDestination } = createVisualizerSource(
+        const { source, shouldRouteToDestination, usesCaptureStream } = createVisualizerSource(
           audioContext,
           audioElement
         )
@@ -155,6 +160,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
           gainNode.connect(audioContext.destination)
         }
         routesPlaybackRef.current = shouldRouteToDestination
+        usesCaptureStreamRef.current = usesCaptureStream
 
         gainNode.gain.value = isMuted ? 0 : 1
 
@@ -175,6 +181,28 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     },
     [isMuted, playbackMode, shouldUseWebAudio]
   )
+
+  const refreshAudioSource = useCallback((audioElement: HTMLAudioElement | null) => {
+    const audioContext = audioContextRef.current
+    const analyser = analyserRef.current
+    if (!audioElement || !audioContext || !analyser || !usesCaptureStreamRef.current) return
+
+    const elementWithCaptureStream = audioElement as HTMLMediaElement & {
+      captureStream?: () => MediaStream
+    }
+    if (typeof elementWithCaptureStream.captureStream !== 'function') return
+
+    try {
+      const nextSource = audioContext.createMediaStreamSource(
+        elementWithCaptureStream.captureStream.call(elementWithCaptureStream)
+      )
+      nextSource.connect(analyser)
+      sourceRef.current?.disconnect()
+      sourceRef.current = nextSource
+    } catch (error) {
+      console.warn('切换歌曲后重新绑定频谱音轨失败:', error)
+    }
+  }, [])
 
   const teardownAudioContext = useCallback((): boolean => {
     const wasRoutingPlayback = routesPlaybackRef.current
@@ -203,6 +231,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     sourceRef.current = null
     gainNodeRef.current = null
     routesPlaybackRef.current = false
+    usesCaptureStreamRef.current = false
     setAnalyserNode(null)
 
     return wasRoutingPlayback
@@ -255,6 +284,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     gainNodeRef,
     analyserNode,
     initAudioContext,
+    refreshAudioSource,
     teardownAudioContext,
     routesPlaybackThroughWebAudio,
   }
