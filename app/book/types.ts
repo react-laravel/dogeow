@@ -1,4 +1,5 @@
 import type { ReactNode, RefObject } from 'react'
+import type { BookChapter } from '@/app/book/utils/bilingualParse'
 
 export interface BookChapterOption<ChapterId = string | number> {
   id: ChapterId
@@ -70,6 +71,8 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
 
   /** Feature flags — control which UI sections are shown */
   hasNarration: boolean
+  /** Chapter text supplied to the browser TTS narrator when narration is enabled */
+  narrationChapter?: BookChapter | null
   hasTextSelection: boolean
   hasPairDisplayMode: boolean
   hasContentMode: boolean

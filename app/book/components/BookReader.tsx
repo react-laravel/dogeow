@@ -15,6 +15,7 @@ import {
 } from '@/app/book/utils/scroll'
 import { TextSelectionToolbar } from '@/app/book/components/TextSelectionToolbar'
 import { useBookTextSelectionActions } from '@/app/book/hooks/useBookTextSelectionActions'
+import { useBookNarration, type BookNarrationMode } from '@/app/book/hooks/useBookNarration'
 import type { BookReaderConfig } from '@/app/book/types'
 import { getBookFontFamily, getBookThemeStyle } from '@/app/book/utils/theme'
 import type { BookTheme } from '@/app/book/utils/theme'
@@ -37,6 +38,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
   const [collectionsPanelOpen, setCollectionsPanelOpen] = useState(false)
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [jumpRequest, setJumpRequest] = useState(0)
+  const [narrationMode, setNarrationMode] = useState<BookNarrationMode>('original')
 
   const contentRef = useRef<HTMLDivElement>(null)
   const pendingJumpRef = useRef<BookJumpTarget | null>(null)
@@ -52,6 +54,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
     hasPrevChapter,
     hasNextChapter,
     hasNarration,
+    narrationChapter,
     hasTextSelection,
     hasPairDisplayMode,
     hasContentMode,
@@ -62,6 +65,11 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
   } = config
 
   const themeStyle = getBookThemeStyle(settings.theme)
+  const narration = useBookNarration({
+    chapter: narrationChapter ?? null,
+    narrationMode,
+    contentRef,
+  })
 
   // ─── Scroll position persistence ──────────────────────────────────
 
@@ -123,10 +131,11 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
     (chapterId: string) => {
       const resolvedId = chapters.find((c: { id: unknown }) => String(c.id) === chapterId)?.id
       if (resolvedId !== undefined) {
+        narration.stop()
         onChapterIdChange(resolvedId)
       }
     },
-    [chapters, onChapterIdChange]
+    [chapters, narration, onChapterIdChange]
   )
 
   const getChapterContext = useCallback(() => {
@@ -148,7 +157,19 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       getContext: getChapterContext,
       addPositionBookmark,
       addCollection,
+      onPlaySelection: selection => {
+        if (!narration.start(selection.pairIndex ?? 0)) {
+          toast.error('当前浏览器不支持听书，或章节还没有加载完成')
+        }
+      },
     })
+
+  const handleStartNarration = useCallback(() => {
+    const startPairIndex = getChapterContext().pairIndex ?? 0
+    if (!narration.start(startPairIndex)) {
+      toast.error('当前浏览器不支持听书，或章节还没有加载完成')
+    }
+  }, [getChapterContext, narration])
 
   const handleAddCurrentBookmark = useCallback(() => {
     const context = getChapterContext()
@@ -222,13 +243,13 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
           onOpenBookmarks={() => setBookmarksPanelOpen(true)}
           onOpenCollections={() => setCollectionsPanelOpen(true)}
           onOpenSettings={() => setSettingsPanelOpen(true)}
-          narrationStatus="idle"
-          narrationMode="original"
-          onNarrationModeChange={() => {}}
-          onStartNarration={() => {}}
-          onPauseNarration={() => {}}
-          onResumeNarration={() => {}}
-          onStopNarration={() => {}}
+          narrationStatus={narration.status}
+          narrationMode={narrationMode}
+          onNarrationModeChange={setNarrationMode}
+          onStartNarration={handleStartNarration}
+          onPauseNarration={narration.pause}
+          onResumeNarration={narration.resume}
+          onStopNarration={narration.stop}
           hideNarration={!hasNarration}
           onPrevChapter={onPrevChapter}
           onNextChapter={onNextChapter}

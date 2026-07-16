@@ -90,11 +90,22 @@ export function VolumeBookReader({
   const [currentVolIdx, currentChIdx] = parseChapterPosition(currentChapterId)
   const currentVol = index?.volumes[currentVolIdx]
   const currentCh = currentVol?.chapters[currentChIdx]
+  const currentFlatIdx = flatChapters.findIndex(c => c.id === currentChapterId)
 
   const contentParagraphs = useMemo(() => {
     if (!chapterContent) return []
     return chapterContent.split(/\n{2,}/).filter(Boolean)
   }, [chapterContent])
+
+  const narrationChapter = useMemo(
+    () => ({
+      id: Math.max(currentFlatIdx, 0),
+      title: currentCh?.name ?? '',
+      translationTitle: '',
+      pairs: contentParagraphs.map(paragraph => ({ o: paragraph, t: '' })),
+    }),
+    [contentParagraphs, currentCh?.name, currentFlatIdx]
+  )
 
   const loadChapter = useCallback(
     async (chapterId: string) => {
@@ -142,7 +153,6 @@ export function VolumeBookReader({
     [flatChapters, currentChapterId, patchSettings]
   )
 
-  const currentFlatIdx = flatChapters.findIndex(c => c.id === currentChapterId)
   const hasPrev = currentFlatIdx > 0
   const hasNext = currentFlatIdx >= 0 && currentFlatIdx < flatChapters.length - 1
 
@@ -172,7 +182,11 @@ export function VolumeBookReader({
             </header>
             <div className="text-base leading-relaxed" style={{ color: themeColor }}>
               {contentParagraphs.map((paragraph, index) => (
-                <p key={index} className="mb-4 whitespace-pre-wrap last:mb-0">
+                <p
+                  key={index}
+                  data-pair-index={index}
+                  className="mb-4 whitespace-pre-wrap last:mb-0"
+                >
                   {paragraph}
                 </p>
               ))}
@@ -205,7 +219,8 @@ export function VolumeBookReader({
       onNextChapter: hasNext ? () => navigateChapter(1) : undefined,
       hasPrevChapter: hasPrev,
       hasNextChapter: hasNext,
-      hasNarration: false,
+      hasNarration: true,
+      narrationChapter,
       hasTextSelection: true,
       hasPairDisplayMode: false,
       hasContentMode: false,
@@ -231,6 +246,7 @@ export function VolumeBookReader({
       hasPrev,
       hasNext,
       navigateChapter,
+      narrationChapter,
       storageKey,
       chapterSelectPlaceholder,
       renderContent,
