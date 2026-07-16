@@ -148,6 +148,23 @@ export function BilingualBookReader({
     patchSettings({ chapterId })
   }
 
+  const currentChapterIndex =
+    index?.chapters.findIndex(chapterMeta => chapterMeta.id === settings.chapterId) ?? -1
+  const hasPrevChapter = currentChapterIndex > 0
+  const hasNextChapter = Boolean(
+    index && currentChapterIndex >= 0 && currentChapterIndex < index.chapters.length - 1
+  )
+
+  const handlePrevChapter = () => {
+    if (!index || !hasPrevChapter) return
+    handleChapterChange(index.chapters[currentChapterIndex - 1].id)
+  }
+
+  const handleNextChapter = () => {
+    if (!index || !hasNextChapter) return
+    handleChapterChange(index.chapters[currentChapterIndex + 1].id)
+  }
+
   const getChapterContext = useCallback(() => {
     const position = getReadingPosition(contentRef.current, findNearestPairIndex)
     const pair = position.pairIndex != null ? chapter?.pairs[position.pairIndex] : undefined
@@ -259,6 +276,10 @@ export function BilingualBookReader({
           onPauseNarration={narration.pause}
           onResumeNarration={narration.resume}
           onStopNarration={narration.stop}
+          onPrevChapter={handlePrevChapter}
+          onNextChapter={handleNextChapter}
+          hasPrevChapter={hasPrevChapter}
+          hasNextChapter={hasNextChapter}
         />
       )}
 
