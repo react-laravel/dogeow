@@ -5,12 +5,12 @@ import Heart from './Heart'
 
 const BuiltBy = () => {
   return (
-    <div className="flex items-center justify-center gap-2 text-sm opacity-80">
-      <span>🔨 Built By</span>
-      <Link href="/about" className="underline decoration-green-500 decoration-wavy">
+    <div className="text-muted-foreground flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+      <span>Built by</span>
+      <Link href="/about" className="text-foreground hover:text-primary transition-colors">
         小李世界
       </Link>
-      <span> with </span>
+      <span>with</span>
       <Heart />
     </div>
   )

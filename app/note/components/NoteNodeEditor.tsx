@@ -243,20 +243,28 @@ export default function NoteNodeEditor({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px]" />
         <Dialog.Content
           className={
             isSimpleCreateChild
-              ? 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border p-4 shadow-lg'
-              : 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[90vh] w-[90vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border shadow-lg'
+              ? 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border shadow-2xl'
+              : 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[min(90dvh,48rem)] w-[calc(100%-1rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl'
           }
         >
           <div className="border-border flex items-center justify-between border-b p-4">
             <Dialog.Title className="text-lg font-semibold">
               {node ? '编辑节点' : isSimpleCreateChild ? '创建子节点' : '新建节点'}
             </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              {isSimpleCreateChild ? '填写子节点标题并创建' : '填写节点标题、标签、摘要和内容'}
+            </Dialog.Description>
             <Dialog.Close asChild>
-              <button className="hover:bg-muted rounded p-1" aria-label="关闭">
+              <button
+                type="button"
+                className="hover:bg-muted focus-visible:ring-ring flex size-8 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2"
+                aria-label="关闭"
+                title="关闭"
+              >
                 <X className="h-5 w-5" />
               </button>
             </Dialog.Close>
@@ -343,8 +351,11 @@ export default function NoteNodeEditor({
                         >
                           {tag}
                           <button
+                            type="button"
                             onClick={() => handleRemoveTag(tag)}
-                            className="hover:text-primary/80"
+                            className="hover:bg-primary/10 rounded p-0.5 transition-colors"
+                            aria-label={`移除标签 ${tag}`}
+                            title={`移除标签 ${tag}`}
                           >
                             <X className="h-3 w-3" />
                           </button>

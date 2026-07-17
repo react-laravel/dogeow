@@ -40,7 +40,9 @@ export default function TagCard({ tag, count, onDelete, className }: TagCardProp
 
           {onDelete && (
             <button
-              aria-label="Delete tag"
+              type="button"
+              aria-label={`删除标签 ${tag.name}`}
+              title={`删除标签 ${tag.name}`}
               onClick={e => {
                 e.preventDefault()
                 e.stopPropagation()

@@ -39,13 +39,13 @@ describe('TagCard', () => {
 
   it('renders delete button when onDelete provided', () => {
     render(<TagCard tag={defaultTag} onDelete={vi.fn()} />)
-    expect(screen.getByLabelText('Delete tag')).toBeDefined()
+    expect(screen.getByLabelText('删除标签 Test Tag')).toBeDefined()
   })
 
   it('calls onDelete when delete button clicked', () => {
     const onDelete = vi.fn()
     render(<TagCard tag={defaultTag} onDelete={onDelete} />)
-    fireEvent.click(screen.getByLabelText('Delete tag'))
+    fireEvent.click(screen.getByLabelText('删除标签 Test Tag'))
     expect(onDelete).toHaveBeenCalled()
   })
 

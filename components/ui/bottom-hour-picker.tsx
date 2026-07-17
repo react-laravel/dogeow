@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/helpers'
@@ -59,7 +59,7 @@ export function BottomHourPicker({
           aria-describedby={undefined}
         >
           <div className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 pr-12 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <p className="text-foreground text-center font-medium">{title ?? label}</p>
+            <SheetTitle className="text-center font-medium">{title ?? label}</SheetTitle>
           </div>
           <ScrollArea className="h-[min(50vh,320px)]">
             <div className="py-2">
@@ -68,6 +68,7 @@ export function BottomHourPicker({
                   key={hour}
                   type="button"
                   onClick={() => handleSelect(hour)}
+                  aria-pressed={value === hour}
                   className={cn(
                     'flex w-full items-center justify-between px-4 py-3 text-left text-base transition-colors active:bg-muted',
                     value === hour ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted/70'

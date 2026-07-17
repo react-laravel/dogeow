@@ -40,24 +40,24 @@ const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTile
 
   const shellClassName = useMemo(() => {
     const baseClassName =
-      'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[24px] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98]'
+      'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-muted/45 transition-transform duration-200 group-hover:scale-[1.02] group-active:scale-[0.98]'
 
     if (projectCoverMode === 'image') {
-      return `${baseClassName} bg-white/80 shadow-[0_14px_30px_rgba(15,23,42,0.16)] dark:bg-white/8 dark:shadow-[0_18px_36px_rgba(0,0,0,0.35)]`
+      return baseClassName
     }
 
     if (projectCoverMode === 'color') {
-      return `${baseClassName} shadow-[0_14px_30px_rgba(15,23,42,0.18)]`
+      return baseClassName
     }
 
-    return `${baseClassName} bg-card border border-border/60 shadow-[0_12px_24px_rgba(15,23,42,0.10)] dark:bg-neutral-950 dark:border-white/8 dark:shadow-[0_18px_36px_rgba(0,0,0,0.28)]`
+    return `${baseClassName} border border-border/60`
   }, [projectCoverMode])
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-w-0 flex-col items-center gap-2 text-center outline-none transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="app-surface app-surface-interactive group flex min-w-0 flex-col gap-2 p-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       aria-label={needsLogin ? `打开 ${tileName}（需登录）` : `打开 ${tileName}`}
     >
       <div
@@ -76,7 +76,7 @@ const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTile
               onError={handleImageError}
               quality={PERFORMANCE.IMAGE_QUALITY}
             />
-            <div className="absolute inset-0 bg-black/28" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/18 via-transparent to-white/8" />
           </>
         )}
 
@@ -99,7 +99,7 @@ const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTile
         )}
       </div>
 
-      <span className="line-clamp-2 min-h-[2.5rem] text-xs font-medium leading-5 text-foreground sm:text-sm">
+      <span className="line-clamp-2 flex min-h-9 items-center justify-center px-1 text-xs font-medium leading-4 text-foreground sm:text-sm">
         {tileName}
       </span>
     </button>
@@ -110,7 +110,7 @@ IconTile.displayName = 'IconTile'
 
 export const IconLayout = memo(
   ({ tiles, projectCoverMode, getTileStatus, handleTileClick }: IconLayoutProps) => (
-    <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
       {tiles.map(tile => {
         const tileStatus = getTileStatus(tile)
 

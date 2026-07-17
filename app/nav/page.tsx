@@ -32,7 +32,7 @@ function SearchBar({ onSearch }: { onSearch: (term: string) => void }) {
   }, [localSearch, onSearch, searchTerm])
 
   return (
-    <div className="relative flex-1">
+    <div className="relative min-w-0 flex-1">
       <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
       <Input
         placeholder="搜索导航..."
@@ -194,9 +194,9 @@ function NavContent() {
         <SearchBar onSearch={onSearch} />
         <Button
           onClick={handleAddNav}
-          size="icon"
+          size="sm"
           variant="default"
-          className="relative h-9 w-9 shrink-0"
+          className="relative h-9 shrink-0 gap-1.5 px-3"
           disabled={!isAuthenticated}
           style={{
             backgroundColor: themeColor.color,
@@ -204,22 +204,26 @@ function NavContent() {
             opacity: !isAuthenticated ? 0.6 : 1,
           }}
           aria-label={t('nav.add_nav', '添加导航')}
+          title={isAuthenticated ? '添加导航' : '登录后可添加导航'}
         >
           <Plus className="h-4 w-4" />
+          <span>添加</span>
           {!isAuthenticated ? (
             <Lock className="absolute -top-1 -right-1 h-3 w-3 text-white" />
           ) : null}
         </Button>
         <Button
           onClick={handleManageCategories}
-          size="icon"
+          size="sm"
           variant="outline"
-          className="relative h-9 w-9 shrink-0"
+          className="relative h-9 shrink-0 gap-1.5 px-3"
           disabled={!isAuthenticated}
           style={{ opacity: !isAuthenticated ? 0.6 : 1 }}
           aria-label={t('nav.manage_categories', '管理分类')}
+          title={isAuthenticated ? '管理分类' : '登录后可管理分类'}
         >
           <Settings className="h-4 w-4" />
+          <span>分类</span>
           {!isAuthenticated ? (
             <Lock className="text-muted-foreground absolute -top-1 -right-1 h-3 w-3" />
           ) : null}

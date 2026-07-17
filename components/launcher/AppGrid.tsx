@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { useMusicStore } from '@/stores/musicStore'
 import { useTranslation } from '@/hooks/useTranslation'
 import { cn } from '@/lib/helpers'
+import { canUseAi } from '@/lib/ai/access'
+import useAuthStore from '@/stores/authStore'
 import '@/components/launcher/music/music-visualizer.css'
 
 type DisplayMode = 'music' | 'apps' | 'settings'
@@ -14,6 +16,7 @@ interface AppGridButtonConfig {
   icon: React.ReactNode
   label: string
   onClick: () => void
+  isActive?: boolean
   buttonClassName?: string
 }
 
@@ -104,11 +107,12 @@ export function AppGrid({
 }: AppGridProps) {
   const { t } = useTranslation()
   const { isPlaying } = useMusicStore()
+  const user = useAuthStore(state => state.user)
 
   const musicIcon = isPlaying ? (
     <MusicEqualizerIcon analyserNode={analyserNode} isPlaying={isPlaying} />
   ) : (
-    <Music className="h-4 w-4 transition-colors" />
+    <Music className="h-5 w-5 transition-colors" />
   )
 
   // 定义按钮配置
@@ -117,34 +121,43 @@ export function AppGrid({
       icon: <div className="transition-transform duration-300">{musicIcon}</div>,
       label: t('appgrid.music'),
       onClick: () => toggleDisplayMode('music'),
+      isActive: isPlaying,
     },
+    ...(canUseAi(user)
+      ? [
+          {
+            icon: <Bot className="h-5 w-5" />,
+            label: 'AI 助理',
+            onClick: () => onOpenAi?.(),
+          },
+        ]
+      : []),
     {
-      icon: <Bot className="h-4 w-4" />,
-      label: 'AI 助理',
-      onClick: () => onOpenAi?.(),
-    },
-    {
-      icon: <Search className="h-4 w-4" />,
+      icon: <Search className="h-5 w-5" />,
       label: '搜索',
       onClick: () => onToggleSearch?.(),
     },
   ]
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex shrink-0 items-center gap-0 sm:gap-2">
       {buttons.map(button => (
-        <div key={button.label} className="transition-transform hover:scale-105 active:scale-95">
+        <div key={button.label}>
           <Button
             variant="ghost"
             size="icon"
             className={cn(
-              'size-10 rounded-xl hover:bg-transparent hover:opacity-80',
+              'size-10 gap-2 rounded-xl hover:bg-accent/70 lg:w-auto lg:px-3',
+              button.isActive && 'bg-primary/12 text-primary hover:bg-primary/18',
               button.buttonClassName
             )}
             onClick={button.onClick}
+            title={button.label}
+            aria-label={button.isActive ? `${button.label}，正在播放` : button.label}
+            data-active={button.isActive || undefined}
           >
             {button.icon}
-            <span className="sr-only">{button.label}</span>
+            <span className="hidden text-sm font-medium lg:inline">{button.label}</span>
           </Button>
         </div>
       ))}

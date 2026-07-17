@@ -621,7 +621,7 @@ describe('ThingHeader', () => {
       )
 
       await user.click(screen.getByRole('button', { name: '选择图片大小' }))
-      await user.click(await screen.findByTitle(/Set image size to L/))
+      await user.click(await screen.findByTitle('图片大小：大'))
 
       expect(mockOnImageSizePresetChange).toHaveBeenCalledWith('lg')
     })

@@ -14,6 +14,8 @@ import { ChatHeader, ChatMessageList, ChatInput } from '@/app/ai/features/chat/c
 import type { ChatMessage } from '@/app/ai/features/chat/types'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { useAiDialogStore } from '@/stores/aiDialogStore'
+import useAuthStore from '@/stores/authStore'
+import { canUseAi } from '@/lib/ai/access'
 
 interface AiDialogProps {
   open: boolean
@@ -39,10 +41,12 @@ const docsFetcher = async (url: string): Promise<KnowledgeDocumentsResponse> => 
 }
 
 export function AiDialog({ open, onOpenChange }: AiDialogProps) {
+  const user = useAuthStore(state => state.user)
+  const allowedOpen = open && canUseAi(user)
   const consumeSeedPrompt = useAiDialogStore(state => state.consumeSeedPrompt)
   const [chatMode, setChatMode] = useState<'ai' | 'knowledge'>('ai')
 
-  const shouldFetchDocs = open && chatMode === 'knowledge'
+  const shouldFetchDocs = allowedOpen && chatMode === 'knowledge'
   const { data: docsData, error: docsError } = useSWR(
     shouldFetchDocs ? '/api/knowledge/documents' : null,
     docsFetcher,
@@ -71,9 +75,12 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     ]
   }, [shouldFetchDocs, docsData, docsError])
 
-  const aiChat = useAiChat({ open })
-  const knowledgeChat = useKnowledgeChat({ open, initialMessages: knowledgeInitialMessages })
-  const knowledgeIndexEnabled = open && chatMode === 'knowledge'
+  const aiChat = useAiChat({ open: allowedOpen })
+  const knowledgeChat = useKnowledgeChat({
+    open: allowedOpen,
+    initialMessages: knowledgeInitialMessages,
+  })
+  const knowledgeIndexEnabled = allowedOpen && chatMode === 'knowledge'
   const { updatedAt: knowledgeUpdatedAt } = useKnowledgeIndexStatus(knowledgeIndexEnabled)
   const knowledgeSubtitle = useMemo(() => {
     if (!knowledgeUpdatedAt) return undefined
@@ -113,14 +120,14 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
   } = activeChat as typeof knowledgeChat
 
   useEffect(() => {
-    if (!open) return
+    if (!allowedOpen) return
     const seedPrompt = consumeSeedPrompt()
     if (!seedPrompt) return
     queueMicrotask(() => {
       setChatMode('ai')
       aiChat.setPrompt(seedPrompt)
     })
-  }, [open, consumeSeedPrompt, aiChat])
+  }, [allowedOpen, consumeSeedPrompt, aiChat])
 
   const { ollamaModels, isLoadingOllamaModels, supportsImages } = aiChat
   const currentProvider = chatMode === 'knowledge' ? knowledgeChat.provider : aiChat.provider
@@ -189,7 +196,7 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     </>
   )
 
-  if (!open) return null
+  if (!allowedOpen) return null
 
   const panelEl = (
     <div

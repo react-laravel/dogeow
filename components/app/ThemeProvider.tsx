@@ -60,18 +60,18 @@ function syncThemeChrome(themeMode: ResolvedThemeMode) {
   }
 
   const isDark = themeMode === 'dark'
-  const backgroundColor = isDark ? '#000000' : '#ffffff'
+  const chromeColor = isDark ? '#181512' : '#fbfaf7'
   const root = document.documentElement
 
   root.style.colorScheme = themeMode
-  root.style.backgroundColor = backgroundColor
+  root.style.removeProperty('background-color')
 
   if (document.body) {
-    document.body.style.backgroundColor = backgroundColor
+    document.body.style.removeProperty('background-color')
   }
 
-  upsertMeta('theme-color', backgroundColor)
-  upsertMeta('msapplication-TileColor', backgroundColor)
+  upsertMeta('theme-color', chromeColor)
+  upsertMeta('msapplication-TileColor', chromeColor)
   upsertMeta('apple-mobile-web-app-status-bar-style', 'default')
   upsertMeta('color-scheme', 'light dark')
 }

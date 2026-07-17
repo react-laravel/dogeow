@@ -16,6 +16,7 @@ export function SearchBar({
   currentApp,
   showTrigger = true,
 }: SearchBarProps) {
+  const searchContainerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pathname = usePathname()
@@ -50,12 +51,10 @@ export function SearchBar({
     if (!isVisible) return
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      const isClearButton = target.closest('[data-clear-button="true"]')
-
-      if (isClearButton) return
-
-      if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
         onToggleSearch()
       }
     }
@@ -114,7 +113,8 @@ export function SearchBar({
         size="icon"
         className="size-10 rounded-xl"
         onClick={onToggleSearch}
-        aria-label="Open search"
+        aria-label="打开搜索"
+        title="打开搜索"
       >
         <Search className="h-5 w-5" />
       </Button>
@@ -122,8 +122,11 @@ export function SearchBar({
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-1 items-center gap-2">
-      <div className="relative flex-1">
+    <div
+      ref={searchContainerRef}
+      className="mx-auto flex min-w-0 max-w-md flex-1 items-center gap-2"
+    >
+      <div className="relative min-w-0 flex-1">
         <SearchInput
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
@@ -147,7 +150,8 @@ export function SearchBar({
           e.stopPropagation()
           onToggleSearch()
         }}
-        aria-label="Close search"
+        aria-label="关闭搜索"
+        title="关闭搜索"
       >
         <X className="h-4 w-4" />
       </Button>

@@ -142,7 +142,7 @@ describe('NoteLinkCreator', () => {
     const onOpenChange = vi.fn()
     render(<NoteLinkCreator {...defaultProps} onOpenChange={onOpenChange} />)
 
-    const closeButton = screen.getByLabelText('Close')
+    const closeButton = screen.getByLabelText('关闭')
     await userEvent.click(closeButton)
 
     expect(onOpenChange).toHaveBeenCalledWith(false)

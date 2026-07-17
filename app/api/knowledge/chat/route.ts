@@ -5,7 +5,7 @@ import { getKnowledgeConfig, type KnowledgeSearchMethod } from '@/lib/knowledge/
 import { callCodexExecAPI } from '@/app/api/generate/_lib/clients'
 import { createCodexExecStreamResponse } from '@/app/api/generate/_lib/streams'
 import type { CodexReasoningEffort } from '@/app/api/generate/_lib/types'
-import { requireAuth } from '../../_lib/auth-guard'
+import { requireAiAccess } from '../../_lib/auth-guard'
 
 type AIProvider = 'ollama' | 'codex'
 
@@ -272,7 +272,7 @@ ${context}
 
 export async function POST(request: NextRequest) {
   // Auth guard: require valid Bearer token (validates against backend)
-  const authError = await requireAuth(request)
+  const authError = await requireAiAccess(request)
   if (authError) return authError
 
   const {

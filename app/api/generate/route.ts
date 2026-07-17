@@ -8,7 +8,7 @@ import {
 import { callCodexExecAPI, callOllamaChatAPI, callOllamaGenerateAPI } from './_lib/clients'
 import { createCodexExecStreamResponse, createStreamResponse } from './_lib/streams'
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
-import { requireAuth } from '../_lib/auth-guard'
+import { requireAiAccess } from '../_lib/auth-guard'
 import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
 
 export const runtime = 'nodejs'
@@ -69,7 +69,7 @@ async function handleGenerateRequest(body: GenerateRequestBody) {
 
 export async function POST(request: NextRequest) {
   // Auth guard: require valid Bearer token (validates against backend)
-  const authError = await requireAuth(request)
+  const authError = await requireAiAccess(request)
   if (authError) return authError
 
   let body: GenerateRequestBody

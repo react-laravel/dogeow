@@ -181,13 +181,14 @@ describe('ThemeProvider', () => {
 
     await waitFor(() => {
       expect(document.documentElement.style.colorScheme).toBe('dark')
-      expect(document.documentElement.style.backgroundColor).toBe('rgb(0, 0, 0)')
+      expect(document.documentElement.style.backgroundColor).toBe('')
+      expect(document.body.style.backgroundColor).toBe('')
       expect(
         document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
       ).toHaveAttribute('content', 'default')
       expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
         'content',
-        '#000000'
+        '#181512'
       )
     })
   })
@@ -210,7 +211,7 @@ describe('ThemeProvider', () => {
     await waitFor(() => {
       expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
         'content',
-        '#000000'
+        '#181512'
       )
     })
 
@@ -225,9 +226,9 @@ describe('ThemeProvider', () => {
       expect(mockSetTheme).toHaveBeenCalledWith('dark')
       expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
         'content',
-        '#000000'
+        '#181512'
       )
-      expect(document.documentElement.style.backgroundColor).toBe('rgb(0, 0, 0)')
+      expect(document.documentElement.style.backgroundColor).toBe('')
     })
   })
 

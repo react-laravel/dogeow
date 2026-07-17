@@ -68,17 +68,19 @@ export function AppsView({
   }
 
   return (
-    <div className={`flex h-full items-center justify-between ${showLogo ? '' : 'pl-14'}`}>
+    <div
+      className={`flex h-full min-w-0 items-center justify-between ${showLogo ? '' : 'pl-10 sm:pl-13'}`}
+    >
       {/* 左侧：应用切换按钮 */}
       {showLogo && (
-        <div className="mr-3 flex shrink-0 items-center">
+        <div className="mr-0 flex shrink-0 items-center sm:mr-3">
           <LogoButton onClick={handleLogoClick} />
         </div>
       )}
 
       {/* 中间：应用图标 */}
       {!searchManager.isSearchVisible && (
-        <div className="flex flex-1 items-center justify-start">
+        <div className="flex min-w-0 flex-1 items-center justify-start">
           <AppGrid
             toggleDisplayMode={toggleDisplayMode}
             onOpenAi={onOpenAi}
@@ -90,7 +92,7 @@ export function AppsView({
 
       {/* 右侧：设置、搜索输入、通知、用户 */}
       <div
-        className={`flex items-center gap-3 ${searchManager.isSearchVisible ? 'flex-1 justify-between' : 'ml-auto'}`}
+        className={`flex min-w-0 items-center gap-0 sm:gap-2 ${searchManager.isSearchVisible ? 'flex-1 justify-between' : 'ml-auto'}`}
       >
         {searchManager.isSearchVisible ? (
           <SearchBar
@@ -106,19 +108,21 @@ export function AppsView({
           <Button
             variant="ghost"
             size="icon"
-            className="size-10 rounded-xl"
+            className="size-10 gap-2 rounded-xl lg:w-auto lg:px-3"
             onClick={() => toggleDisplayMode('settings')}
             aria-label="打开设置"
+            title="打开设置"
           >
             <Settings className="h-5 w-5" />
+            <span className="hidden text-sm font-medium lg:inline">设置</span>
           </Button>
         )}
 
         {/* 通知铃铛 */}
-        {!(searchManager.isSearchVisible && !searchManager.isHomePage) && <NotificationDropdown />}
+        {!searchManager.isSearchVisible && <NotificationDropdown />}
 
         {/* 用户按钮 */}
-        {!(searchManager.isSearchVisible && !searchManager.isHomePage) && (
+        {!searchManager.isSearchVisible && (
           <UserButton
             isAuthenticated={isAuthenticated}
             onToggleAuth={() => toggleDisplayMode('auth')}

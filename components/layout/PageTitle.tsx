@@ -11,5 +11,5 @@ interface PageTitleProps {
  * 所有页面的一级标题统一为 text-2xl font-bold，保证视觉一致性。
  */
 export function PageTitle({ children, className }: PageTitleProps) {
-  return <h1 className={cn('text-2xl font-bold tracking-tight', className)}>{children}</h1>
+  return <h1 className={cn('text-2xl font-semibold tracking-tight', className)}>{children}</h1>
 }

@@ -28,6 +28,14 @@ describe('ReaderSettingsPanel', () => {
     expect(screen.getByText('阅读设置')).toBeInTheDocument()
   })
 
+  it('keeps enough of the reader visible while adjusting settings', () => {
+    render(<ReaderSettingsPanel {...defaultProps} />)
+
+    expect(screen.getByRole('dialog')).toHaveStyle({
+      width: 'min(18rem, 86vw)',
+    })
+  })
+
   it('renders all setting labels', () => {
     render(<ReaderSettingsPanel {...defaultProps} hasDualFonts />)
     expect(screen.getByText('原文字体')).toBeInTheDocument()

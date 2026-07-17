@@ -31,7 +31,7 @@ describe('Button', () => {
       expect(screen.getByRole('button')).toHaveClass('bg-destructive')
 
       rerender(<Button variant="outline">Outline</Button>)
-      expect(screen.getByRole('button')).toHaveClass('border bg-background')
+      expect(screen.getByRole('button')).toHaveClass('border', 'bg-background/80')
 
       rerender(<Button variant="secondary">Secondary</Button>)
       expect(screen.getByRole('button')).toHaveClass('bg-secondary')
@@ -45,16 +45,16 @@ describe('Button', () => {
 
     it('should render button with different sizes', () => {
       const { rerender } = render(<Button size="default">Default</Button>)
-      expect(screen.getByRole('button')).toHaveClass('h-9 px-4 py-2')
+      expect(screen.getByRole('button')).toHaveClass('h-10 px-4 py-2')
 
       rerender(<Button size="sm">Small</Button>)
       expect(screen.getByRole('button')).toHaveClass('h-8 rounded-md px-3')
 
       rerender(<Button size="lg">Large</Button>)
-      expect(screen.getByRole('button')).toHaveClass('h-10 rounded-md px-6')
+      expect(screen.getByRole('button')).toHaveClass('h-11 rounded-xl px-6')
 
       rerender(<Button size="icon">Icon</Button>)
-      expect(screen.getByRole('button')).toHaveClass('size-9')
+      expect(screen.getByRole('button')).toHaveClass('size-10')
     })
 
     it('should render disabled button', () => {
@@ -216,7 +216,7 @@ describe('Button', () => {
 
       const button = screen.getByRole('button', { name: /large destructive/i })
       expect(button).toHaveClass('bg-destructive')
-      expect(button).toHaveClass('h-10 rounded-md px-6')
+      expect(button).toHaveClass('h-11 rounded-xl px-6')
 
       rerender(
         <Button variant="outline" size="sm">
@@ -225,7 +225,7 @@ describe('Button', () => {
       )
 
       const smallButton = screen.getByRole('button', { name: /small outline/i })
-      expect(smallButton).toHaveClass('border bg-background')
+      expect(smallButton).toHaveClass('border', 'bg-background/80')
       expect(smallButton).toHaveClass('h-8 rounded-md px-3')
     })
 

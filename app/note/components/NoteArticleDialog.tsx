@@ -40,6 +40,7 @@ export function NoteArticleDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay
+          className="backdrop-blur-[2px]"
           style={{
             position: 'fixed',
             inset: 0,
@@ -56,7 +57,8 @@ export function NoteArticleDialog({
             width: 'min(880px, 92vw)',
             maxHeight: '85vh',
             background: themeColors.card,
-            borderRadius: 12,
+            border: `1px solid ${themeColors.border}`,
+            borderRadius: 16,
             boxShadow: isDark ? '0 16px 50px rgba(0,0,0,0.6)' : '0 10px 40px rgba(0,0,0,0.2)',
             zIndex: 51,
             display: 'flex',
@@ -76,9 +78,12 @@ export function NoteArticleDialog({
             <Dialog.Title style={{ fontSize: 18, fontWeight: 600, flex: 1 }}>
               {activeNode?.title ?? '文章'}
             </Dialog.Title>
+            <Dialog.Description className="sr-only">阅读所选节点关联的文章内容</Dialog.Description>
             <Dialog.Close asChild>
               <button
-                aria-label="Close"
+                type="button"
+                aria-label="关闭"
+                title="关闭"
                 style={{
                   padding: '6px 8px',
                   border: `1px solid ${themeColors.border}`,

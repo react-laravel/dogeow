@@ -5,9 +5,9 @@ import { GET } from '../route'
 // Mock fetch
 global.fetch = vi.fn()
 
-// Mock requireAuth - vi.mock is hoisted, so we need to import it first
+// Mock AI access guard - vi.mock is hoisted, so we need to import it first
 vi.mock('../../../_lib/auth-guard', () => ({
-  requireAuth: vi.fn(),
+  requireAiAccess: vi.fn(),
 }))
 
 describe('Ollama Models API Route', () => {
@@ -31,8 +31,8 @@ describe('Ollama Models API Route', () => {
   }
 
   const mockRequireAuthResult = async (result: NextResponse | null) => {
-    const { requireAuth } = await import('../../../_lib/auth-guard')
-    vi.mocked(requireAuth).mockResolvedValueOnce(result)
+    const { requireAiAccess } = await import('../../../_lib/auth-guard')
+    vi.mocked(requireAiAccess).mockResolvedValueOnce(result)
   }
 
   describe('Authentication', () => {

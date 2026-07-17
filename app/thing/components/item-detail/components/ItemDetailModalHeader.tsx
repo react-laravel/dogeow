@@ -61,32 +61,39 @@ export function ItemDetailModalHeader({
             />
           </div>
         ) : (
-          <Badge variant="outline" className="max-w-[60%] truncate px-3 py-1 text-sm">
+          <Badge
+            variant="outline"
+            className="max-w-[35%] truncate px-3 py-1 text-sm sm:max-w-[60%]"
+          >
             {displayCategoryName}
           </Badge>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {isInlineEditMode ? (
             <AutoSaveStatus autoSaving={autoSaving} lastSaved={lastSaved} />
           ) : canEdit ? (
             <>
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={onEdit}
-                className="h-8 w-8"
-                aria-label="Edit"
+                className="h-8 px-2"
+                aria-label="编辑物品"
+                title="编辑物品"
               >
                 <Edit className="h-4 w-4" />
+                <span>编辑</span>
               </Button>
               <Button
                 variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
                 onClick={onDelete}
-                aria-label="Delete"
+                aria-label="删除物品"
+                title="删除物品"
               >
                 <Trash2 className="h-4 w-4" />
+                <span>删除</span>
               </Button>
             </>
           ) : null}
@@ -95,7 +102,8 @@ export function ItemDetailModalHeader({
             size="icon"
             onClick={onClose}
             className="h-8 w-8"
-            aria-label="Close"
+            aria-label="关闭"
+            title="关闭"
           >
             <X className="h-4 w-4" />
           </Button>

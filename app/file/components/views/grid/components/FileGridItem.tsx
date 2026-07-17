@@ -39,25 +39,31 @@ export const FileGridItem = memo<FileGridItemProps>(
     return (
       <div
         className={cn(
-          'flex cursor-pointer flex-col items-center rounded-lg border p-4 shadow-sm transition-colors',
+          'relative flex cursor-pointer flex-col items-center rounded-lg border p-4 shadow-sm transition-colors',
           'bg-card hover:bg-accent/50 border-border',
           isSelected && 'ring-primary border-primary ring-2'
         )}
-        onClick={() => onClick(file)}
         draggable={!file.is_folder}
         onDragStart={handleDragStart}
       >
-        <div className="relative">
+        <button
+          type="button"
+          className="focus-visible:ring-primary absolute inset-0 z-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          onClick={() => onClick(file)}
+          aria-label={`${file.is_folder ? '打开文件夹' : '预览文件'}：${file.name}`}
+        />
+        <div className="pointer-events-none relative z-10">
           <FileIcon file={file} />
           <input
             type="checkbox"
-            className="border-primary absolute -top-2 -left-2 h-4 w-4 rounded-sm border"
+            className="border-primary pointer-events-auto absolute -top-2 -left-2 z-20 h-4 w-4 rounded-sm border"
             checked={isSelected}
             readOnly
             onClick={e => onSelect(file.id, e)}
+            aria-label={`选择 ${file.name}`}
           />
         </div>
-        <div className="mt-2 text-center">
+        <div className="pointer-events-none relative z-10 mt-2 text-center">
           <p
             className="text-foreground max-w-[8rem] truncate text-sm font-medium"
             title={file.name}
@@ -71,7 +77,13 @@ export const FileGridItem = memo<FileGridItemProps>(
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-1 right-1 z-20 h-8 w-8"
+              aria-label={`${file.name} 的更多操作`}
+              title="更多操作"
+            >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

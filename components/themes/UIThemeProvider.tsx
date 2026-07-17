@@ -23,15 +23,11 @@ export function UIThemeProvider({ children }: { children: React.ReactNode }) {
 
     const root = document.documentElement
 
-    // 应用布局相关的 CSS 变量
-    if (theme.layout.header.height) {
-      root.style.setProperty('--app-header-height', theme.layout.header.height)
-    }
-
-    // 应用样式相关的 CSS 变量
+    // 旧布局主题仅保留为数据兼容，不再覆盖 canonical shell 的尺寸。
     if (theme.styles.cssVariables) {
       Object.entries(theme.styles.cssVariables).forEach(([key, value]) => {
-        root.style.setProperty(`--${key}`, value)
+        if (key.includes('app-header-height') || key.includes('sidebar-width')) return
+        root.style.setProperty(key.startsWith('--') ? key : `--${key}`, value)
       })
     }
 

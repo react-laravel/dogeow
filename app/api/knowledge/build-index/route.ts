@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadAllDocuments } from '@/lib/knowledge/search'
 import { buildVectorIndex, saveVectorIndex, loadVectorIndex } from '@/lib/knowledge/vector-store'
-import { requireAuth, requireAdmin } from '../../_lib/auth-guard'
+import { requireAiAccess } from '../../_lib/auth-guard'
 import {
   withIdempotencyAndLock,
   generateRequestId,
@@ -43,13 +43,8 @@ function getRequestId(request: NextRequest): string {
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request)
 
-  // Auth guard: require valid Bearer token
-  const authError = await requireAuth(request)
+  const authError = await requireAiAccess(request)
   if (authError) return authError
-
-  // Admin guard: require admin role for rebuilding vector index (resource-intensive operation)
-  const adminError = await requireAdmin(request)
-  if (adminError) return adminError
 
   try {
     const { force = false } = await request.json().catch(() => ({ force: false }))

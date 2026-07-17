@@ -7,11 +7,8 @@ import { ThemedTileCard } from '@/components/app/ThemedTileCard'
 import { HomeTilesSkeleton } from '@/components/app/HomeTilesSkeleton'
 import { useTileManagement } from '@/hooks/useTileManagement'
 import { PageContainer } from '@/components/layout'
-import { useUITheme } from '@/components/themes/UIThemeProvider'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useTranslation } from '@/hooks/useTranslation'
-import type { Tile } from '@/app/types'
-import type { ProjectCoverMode } from '@/stores/projectCoverStore'
 
 const MagazineLayout = dynamic(
   () => import('@/components/app/MagazineLayout').then(mod => mod.MagazineLayout),
@@ -29,7 +26,6 @@ const Footer = dynamic(() => import('@/components/app/Footer'), {
 })
 
 const HOME_TILES_GAP = 'gap-4'
-const HOME_LIST_GAP = 'space-y-4'
 const HOME_SECTION_SPACING = 'space-y-6'
 
 function useHydrated() {
@@ -54,84 +50,21 @@ function MagazineSkeleton() {
   )
 }
 
-function IconSkeleton() {
+function IconSkeleton({ count }: { count: number }) {
   return (
-    <div className="animate-pulse grid grid-cols-3 gap-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="flex flex-col items-center gap-2">
-          <div className="bg-white/20 h-12 w-12 rounded-xl" />
-          <div className="bg-white/10 h-3 w-10 rounded" />
+    <div className="grid animate-pulse grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="app-surface flex flex-col gap-2 p-2">
+          <div className="bg-muted/70 aspect-square w-full rounded-xl" />
+          <div className="bg-muted/70 mx-auto h-4 w-2/3 rounded" />
         </div>
       ))}
     </div>
-  )
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="animate-pulse grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="bg-card/70 rounded-xl border border-white/10 p-4">
-          <div className="bg-white/20 h-5 w-16 rounded mb-3" />
-          <div className="bg-white/10 h-4 w-full rounded mb-2" />
-          <div className="bg-white/10 h-4 w-3/4 rounded" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ListSkeleton() {
-  return (
-    <div className="animate-pulse space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="bg-card/70 rounded-xl border border-white/10 p-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 h-8 w-8 rounded-lg" />
-            <div className="flex-1">
-              <div className="bg-white/20 h-4 w-24 rounded mb-2" />
-              <div className="bg-white/10 h-3 w-48 rounded" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function TileList({
-  tiles,
-  projectCoverMode,
-  getTileStatus,
-  onTileClick,
-}: {
-  tiles: Tile[]
-  projectCoverMode: ProjectCoverMode
-  getTileStatus: (tile: Tile) => { needsLogin: boolean }
-  onTileClick: (tile: Tile) => void
-}) {
-  return (
-    <>
-      {tiles.map((tile, index) => {
-        const tileStatus = getTileStatus(tile)
-        return (
-          <ThemedTileCard
-            key={tile.name}
-            tile={tile}
-            index={index}
-            projectCoverMode={projectCoverMode}
-            needsLogin={tileStatus.needsLogin}
-            onClick={() => onTileClick(tile)}
-          />
-        )
-      })}
-    </>
   )
 }
 
 export function HomePage() {
   const { tiles, projectCoverMode, handleTileClick, getTileStatus } = useTileManagement()
-  const theme = useUITheme()
   const { siteLayout } = useLayoutStore()
   const { t } = useTranslation()
   const isHydrated = useHydrated()
@@ -139,19 +72,20 @@ export function HomePage() {
   const layoutType = useMemo(() => {
     if (siteLayout === 'icon') return 'icon'
     if (siteLayout === 'magazine') return 'magazine'
-    if (!theme || theme.id === 'default') return 'grid'
-    if (theme.id === 'dashboard') return 'dashboard'
-    return 'list'
-  }, [siteLayout, theme])
+    return 'grid'
+  }, [siteLayout])
 
   return (
     <>
-      <PageContainer className={`py-4 sm:py-6 ${HOME_SECTION_SPACING}`}>
-        <header className="space-y-1">
-          <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
+      <PageContainer className={`py-5 sm:py-8 ${HOME_SECTION_SPACING}`}>
+        <header className="max-w-3xl space-y-2">
+          <div className="bg-primary/12 text-primary inline-flex rounded-full px-3 py-1 text-xs font-semibold tracking-wide">
+            DIGITAL GARDEN
+          </div>
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
             {t('home.title', 'DogeOW - 个人工具和游戏平台')}
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
+          <p className="text-muted-foreground max-w-2xl text-sm leading-6 sm:text-base">
             {t('home.description', '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！')}
           </p>
         </header>
@@ -161,13 +95,9 @@ export function HomePage() {
             layoutType === 'magazine' ? (
               <MagazineSkeleton />
             ) : layoutType === 'icon' ? (
-              <IconSkeleton />
-            ) : layoutType === 'dashboard' ? (
-              <DashboardSkeleton />
-            ) : layoutType === 'grid' ? (
-              <HomeTilesSkeleton />
+              <IconSkeleton count={tiles.length} />
             ) : (
-              <ListSkeleton />
+              <HomeTilesSkeleton />
             )
           ) : layoutType === 'magazine' ? (
             <MagazineLayout
@@ -208,24 +138,8 @@ export function HomePage() {
                 )
               })}
             </div>
-          ) : layoutType === 'dashboard' ? (
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${HOME_TILES_GAP}`}>
-              <TileList
-                tiles={tiles}
-                projectCoverMode={projectCoverMode}
-                getTileStatus={getTileStatus}
-                onTileClick={handleTileClick}
-              />
-            </div>
           ) : (
-            <div className={HOME_LIST_GAP}>
-              <TileList
-                tiles={tiles}
-                projectCoverMode={projectCoverMode}
-                getTileStatus={getTileStatus}
-                onTileClick={handleTileClick}
-              />
-            </div>
+            <HomeTilesSkeleton />
           )}
         </section>
       </PageContainer>

@@ -485,10 +485,7 @@ export function AppLauncher({
         />
       )}
 
-      <div
-        id="app-launcher-bar"
-        className="bg-background/80 relative z-50 flex h-full w-full flex-col backdrop-blur-md"
-      >
+      <div id="app-launcher-bar" className="relative z-50 flex h-full w-full flex-col">
         {shouldShowPersistentLogo && (
           <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex items-center">
             <div className="pointer-events-auto">

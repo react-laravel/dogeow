@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '../../_lib/auth-guard'
+import { requireAiAccess } from '../../_lib/auth-guard'
 import {
   buildOllamaModelList,
   type OllamaShowResponse,
@@ -21,7 +21,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export async function GET(request: NextRequest) {
   // Auth guard: require valid Bearer token to prevent model enumeration
-  const authError = await requireAuth(request)
+  const authError = await requireAiAccess(request)
   if (authError) return authError
 
   try {

@@ -5,9 +5,9 @@ import { POST } from '../route'
 // Mock fetch
 global.fetch = vi.fn()
 
-// Mock requireAuth
+// Mock AI access guard
 vi.mock('../../_lib/auth-guard', () => ({
-  requireAuth: vi.fn(() => null),
+  requireAiAccess: vi.fn(() => null),
 }))
 
 describe('Generate API Route', () => {

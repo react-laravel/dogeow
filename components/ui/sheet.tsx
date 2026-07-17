@@ -31,10 +31,10 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[135] bg-black/80',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[135] bg-black/55 backdrop-blur-[3px]',
         className
       )}
-      style={{ top: 'var(--app-header-height, 50px)', ...style }}
+      style={{ top: 'var(--app-header-total-height, var(--app-header-height, 56px))', ...style }}
       {...props}
     />
   )
@@ -51,33 +51,50 @@ function SheetContent({
   side?: 'top' | 'right' | 'bottom' | 'left'
   overlayClassName?: string
 }) {
+  const safeAreaPosition: React.CSSProperties =
+    side === 'right'
+      ? { right: 'env(safe-area-inset-right, 0px)' }
+      : side === 'left'
+        ? { left: 'env(safe-area-inset-left, 0px)' }
+        : {
+            left: 'env(safe-area-inset-left, 0px)',
+            right: 'env(safe-area-inset-right, 0px)',
+          }
+
   return (
     <SheetPortal>
       <SheetOverlay className={overlayClassName} />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         style={{
-          top: 'var(--app-header-height, 50px)',
+          top:
+            side === 'bottom'
+              ? 'auto'
+              : 'var(--app-header-total-height, var(--app-header-height, 56px))',
+          ...safeAreaPosition,
           ...style,
         }}
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[140] flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'border-border/70 bg-popover/97 text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[140] flex flex-col gap-4 shadow-2xl backdrop-blur-xl transition ease-in-out data-[state=closed]:duration-200 data-[state=open]:duration-300',
           side === 'right' &&
-            'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right right-0 bottom-0 w-[min(24rem,90vw)] border-l',
           side === 'left' &&
-            'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left bottom-0 left-0 w-[min(24rem,90vw)] border-r',
           side === 'top' &&
-            'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
+            'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 h-auto max-h-[calc(100dvh-var(--app-header-total-height)-0.75rem)] overflow-y-auto overscroll-contain rounded-b-2xl border-b',
           side === 'bottom' &&
-            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
+            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 max-h-[calc(100dvh-var(--app-header-total-height)-0.75rem)] h-auto rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)]',
           className
         )}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+        {(side === 'right' || side === 'left') && (
+          <div aria-hidden className="h-[env(safe-area-inset-bottom)] shrink-0" />
+        )}
+        <SheetPrimitive.Close className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring absolute top-3 right-3 flex size-8 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-1.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none">
           <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">关闭</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

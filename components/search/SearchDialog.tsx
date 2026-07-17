@@ -5,8 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
-  DialogOverlay,
   DialogTitle,
 } from '@/components/ui/dialog'
 import useAuthStore from '@/stores/authStore'
@@ -157,18 +157,16 @@ export function SearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="bg-black/55 backdrop-blur-[1px]" />
       <DialogContent
         className={`w-[calc(100vw-1rem)] max-w-[95vw] gap-0 overflow-hidden p-0 sm:max-w-[550px] ${dialogSizeClass}`}
       >
         <div className="flex h-full min-h-0 flex-col p-3 sm:p-6">
           {/* 标题栏 */}
-          <DialogHeader className="mb-4 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex-1 text-center text-lg font-semibold">
-                {getDialogTitle()}
-              </DialogTitle>
-            </div>
+          <DialogHeader className="mb-5 flex-shrink-0 pr-8 text-left">
+            <DialogTitle className="text-xl font-semibold">{getDialogTitle()}</DialogTitle>
+            <DialogDescription className="text-sm">
+              输入关键词，并按范围快速筛选结果
+            </DialogDescription>
           </DialogHeader>
 
           {/* 搜索输入框 */}
@@ -189,7 +187,12 @@ export function SearchDialog({
           />
 
           {/* 搜索结果 */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div
+            id="search-results"
+            className="min-h-0 flex-1 overflow-y-auto"
+            role="tabpanel"
+            aria-label="搜索结果"
+          >
             <div className="pb-2">
               <SearchResultsList
                 loading={loading}

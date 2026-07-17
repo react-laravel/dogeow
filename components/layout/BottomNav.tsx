@@ -51,25 +51,27 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
     <nav
       aria-label={ariaLabel}
       className={cn(
-        'bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-20 border-t shadow-[0_-1px_0_0_rgba(0,0,0,0.04)] backdrop-blur',
+        'border-border/70 bg-background/90 supports-[backdrop-filter]:bg-background/78 fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(30,20,10,0.06)] backdrop-blur-xl',
         className
       )}
     >
       <ul
-        className="mx-auto grid w-full max-w-3xl px-1"
+        className="mx-auto grid w-full max-w-3xl gap-1 py-1 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map(item => {
           const active = matcher(item, pathname)
           const itemClasses = cn(
-            'group flex h-14 flex-col items-center justify-center gap-0.5 rounded-md text-xs transition-colors',
-            active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+            'group flex h-13 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-xs transition-colors',
+            active
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
             item.disabled && 'pointer-events-none opacity-50'
           )
 
           if (item.onClick) {
             return (
-              <li key={item.href}>
+              <li key={item.href} className="min-w-0">
                 <a
                   href={item.href}
                   onClick={event => {
@@ -83,14 +85,16 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
                   aria-current={active ? 'page' : undefined}
                 >
                   <span className="text-[1.05rem] leading-none">{item.icon}</span>
-                  <span className="leading-none">{item.label}</span>
+                  <span className="max-w-full truncate leading-none whitespace-nowrap">
+                    {item.label}
+                  </span>
                 </a>
               </li>
             )
           }
 
           return (
-            <li key={item.href}>
+            <li key={item.href} className="min-w-0">
               <Link
                 href={item.href}
                 className={itemClasses}
@@ -99,7 +103,9 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
                 aria-current={active ? 'page' : undefined}
               >
                 <span className="text-[1.05rem] leading-none">{item.icon}</span>
-                <span className="leading-none">{item.label}</span>
+                <span className="max-w-full truncate leading-none whitespace-nowrap">
+                  {item.label}
+                </span>
               </Link>
             </li>
           )
@@ -113,4 +119,4 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
  * Tailwind padding utility to reserve space for the BottomNav. Apply on the
  * scrollable wrapper of pages that render <BottomNav />.
  */
-export const BOTTOM_NAV_CONTENT_PADDING = 'pb-14'
+export const BOTTOM_NAV_CONTENT_PADDING = 'pb-[calc(3.75rem+env(safe-area-inset-bottom))]'

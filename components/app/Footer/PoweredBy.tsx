@@ -25,21 +25,21 @@ const TechLink: React.FC<TechLinkProps> = ({ href, src, alt, needsInvert }) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex items-center text-sm"
+    className="hover:bg-accent/70 inline-flex size-7 items-center justify-center rounded-lg transition-colors"
   >
     <Image
       src={src}
       alt={alt}
-      width={20}
-      height={20}
+      width={18}
+      height={18}
       className={`transition-transform hover:scale-110 ${needsInvert ? 'dark:invert' : ''}`}
     />
   </Link>
 )
 
 const PoweredBy: React.FC = () => (
-  <div className="text-muted-foreground flex items-center gap-2 text-sm">
-    <span>🫴 Powered By</span>
+  <div className="text-muted-foreground flex items-center gap-1 text-xs sm:text-sm">
+    <span className="mr-1">Powered by</span>
     <TechLink
       href="https://laravel.com"
       src={techIcons.laravel}

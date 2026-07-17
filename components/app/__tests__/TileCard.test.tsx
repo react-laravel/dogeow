@@ -107,7 +107,7 @@ describe('TileCard', () => {
     render(<TileCard {...defaultProps} projectCoverMode="none" />)
 
     expect(screen.queryByTestId('image')).not.toBeInTheDocument()
-    expect(screen.getByRole('button')).toHaveClass('border', 'backdrop-blur-md')
+    expect(screen.getByRole('button')).toHaveClass('border', 'backdrop-blur-xl')
   })
 
   it('renders lock icon for protected tiles without image skeleton interference', () => {

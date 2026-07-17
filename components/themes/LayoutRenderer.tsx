@@ -1,187 +1,30 @@
 'use client'
 
-import { useUITheme } from './UIThemeProvider'
-import { LazyAppLauncher } from '@/components/launcher/LazyAppLauncher'
-import dynamic from 'next/dynamic'
-import { useMemo } from 'react'
-import { useBackgroundStore } from '@/stores/backgroundStore'
-import { cn } from '@/lib/helpers'
+import { RouteAwareAiLauncher } from '@/components/app/RouteAwareAiLauncher'
 import { ScrollButton } from '@/components/display/ScrollButton'
 
-/**
- * 动态布局渲染器
- * 根据当前选择的 UI 主题动态加载和渲染对应的布局组件
- */
+/** 全站唯一页面壳层。明暗与强调色仍由 ThemeProvider 控制。 */
 export function LayoutRenderer({ children }: { children: React.ReactNode }) {
-  const theme = useUITheme()
-  const { backgroundImage } = useBackgroundStore()
-
-  // 动态加载 Header 组件
-  const HeaderComponent = useMemo(() => {
-    if (!theme) return null
-
-    const headerPath = theme.layout.header.component
-    if (!headerPath) return null
-
-    try {
-      // 动态导入主题的 Header 组件
-      // 格式：themes/{themeId}/Header -> components/themes/{themeId}/Header
-      const componentPath = `components/${headerPath}`
-      return dynamic(() => import(`@/${componentPath}`).catch(() => null), {
-        ssr: false,
-        loading: () => <DefaultHeaderFallback />,
-      })
-    } catch {
-      return null
-    }
-  }, [theme])
-
-  // 动态加载 Sidebar 组件
-  const SidebarComponent = useMemo(() => {
-    if (!theme?.layout.sidebar) return null
-
-    const sidebarPath = theme.layout.sidebar.component
-    if (!sidebarPath) return null
-
-    try {
-      const componentPath = `components/${sidebarPath}`
-      return dynamic(() => import(`@/${componentPath}`).catch(() => null), {
-        ssr: false,
-      })
-    } catch {
-      return null
-    }
-  }, [theme])
-
-  // 动态加载 Footer 组件
-  const FooterComponent = useMemo(() => {
-    if (!theme?.layout.footer) return null
-
-    const footerPath = theme.layout.footer.component
-    if (!footerPath) return null
-
-    try {
-      const componentPath = `components/${footerPath}`
-      return dynamic(() => import(`@/${componentPath}`).catch(() => null), {
-        ssr: false,
-      })
-    } catch {
-      return null
-    }
-  }, [theme])
-
-  if (!theme) {
-    return <DefaultLayout>{children}</DefaultLayout>
-  }
-
-  const Header = HeaderComponent
-  const Sidebar = SidebarComponent
-  const Footer = FooterComponent
-
-  // 根据主题配置渲染布局（整页使用同一背景，顶部用毛玻璃与内容区一致）
   return (
-    <div
-      className={cn('flex h-full flex-col', backgroundImage && 'bg-cover bg-fixed bg-center')}
-      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : undefined}
-      data-theme-layout={theme.id}
-    >
-      {/* Header：整栏全宽、统一背景、延伸至左右边缘 */}
-      {Header && (
-        <header
-          className={cn(
-            'safe-area-header z-30 w-full flex-none border-b shadow-sm',
-            'bg-background',
-            theme.layout.header.position === 'fixed' && 'fixed top-0 right-0 left-0',
-            theme.layout.header.position === 'sticky' && 'sticky top-0'
-          )}
-        >
-          <Header />
-        </header>
-      )}
-
-      {/* 主内容区域 */}
-      <div
-        className={`flex min-h-0 flex-1 overflow-hidden ${
-          theme.layout.header.position === 'fixed' ? 'pt-[var(--app-header-total-height)]' : ''
-        }`}
-      >
-        {/* 左侧边栏 */}
-        {Sidebar && theme.layout.sidebar?.position === 'left' && (
-          <aside
-            className="bg-background flex-none border-r"
-            style={{ width: theme.layout.sidebar.width }}
-          >
-            <Sidebar />
-          </aside>
-        )}
-
-        {/* 主内容 */}
-        <main
-          id="main-scroll"
-          data-scroll-container
-          className="mx-auto min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto"
-          style={{
-            maxWidth: theme.layout.main.maxWidth,
-            padding: theme.layout.main.padding,
-          }}
-        >
-          {children}
-        </main>
-
-        {/* 右侧边栏 */}
-        {Sidebar && theme.layout.sidebar?.position === 'right' && (
-          <aside
-            className="bg-background flex-none border-l"
-            style={{ width: theme.layout.sidebar.width }}
-          >
-            <Sidebar />
-          </aside>
-        )}
-      </div>
-
-      {/* Footer */}
-      {Footer && theme.layout.footer?.show && (
-        <footer
-          className="bg-background flex-none border-t"
-          style={{ height: theme.layout.footer.height }}
-        >
-          <Footer />
-        </footer>
-      )}
-      <ScrollButton />
-    </div>
-  )
-}
-
-// 默认布局回退（当前布局）
-function DefaultLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex h-full flex-col">
-      <div
+    <div className="flex h-full min-h-0 flex-col" data-theme-layout="unified">
+      <header
         id="header-container"
-        className="safe-area-header bg-background/90 sticky top-0 z-30 flex-none border-b shadow-sm backdrop-blur"
+        className="safe-area-header border-border/60 bg-background/82 supports-[backdrop-filter]:bg-background/72 sticky top-0 z-30 w-full flex-none border-b backdrop-blur-xl"
       >
-        <div className="mx-auto flex h-full w-full max-w-7xl items-center px-2 sm:px-4">
-          <LazyAppLauncher />
+        <div className="mx-auto flex h-full w-full max-w-[var(--content-max-width)] items-center pr-[max(var(--page-gutter),env(safe-area-inset-right))] pl-[max(var(--page-gutter),env(safe-area-inset-left))]">
+          <RouteAwareAiLauncher />
         </div>
-      </div>
-      <div
-        id="main-container"
-        data-scroll-container
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
-      >
-        <div className="mx-auto flex h-full w-full max-w-7xl flex-col p-0">{children}</div>
-      </div>
-      <ScrollButton />
-    </div>
-  )
-}
+      </header>
 
-// Header 加载中的回退组件
-function DefaultHeaderFallback() {
-  return (
-    <div className="mx-auto flex h-full w-full max-w-7xl items-center px-2 sm:px-4">
-      <LazyAppLauncher />
+      <main
+        id="main-scroll"
+        data-scroll-container
+        className="mx-auto flex min-h-0 w-full max-w-[var(--content-max-width)] flex-1 flex-col overflow-x-hidden overflow-y-auto"
+      >
+        {children}
+      </main>
+
+      <ScrollButton />
     </div>
   )
 }

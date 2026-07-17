@@ -68,19 +68,19 @@ describe('ItemDetailModalHeader', () => {
 
   it('renders edit and delete buttons when canEdit is true', () => {
     render(<ItemDetailModalHeader {...defaultProps} />)
-    expect(screen.getByLabelText('Edit')).toBeDefined()
-    expect(screen.getByLabelText('Delete')).toBeDefined()
+    expect(screen.getByLabelText('编辑物品')).toHaveTextContent('编辑')
+    expect(screen.getByLabelText('删除物品')).toHaveTextContent('删除')
   })
 
   it('hides edit/delete when canEdit is false', () => {
     render(<ItemDetailModalHeader {...defaultProps} canEdit={false} />)
-    expect(screen.queryByLabelText('Edit')).toBeNull()
+    expect(screen.queryByLabelText('编辑物品')).toBeNull()
   })
 
   it('calls onClose when close button clicked', () => {
     const onClose = vi.fn()
     render(<ItemDetailModalHeader {...defaultProps} onClose={onClose} />)
-    const closeBtn = screen.getByLabelText('Close')
+    const closeBtn = screen.getByLabelText('关闭')
     fireEvent.click(closeBtn)
     expect(onClose).toHaveBeenCalled()
   })

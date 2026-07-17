@@ -422,7 +422,8 @@ describe('DialogOverlay', () => {
       'fixed',
       'inset-0',
       'z-[130]',
-      'bg-black/80'
+      'bg-black/55',
+      'backdrop-blur-[3px]'
     )
   })
 

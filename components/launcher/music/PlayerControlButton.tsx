@@ -4,18 +4,18 @@ import type { PlayerControlButtonProps } from '../types'
 
 // 控制按钮组件
 export const PlayerControlButton = memo(
-  ({ onClick, disabled, title, icon, className = 'h-7 w-7' }: PlayerControlButtonProps) => (
-    <div className="transition-transform hover:scale-110 active:scale-90">
+  ({ onClick, disabled, title, icon, className = 'h-9 w-9' }: PlayerControlButtonProps) => (
+    <div className="shrink-0">
       <Button
         variant="ghost"
         size="icon"
-        className={className}
+        className={`rounded-lg ${className}`}
         onClick={onClick}
         disabled={disabled}
         title={title}
+        aria-label={title}
       >
         {icon}
-        <span className="sr-only">{title}</span>
       </Button>
     </div>
   )

@@ -7,12 +7,23 @@ interface LogoButtonProps {
   className?: string
 }
 
-export const LogoButton = memo(
-  ({ onClick, className = 'h-10 w-10 cursor-pointer' }: LogoButtonProps) => {
-    return (
-      <Image src={Logo} alt="apps" width={40} height={40} className={className} onClick={onClick} />
-    )
-  }
-)
+export const LogoButton = memo(({ onClick, className = 'size-10 sm:size-11' }: LogoButtonProps) => {
+  return (
+    <button
+      type="button"
+      className={`hover:bg-accent/70 flex shrink-0 items-center justify-center rounded-xl transition-colors ${className}`}
+      onClick={onClick}
+      aria-label="返回首页"
+    >
+      <Image
+        src={Logo}
+        alt="DogeOW"
+        width={40}
+        height={40}
+        className="h-[88%] w-[88%] object-contain"
+      />
+    </button>
+  )
+})
 
 LogoButton.displayName = 'LogoButton'

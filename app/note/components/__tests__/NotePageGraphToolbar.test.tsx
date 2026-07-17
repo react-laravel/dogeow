@@ -61,18 +61,18 @@ describe('NotePageGraphToolbar', () => {
     expect(onCreateLink).toHaveBeenCalledTimes(1)
   })
 
-  it('should render new node button with green background', () => {
-    const { container } = render(<NotePageGraphToolbar {...defaultProps} />)
+  it('should show a readable label for the new node action', () => {
+    render(<NotePageGraphToolbar {...defaultProps} />)
 
     const newButton = screen.getByTitle('新建节点')
-    expect(newButton.className).toContain('bg-green-500')
+    expect(newButton).toHaveTextContent('新建节点')
   })
 
-  it('should render create link button with purple background', () => {
-    const { container } = render(<NotePageGraphToolbar {...defaultProps} />)
+  it('should show a readable label for the create link action', () => {
+    render(<NotePageGraphToolbar {...defaultProps} />)
 
     const linkButton = screen.getByTitle('创建链接')
-    expect(linkButton.className).toContain('bg-purple-500')
+    expect(linkButton).toHaveTextContent('创建链接')
   })
 
   it('should render with memo display name', () => {

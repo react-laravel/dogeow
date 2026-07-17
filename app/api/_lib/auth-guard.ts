@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { canUseAi } from '@/lib/ai/access'
 
 interface AuthenticatedUser {
+  id: number
   is_admin: boolean
 }
 
@@ -73,7 +75,7 @@ async function validateRequestWithBackend({
     const data = await response.json()
     // Handle both { user: {...} } and direct user object formats
     const user = data.user || data
-    return { is_admin: Boolean(user?.is_admin) }
+    return { id: Number(user?.id), is_admin: Boolean(user?.is_admin) }
   } catch {
     // Network errors or timeout - fail closed (deny access) for security
     return null
@@ -82,7 +84,7 @@ async function validateRequestWithBackend({
 
 // Cache for validated tokens (prevents excessive backend calls)
 // In production with multiple serverless instances, this is per-instance only
-const tokenValidationCache = new Map<string, { user: { is_admin: boolean }; timestamp: number }>()
+const tokenValidationCache = new Map<string, { user: AuthenticatedUser; timestamp: number }>()
 const TOKEN_CACHE_TTL = 30 * 1000 // 30 seconds
 
 /**
@@ -169,6 +171,50 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
 
   if (!user.is_admin) {
     return NextResponse.json({ error: '禁止访问', message: '需要管理员权限' }, { status: 403 })
+  }
+
+  return null
+}
+
+/** Only the primary administrator account (user ID 1) may use AI resources. */
+export async function requireAiAccess(request: NextRequest): Promise<NextResponse | null> {
+  const token = validateAuthToken(request)
+  const cookie = getSessionCookie(request)
+
+  if (!token && !cookie) {
+    return NextResponse.json({ error: '未授权', message: '请先登录' }, { status: 401 })
+  }
+
+  if (token) {
+    cleanExpiredCache()
+    const cached = tokenValidationCache.get(token)
+    if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
+      return canUseAi(cached.user)
+        ? null
+        : NextResponse.json(
+            { error: '禁止访问', message: '仅管理员账号 ID 1 可使用 AI' },
+            { status: 403 }
+          )
+    }
+  }
+
+  const user = await validateRequestWithBackend({ token, cookie })
+  if (!user) {
+    return NextResponse.json(
+      { error: '未授权', message: '登录已失效，请重新登录' },
+      { status: 401 }
+    )
+  }
+
+  if (token) {
+    tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  }
+
+  if (!canUseAi(user)) {
+    return NextResponse.json(
+      { error: '禁止访问', message: '仅管理员账号 ID 1 可使用 AI' },
+      { status: 403 }
+    )
   }
 
   return null

@@ -6,10 +6,6 @@ import { X } from 'lucide-react'
 
 import { cn } from '@/lib/helpers'
 
-const DialogDescriptionContext = React.createContext<{
-  registerDescription: () => void
-} | null>(null)
-
 function DialogDescriptionFallback({
   hasExplicitAriaDescribedBy,
   hasDescription,
@@ -22,6 +18,15 @@ function DialogDescriptionFallback({
   }
 
   return <DialogPrimitive.Description className="sr-only">对话框内容</DialogPrimitive.Description>
+}
+
+function containsDialogDescription(children: React.ReactNode): boolean {
+  return React.Children.toArray(children).some(child => {
+    if (!React.isValidElement(child)) return false
+    if (child.type === DialogDescription) return true
+
+    return containsDialogDescription((child.props as { children?: React.ReactNode }).children)
+  })
 }
 
 const Dialog = DialogPrimitive.Root
@@ -39,7 +44,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[130] bg-black/80',
+      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[130] bg-black/55 backdrop-blur-[3px]',
       className
     )}
     {...props}
@@ -51,35 +56,31 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  const [hasDescription, setHasDescription] = React.useState(false)
-  const registerDescription = React.useCallback(() => {
-    setHasDescription(true)
-  }, [])
+  const hasDescription = containsDialogDescription(children)
   const hasExplicitAriaDescribedBy = 'aria-describedby' in props
 
   return (
-    <DialogDescriptionContext.Provider value={{ registerDescription }}>
-      <DialogPortal>
-        <DialogPrimitive.Content
-          ref={ref}
-          className={cn(
-            'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[130] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border p-6 shadow-lg duration-200 sm:rounded-lg',
-            className
-          )}
-          {...props}
-        >
-          {children}
-          <DialogDescriptionFallback
-            hasExplicitAriaDescribedBy={hasExplicitAriaDescribedBy}
-            hasDescription={hasDescription}
-          />
-          <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none">
-            <X className="h-4 w-4" />
-            <span className="sr-only">关闭</span>
-          </DialogPrimitive.Close>
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    </DialogDescriptionContext.Provider>
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          'border-border/70 bg-popover/96 text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-[130] grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-2xl border p-5 shadow-2xl backdrop-blur-xl duration-200 sm:p-6',
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <DialogDescriptionFallback
+          hasExplicitAriaDescribedBy={hasExplicitAriaDescribedBy}
+          hasDescription={hasDescription}
+        />
+        <DialogPrimitive.Close className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring absolute top-3 right-3 flex size-8 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none">
+          <X className="h-4 w-4" />
+          <span className="sr-only">关闭</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
   )
 })
 DialogContent.displayName = DialogPrimitive.Content.displayName
@@ -113,9 +114,6 @@ const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => {
-  const descriptionContext = React.useContext(DialogDescriptionContext)
-  descriptionContext?.registerDescription()
-
   return (
     <DialogPrimitive.Description
       ref={ref}

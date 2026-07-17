@@ -4,6 +4,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SearchDialog } from '../SearchDialog'
 
+const { translate } = vi.hoisted(() => ({
+  translate: (key: string, fallback?: string) => fallback || key,
+}))
+
 // Mock Next.js navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -28,7 +32,7 @@ vi.mock('@/stores/authStore', () => ({
 // Mock translation hook
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback || key,
+    t: translate,
   }),
 }))
 
@@ -64,6 +68,17 @@ vi.mock('@/components/ui/dialog', async () => {
     },
     DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => {
       const { open, onOpenChange } = React.useContext(DialogContext)
+      React.useEffect(() => {
+        if (!open) return
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Escape') onOpenChange(false)
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+      }, [open, onOpenChange])
+
       if (!open) return null
       return (
         <div role="dialog" className={className}>
@@ -80,6 +95,13 @@ vi.mock('@/components/ui/dialog', async () => {
     DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div className={className}>{children}</div>
     ),
+    DialogDescription: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode
+      className?: string
+    }) => <div className={className}>{children}</div>,
   }
 })
 
@@ -150,6 +172,8 @@ describe('SearchDialog', () => {
       render(<SearchDialog {...defaultProps} />)
 
       expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText('全站搜索')).toBeInTheDocument()
+      expect(screen.getByText('输入关键词，并按范围快速筛选结果')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('搜索...')).toBeInTheDocument()
       expect(screen.getByText('全部')).toBeInTheDocument()
     })
@@ -173,7 +197,6 @@ describe('SearchDialog', () => {
       // When not authenticated, should only show public categories
       expect(screen.getByText('全部')).toBeInTheDocument()
       expect(screen.getByText('物品')).toBeInTheDocument()
-      expect(screen.getByText('实验室')).toBeInTheDocument()
       expect(screen.getByText('游戏')).toBeInTheDocument()
       expect(screen.getByText('工具')).toBeInTheDocument()
 
@@ -203,7 +226,7 @@ describe('SearchDialog', () => {
       await user.type(input, '俄罗斯')
 
       await waitFor(() => {
-        expect(screen.getByText('俄罗斯方块')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /俄罗斯方块/ })).toBeInTheDocument()
       })
     })
 
@@ -226,13 +249,13 @@ describe('SearchDialog', () => {
       await user.type(input, '俄罗斯')
 
       await waitFor(() => {
-        expect(screen.getByText('俄罗斯方块')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /俄罗斯方块/ })).toBeInTheDocument()
       })
 
       await user.clear(input)
 
       await waitFor(() => {
-        expect(screen.queryByText('俄罗斯方块')).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /俄罗斯方块/ })).not.toBeInTheDocument()
       })
     })
   })
@@ -267,10 +290,11 @@ describe('SearchDialog', () => {
       const user = userEvent.setup()
       render(<SearchDialog {...defaultProps} />)
 
-      const gameCategories = screen.getAllByText('游戏')
-      await user.click(gameCategories[0])
+      const gameCategory = screen.getByRole('tab', { name: '游戏' })
+      await user.click(gameCategory)
 
-      expect(gameCategories[0]).toHaveClass('bg-secondary')
+      expect(gameCategory).toHaveAttribute('aria-selected', 'true')
+      expect(gameCategory).toHaveClass('bg-primary')
     })
   })
 
@@ -300,10 +324,10 @@ describe('SearchDialog', () => {
       await user.type(input, '俄罗斯')
 
       await waitFor(() => {
-        expect(screen.getByText('俄罗斯方块')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /俄罗斯方块/ })).toBeInTheDocument()
       })
 
-      const result = screen.getByText('俄罗斯方块')
+      const result = screen.getByRole('button', { name: /俄罗斯方块/ })
       result.focus()
       await user.keyboard('{Enter}')
 
@@ -342,15 +366,17 @@ describe('SearchDialog', () => {
     it('should set active category based on current route', () => {
       render(<SearchDialog {...defaultProps} currentRoute="/game" />)
 
-      const gameCategories = screen.getAllByText('游戏')
-      expect(gameCategories[0]).toHaveClass('bg-secondary')
+      const gameCategory = screen.getByRole('tab', { name: '游戏' })
+      expect(gameCategory).toHaveAttribute('aria-selected', 'true')
+      expect(gameCategory).toHaveClass('bg-primary')
     })
 
     it('should default to all category when route is not recognized', () => {
       render(<SearchDialog {...defaultProps} currentRoute="/unknown" />)
 
-      const allCategory = screen.getByText('全部')
-      expect(allCategory).toHaveClass('bg-secondary')
+      const allCategory = screen.getByRole('tab', { name: '全部' })
+      expect(allCategory).toHaveAttribute('aria-selected', 'true')
+      expect(allCategory).toHaveClass('bg-primary')
     })
   })
 
@@ -373,6 +399,8 @@ describe('SearchDialog', () => {
 
       expect(screen.getByPlaceholderText('搜索...')).toBeInTheDocument()
       expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByRole('tablist', { name: '搜索范围' })).toBeInTheDocument()
+      expect(screen.getByRole('tabpanel', { name: '搜索结果' })).toBeInTheDocument()
     })
 
     it('should support keyboard navigation', async () => {

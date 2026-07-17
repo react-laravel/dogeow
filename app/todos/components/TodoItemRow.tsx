@@ -83,6 +83,7 @@ export function TodoItemRow({
         type="button"
         className="touch-none -ml-1 cursor-grab rounded p-1 text-muted-foreground outline-none hover:text-foreground active:cursor-grabbing"
         aria-label="拖动排序"
+        title="拖动排序"
         {...attributes}
         {...listeners}
       >

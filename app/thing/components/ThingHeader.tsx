@@ -231,11 +231,11 @@ function ThingHeader({
   }, [categorySearch, categoryTree, showParentCategoriesOnly])
 
   const imageSizePresets = [
-    { id: 'xs', label: 'XS', icon: <GripIcon className="h-4 w-4" /> },
-    { id: 'sm', label: 'S', icon: <Columns4Icon className="h-4 w-4" /> },
-    { id: 'md', label: 'M', icon: <Columns3Icon className="h-4 w-4" /> },
-    { id: 'lg', label: 'L', icon: <Columns2Icon className="h-4 w-4" /> },
-    { id: 'xl', label: 'XL', icon: <RectangleHorizontalIcon className="h-4 w-4" /> },
+    { id: 'xs', label: '极小', icon: <GripIcon className="h-4 w-4" /> },
+    { id: 'sm', label: '小', icon: <Columns4Icon className="h-4 w-4" /> },
+    { id: 'md', label: '中', icon: <Columns3Icon className="h-4 w-4" /> },
+    { id: 'lg', label: '大', icon: <Columns2Icon className="h-4 w-4" /> },
+    { id: 'xl', label: '特大', icon: <RectangleHorizontalIcon className="h-4 w-4" /> },
   ] as const
 
   // 渲染分类抽屉
@@ -438,12 +438,14 @@ function ThingHeader({
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground"
           >
             <LayoutList className="h-4 w-4" />
+            <span>列表</span>
           </TabsTrigger>
           <TabsTrigger
             value="gallery"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground"
           >
             <Grid className="h-4 w-4" />
+            <span>图片</span>
           </TabsTrigger>
           {viewMode === 'gallery' ? (
             <DropdownMenu>
@@ -469,7 +471,7 @@ function ThingHeader({
                       key={preset.id}
                       value={preset.id}
                       className="justify-between"
-                      title={`Set image size to ${preset.label}`}
+                      title={`图片大小：${preset.label}`}
                     >
                       <span className="flex items-center gap-2">
                         {preset.icon}

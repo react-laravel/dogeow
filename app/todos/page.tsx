@@ -280,14 +280,15 @@ export default function TodosPage() {
         singleLine
         actions={
           <Button
-            variant="ghost"
-            size="icon"
+            variant="outline"
+            size="sm"
             onClick={() => setDeleteDialogOpen(true)}
             aria-label="删除列表"
-            className="text-muted-foreground hover:text-destructive"
+            className="text-muted-foreground hover:border-destructive/30 hover:text-destructive"
             disabled={isDeletingList}
           >
             <Trash2 className="h-5 w-5" />
+            <span>删除列表</span>
           </Button>
         }
       />
@@ -298,19 +299,19 @@ export default function TodosPage() {
             type="text"
             value={newTaskTitle}
             onChange={event => setNewTaskTitle(event.target.value)}
-            placeholder="任务"
+            placeholder="输入新任务…"
             aria-label="新任务"
             className="border-border bg-background focus:ring-primary flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
             disabled={isSubmittingNewTask}
           />
-          <Button type="submit" size="sm" disabled={isSubmittingNewTask}>
+          <Button type="submit" size="sm" loading={isSubmittingNewTask} loadingText="添加中">
             添加
           </Button>
         </form>
       </section>
 
       <section>
-        <h2 className="text-foreground mb-3 text-base font-medium">代办事项</h2>
+        <h2 className="text-foreground mb-3 text-base font-medium">待办事项</h2>
         {visibleTasks.length === 0 ? (
           <p className="text-muted-foreground py-6 text-sm">暂无事项，在上方添加一条吧</p>
         ) : (

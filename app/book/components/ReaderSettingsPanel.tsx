@@ -51,8 +51,9 @@ export function ReaderSettingsPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        overlayClassName="bg-black/10"
-        className="flex w-1/2 max-w-none flex-col gap-5 px-5 pt-5 pb-6 sm:max-w-none"
+        overlayClassName="bg-transparent backdrop-blur-none"
+        style={{ width: 'min(18rem, 86vw)' }}
+        className="flex max-w-none flex-col gap-5 px-5 pt-5 pb-6"
       >
         <SheetHeader className="p-0 pr-10">
           <SheetTitle>阅读设置</SheetTitle>

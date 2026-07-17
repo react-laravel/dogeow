@@ -27,6 +27,7 @@ export const SearchInput = memo(
               value={searchTerm}
               onChange={e => onSearchTermChange(e.target.value)}
               className={`h-10 pl-10 ${searchTerm ? 'pr-10' : 'pr-3'}`}
+              aria-label="搜索关键词"
               autoFocus={!keyboardOpen} // 移动端键盘打开时不自动focus
             />
             {searchTerm && (
@@ -36,6 +37,8 @@ export const SearchInput = memo(
                 size="icon"
                 className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2 transform"
                 onClick={() => onSearchTermChange('')}
+                aria-label="清空搜索"
+                title="清空搜索"
               >
                 <X className="h-4 w-4" />
               </Button>

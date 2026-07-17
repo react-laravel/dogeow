@@ -25,11 +25,10 @@ export function BackgroundWrapper({ children }: BackgroundWrapperProps) {
     <div
       className={cn(
         'flex min-h-0 flex-1 flex-col',
-        backgroundImage && 'bg-cover bg-fixed bg-center',
+        backgroundImage && 'bg-background/76 backdrop-blur-[1px]',
         'transition-opacity duration-200',
         isVisible ? 'opacity-100' : 'opacity-0'
       )}
-      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
     >
       {children}
     </div>

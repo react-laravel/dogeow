@@ -13,18 +13,17 @@ const TILE_CLASSES = {
     'tile-card',
     'w-full h-full min-h-[8rem]',
     'relative flex flex-col items-start justify-end',
-    'p-3 sm:p-4 rounded-xl overflow-hidden',
-    'shadow-sm',
+    'p-3 sm:p-4 rounded-2xl overflow-hidden border border-border/70 bg-card/85',
+    'shadow-[var(--surface-shadow)] backdrop-blur-xl',
     'transition-[transform,box-shadow,border-color] duration-200 ease-in-out',
-    'hover:scale-[0.98] hover:shadow-md cursor-pointer',
-    'active:scale-[0.97]',
+    'hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--surface-shadow-hover)] cursor-pointer',
+    'active:translate-y-0',
     'will-change-transform',
     'text-left outline-none',
     'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-    'motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100',
+    'motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0',
   ].join(' '),
-  BORDERED:
-    'border border-white/30 bg-white/10 backdrop-blur-md hover:border-white/40 dark:border-white/5 dark:bg-neutral-950 dark:hover:border-white/10',
+  BORDERED: '',
   LOCK_ICON:
     'absolute top-2 right-2 z-[3] flex h-6 w-6 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm',
   CONTENT: 'relative z-[2] flex items-center gap-2.5',
@@ -86,7 +85,7 @@ const TileIcon = memo(
 
     return (
       <div
-        className={`h-5 w-5 shrink-0 sm:h-6 sm:w-6 ${decorated ? 'text-foreground dark:text-white' : 'text-foreground'}`}
+        className={`h-5 w-5 shrink-0 sm:h-6 sm:w-6 ${decorated ? 'text-white' : 'text-foreground'}`}
         style={decorated ? { filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18))' } : undefined}
       >
         {tile.icon}
@@ -134,16 +133,12 @@ export const TileCard = memo(
       }
 
       if (!usesDecoratedCover) {
-        return {
-          ...baseStyle,
-          boxShadow: '0 14px 30px rgba(15, 23, 42, 0.10)',
-        }
+        return baseStyle
       }
 
       return {
         ...baseStyle,
-        backgroundColor: `${tile.color}b3`,
-        backdropFilter: 'blur(1px)',
+        backgroundColor: tile.color,
       }
     }, [needsLogin, tile.color, usesDecoratedCover])
 
@@ -189,6 +184,10 @@ export const TileCard = memo(
           </>
         )}
 
+        {usesDecoratedCover && !showSkeleton && (
+          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-black/12 to-white/8" />
+        )}
+
         {showSkeleton && (
           <>
             <div className={TILE_CLASSES.SKELETON_OVERLAY} />
@@ -211,7 +210,7 @@ export const TileCard = memo(
           {tile.icon && (
             <div
               className={`flex items-center justify-center ${
-                usesDecoratedCover ? '' : TILE_CLASSES.GLASS_ICON_SHELL
+                usesDecoratedCover ? 'text-white' : TILE_CLASSES.GLASS_ICON_SHELL
               }`}
             >
               <TileIcon tile={tile} tileName={tileName} decorated={usesDecoratedCover} />
@@ -219,7 +218,7 @@ export const TileCard = memo(
           )}
 
           <span
-            className={`${TILE_CLASSES.TITLE} ${usesDecoratedCover ? 'text-foreground dark:text-white' : 'text-foreground'}`}
+            className={`${TILE_CLASSES.TITLE} ${usesDecoratedCover ? 'text-white' : 'text-foreground'}`}
             style={
               usesDecoratedCover ? { textShadow: '0 1px 2px rgba(255, 255, 255, 0.2)' } : undefined
             }

@@ -97,7 +97,7 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'theme-storage',
-      version: 5,
+      version: 6,
       migrate: (persisted, version) => {
         if (persisted && typeof persisted === 'object') {
           const p = persisted as Record<string, unknown>
@@ -120,6 +120,9 @@ export const useThemeStore = create<ThemeState>()(
           }
           if (version < 5 || p.themeTransitionEnabled == null) {
             out.themeTransitionEnabled = false
+          }
+          if (version < 6) {
+            out.currentUITheme = 'default'
           }
           return out as unknown as ThemeState
         }

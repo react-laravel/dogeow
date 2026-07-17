@@ -4,6 +4,16 @@
 // offline fallbacks, so users won't get stuck on the old "正在检查网络..." page.
 
 const LEGACY_CACHE_PREFIX = 'dogeow-'
+const NOTIFICATION_PREFERENCES_CACHE = 'push-notification-preferences-v1'
+const NOTIFICATION_PREFERENCES_URL = new URL(
+  '/__push-notification-preferences__',
+  self.location.origin
+).href
+const DEFAULT_NOTIFICATION_PREFERENCES = {
+  soundEnabled: true,
+  quietHoursStart: 22,
+  quietHoursEnd: 9,
+}
 
 async function clearLegacyCaches() {
   if (!self.caches) return
@@ -13,6 +23,66 @@ async function clearLegacyCaches() {
       .filter(cacheName => cacheName.startsWith(LEGACY_CACHE_PREFIX))
       .map(cacheName => caches.delete(cacheName).catch(() => false))
   )
+}
+
+function normalizeNotificationPreferences(preferences) {
+  return {
+    soundEnabled: preferences?.soundEnabled !== false,
+    quietHoursStart: normalizeHour(
+      preferences?.quietHoursStart,
+      DEFAULT_NOTIFICATION_PREFERENCES.quietHoursStart
+    ),
+    quietHoursEnd: normalizeHour(
+      preferences?.quietHoursEnd,
+      DEFAULT_NOTIFICATION_PREFERENCES.quietHoursEnd
+    ),
+  }
+}
+
+function normalizeHour(value, fallback) {
+  return Number.isInteger(value) && value >= 0 && value <= 23 ? value : fallback
+}
+
+async function readNotificationPreferences() {
+  if (!self.caches) return DEFAULT_NOTIFICATION_PREFERENCES
+
+  try {
+    const cache = await caches.open(NOTIFICATION_PREFERENCES_CACHE)
+    const response = await cache.match(NOTIFICATION_PREFERENCES_URL)
+    if (!response) return DEFAULT_NOTIFICATION_PREFERENCES
+
+    return normalizeNotificationPreferences(await response.json())
+  } catch {
+    return DEFAULT_NOTIFICATION_PREFERENCES
+  }
+}
+
+async function writeNotificationPreferences(preferences) {
+  if (!self.caches) {
+    throw new Error('Cache Storage is unavailable')
+  }
+
+  const cache = await caches.open(NOTIFICATION_PREFERENCES_CACHE)
+  const normalizedPreferences = normalizeNotificationPreferences(preferences)
+  await cache.put(
+    NOTIFICATION_PREFERENCES_URL,
+    new Response(JSON.stringify(normalizedPreferences), {
+      headers: { 'content-type': 'application/json' },
+    })
+  )
+}
+
+function isQuietHours(preferences, date = new Date()) {
+  const hour = date.getHours()
+  const { quietHoursStart: start, quietHoursEnd: end } = preferences
+
+  if (start === end) return false
+  if (start < end) return hour >= start && hour < end
+  return hour >= start || hour < end
+}
+
+function shouldSilenceNotification(preferences, date = new Date()) {
+  return preferences.soundEnabled === false || isQuietHours(preferences, date)
 }
 
 function parsePushPayload(event) {
@@ -63,21 +133,40 @@ self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }
+
+  if (event.data?.type === 'SET_NOTIFICATION_PREFERENCES') {
+    const responsePort = event.ports?.[0]
+    const persistPreferences = writeNotificationPreferences(event.data.preferences)
+      .then(() => {
+        responsePort?.postMessage({ ok: true })
+      })
+      .catch(error => {
+        responsePort?.postMessage({ ok: false })
+        throw error
+      })
+
+    event.waitUntil(persistPreferences)
+  }
 })
 
 self.addEventListener('push', event => {
   const payload = parsePushPayload(event)
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: payload.icon,
-      badge: payload.badge,
-      tag: payload.tag,
-      data: {
-        url: payload.url,
-        notification_id: payload.notificationId,
-      },
+    readNotificationPreferences().then(preferences => {
+      const silent = shouldSilenceNotification(preferences)
+
+      return self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: payload.icon,
+        badge: payload.badge,
+        tag: payload.tag,
+        data: {
+          url: payload.url,
+          notification_id: payload.notificationId,
+        },
+        ...(silent ? { silent: true } : {}),
+      })
     })
   )
 })

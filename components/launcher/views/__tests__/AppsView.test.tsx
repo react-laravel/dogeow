@@ -67,7 +67,7 @@ describe('AppsView', () => {
     })
 
     const user = userEvent.setup()
-    const { getByAltText } = render(
+    const { getByRole } = render(
       <AppsView
         router={{ push: routerPush }}
         searchManager={defaultSearchManager}
@@ -76,7 +76,7 @@ describe('AppsView', () => {
       />
     )
 
-    await user.click(getByAltText('apps'))
+    await user.click(getByRole('button', { name: '返回首页' }))
 
     expect(clearFilters).toHaveBeenCalledTimes(1)
     expect(routerPush).toHaveBeenCalledWith('/')
@@ -85,7 +85,7 @@ describe('AppsView', () => {
 
   it('does not navigate when clicking the logo on home', async () => {
     const user = userEvent.setup()
-    const { getByAltText } = render(
+    const { getByRole } = render(
       <AppsView
         router={{ push: routerPush }}
         searchManager={{ ...defaultSearchManager, isHomePage: true }}
@@ -94,7 +94,7 @@ describe('AppsView', () => {
       />
     )
 
-    await user.click(getByAltText('apps'))
+    await user.click(getByRole('button', { name: '返回首页' }))
 
     expect(clearFilters).toHaveBeenCalledTimes(1)
     expect(routerPush).not.toHaveBeenCalled()
@@ -109,7 +109,7 @@ describe('AppsView', () => {
     })
 
     const user = userEvent.setup()
-    const { getByAltText } = render(
+    const { getByRole } = render(
       <AppsView
         router={{ push: routerPush }}
         searchManager={defaultSearchManager}
@@ -120,10 +120,25 @@ describe('AppsView', () => {
       />
     )
 
-    await user.click(getByAltText('apps'))
+    await user.click(getByRole('button', { name: '返回首页' }))
 
     expect(onCloseAi).toHaveBeenCalledTimes(1)
     expect(assign).not.toHaveBeenCalled()
     expect(clearFilters).not.toHaveBeenCalled()
+  })
+
+  it('gives search the full action area on the home page', () => {
+    const { getByRole, queryByRole } = render(
+      <AppsView
+        router={{ push: routerPush }}
+        searchManager={{ ...defaultSearchManager, isHomePage: true, isSearchVisible: true }}
+        isAuthenticated
+        toggleDisplayMode={toggleDisplayMode}
+      />
+    )
+
+    expect(getByRole('textbox')).toBeInTheDocument()
+    expect(queryByRole('button', { name: '通知' })).not.toBeInTheDocument()
+    expect(queryByRole('button', { name: /用户菜单/ })).not.toBeInTheDocument()
   })
 })

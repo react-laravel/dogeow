@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpen, Columns } from 'lucide-react'
+import { ImageIcon, LayoutGrid } from 'lucide-react'
 import { BottomHourPicker } from '@/components/ui/bottom-hour-picker'
 import { Switch } from '@/components/ui/switch'
 import { type AudioPlaybackMode } from '@/stores/musicStore'
@@ -201,46 +201,94 @@ export function AppsListView({
   setProjectCoverMode,
 }: AppsListViewProps) {
   return (
-    <div className="flex flex-col space-y-3">
-      <div className="flex w-full items-center gap-2 rounded-lg p-2">
-        <Columns className="h-4 w-4 shrink-0" />
-        <div className="flex flex-1 gap-1">
+    <div className="flex flex-col space-y-4">
+      <section
+        className="border-border/70 bg-card/50 space-y-3 rounded-xl border p-3"
+        aria-labelledby="apps-layout-title"
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg"
+            aria-hidden="true"
+          >
+            <LayoutGrid className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 id="apps-layout-title" className="text-sm font-semibold">
+              首页布局
+            </h3>
+            <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+              控制首页应用入口的排列方式
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="bg-muted/55 grid grid-cols-3 gap-1 rounded-lg p-1"
+          role="group"
+          aria-labelledby="apps-layout-title"
+        >
           {SITE_LAYOUT_OPTIONS.map(option => (
             <button
               key={option.value}
               type="button"
               onClick={() => setSiteLayout(option.value)}
-              className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
+              aria-pressed={siteLayout === option.value}
+              className={`min-h-9 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                 siteLayout === option.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-background/75 hover:text-foreground'
               }`}
             >
               {option.label}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="flex w-full items-center gap-2 rounded-lg p-2">
-        <BookOpen className="h-4 w-4" />
-        <div className="flex flex-1 gap-1">
+      <section
+        className="border-border/70 bg-card/50 space-y-3 rounded-xl border p-3"
+        aria-labelledby="project-cover-title"
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg"
+            aria-hidden="true"
+          >
+            <ImageIcon className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 id="project-cover-title" className="text-sm font-semibold">
+              封面样式
+            </h3>
+            <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+              控制应用卡片使用图片、纯色或无封面
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="bg-muted/55 grid grid-cols-3 gap-1 rounded-lg p-1"
+          role="group"
+          aria-labelledby="project-cover-title"
+        >
           {PROJECT_COVER_MODE_OPTIONS.map(option => (
             <button
               key={option.value}
               type="button"
               onClick={() => setProjectCoverMode(option.value)}
-              className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
+              aria-pressed={projectCoverMode === option.value}
+              className={`min-h-9 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                 projectCoverMode === option.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-background/75 hover:text-foreground'
               }`}
             >
               {option.label}
             </button>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   )
 }

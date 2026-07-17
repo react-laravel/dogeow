@@ -16,7 +16,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#000000',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fbfaf7' },
+    { media: '(prefers-color-scheme: dark)', color: '#181512' },
+  ],
   colorScheme: 'dark light',
 }
 
@@ -72,8 +75,8 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
     'apple-mobile-web-app-title': 'DogeOW',
-    'msapplication-TileColor': '#000000',
-    'theme-color': '#000000',
+    'msapplication-TileColor': '#fbfaf7',
+    'theme-color': '#fbfaf7',
   },
 }
 
@@ -90,7 +93,7 @@ const themeBootstrapScript = `
       ? hour >= restPeriod.startHour || hour < restPeriod.endHour
       : hour >= restPeriod.startHour && hour < restPeriod.endHour
     const dark = mode === 'dark' || (mode === 'system' && followSystem && matchMedia('(prefers-color-scheme: dark)').matches) || (mode === 'rest' && inRest)
-    const backgroundColor = dark ? '#000000' : '#ffffff'
+    const backgroundColor = dark ? '#181512' : '#fbfaf7'
     document.documentElement.classList.toggle('dark', dark)
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
     document.documentElement.style.backgroundColor = backgroundColor

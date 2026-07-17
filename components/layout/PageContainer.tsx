@@ -30,7 +30,7 @@ const maxWidthMap = {
  * 统一的页面容器组件
  *
  * 提供一致的内边距和最大宽度，保证各页面间距统一。
- * - 默认: px-3 sm:px-4 py-4
+ * - 默认: 使用全站 gutter 与 block spacing 令牌
  * - fullScreen: 无内边距（用于游戏等需要全屏的页面）
  */
 export function PageContainer({
@@ -51,7 +51,7 @@ export function PageContainer({
   return (
     <div
       className={cn(
-        'mx-auto w-full px-3 py-4 sm:px-4',
+        'mx-auto w-full px-[var(--page-gutter)] py-[var(--page-block-space)]',
         maxWidth !== 'none' && maxWidthMap[maxWidth],
         className
       )}

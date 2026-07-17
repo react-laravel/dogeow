@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { validateAuthToken, requireAuth, requireAdmin } from '../auth-guard'
+import { validateAuthToken, requireAuth, requireAdmin, requireAiAccess } from '../auth-guard'
 
 // Helper to create a mock NextRequest
 function createMockNextRequest(authHeader?: string, cookieHeader?: string) {
@@ -17,7 +17,7 @@ function createMockNextRequest(authHeader?: string, cookieHeader?: string) {
 }
 
 // Mock the backend validation
-function mockFetch(validToken: boolean, isAdmin = false) {
+function mockFetch(validToken: boolean, isAdmin = false, userId = 2) {
   return vi.spyOn(global, 'fetch').mockImplementation(async () => {
     if (!validToken) {
       return { ok: false, status: 401 } as Response
@@ -25,7 +25,7 @@ function mockFetch(validToken: boolean, isAdmin = false) {
     return {
       ok: true,
       status: 200,
-      json: async () => ({ user: { is_admin: isAdmin } }),
+      json: async () => ({ user: { id: userId, is_admin: isAdmin } }),
     } as Response
   })
 }
@@ -190,6 +190,32 @@ describe('auth-guard', () => {
       const response = await requireAdmin(request)
       expect(response).not.toBeNull()
       expect(response!.status).toBe(401)
+    })
+  })
+
+  describe('requireAiAccess', () => {
+    let fetchSpy: ReturnType<typeof vi.spyOn>
+
+    afterEach(() => {
+      fetchSpy?.mockRestore()
+    })
+
+    it('allows only administrator user ID 1', async () => {
+      fetchSpy = mockFetch(true, true, 1)
+      const response = await requireAiAccess(createMockNextRequest('Bearer primary-admin-ai-token'))
+      expect(response).toBeNull()
+    })
+
+    it('rejects other administrators', async () => {
+      fetchSpy = mockFetch(true, true, 2)
+      const response = await requireAiAccess(createMockNextRequest('Bearer other-admin-ai-token'))
+      expect(response?.status).toBe(403)
+    })
+
+    it('rejects user ID 1 when the account is not an administrator', async () => {
+      fetchSpy = mockFetch(true, false, 1)
+      const response = await requireAiAccess(createMockNextRequest('Bearer non-admin-ai-token'))
+      expect(response?.status).toBe(403)
     })
   })
 })

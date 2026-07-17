@@ -159,18 +159,26 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
     return (
       <Dialog.Root open={open} onOpenChange={onOpenChange}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
-          <Dialog.Content className="border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border shadow-lg">
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px]" />
+          <Dialog.Content className="border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[min(90dvh,42rem)] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl">
             <div className="border-border flex items-center justify-between border-b p-4">
               <Dialog.Title className="text-lg font-semibold">创建链接</Dialog.Title>
+              <Dialog.Description className="sr-only">
+                选择源节点和目标节点并设置链接类型
+              </Dialog.Description>
               <Dialog.Close asChild>
-                <button aria-label="Close" className="hover:bg-muted rounded p-1">
+                <button
+                  type="button"
+                  aria-label="关闭"
+                  title="关闭"
+                  className="hover:bg-muted focus-visible:ring-ring flex size-8 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </Dialog.Close>
             </div>
 
-            <div className="space-y-4 p-4">
+            <div className="min-h-0 space-y-4 overflow-y-auto p-4">
               {/* 源节点选择 */}
               <div>
                 <label className="mb-2 block text-sm font-medium">源节点 *</label>
@@ -214,11 +222,13 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
                   <Button
                     type="button"
                     variant={isSelectingFromGraph ? 'default' : 'outline'}
+                    size="sm"
                     onClick={handleStartSelectFromGraph}
                     className="shrink-0"
                     title="从图谱中选择节点"
                   >
                     <MousePointerClick className="h-4 w-4" />
+                    <span>图谱选择</span>
                   </Button>
                 </div>
                 {isSelectingFromGraph && (

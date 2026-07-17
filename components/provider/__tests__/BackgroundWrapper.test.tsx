@@ -58,7 +58,7 @@ describe('BackgroundWrapper', () => {
     expect(wrapper).not.toHaveClass('bg-center')
   })
 
-  it('should apply background image classes when background image is set', () => {
+  it('should apply a readable content veil when a background image is set', () => {
     const backgroundImageUrl = 'https://example.com/background.jpg'
     mockUseBackgroundStore.mockReturnValue({
       backgroundImage: backgroundImageUrl,
@@ -77,12 +77,11 @@ describe('BackgroundWrapper', () => {
     expect(wrapper).toHaveClass('min-h-0')
     expect(wrapper).toHaveClass('flex-1')
     expect(wrapper).toHaveClass('flex-col')
-    expect(wrapper).toHaveClass('bg-cover')
-    expect(wrapper).toHaveClass('bg-fixed')
-    expect(wrapper).toHaveClass('bg-center')
+    expect(wrapper).toHaveClass('bg-background/76')
+    expect(wrapper).toHaveClass('backdrop-blur-[1px]')
   })
 
-  it('should set background image style when background image is provided', () => {
+  it('should leave background image rendering to the body background manager', () => {
     const backgroundImageUrl = 'https://example.com/background.jpg'
     mockUseBackgroundStore.mockReturnValue({
       backgroundImage: backgroundImageUrl,
@@ -97,9 +96,7 @@ describe('BackgroundWrapper', () => {
     )
 
     const wrapper = container.firstChild as HTMLElement
-    expect(wrapper).toHaveStyle({
-      backgroundImage: `url(${backgroundImageUrl})`,
-    })
+    expect(wrapper.style.backgroundImage).toBe('')
   })
 
   it('should not set background image style when no background image', () => {
@@ -154,9 +151,8 @@ describe('BackgroundWrapper', () => {
       )
 
       const wrapper = container.firstChild as HTMLElement
-      expect(wrapper).toHaveStyle({
-        backgroundImage: `url(${url})`,
-      })
+      expect(wrapper).toHaveClass('bg-background/76', 'backdrop-blur-[1px]')
+      expect(wrapper.style.backgroundImage).toBe('')
     })
   })
 

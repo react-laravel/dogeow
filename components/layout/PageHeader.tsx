@@ -33,8 +33,8 @@ export function PageHeader({
     <header
       className={cn(
         singleLine
-          ? 'mb-6 flex items-center justify-between gap-3'
-          : 'mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
+          ? 'mb-5 flex items-center justify-between gap-3'
+          : 'mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between',
         className
       )}
     >
@@ -51,12 +51,12 @@ export function PageHeader({
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
-          <PageTitle className={cn('text-xl sm:text-2xl', titleClassName)}>{title}</PageTitle>
+          <PageTitle className={cn('text-2xl sm:text-3xl', titleClassName)}>{title}</PageTitle>
         </div>
         {description ? (
           <p
             className={cn(
-              'text-muted-foreground text-sm',
+              'text-muted-foreground text-sm leading-6',
               singleLine ? 'truncate' : undefined,
               showBackButton && !singleLine ? 'pl-12' : undefined
             )}

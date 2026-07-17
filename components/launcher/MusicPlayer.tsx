@@ -16,7 +16,7 @@ const ICON_SIZE = 'h-4 w-4'
 
 // 加载状态指示器组件 - 保持与播放按钮相同尺寸
 const LoadingIndicator = memo(() => (
-  <div data-testid="music-player-loading" className="flex h-7 w-7 items-center justify-center">
+  <div data-testid="music-player-loading" className="flex h-9 w-9 items-center justify-center">
     <Loader2 className={`${ICON_SIZE} animate-spin text-foreground/60`} />
   </div>
 ))
@@ -83,7 +83,7 @@ export const MusicPlayer = memo(
         <div className="relative flex w-full min-w-0 items-center gap-2 overflow-hidden">
           <div className="relative z-10 flex shrink-0 items-center gap-3">
             {showLogo && <LogoButton onClick={handleLogoClick} className="h-10 w-10" />}
-            <BackButton onClick={handleBackToApps} title="返回启动台" className="h-7 w-7" />
+            <BackButton onClick={handleBackToApps} title="返回启动台" className="h-9 w-9" />
             {(hasContent || isLoading) && (
               <div className="flex items-center justify-center">
                 {isLoading ? (
@@ -92,6 +92,7 @@ export const MusicPlayer = memo(
                   <PlayerControlButton
                     onClick={togglePlay}
                     title={isPlaying ? '暂停' : '播放'}
+                    className="h-9 w-9 bg-primary/12 text-primary hover:bg-primary/20"
                     icon={
                       isPlaying ? <Pause className={ICON_SIZE} /> : <Play className={ICON_SIZE} />
                     }
@@ -120,7 +121,7 @@ export const MusicPlayer = memo(
             {hasContent && (
               <button
                 type="button"
-                className="shrink-0 text-xs font-medium text-foreground/80 tabular-nums transition-opacity hover:opacity-80"
+                className="hover:bg-accent shrink-0 rounded-lg px-2 py-1.5 text-xs font-medium text-foreground/80 tabular-nums transition-colors"
                 onClick={() => setShowRemainingTime(prev => !prev)}
                 title={showRemainingTime ? '点击切换为已播放时间' : '点击切换为倒计时'}
                 aria-label={showRemainingTime ? '显示已播放时间' : '显示倒计时'}
@@ -132,6 +133,7 @@ export const MusicPlayer = memo(
               <PlayerControlButton
                 onClick={onOpenFullscreen}
                 title="全屏"
+                className="h-9 w-9"
                 icon={<Maximize2 className={ICON_SIZE} />}
               />
             )}

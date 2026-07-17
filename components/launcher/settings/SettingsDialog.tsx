@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react'
 import type { CustomTheme } from '@/app/types'
-import { Dialog, DialogContent, DialogOverlay, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useTheme } from 'next-themes'
 import { useMusicStore } from '@/stores/musicStore'
 import { useThemeStore } from '@/stores/themeStore'
@@ -226,16 +226,21 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="bg-black/55 backdrop-blur-[1px]" />
-      <DialogContent className="w-[90%] max-w-md overflow-hidden p-0">
-        <div className="flex h-[60vh] min-h-[400px] w-full flex-col overflow-hidden">
+      <DialogContent
+        className="max-w-none overflow-hidden p-0"
+        style={{
+          width:
+            'min(42rem, calc(100vw - max(1rem, env(safe-area-inset-left, 0px)) - max(1rem, env(safe-area-inset-right, 0px))))',
+        }}
+      >
+        <div className="flex h-[min(80dvh,42rem)] min-h-0 w-full flex-col overflow-hidden">
           {/* 顶部标题栏 */}
           <div className="flex h-12 items-center justify-center border-b px-4">
             <DialogTitle className="text-base font-semibold">设置</DialogTitle>
           </div>
 
-          {/* 左侧和右侧内容 */}
-          <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* 移动端使用顶部横向导航，较宽屏恢复为左侧导航 */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:flex-row">
             {/* 左侧 sidebar */}
             <SettingsDialogSidebar
               activeSection={activeSection}
