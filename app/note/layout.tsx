@@ -3,8 +3,7 @@
 import NoteNavigation from './components/NoteNavigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { BOTTOM_NAV_CONTENT_PADDING } from '@/components/layout'
-import 'prismjs/themes/prism.css'
-import './styles/prism.css'
+import './styles/code-highlight.css'
 
 export default function NoteLayout({ children }: { children: React.ReactNode }) {
   return (

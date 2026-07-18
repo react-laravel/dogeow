@@ -4,17 +4,18 @@
 
 ## 项目概述
 
-这是一个基于 Next.js 15 的个人效率平台前端，与 `dogeow-api`（Laravel 13）配合使用。
+这是一个基于 Next.js 16 的个人效率平台前端，与 `dogeow-api`（Laravel 13）配合使用。
 
 ### 技术栈
 
-- **框架**: Next.js 15（App Router）、React 19、TypeScript（严格模式）
+- **框架**: Next.js 16（App Router）、React 19、TypeScript（严格模式）
 - **UI**: Tailwind CSS、Shadcn UI（Radix UI）、Lucide React 图标、Framer Motion
 - **状态管理**: Zustand（优先于 React Context）
 - **数据获取**: SWR（优先于 fetch/axios）
 - **表单**: React Hook Form + Zod 校验
 - **实时通信**: Laravel Echo + Pusher.js
-- **其他**: date-fns、React DnD
+- **编辑器**: Novel / TipTap
+- **其他**: date-fns、Sonner、@dnd-kit
 
 ### 开发命令
 
@@ -37,14 +38,13 @@ npm run test:coverage    # 生成测试覆盖率报告
 
 代码按功能模块组织在 `app/` 目录下：
 
-- `app/note/` - Slate 编辑器笔记（stores、components、hooks、utils）
+- `app/note/` - Novel/TipTap 编辑器笔记（stores、components、hooks、utils）
 - `app/file/` - 文件管理（store、components）
-- `react-laravel/game` - 独立游戏中心；中央站的 `/game/**` 仅负责跳转
+- `chat/` / `game/` / `rpg/` - 已拆为独立前端；中央站对应路由负责跳转
 - `app/word/` - 单词学习
 - `app/thing/` - 物品/地点管理
 - `app/nav/` - 导航管理
 - `app/todos/` - 待办任务
-- `app/wiki/` - Wiki 笔记
 - `app/book/` - 书籍
 - `app/ai/` - AI 功能
 
