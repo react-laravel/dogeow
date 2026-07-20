@@ -36,7 +36,6 @@ export const useAudioManager = () => {
   // Audio refs
   const audioRef = useRef<HTMLAudioElement>(null)
   const handoffAudioRef = useRef<HTMLAudioElement>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
 
   // API URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
@@ -53,17 +52,7 @@ export const useAudioManager = () => {
   // Audio visualizer hook
   const visualizer = useAudioVisualizer({ volume, isMuted, playbackMode: audioPlaybackMode })
 
-  // Initialize AudioContext from visualizer
-  const initAudioContext = useCallback(
-    (audioElement: HTMLAudioElement | null) => {
-      visualizer.initAudioContext(audioElement)
-      // Sync refs
-      if (audioElement) {
-        audioContextRef.current = visualizer.audioContextRef.current
-      }
-    },
-    [visualizer]
-  )
+  const initAudioContext = visualizer.initAudioContext
 
   useAudioBackgroundHandoff({
     audioRef,
@@ -219,13 +208,6 @@ export const useAudioManager = () => {
     setUserInteracted(true)
   }, [])
 
-  const handlePlaybackLoadedMetadata = playback.handleLoadedMetadata
-  const refreshAudioSource = visualizer.refreshAudioSource
-  const handleLoadedMetadata = useCallback(() => {
-    handlePlaybackLoadedMetadata()
-    refreshAudioSource(audioRef.current)
-  }, [handlePlaybackLoadedMetadata, refreshAudioSource])
-
   return {
     // State
     isPlaying,
@@ -250,7 +232,6 @@ export const useAudioManager = () => {
     handoffAudioRef,
     // Audio controller
     ...playback,
-    handleLoadedMetadata,
     analyserNode: visualizer.analyserNode,
   }
 }

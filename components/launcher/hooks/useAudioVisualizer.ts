@@ -3,7 +3,7 @@
  * 处理 Web Audio API 初始化和频谱分析
  */
 
-import { useRef, useCallback, useState, useEffect } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import type { AudioPlaybackMode } from '@/stores/musicStore'
 import type { AudioVisualizerSourceNode } from './types'
 
@@ -20,23 +20,8 @@ interface UseAudioVisualizerReturn {
   gainNodeRef: React.MutableRefObject<GainNode | null>
   analyserNode: AnalyserNode | null
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
-  refreshAudioSource: (audioElement: HTMLAudioElement | null) => void
   teardownAudioContext: () => boolean
   routesPlaybackThroughWebAudio: () => boolean
-}
-
-interface AudioSourceSetup {
-  source: AudioVisualizerSourceNode
-  shouldRouteToDestination: boolean
-  usesCaptureStream: boolean
-}
-
-function supportsCaptureStream(audioElement: HTMLAudioElement): boolean {
-  const elementWithCaptureStream = audioElement as HTMLMediaElement & {
-    captureStream?: () => MediaStream
-  }
-
-  return typeof elementWithCaptureStream.captureStream === 'function'
 }
 
 function isIOSLikeBrowser(): boolean {
@@ -47,10 +32,7 @@ function isIOSLikeBrowser(): boolean {
   return /iPad|iPhone|iPod/i.test(userAgent) || (platform === 'MacIntel' && maxTouchPoints > 1)
 }
 
-function shouldBypassWebAudio(
-  audioElement: HTMLAudioElement,
-  playbackMode: AudioPlaybackMode
-): boolean {
+function shouldBypassWebAudio(playbackMode: AudioPlaybackMode): boolean {
   if (playbackMode === 'native') {
     return true
   }
@@ -59,42 +41,12 @@ function shouldBypassWebAudio(
     return false
   }
 
-  return isIOSLikeBrowser() && !supportsCaptureStream(audioElement)
+  return isIOSLikeBrowser()
 }
 
 function getAudioContextClass(): typeof AudioContext | undefined {
   const win = window as typeof window & { webkitAudioContext?: typeof AudioContext }
   return win.AudioContext ?? win.webkitAudioContext
-}
-
-function createVisualizerSource(
-  audioContext: AudioContext,
-  audioElement: HTMLAudioElement
-): AudioSourceSetup {
-  const elementWithCaptureStream = audioElement as HTMLMediaElement & {
-    captureStream?: () => MediaStream
-  }
-  const captureStream = elementWithCaptureStream.captureStream
-
-  if (typeof captureStream === 'function') {
-    try {
-      const stream = captureStream.call(elementWithCaptureStream)
-
-      return {
-        source: audioContext.createMediaStreamSource(stream),
-        shouldRouteToDestination: false,
-        usesCaptureStream: true,
-      }
-    } catch (error) {
-      console.warn('captureStream 初始化失败，切换到 MediaElementAudioSource:', error)
-    }
-  }
-
-  return {
-    source: audioContext.createMediaElementSource(audioElement),
-    shouldRouteToDestination: true,
-    usesCaptureStream: false,
-  }
 }
 
 export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudioVisualizerReturn {
@@ -105,10 +57,9 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   const analyserRef = useRef<AnalyserNode | null>(null)
   const sourceRef = useRef<AudioVisualizerSourceNode | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
-  // 仅当播放音频经由 AudioContext 路由到扬声器时为 true（createMediaElementSource 路径）。
-  // captureStream 路径下声音由 <audio> 元素直接输出，AudioContext 只做频谱分析。
+  // MediaElementAudioSource 会跟随同一 <audio> 元素的 src 变化，
+  // 因此切歌时不需要重建或重绑音频轨道。
   const routesPlaybackRef = useRef(false)
-  const usesCaptureStreamRef = useRef(false)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
 
   const shouldUseWebAudio = useCallback(() => {
@@ -131,7 +82,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   const initAudioContext = useCallback(
     (audioElement: HTMLAudioElement | null) => {
       if (!audioElement || audioContextRef.current) return
-      if (shouldBypassWebAudio(audioElement, playbackMode)) {
+      if (shouldBypassWebAudio(playbackMode)) {
         return
       }
       if (!shouldUseWebAudio()) return
@@ -146,21 +97,15 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
         const audioContext = new AudioContextClass()
         const analyser = audioContext.createAnalyser()
         const gainNode = audioContext.createGain()
-        const { source, shouldRouteToDestination, usesCaptureStream } = createVisualizerSource(
-          audioContext,
-          audioElement
-        )
+        const source = audioContext.createMediaElementSource(audioElement)
 
         analyser.fftSize = 64
         analyser.smoothingTimeConstant = 0.8
 
         source.connect(analyser)
-        if (shouldRouteToDestination) {
-          analyser.connect(gainNode)
-          gainNode.connect(audioContext.destination)
-        }
-        routesPlaybackRef.current = shouldRouteToDestination
-        usesCaptureStreamRef.current = usesCaptureStream
+        analyser.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+        routesPlaybackRef.current = true
 
         gainNode.gain.value = isMuted ? 0 : 1
 
@@ -181,28 +126,6 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     },
     [isMuted, playbackMode, shouldUseWebAudio]
   )
-
-  const refreshAudioSource = useCallback((audioElement: HTMLAudioElement | null) => {
-    const audioContext = audioContextRef.current
-    const analyser = analyserRef.current
-    if (!audioElement || !audioContext || !analyser || !usesCaptureStreamRef.current) return
-
-    const elementWithCaptureStream = audioElement as HTMLMediaElement & {
-      captureStream?: () => MediaStream
-    }
-    if (typeof elementWithCaptureStream.captureStream !== 'function') return
-
-    try {
-      const nextSource = audioContext.createMediaStreamSource(
-        elementWithCaptureStream.captureStream.call(elementWithCaptureStream)
-      )
-      nextSource.connect(analyser)
-      sourceRef.current?.disconnect()
-      sourceRef.current = nextSource
-    } catch (error) {
-      console.warn('切换歌曲后重新绑定频谱音轨失败:', error)
-    }
-  }, [])
 
   const teardownAudioContext = useCallback((): boolean => {
     const wasRoutingPlayback = routesPlaybackRef.current
@@ -231,51 +154,12 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     sourceRef.current = null
     gainNodeRef.current = null
     routesPlaybackRef.current = false
-    usesCaptureStreamRef.current = false
     setAnalyserNode(null)
 
     return wasRoutingPlayback
   }, [])
 
   const routesPlaybackThroughWebAudio = useCallback(() => routesPlaybackRef.current, [])
-
-  // 锁屏/切后台时挂起“仅用于分析”的 AudioContext，解锁后再恢复。
-  //
-  // 仅在 captureStream 路径（routesPlaybackRef.current === false）生效：此路径下
-  // 声音由 <audio> 元素直接输出，挂起 AudioContext 不会中断播放，但能在锁屏期间
-  // 释放 Web Audio 占用的音频会话，避免移动端系统在“中断→恢复”循环中把音频
-  // 切到降级（低/沉闷）的输出通道。
-  //
-  // createMediaElementSource 路径（routesPlaybackRef.current === true）下播放依赖
-  // AudioContext，此处绝不挂起，否则会直接静音。
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-
-    const handleVisibilityChange = () => {
-      const audioContext = audioContextRef.current
-      if (!audioContext || routesPlaybackRef.current) return
-
-      if (document.hidden) {
-        if (audioContext.state === 'running') {
-          audioContext.suspend().catch(err => {
-            console.warn('AudioContext suspend 失败:', err)
-          })
-        }
-        return
-      }
-
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().catch(err => {
-          console.warn('AudioContext resume 失败:', err)
-        })
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
 
   return {
     audioContextRef,
@@ -284,7 +168,6 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     gainNodeRef,
     analyserNode,
     initAudioContext,
-    refreshAudioSource,
     teardownAudioContext,
     routesPlaybackThroughWebAudio,
   }

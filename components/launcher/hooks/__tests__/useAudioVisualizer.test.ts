@@ -36,7 +36,7 @@ describe('useAudioVisualizer', () => {
     })
   })
 
-  it('falls back to MediaElementAudioSource when captureStream is unavailable', () => {
+  it('uses one MediaElementAudioSource that follows track changes', () => {
     const sourceConnect = vi.fn()
     const analyserConnect = vi.fn()
     const gainConnect = vi.fn()
@@ -72,16 +72,24 @@ describe('useAudioVisualizer', () => {
       value: MockAudioContext,
     })
 
-    const audioElement = document.createElement('audio')
+    const captureStream = vi.fn(() => ({}) as MediaStream)
+    const audioElement = document.createElement('audio') as HTMLAudioElement & {
+      captureStream: () => MediaStream
+    }
+    audioElement.captureStream = captureStream
     const { result } = renderHook(() =>
       useAudioVisualizer({ volume: 0.7, isMuted: false, playbackMode: 'auto' })
     )
 
     act(() => {
       result.current.initAudioContext(audioElement)
+      audioElement.src = 'https://example.com/next-track.mp3'
+      result.current.initAudioContext(audioElement)
     })
 
+    expect(captureStream).not.toHaveBeenCalled()
     expect(createMediaElementSource).toHaveBeenCalledWith(audioElement)
+    expect(createMediaElementSource).toHaveBeenCalledTimes(1)
     expect(createMediaStreamSource).not.toHaveBeenCalled()
     expect(sourceConnect).toHaveBeenCalledWith(analyserNode)
     expect(analyserConnect).toHaveBeenCalledWith(gainNode)
@@ -90,7 +98,7 @@ describe('useAudioVisualizer', () => {
     expect(result.current.analyserNode).toBe(analyserNode)
   })
 
-  it('skips Web Audio on iOS when captureStream is unavailable to preserve background playback', () => {
+  it('skips Web Audio in auto mode on iOS even when captureStream exists', () => {
     const createMediaElementSource = vi.fn()
 
     class MockAudioContext {
@@ -122,7 +130,11 @@ describe('useAudioVisualizer', () => {
       value: 5,
     })
 
-    const audioElement = document.createElement('audio')
+    const captureStream = vi.fn(() => ({}) as MediaStream)
+    const audioElement = document.createElement('audio') as HTMLAudioElement & {
+      captureStream: () => MediaStream
+    }
+    audioElement.captureStream = captureStream
     const { result } = renderHook(() =>
       useAudioVisualizer({ volume: 0.7, isMuted: false, playbackMode: 'auto' })
     )
@@ -131,6 +143,7 @@ describe('useAudioVisualizer', () => {
       result.current.initAudioContext(audioElement)
     })
 
+    expect(captureStream).not.toHaveBeenCalled()
     expect(createMediaElementSource).not.toHaveBeenCalled()
     expect(result.current.audioContextRef.current).toBeNull()
     expect(result.current.analyserNode).toBeNull()
@@ -198,60 +211,5 @@ describe('useAudioVisualizer', () => {
     expect(analyserConnect).toHaveBeenCalledWith(gainNode)
     expect(gainConnect).toHaveBeenCalledWith(destinationNode)
     expect(result.current.analyserNode).toBe(analyserNode)
-  })
-
-  it('rebinds a captureStream source after the audio track changes', () => {
-    const firstSource = { connect: vi.fn(), disconnect: vi.fn() }
-    const nextSource = { connect: vi.fn(), disconnect: vi.fn() }
-    const analyserNode = {
-      connect: vi.fn(),
-      fftSize: 0,
-      smoothingTimeConstant: 0,
-      frequencyBinCount: 32,
-      getByteFrequencyData: vi.fn(),
-    } as unknown as AnalyserNode
-    const createMediaStreamSource = vi
-      .fn()
-      .mockReturnValueOnce(firstSource)
-      .mockReturnValueOnce(nextSource)
-
-    class MockAudioContext {
-      public readonly state: AudioContextState = 'running'
-      public readonly destination = {} as AudioDestinationNode
-      public readonly createAnalyser = vi.fn(() => analyserNode)
-      public readonly createGain = vi.fn(() => ({ connect: vi.fn(), gain: { value: 1 } }))
-      public readonly createMediaElementSource = vi.fn()
-      public readonly createMediaStreamSource = createMediaStreamSource
-      public readonly resume = vi.fn(() => Promise.resolve())
-    }
-
-    Object.defineProperty(window, 'AudioContext', {
-      configurable: true,
-      writable: true,
-      value: MockAudioContext,
-    })
-
-    const firstStream = {} as MediaStream
-    const nextStream = {} as MediaStream
-    const captureStream = vi.fn().mockReturnValueOnce(firstStream).mockReturnValueOnce(nextStream)
-    const audioElement = document.createElement('audio') as HTMLAudioElement & {
-      captureStream: () => MediaStream
-    }
-    audioElement.captureStream = captureStream
-
-    const { result } = renderHook(() =>
-      useAudioVisualizer({ volume: 0.7, isMuted: false, playbackMode: 'auto' })
-    )
-
-    act(() => {
-      result.current.initAudioContext(audioElement)
-      result.current.refreshAudioSource(audioElement)
-    })
-
-    expect(createMediaStreamSource).toHaveBeenNthCalledWith(1, firstStream)
-    expect(createMediaStreamSource).toHaveBeenNthCalledWith(2, nextStream)
-    expect(nextSource.connect).toHaveBeenCalledWith(analyserNode)
-    expect(firstSource.disconnect).toHaveBeenCalled()
-    expect(result.current.sourceRef.current).toBe(nextSource)
   })
 })

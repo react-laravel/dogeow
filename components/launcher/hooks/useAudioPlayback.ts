@@ -338,7 +338,6 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       setCurrentTrack(availableTracks[nextIndex].path)
       setAudioError(null)
       setIsPlaying(true)
-      setupMediaSource()
     },
     [
       currentTrack,
@@ -347,7 +346,6 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
       setCurrentTrack,
       setAudioError,
       setIsPlaying,
-      setupMediaSource,
       getActiveAudio,
       handoffAudioRef,
     ]
