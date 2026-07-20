@@ -72,7 +72,29 @@ pm2 info dogeow-nextjs
 - 常见 ECS / 精简 Linux 镜像默认没有安装 `acl`
 - Deployer 默认优先尝试 ACL，缺少 `setfacl` 时会在 `deploy:writable` 失败
 
-### 3.4 首次部署准备
+### 3.4 Nginx 静态资源压缩
+
+Nginx 若直接从 `.next/static` 提供 JavaScript/CSS，Next.js 自带的压缩不会经过这些响应。请在 `next.dogeow.com` 的 `server` 块中引入仓库提供的配置：
+
+> 生产节点 `115.29.235.44` 已于 2026-07-19 将同等指令直接写入
+> `/etc/nginx/conf.d/next.dogeow.conf` 的 HTTP/HTTPS `server` 块，不要在该节点重复添加下面的 `include`。
+> 下面的方式用于新节点或尚未配置压缩的节点。
+
+```nginx
+include /var/www/dogeow/current/docs/nginx-compression.conf;
+```
+
+更新配置后检查并平滑重载：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+curl --compressed -I https://next.dogeow.com/_next/static/chunks/<chunk>.js
+```
+
+最后一个响应应包含 `Content-Encoding: gzip`。该服务器配置不由普通 `www-data` 部署任务自动写入，首次需由管理员添加一次；后续参数会随 `current` 软链更新。
+
+### 3.5 首次部署准备
 
 如果是从旧脚本迁移，部署根目录可以直接复用，不需要先删库重建。
 

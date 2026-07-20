@@ -6,7 +6,7 @@ import { Lock } from 'lucide-react'
 import type { Tile } from '@/app/types'
 import { useTranslation } from '@/hooks/useTranslation'
 import { PERFORMANCE } from '@/lib/constants'
-import { imageAsset } from '@/lib/helpers/assets'
+import { projectCoverAsset } from '@/lib/helpers/assets'
 import type { ProjectCoverMode } from '@/stores/projectCoverStore'
 
 interface IconLayoutProps {
@@ -18,12 +18,13 @@ interface IconLayoutProps {
 
 interface IconTileProps {
   tile: Tile
+  index: number
   projectCoverMode: ProjectCoverMode
   needsLogin: boolean
   onClick: () => void
 }
 
-const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTileProps) => {
+const IconTile = memo(({ tile, index, projectCoverMode, needsLogin, onClick }: IconTileProps) => {
   const { t } = useTranslation()
   const [imageError, setImageError] = useState(false)
 
@@ -58,7 +59,7 @@ const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTile
       type="button"
       onClick={onClick}
       className="app-surface app-surface-interactive group flex min-w-0 flex-col gap-2 p-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-      aria-label={needsLogin ? `打开 ${tileName}（需登录）` : `打开 ${tileName}`}
+      aria-label={tileName}
     >
       <div
         className={shellClassName}
@@ -67,12 +68,13 @@ const IconTile = memo(({ tile, projectCoverMode, needsLogin, onClick }: IconTile
         {showImagePattern && (
           <>
             <Image
-              src={imageAsset(`/images/projects/${coverImage}`)}
+              src={projectCoverAsset(coverImage)}
               alt={`${tileName} icon pattern`}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 20vw, 120px"
-              priority
+              loading={index < 3 ? 'eager' : 'lazy'}
+              fetchPriority={index < 3 ? 'high' : 'auto'}
               onError={handleImageError}
               quality={PERFORMANCE.IMAGE_QUALITY}
             />
@@ -111,13 +113,14 @@ IconTile.displayName = 'IconTile'
 export const IconLayout = memo(
   ({ tiles, projectCoverMode, getTileStatus, handleTileClick }: IconLayoutProps) => (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-      {tiles.map(tile => {
+      {tiles.map((tile, index) => {
         const tileStatus = getTileStatus(tile)
 
         return (
           <IconTile
             key={tile.name}
             tile={tile}
+            index={index}
             projectCoverMode={projectCoverMode}
             needsLogin={tileStatus.needsLogin}
             onClick={() => handleTileClick(tile)}

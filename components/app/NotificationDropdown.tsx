@@ -218,6 +218,7 @@ export function NotificationDropdown() {
   }
 
   const count = data?.count ?? 0
+  const renderedCount = count > 99 ? '99+' : String(count)
   const showPushControl = isAuthenticated && pushPermission !== 'unsupported'
   const pushIsLoading = pushStatus === 'loading'
   const pushLabel = getPushControlLabel(pushPermission, hasPushSubscription, pushIsLoading)
@@ -227,12 +228,12 @@ export function NotificationDropdown() {
       <button
         onClick={handleToggleOpen}
         className="hover:bg-accent/70 relative flex size-10 items-center justify-center rounded-xl transition-colors"
-        aria-label="通知"
+        aria-label={count > 0 ? `通知，${renderedCount} 条未读` : '通知'}
       >
         <Bell className="h-4 w-4" />
         {count > 0 && (
           <span className="bg-destructive text-white absolute -top-px -right-px flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] font-medium leading-none">
-            {count > 99 ? '99+' : count}
+            {renderedCount}
           </span>
         )}
       </button>

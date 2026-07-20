@@ -2,12 +2,9 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef, startTransition } from 'react'
 import dynamic from 'next/dynamic'
-import { MusicPlayer } from './MusicPlayer'
-import { SettingsPanel, CustomBackground } from './SettingsPanel'
+import type { CustomBackground } from './SettingsPanel'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { AuthPanel, AuthDialog } from '@/components/launcher/AuthPanel'
 import useAuthStore from '@/stores/authStore'
-import { SearchDialog } from '@/components/search/SearchDialog'
 import { useAudioManager } from '@/hooks/useAudioManager'
 import { useSearchManager } from '@/hooks/useSearchManager'
 import { useBackgroundManager } from '@/hooks/useBackgroundManager'
@@ -18,14 +15,34 @@ import { useMusicStore, type PlayMode } from '@/stores/musicStore'
 import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
 import { useMediaKeys } from './hooks/useMediaKeys'
 import { useMediaSession } from './hooks/useMediaSession'
-import { AudioVisualizer } from './music/visualizer'
-import { FullscreenVisualizer } from './music/FullscreenVisualizer'
-import { SettingsDialog } from './settings/SettingsDialog'
 import { useTrackLyrics } from './music/useTrackLyrics'
 import { LogoButton } from './common/LogoButton'
 
 const AiDialog = dynamic(
   () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
+  { ssr: false }
+)
+const AuthDialog = dynamic(
+  () => import('@/components/launcher/AuthPanel').then(mod => mod.AuthDialog),
+  { ssr: false }
+)
+const SearchDialog = dynamic(
+  () => import('@/components/search/SearchDialog').then(mod => mod.SearchDialog),
+  { ssr: false }
+)
+const SettingsDialog = dynamic(
+  () => import('./settings/SettingsDialog').then(mod => mod.SettingsDialog),
+  { ssr: false }
+)
+const MusicPlayer = dynamic(() => import('./MusicPlayer').then(mod => mod.MusicPlayer), {
+  ssr: false,
+})
+const AudioVisualizer = dynamic(
+  () => import('./music/visualizer').then(mod => mod.AudioVisualizer),
+  { ssr: false }
+)
+const FullscreenVisualizer = dynamic(
+  () => import('./music/FullscreenVisualizer').then(mod => mod.FullscreenVisualizer),
   { ssr: false }
 )
 
@@ -341,16 +358,6 @@ export function AppLauncher({
           onOpenFullscreen: () => setIsFullscreenViz(true),
         },
       },
-      settings: {
-        component: SettingsPanel,
-        props: {
-          toggleDisplayMode,
-          backgroundImage,
-          setBackgroundImage,
-          customBackgrounds,
-          setCustomBackgrounds,
-        },
-      },
     }),
     [
       isPlaying,
@@ -380,9 +387,6 @@ export function AppLauncher({
       toggleDisplayMode,
       setPlayMode,
       markUserInteracted,
-      backgroundImage,
-      setBackgroundImage,
-      customBackgrounds,
       audioManager.analyserNode,
     ]
   )
@@ -425,24 +429,32 @@ export function AppLauncher({
 
   return (
     <>
-      <AiDialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen} />
-      <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} />
-      <SearchDialog
-        open={searchManager.isSearchDialogOpen}
-        onOpenChange={searchManager.setIsSearchDialogOpen}
-        initialSearchTerm={searchManager.searchTerm}
-        currentRoute={!searchManager.isHomePage ? pathname : undefined}
-      />
+      {!onOpenAi && isAiDialogOpen && (
+        <AiDialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen} />
+      )}
+      {isAuthDialogOpen && (
+        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} />
+      )}
+      {searchManager.isSearchDialogOpen && (
+        <SearchDialog
+          open={searchManager.isSearchDialogOpen}
+          onOpenChange={searchManager.setIsSearchDialogOpen}
+          initialSearchTerm={searchManager.searchTerm}
+          currentRoute={!searchManager.isHomePage ? pathname : undefined}
+        />
+      )}
 
       {/* 设置对话框 */}
-      <SettingsDialog
-        open={isSettingsDialogOpen}
-        onOpenChange={setIsSettingsDialogOpen}
-        backgroundImage={backgroundImage}
-        setBackgroundImage={setBackgroundImage}
-        customBackgrounds={customBackgrounds}
-        setCustomBackgrounds={setCustomBackgrounds}
-      />
+      {isSettingsDialogOpen && (
+        <SettingsDialog
+          open={isSettingsDialogOpen}
+          onOpenChange={setIsSettingsDialogOpen}
+          backgroundImage={backgroundImage}
+          setBackgroundImage={setBackgroundImage}
+          customBackgrounds={customBackgrounds}
+          setCustomBackgrounds={setCustomBackgrounds}
+        />
+      )}
 
       {/* 全屏音频可视化 */}
       {isFullscreenViz && (

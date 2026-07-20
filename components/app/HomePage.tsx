@@ -27,6 +27,9 @@ const Footer = dynamic(() => import('@/components/app/Footer'), {
 
 const HOME_TILES_GAP = 'gap-4'
 const HOME_SECTION_SPACING = 'space-y-6'
+const getInitialTileStatus = (tile: { needLogin?: boolean }) => ({
+  needsLogin: Boolean(tile.needLogin),
+})
 
 function useHydrated() {
   return useSyncExternalStore(
@@ -36,38 +39,12 @@ function useHydrated() {
   )
 }
 
-function MagazineSkeleton() {
-  return (
-    <div className="animate-pulse space-y-4">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="bg-card/70 rounded-xl border border-white/10 p-4">
-          <div className="bg-white/20 h-6 w-3/4 rounded mb-3" />
-          <div className="bg-white/10 h-4 w-full rounded mb-2" />
-          <div className="bg-white/10 h-4 w-2/3 rounded" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function IconSkeleton({ count }: { count: number }) {
-  return (
-    <div className="grid animate-pulse grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="app-surface flex flex-col gap-2 p-2">
-          <div className="bg-muted/70 aspect-square w-full rounded-xl" />
-          <div className="bg-muted/70 mx-auto h-4 w-2/3 rounded" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function HomePage() {
   const { tiles, projectCoverMode, handleTileClick, getTileStatus } = useTileManagement()
   const { siteLayout } = useLayoutStore()
   const { t } = useTranslation()
   const isHydrated = useHydrated()
+  const hydratedProjectCoverMode = isHydrated ? projectCoverMode : 'image'
 
   const layoutType = useMemo(() => {
     if (siteLayout === 'icon') return 'icon'
@@ -92,13 +69,12 @@ export function HomePage() {
 
         <section aria-label={t('home.section_tiles', '应用入口')}>
           {!isHydrated ? (
-            layoutType === 'magazine' ? (
-              <MagazineSkeleton />
-            ) : layoutType === 'icon' ? (
-              <IconSkeleton count={tiles.length} />
-            ) : (
-              <HomeTilesSkeleton />
-            )
+            <IconLayout
+              tiles={tiles}
+              projectCoverMode={hydratedProjectCoverMode}
+              getTileStatus={getInitialTileStatus}
+              handleTileClick={handleTileClick}
+            />
           ) : layoutType === 'magazine' ? (
             <MagazineLayout
               tiles={tiles}

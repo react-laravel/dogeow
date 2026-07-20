@@ -23,3 +23,16 @@ export function asset(path: string): string {
 export function imageAsset(path: string): string {
   return asset(path.startsWith('/images/') ? path : `/images/${path.replace(/^\/+/, '')}`)
 }
+
+/**
+ * Resolve a project cover while allowing an explicitly root-relative path to
+ * stay on the application origin. This is useful for assets that have not
+ * been mirrored to NEXT_PUBLIC_ASSET_BASE_URL.
+ */
+export function projectCoverAsset(path: string): string {
+  if (path.startsWith('/') || REMOTE_PROTOCOL_RE.test(path)) {
+    return path
+  }
+
+  return imageAsset(`/images/projects/${path}`)
+}

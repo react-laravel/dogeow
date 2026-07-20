@@ -32,7 +32,7 @@ export function RouteAwareAiLauncher() {
 
   return (
     <>
-      <AiDialog open={isAiOpen} onOpenChange={handleOpenChange} />
+      {isAiOpen && <AiDialog open={isAiOpen} onOpenChange={handleOpenChange} />}
       <LazyAppLauncher
         onOpenAi={() => handleOpenChange(!isAiOpen)}
         isAiOpen={isAiOpen}

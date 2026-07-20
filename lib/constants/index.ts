@@ -4,7 +4,7 @@ export const APP_DESCRIPTION = 'DogeOW是一个集学习、生活、工作于一
 
 // 性能相关常量
 export const PERFORMANCE = {
-  IMAGE_QUALITY: 85,
+  IMAGE_QUALITY: 75,
   LOADING_DEBOUNCE: 300,
   SCROLL_THROTTLE: 100,
   SEARCH_DEBOUNCE: 500,

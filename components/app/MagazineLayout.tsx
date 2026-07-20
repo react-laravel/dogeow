@@ -6,7 +6,7 @@ import { Lock } from 'lucide-react'
 import type { Tile } from '@/app/types'
 import { useTranslation } from '@/hooks/useTranslation'
 import { PERFORMANCE } from '@/lib/constants'
-import { imageAsset } from '@/lib/helpers/assets'
+import { projectCoverAsset } from '@/lib/helpers/assets'
 import type { ProjectCoverMode } from '@/stores/projectCoverStore'
 
 interface MagazineTileCardProps {
@@ -55,12 +55,12 @@ const HeroCard = memo(
           backgroundColor: usesDecoratedCover ? tile.color : 'hsl(var(--card))',
           minHeight: '200px',
         }}
-        aria-label={needsLogin ? `打开 ${tileName}（需登录）` : `打开 ${tileName}`}
+        aria-label={tileName}
       >
         {/* 背景图 */}
         {hasBackground && (
           <Image
-            src={imageAsset(`/images/projects/${coverImage}`)}
+            src={projectCoverAsset(coverImage!)}
             alt={`${tileName} background`}
             fill
             className={`object-cover transition-opacity duration-300 ${
@@ -151,11 +151,11 @@ const ListCard = memo(
             : 'bg-card/70 border-border backdrop-blur-[1px] hover:bg-accent/80'
         }`}
         style={showPreview && !showImagePreview ? { backgroundColor: tile.color } : undefined}
-        aria-label={needsLogin ? `打开 ${tileName}（需登录）` : `打开 ${tileName}`}
+        aria-label={tileName}
       >
         {showPreview && showImagePreview && (
           <Image
-            src={imageAsset(`/images/projects/${coverImage}`)}
+            src={projectCoverAsset(coverImage!)}
             alt={tileName}
             fill
             className="object-cover"

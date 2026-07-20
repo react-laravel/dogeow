@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { asset, imageAsset } from '../assets'
+import { asset, imageAsset, projectCoverAsset } from '../assets'
 
 describe('assets', () => {
   const originalEnv = process.env.NEXT_PUBLIC_ASSET_BASE_URL
@@ -75,6 +75,18 @@ describe('assets', () => {
     it('should combine with base URL', () => {
       process.env.NEXT_PUBLIC_ASSET_BASE_URL = 'https://cdn.example.com'
       expect(imageAsset('photo.jpg')).toBe('https://cdn.example.com/images/photo.jpg')
+    })
+  })
+
+  describe('projectCoverAsset', () => {
+    it('uses the configured asset host for ordinary cover filenames', () => {
+      process.env.NEXT_PUBLIC_ASSET_BASE_URL = 'https://cdn.example.com'
+      expect(projectCoverAsset('book.png')).toBe('https://cdn.example.com/images/projects/book.png')
+    })
+
+    it('keeps an explicitly local cover on the application origin', () => {
+      process.env.NEXT_PUBLIC_ASSET_BASE_URL = 'https://cdn.example.com'
+      expect(projectCoverAsset('/images/projects/book.png')).toBe('/images/projects/book.png')
     })
   })
 })

@@ -42,5 +42,9 @@ describe('extracted game redirects', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('location')).toBeNull()
+    expect(response.headers.get('cache-control')).toBe(
+      'private, no-cache, max-age=0, must-revalidate'
+    )
+    expect(response.headers.get('cache-control')).not.toContain('no-store')
   })
 })

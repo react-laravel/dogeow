@@ -52,6 +52,7 @@ const CustomCursorSync = dynamic(
 
 const IDLE_TIMEOUT_MS = 1500
 const FALLBACK_DELAY_MS = 400
+const INTERACTION_EVENTS = ['pointerdown', 'keydown', 'touchstart'] as const
 
 type IdleCallbackWindow = Window &
   typeof globalThis & {
@@ -81,6 +82,20 @@ function scheduleRuntimeBootstrap(callback: () => void): () => void {
  */
 export function DeferredRuntimeClients() {
   const [isBootstrapped, setIsBootstrapped] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
+
+  useEffect(() => {
+    if (hasInteracted) return
+
+    const handleInteraction = () => setHasInteracted(true)
+    INTERACTION_EVENTS.forEach(event => {
+      window.addEventListener(event, handleInteraction, { once: true, passive: true })
+    })
+
+    return () => {
+      INTERACTION_EVENTS.forEach(event => window.removeEventListener(event, handleInteraction))
+    }
+  }, [hasInteracted])
 
   useEffect(() => {
     const cancel = scheduleRuntimeBootstrap(() => setIsBootstrapped(true))
@@ -99,7 +114,7 @@ export function DeferredRuntimeClients() {
       <PushSubscriptionRegister />
       <PushNotificationPrompt />
       <UnreadNotificationFetcher />
-      <NotificationRealtimeSubscriber />
+      {hasInteracted && <NotificationRealtimeSubscriber />}
       <CustomCursorSync />
     </>
   )

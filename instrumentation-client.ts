@@ -7,9 +7,6 @@ import * as Sentry from '@sentry/nextjs'
 Sentry.init({
   dsn: 'https://e02c0936d80a80d0d2b7fd54c7eec393@o394812.ingest.us.sentry.io/4511641981091840',
 
-  // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
-
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
   // Enable logs to be sent to Sentry
@@ -27,5 +24,35 @@ Sentry.init({
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
 })
+
+let replayLoadPromise: Promise<void> | null = null
+
+function loadReplayAfterInteraction() {
+  replayLoadPromise ??= import('@sentry/replay')
+    .then(({ replayIntegration }) => {
+      Sentry.addIntegration(replayIntegration())
+    })
+    .catch(() => {
+      // Error reporting remains active even when the optional replay bundle cannot load.
+    })
+}
+
+if (typeof window !== 'undefined') {
+  const interactionEvents = ['pointerdown', 'keydown', 'touchstart'] as const
+  const scheduleReplay = () => {
+    interactionEvents.forEach(event => window.removeEventListener(event, scheduleReplay))
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(loadReplayAfterInteraction, { timeout: 5000 })
+      return
+    }
+
+    setTimeout(loadReplayAfterInteraction, 1000)
+  }
+
+  interactionEvents.forEach(event => {
+    window.addEventListener(event, scheduleReplay, { once: true, passive: true })
+  })
+}
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart

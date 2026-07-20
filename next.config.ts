@@ -68,17 +68,6 @@ const nextConfig: NextConfig = {
         source: '/manifest.webmanifest',
         headers: NO_STORE_HEADERS,
       },
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'header',
-            key: 'accept',
-            value: '.*text/html.*',
-          },
-        ],
-        headers: NO_STORE_HEADERS,
-      },
     ]
   },
   // 将 Next 默认的 module polyfills 缩减到仅保留当前目标浏览器仍缺失的 URL.canParse。
@@ -170,6 +159,12 @@ export default withSentryConfig(nextConfig, {
   org: 'none-v49',
 
   project: 'dogeow',
+
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+  },
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,

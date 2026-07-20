@@ -332,7 +332,12 @@ export function createEchoInstance(): Echo<'reverb'> | null {
           })
 
           pusherConnector.pusher.connection.bind('error', (error: unknown) => {
-            console.error('🔥 Echo: 连接错误:', error)
+            // The connection monitor already records and retries this transient state.
+            // Keep it out of console.error so expected network recovery is not reported
+            // as an uncaught browser error.
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('🔥 Echo: 连接错误，正在重试:', error)
+            }
           })
 
           pusherConnector.pusher.connection.bind('unavailable', (error: unknown) => {

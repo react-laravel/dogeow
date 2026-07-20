@@ -29,7 +29,7 @@ describe('constants', () => {
 
   describe('PERFORMANCE', () => {
     it('should have IMAGE_QUALITY', () => {
-      expect(PERFORMANCE.IMAGE_QUALITY).toBe(85)
+      expect(PERFORMANCE.IMAGE_QUALITY).toBe(75)
     })
 
     it('should have LOADING_DEBOUNCE', () => {

@@ -4,7 +4,7 @@ import { Lock } from 'lucide-react'
 import type { Tile } from '@/app/types'
 import { useTranslation } from '@/hooks/useTranslation'
 import { PERFORMANCE } from '@/lib/constants'
-import { imageAsset } from '@/lib/helpers/assets'
+import { imageAsset, projectCoverAsset } from '@/lib/helpers/assets'
 import type { ProjectCoverMode } from '@/stores/projectCoverStore'
 
 // 常量定义：与 MagazineLayout 列表卡统一圆角与焦点样式
@@ -97,7 +97,7 @@ const TileIcon = memo(
 TileIcon.displayName = 'TileIcon'
 
 export const TileCard = memo(
-  ({ tile, customStyles = '', projectCoverMode, needsLogin, onClick }: TileCardProps) => {
+  ({ tile, index, customStyles = '', projectCoverMode, needsLogin, onClick }: TileCardProps) => {
     const { t } = useTranslation()
     const [imageError, setImageError] = useState(false)
     const [imageLoaded, setImageLoaded] = useState(false)
@@ -143,18 +143,13 @@ export const TileCard = memo(
     }, [needsLogin, tile.color, usesDecoratedCover])
 
     const showSkeleton = hasBackgroundImage && !imageLoaded
-    const ariaLabel = useMemo(
-      () => (needsLogin ? `打开 ${tileName}（需登录）` : `打开 ${tileName}`),
-      [needsLogin, tileName]
-    )
-
     return (
       <button
         type="button"
         className={className}
         style={dynamicStyles}
         onClick={onClick}
-        aria-label={ariaLabel}
+        aria-label={tileName}
       >
         {!usesDecoratedCover && !showSkeleton && (
           <>
@@ -167,14 +162,15 @@ export const TileCard = memo(
         {hasBackgroundImage && (
           <>
             <Image
-              src={imageAsset(`/images/projects/${coverImage}`)}
+              src={projectCoverAsset(coverImage!)}
               alt={`${tileName} background`}
               fill
               className={`tile-image z-[1] object-cover transition-opacity duration-300 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               sizes={getImageSizes(gridArea)}
-              priority
+              loading={index < 3 ? 'eager' : 'lazy'}
+              fetchPriority={index < 3 ? 'high' : 'auto'}
               onError={handleImageError}
               onLoad={handleImageLoad}
               quality={PERFORMANCE.IMAGE_QUALITY}

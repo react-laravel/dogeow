@@ -20,6 +20,8 @@ export const LogoButton = memo(({ onClick, className = 'size-10 sm:size-11' }: L
         alt="DogeOW"
         width={40}
         height={40}
+        loading="eager"
+        fetchPriority="high"
         className="h-[88%] w-[88%] object-contain"
       />
     </button>
