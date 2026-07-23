@@ -25,7 +25,8 @@ function mockFetch(validToken: boolean, isAdmin = false, userId = 2) {
     return {
       ok: true,
       status: 200,
-      json: async () => ({ user: { id: userId, is_admin: isAdmin } }),
+      // Match the real Laravel ApiResponse::success($user) envelope.
+      json: async () => ({ data: { id: userId, is_admin: isAdmin } }),
     } as Response
   })
 }

@@ -73,8 +73,9 @@ async function validateRequestWithBackend({
     }
 
     const data = await response.json()
-    // Handle both { user: {...} } and direct user object formats
-    const user = data.user || data
+    // Laravel's AuthController returns ApiResponse::success($user), whose
+    // production shape is { data: {...} }. Keep the older shapes compatible.
+    const user = data.user || data.data?.user || data.data || data
     return { id: Number(user?.id), is_admin: Boolean(user?.is_admin) }
   } catch {
     // Network errors or timeout - fail closed (deny access) for security
