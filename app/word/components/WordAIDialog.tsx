@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { getWordAIRequestConfig } from '../utils/aiRequest'
 import { cn } from '@/lib/helpers'
+import { SimpleMarkdown } from '@/app/ai/features/chat/components/SimpleMarkdown'
 
 interface WordAIDialogProps {
   word: Word
@@ -203,13 +204,20 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
                 >
                   <div
                     className={cn(
-                      'group relative max-w-[88%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap',
+                      'group relative max-w-[88%] rounded-2xl px-4 py-3 text-sm',
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        ? 'bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap'
                         : 'bg-muted rounded-bl-md pr-10'
                     )}
                   >
-                    {message.content || (isLoading ? '正在思考…' : '')}
+                    {message.role === 'assistant' && message.content ? (
+                      <SimpleMarkdown
+                        content={message.content}
+                        className="prose-p:my-1 prose-pre:overflow-x-auto prose-code:break-words"
+                      />
+                    ) : (
+                      message.content || (isLoading ? '正在思考…' : '')
+                    )}
                     {message.role === 'assistant' && message.content ? (
                       <Button
                         type="button"

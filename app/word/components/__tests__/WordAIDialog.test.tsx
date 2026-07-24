@@ -14,7 +14,7 @@ describe('WordAIDialog', () => {
     vi.clearAllMocks()
     localStorage.clear()
     fetchMocks.authenticatedInternalFetch.mockResolvedValue(
-      new Response('0:"fabricate 更强调编造或制造。"\n', { status: 200 })
+      new Response('0:"**fabricate** 更强调：\\n\\n- 编造\\n- 制造"\n', { status: 200 })
     )
   })
 
@@ -71,6 +71,8 @@ describe('WordAIDialog', () => {
     })
     expect(body.command).toContain('当前单词：fabricate')
     expect(body.command).toContain('当前释义：v. 制造；编造')
-    expect(await screen.findByText('fabricate 更强调编造或制造。')).toBeInTheDocument()
+    expect(await screen.findByText('fabricate', { selector: 'strong' })).toBeInTheDocument()
+    expect(screen.getByText('编造', { selector: 'li' })).toBeInTheDocument()
+    expect(screen.getByText('制造', { selector: 'li' })).toBeInTheDocument()
   })
 })
