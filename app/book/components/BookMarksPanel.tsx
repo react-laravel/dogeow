@@ -1,6 +1,6 @@
 'use client'
 
-import { Eye, Star, Trash2 } from 'lucide-react'
+import { Bookmark, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -36,7 +36,7 @@ const panelConfig = {
     description: '点击条目可跳转到对应阅读位置',
     emptyText: '选中文字后点「展示」可保存位置。',
     addCurrentLabel: '记录当前位置',
-    icon: Eye,
+    icon: Bookmark,
   },
   collection: {
     title: '收藏',

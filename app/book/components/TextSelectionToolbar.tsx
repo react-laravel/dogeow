@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Bot, Eye, Play, Star, type LucideIcon } from 'lucide-react'
+import { Bot, Bookmark, Play, Star, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/helpers'
 
@@ -148,7 +148,7 @@ export function TextSelectionToolbar({
         ) : null}
         <ToolbarButton
           label="展示"
-          icon={Eye}
+          icon={Bookmark}
           onClick={() => {
             onAddBookmark(selection)
             hide()

@@ -11,6 +11,8 @@ import {
   getBookReaderStorageKey,
   VOLUME_BOOK_DEFAULTS,
 } from '@/app/book/utils/registry'
+import { NarrationHighlightedText } from '@/app/book/components/NarrationHighlightedText'
+import { cn } from '@/lib/helpers'
 
 interface Volume {
   name: string
@@ -164,7 +166,20 @@ export function VolumeBookReader({
   )
 
   const renderContent = useCallback(
-    ({ themeColor }: { themeColor?: string }) => (
+    ({
+      themeColor,
+      activePairIndex = null,
+      activeHighlight = null,
+    }: {
+      themeColor?: string
+      activePairIndex?: number | null
+      activeHighlight?: {
+        pairIndex: number
+        role: 'original' | 'translation'
+        start: number
+        end: number
+      } | null
+    }) => (
       <>
         {!chapterContent && <p className="text-sm opacity-70">正在加载章节…</p>}
 
@@ -181,15 +196,27 @@ export function VolumeBookReader({
               )}
             </header>
             <div style={{ color: themeColor }}>
-              {contentParagraphs.map((paragraph, index) => (
-                <p
-                  key={index}
-                  data-pair-index={index}
-                  className="mb-4 whitespace-pre-wrap last:mb-0"
-                >
-                  {paragraph}
-                </p>
-              ))}
+              {contentParagraphs.map((paragraph, index) => {
+                const isNarrating = activePairIndex === index
+                const highlight =
+                  activeHighlight?.pairIndex === index && activeHighlight.role === 'original'
+                    ? activeHighlight
+                    : null
+
+                return (
+                  <p
+                    key={index}
+                    data-pair-index={index}
+                    className={cn(
+                      'mb-4 whitespace-pre-wrap last:mb-0',
+                      isNarrating &&
+                        'rounded-md bg-current/5 px-2 py-1 ring-1 ring-current/15 transition-colors'
+                    )}
+                  >
+                    <NarrationHighlightedText text={paragraph} highlight={highlight} />
+                  </p>
+                )
+              })}
             </div>
           </>
         )}

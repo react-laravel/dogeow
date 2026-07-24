@@ -1,11 +1,11 @@
 'use client'
 
-import { Eye, Pause, Play, Settings2, Square, Star } from 'lucide-react'
+import { Bookmark, Pause, Play, Settings2, Square, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GroupedChapterPicker } from '@/app/book/components/GroupedChapterPicker'
 import type { BookNarrationMode, BookNarrationStatus } from '@/app/book/types/narration'
 import type { BookTheme } from '@/app/book/types/reader'
-import { getBookToolbarTheme } from '@/app/book/utils/theme'
+import { getBookOverlayCssVars, getBookToolbarTheme } from '@/app/book/utils/theme'
 import {
   Select,
   SelectContent,
@@ -74,6 +74,11 @@ export function ReaderToolbar({
     ? chapterGroups.flatMap(group => group.chapters).find(ch => ch.id === currentChapterId)?.title
     : chapters.find(ch => ch.id === currentChapterId)?.title
 
+  const overlayStyle = toolbarTheme ? getBookOverlayCssVars(toolbarTheme) : undefined
+  const overlayClass = toolbarTheme
+    ? 'border bg-transparent shadow-lg backdrop-blur-none [&_[data-slot=select-item]]:focus:!bg-[var(--book-accent)] [&_[data-slot=select-item]]:focus:!text-inherit'
+    : undefined
+
   const chapterPicker = chapterGroups?.length ? (
     <GroupedChapterPicker
       chapterGroups={chapterGroups}
@@ -81,6 +86,7 @@ export function ReaderToolbar({
       selectedTitle={selectedChapterTitle}
       placeholder={chapterSelectPlaceholder}
       controlClass={controlClass}
+      toolbarTheme={toolbarTheme}
       onChapterChange={onChapterChange}
     />
   ) : (
@@ -94,7 +100,8 @@ export function ReaderToolbar({
       <SelectContent
         side="top"
         sideOffset={8}
-        className="max-h-[min(80dvh,36rem)] min-w-[var(--radix-select-trigger-width)]"
+        className={`max-h-[min(80dvh,36rem)] min-w-[var(--radix-select-trigger-width)] ${overlayClass ?? ''}`}
+        style={overlayStyle}
       >
         {chapters.map(ch => (
           <SelectItem key={ch.id} value={ch.id}>
@@ -162,7 +169,7 @@ export function ReaderToolbar({
                 >
                   <SelectValue placeholder="朗读" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={overlayClass} style={overlayStyle}>
                   <SelectItem value="original">原文</SelectItem>
                   <SelectItem value="translation">译文</SelectItem>
                   <SelectItem value="both">全部</SelectItem>
@@ -223,7 +230,7 @@ export function ReaderToolbar({
             onClick={onOpenBookmarks}
             aria-label="打开展示列表"
           >
-            <Eye className="h-4 w-4" />
+            <Bookmark className="h-4 w-4" />
             <span className="hidden sm:inline">展示</span>
             {bookmarkCount > 0 ? (
               <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]">

@@ -297,7 +297,13 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
             color: themeStyle?.color,
           }}
         >
-          {renderContent({ contentRef, settings, themeColor: themeStyle?.color })}
+          {renderContent({
+            contentRef,
+            settings,
+            themeColor: themeStyle?.color,
+            activePairIndex: narration.activePairIndex,
+            activeHighlight: narration.activeHighlight,
+          })}
         </article>
 
         {hasTextSelection ? (

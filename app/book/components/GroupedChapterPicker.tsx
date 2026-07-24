@@ -5,6 +5,8 @@ import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucid
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/helpers'
+import type { BookToolbarTheme } from '@/app/book/utils/theme'
+import { getBookOverlayCssVars } from '@/app/book/utils/theme'
 
 export interface ChapterGroup {
   label: string
@@ -17,6 +19,7 @@ interface GroupedChapterPickerProps {
   selectedTitle?: string
   placeholder?: string
   controlClass?: string
+  toolbarTheme?: BookToolbarTheme | null
   onChapterChange: (chapterId: string) => void
 }
 
@@ -35,6 +38,7 @@ export function GroupedChapterPicker({
   selectedTitle,
   placeholder = '选择篇目',
   controlClass,
+  toolbarTheme,
   onChapterChange,
 }: GroupedChapterPickerProps) {
   const [open, setOpen] = useState(false)
@@ -94,6 +98,13 @@ export function GroupedChapterPicker({
     }
   }
 
+  const themed = Boolean(toolbarTheme)
+  const itemHoverClass = themed ? 'hover:bg-[var(--book-hover)]' : 'hover:bg-accent'
+  const selectedClass = themed ? 'bg-[var(--book-accent)] font-medium' : 'bg-accent font-medium'
+  const volumeCollapsedClass = themed ? 'bg-[var(--book-hover)]' : 'bg-accent/40'
+  const mutedClass = themed ? 'text-[color:var(--book-muted)]' : 'text-muted-foreground'
+  const borderClass = themed ? 'border-[color:var(--book-muted)]/25' : 'border-border/60'
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -116,15 +127,24 @@ export function GroupedChapterPicker({
         side="top"
         sideOffset={8}
         align="center"
-        className="flex max-h-[min(80dvh,36rem)] w-[min(calc(100vw-1.5rem),28rem)] flex-col gap-0 overflow-hidden p-0"
+        className={cn(
+          'flex max-h-[min(80dvh,36rem)] w-[min(calc(100vw-1.5rem),28rem)] flex-col gap-0 overflow-hidden p-0',
+          themed && 'border bg-transparent shadow-lg backdrop-blur-none'
+        )}
+        style={toolbarTheme ? getBookOverlayCssVars(toolbarTheme) : undefined}
       >
-        <div className="border-border/60 flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
-          <span className="text-muted-foreground shrink-0 text-sm whitespace-nowrap">按卷浏览</span>
+        <div
+          className={cn(
+            'flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2',
+            borderClass
+          )}
+        >
+          <span className={cn('shrink-0 text-sm whitespace-nowrap', mutedClass)}>按卷浏览</span>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className={cn('h-8 w-8 shrink-0', themed && 'hover:bg-[var(--book-hover)]')}
             onClick={toggleAllVolumes}
             aria-label={allExpanded ? '全部收起' : '全部展开'}
           >
@@ -146,8 +166,9 @@ export function GroupedChapterPicker({
                 <button
                   type="button"
                   className={cn(
-                    'hover:bg-accent flex w-full items-center gap-2 rounded-md px-2.5 py-2.5 text-left text-sm font-medium',
-                    containsCurrent && !expanded && 'bg-accent/40'
+                    'flex w-full items-center gap-2 rounded-md px-2.5 py-2.5 text-left text-sm font-medium',
+                    itemHoverClass,
+                    containsCurrent && !expanded && volumeCollapsedClass
                   )}
                   onClick={() => toggleVolume(group.label)}
                   aria-expanded={expanded}
@@ -158,7 +179,7 @@ export function GroupedChapterPicker({
                     <ChevronRight className="size-4 shrink-0 opacity-60" />
                   )}
                   <span className="flex-1 truncate">{group.label}</span>
-                  <span className="text-muted-foreground text-xs tabular-nums" aria-hidden>
+                  <span className={cn('text-xs tabular-nums', mutedClass)} aria-hidden>
                     {group.chapters.length}
                   </span>
                 </button>
@@ -172,8 +193,9 @@ export function GroupedChapterPicker({
                           <button
                             type="button"
                             className={cn(
-                              'hover:bg-accent flex w-full rounded-md px-2.5 py-2 text-left text-sm',
-                              selected && 'bg-accent font-medium'
+                              'flex w-full rounded-md px-2.5 py-2 text-left text-sm',
+                              itemHoverClass,
+                              selected && selectedClass
                             )}
                             onClick={() => handleSelectChapter(ch.id)}
                             aria-current={selected ? 'true' : undefined}

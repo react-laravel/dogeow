@@ -45,7 +45,7 @@ export default function BookPage() {
               key={book.id}
               type="button"
               onClick={() => router.push(book.href)}
-              className="group flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-5 text-left backdrop-blur-sm transition-all hover:scale-[0.98] hover:border-white/20 hover:bg-white/10 active:scale-[0.97] dark:bg-neutral-950/50"
+              className="group border-border/60 bg-card hover:border-border hover:bg-accent/40 flex flex-col items-start gap-3 rounded-xl border p-5 text-left transition-all hover:scale-[0.98] active:scale-[0.97]"
             >
               <div
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl"

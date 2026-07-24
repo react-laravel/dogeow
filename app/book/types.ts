@@ -85,5 +85,12 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
     contentRef: RefObject<HTMLDivElement | null>
     settings: Settings
     themeColor?: string
+    activePairIndex?: number | null
+    activeHighlight?: {
+      pairIndex: number
+      role: 'original' | 'translation'
+      start: number
+      end: number
+    } | null
   }) => ReactNode
 }

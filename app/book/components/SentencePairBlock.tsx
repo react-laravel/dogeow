@@ -10,6 +10,7 @@ import type {
 } from '@/app/book/types/reader'
 import { getBookFontFamily } from '@/app/book/utils/theme'
 import { getPairLinePresentation } from '@/app/book/utils/pairDisplay'
+import { NarrationHighlightedText } from '@/app/book/components/NarrationHighlightedText'
 import { cn } from '@/lib/helpers'
 import type { BookNarrationHighlight } from '@/app/book/hooks/useBookNarration'
 
@@ -23,30 +24,6 @@ interface SentencePairBlockProps {
   translationFontFamily: ReaderFont
   isNarrating?: boolean
   narrationHighlight?: BookNarrationHighlight | null
-}
-
-function HighlightedText({
-  text,
-  highlight,
-}: {
-  text: string
-  highlight?: Pick<BookNarrationHighlight, 'start' | 'end'> | null
-}) {
-  if (!highlight || highlight.start < 0 || highlight.end <= highlight.start) return <>{text}</>
-
-  const start = Math.min(highlight.start, text.length)
-  const end = Math.min(highlight.end, text.length)
-  if (start >= end) return <>{text}</>
-
-  return (
-    <>
-      {text.slice(0, start)}
-      <span className="text-amber-500 drop-shadow-[0_0_0.45px_currentColor]">
-        {text.slice(start, end)}
-      </span>
-      {text.slice(end)}
-    </>
-  )
 }
 
 function PairLine({
@@ -82,7 +59,7 @@ function PairLine({
           {prefix}
         </span>
         <span className="min-w-0 flex-1">
-          <HighlightedText text={text} highlight={highlight} />
+          <NarrationHighlightedText text={text} highlight={highlight} />
         </span>
       </p>
     )
@@ -90,7 +67,7 @@ function PairLine({
 
   return (
     <p className={className} style={lineStyle}>
-      <HighlightedText text={text} highlight={highlight} />
+      <NarrationHighlightedText text={text} highlight={highlight} />
     </p>
   )
 }

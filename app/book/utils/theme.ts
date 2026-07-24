@@ -58,39 +58,69 @@ function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-export function getBookToolbarTheme(theme: BookTheme): {
+export type BookToolbarTheme = {
   headerStyle: CSSProperties
+  panelStyle: CSSProperties
   mutedColor: string
   borderColor: string
-} | null {
+  accentBg: string
+  hoverBg: string
+}
+
+export function getBookToolbarTheme(theme: BookTheme): BookToolbarTheme | null {
   const resolved = theme === 'auto' ? getSystemTheme() : theme
 
   switch (resolved) {
     case 'light':
       return {
         headerStyle: { backgroundColor: 'rgba(255,255,255,0.94)', color: '#1a1a1a' },
+        panelStyle: { backgroundColor: 'rgba(255,255,255,0.98)', color: '#1a1a1a' },
         mutedColor: 'rgba(26,26,26,0.62)',
         borderColor: 'rgba(26,26,26,0.14)',
+        accentBg: 'rgba(26,26,26,0.1)',
+        hoverBg: 'rgba(26,26,26,0.06)',
       }
     case 'dark':
       return {
         headerStyle: { backgroundColor: 'rgba(20,20,20,0.94)', color: '#e8e8e8' },
+        panelStyle: { backgroundColor: 'rgba(20,20,20,0.98)', color: '#e8e8e8' },
         mutedColor: 'rgba(232,232,232,0.62)',
         borderColor: 'rgba(232,232,232,0.14)',
+        accentBg: 'rgba(232,232,232,0.14)',
+        hoverBg: 'rgba(232,232,232,0.08)',
       }
     case 'sepia':
       return {
         headerStyle: { backgroundColor: 'rgba(244,236,216,0.94)', color: '#5c4b37' },
+        panelStyle: { backgroundColor: 'rgba(244,236,216,0.98)', color: '#5c4b37' },
         mutedColor: 'rgba(92,75,55,0.62)',
         borderColor: 'rgba(92,75,55,0.18)',
+        accentBg: 'rgba(92,75,55,0.14)',
+        hoverBg: 'rgba(92,75,55,0.08)',
       }
     case 'green':
       return {
         headerStyle: { backgroundColor: 'rgba(199,237,204,0.94)', color: '#2d3a2d' },
+        panelStyle: { backgroundColor: 'rgba(199,237,204,0.98)', color: '#2d3a2d' },
         mutedColor: 'rgba(45,58,45,0.62)',
         borderColor: 'rgba(45,58,45,0.18)',
+        accentBg: 'rgba(45,58,45,0.14)',
+        hoverBg: 'rgba(45,58,45,0.08)',
       }
     default:
       return null
+  }
+}
+
+/** CSS variables for themed overlays (popover / select) inside the reader. */
+export function getBookOverlayCssVars(
+  toolbarTheme: BookToolbarTheme
+): CSSProperties & Record<`--book-${string}`, string> {
+  return {
+    ...toolbarTheme.panelStyle,
+    borderColor: toolbarTheme.borderColor,
+    '--book-muted': toolbarTheme.mutedColor,
+    '--book-accent': toolbarTheme.accentBg,
+    '--book-hover': toolbarTheme.hoverBg,
   }
 }
