@@ -7,6 +7,7 @@ import { ReaderSettingsPanel } from '@/app/book/components/ReaderSettingsPanel'
 import { BookMarksPanel } from '@/app/book/components/BookMarksPanel'
 import {
   type BookJumpTarget,
+  findNearestPairIndex,
   findScrollingAncestor,
   getReadingPosition,
   getSavedScrollPosition,
@@ -139,7 +140,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
   )
 
   const getChapterContext = useCallback(() => {
-    const position = getReadingPosition(contentRef.current)
+    const position = getReadingPosition(contentRef.current, findNearestPairIndex)
     const chapter = chapters.find((c: { id: unknown }) => c.id === currentChapterId)
     const chapterTitle = (chapter as { title?: string })?.title ?? ''
 

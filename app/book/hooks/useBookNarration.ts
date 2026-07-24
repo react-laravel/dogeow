@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { BookChapter, SentencePair } from '@/app/book/utils/bilingualParse'
 import type { BookNarrationMode, BookNarrationStatus } from '@/app/book/types/narration'
+import { scrollNarrationPairIntoView } from '@/app/book/utils/scroll'
 
 export type { BookNarrationMode, BookNarrationStatus }
 export interface BookNarrationHighlight {
@@ -154,8 +155,7 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
 
   const scrollActivePairIntoView = useCallback(
     (pairIndex: number) => {
-      const target = contentRef.current?.querySelector(`[data-pair-index="${pairIndex}"]`)
-      target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      scrollNarrationPairIntoView(contentRef.current, pairIndex)
     },
     [contentRef]
   )

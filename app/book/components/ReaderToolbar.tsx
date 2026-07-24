@@ -125,39 +125,41 @@ export function ReaderToolbar({
           : undefined
       }
     >
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-3 py-2 sm:px-4">
-        {!hideNarration && (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={`h-8 w-8 p-0 shrink-0 ${controlClass ?? ''}`}
-              onClick={onPrevChapter}
-              disabled={!hasPrevChapter}
-              aria-label="上一章"
-            >
-              ‹
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={`h-8 w-8 p-0 shrink-0 ${controlClass ?? ''}`}
-              onClick={onNextChapter}
-              disabled={!hasNextChapter}
-              aria-label="下一章"
-            >
-              ›
-            </Button>
-          </>
-        )}
-
-        {chapterPicker}
-
-        <div className="flex items-center gap-1">
+      <div className="mx-auto flex max-w-3xl flex-col gap-2 px-3 py-2 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
           {!hideNarration && (
             <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={`h-8 w-8 p-0 shrink-0 ${controlClass ?? ''}`}
+                onClick={onPrevChapter}
+                disabled={!hasPrevChapter}
+                aria-label="上一章"
+              >
+                ‹
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={`h-8 w-8 p-0 shrink-0 ${controlClass ?? ''}`}
+                onClick={onNextChapter}
+                disabled={!hasNextChapter}
+                aria-label="下一章"
+              >
+                ›
+              </Button>
+            </>
+          )}
+
+          {chapterPicker}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          {!hideNarration ? (
+            <div className="flex items-center gap-1.5">
               <Select
                 value={narrationMode}
                 onValueChange={value => onNarrationModeChange(value as BookNarrationMode)}
@@ -219,54 +221,57 @@ export function ReaderToolbar({
                   </Button>
                 </>
               )}
-            </>
+            </div>
+          ) : (
+            <div />
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={`relative gap-1.5 ${controlClass ?? ''}`}
-            onClick={onOpenBookmarks}
-            aria-label="打开展示列表"
-          >
-            <Bookmark className="h-4 w-4" />
-            <span className="hidden sm:inline">展示</span>
-            {bookmarkCount > 0 ? (
-              <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]">
-                {bookmarkCount > 99 ? '99+' : bookmarkCount}
-              </span>
-            ) : null}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={`relative gap-1.5 ${controlClass ?? ''}`}
-            onClick={onOpenCollections}
-            aria-label="打开收藏列表"
-          >
-            <Star className="h-4 w-4" />
-            <span className="hidden sm:inline">收藏</span>
-            {collectionCount > 0 ? (
-              <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]">
-                {collectionCount > 99 ? '99+' : collectionCount}
-              </span>
-            ) : null}
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={`relative gap-1.5 ${controlClass ?? ''}`}
+              onClick={onOpenBookmarks}
+              aria-label="打开展示列表"
+            >
+              <Bookmark className="h-4 w-4" />
+              <span className="hidden sm:inline">展示</span>
+              {bookmarkCount > 0 ? (
+                <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]">
+                  {bookmarkCount > 99 ? '99+' : bookmarkCount}
+                </span>
+              ) : null}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={`relative gap-1.5 ${controlClass ?? ''}`}
+              onClick={onOpenCollections}
+              aria-label="打开收藏列表"
+            >
+              <Star className="h-4 w-4" />
+              <span className="hidden sm:inline">收藏</span>
+              {collectionCount > 0 ? (
+                <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]">
+                  {collectionCount > 99 ? '99+' : collectionCount}
+                </span>
+              ) : null}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={`gap-1.5 ${controlClass ?? ''}`}
+              onClick={onOpenSettings}
+              aria-label="打开阅读设置"
+            >
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">设置</span>
+            </Button>
+          </div>
         </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={`gap-1.5 ${controlClass ?? ''}`}
-          onClick={onOpenSettings}
-          aria-label="打开阅读设置"
-        >
-          <Settings2 className="h-4 w-4" />
-          <span className="hidden sm:inline">设置</span>
-        </Button>
       </div>
     </header>
   )

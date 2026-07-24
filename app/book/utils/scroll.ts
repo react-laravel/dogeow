@@ -108,7 +108,7 @@ export function findNearestPairIndex(container: HTMLElement): number | null {
 export function scrollElementIntoContainer(
   container: HTMLElement,
   element: HTMLElement,
-  block: 'center' | 'start' = 'center'
+  block: 'center' | 'start' | 'anchor' = 'center'
 ): void {
   const elementTop = element.getBoundingClientRect().top
   const containerTop = container.getBoundingClientRect().top
@@ -119,7 +119,41 @@ export function scrollElementIntoContainer(
     return
   }
 
+  if (block === 'anchor') {
+    container.scrollTop += delta - container.clientHeight * READING_ANCHOR_RATIO
+    return
+  }
+
   container.scrollTop += delta
+}
+
+/**
+ * Keep the narrated pair's start in the reading zone.
+ * Avoids centering tall paragraphs (which would push the highlight above the viewport).
+ */
+export function scrollNarrationPairIntoView(
+  container: HTMLElement | null,
+  pairIndex: number
+): void {
+  if (!container) return
+
+  const target = container.querySelector(`[data-pair-index="${pairIndex}"]`)
+  if (!(target instanceof HTMLElement)) return
+
+  const scrollContainer = findScrollingAncestor(container) ?? container
+  const containerRect = scrollContainer.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const toolbarPadding = 112
+  const topPadding = 12
+  const anchorY = containerRect.top + scrollContainer.clientHeight * READING_ANCHOR_RATIO
+
+  const startVisible =
+    targetRect.top >= containerRect.top + topPadding &&
+    targetRect.top <= Math.min(anchorY + 48, containerRect.bottom - toolbarPadding)
+
+  if (startVisible) return
+
+  scrollElementIntoContainer(scrollContainer, target, 'anchor')
 }
 
 // ─── Jump scheduling ────────────────────────────────────────────────
