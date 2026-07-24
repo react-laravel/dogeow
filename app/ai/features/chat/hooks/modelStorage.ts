@@ -32,9 +32,9 @@ export const getStoredOllamaModel = (): string => {
   return localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY) || DEFAULT_OLLAMA_MODEL
 }
 
-export const getStoredCodexModel = (): string => {
-  if (typeof window === 'undefined') return DEFAULT_CODEX_MODEL
-  return localStorage.getItem(CODEX_MODEL_STORAGE_KEY) || DEFAULT_CODEX_MODEL
+export const getStoredCodexModel = (fallbackModel = DEFAULT_CODEX_MODEL): string => {
+  if (typeof window === 'undefined') return fallbackModel
+  return localStorage.getItem(CODEX_MODEL_STORAGE_KEY) || fallbackModel
 }
 
 export const getStoredCodexReasoningEffort = (): CodexReasoningEffort => {

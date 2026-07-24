@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bot, MoreVertical, Edit, CheckCircle } from 'lucide-react'
+import { Bot, MoreVertical, Edit, CheckCircle, Volume2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -52,6 +52,10 @@ export function WordCard({ word, onResult }: WordCardProps) {
     }
 
     void playAmericanPronunciation(word.content)
+  }
+
+  const handleExamplePronounce = (sentence: string) => {
+    void playAmericanPronunciation(sentence)
   }
 
   const handleMarkAndNext = async (remembered: boolean) => {
@@ -203,7 +207,20 @@ export function WordCard({ word, onResult }: WordCardProps) {
                   <h4 className="text-muted-foreground text-sm font-medium">例句</h4>
                   {word.example_sentences.slice(0, 2).map((example, index) => (
                     <div key={index} className="bg-muted/30 rounded p-3 text-sm">
-                      <p className="mb-1">{example.en}</p>
+                      <div className="mb-1 flex items-start gap-2">
+                        <p className="min-w-0 flex-1">{example.en}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="-mt-1 h-7 w-7 shrink-0"
+                          onClick={() => handleExamplePronounce(example.en)}
+                          aria-label={`朗读例句 ${index + 1}`}
+                          title="朗读例句"
+                        >
+                          <Volume2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                       <p className="text-muted-foreground text-xs">{example.zh}</p>
                     </div>
                   ))}

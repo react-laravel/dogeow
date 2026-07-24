@@ -13,6 +13,7 @@ import { patch } from '@/lib/api'
 import { ApiRequestError } from '@/lib/api/errors'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { WordEditFields } from './WordEditFields'
+import { getWordAIRequestConfig } from '../utils/aiRequest'
 
 interface WordAIDialogProps {
   word: Word
@@ -92,6 +93,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
         ]
 
         const body = {
+          ...getWordAIRequestConfig(),
           useChat: true,
           messages: chatMessages,
           command: '你是一个英语学习助手，帮助用户学习英语单词。请用中文回答。',
@@ -200,6 +202,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
 【翻译2】中文翻译`
 
       const body = {
+        ...getWordAIRequestConfig(),
         useChat: true,
         messages: [{ role: 'user' as const, content: prompt }],
         command: '你是一个英语学习助手。请严格按照用户要求的格式返回数据。',
