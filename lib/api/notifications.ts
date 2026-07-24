@@ -1,9 +1,11 @@
 'use client'
 
-import useSWR from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 import { get, post } from './core'
 import { baseSWRConfig, apiFetcher } from './swr'
+
+export const UNREAD_NOTIFICATIONS_KEY = 'notifications/unread' as const
 
 // 未读通知（拉取时会触发后端「打开时补发汇总推送」）
 export interface UnreadNotificationItem {
@@ -25,16 +27,20 @@ export interface UnreadNotificationsResponse {
 }
 
 export const fetchUnreadNotifications = () =>
-  get<UnreadNotificationsResponse>('notifications/unread')
+  get<UnreadNotificationsResponse>(UNREAD_NOTIFICATIONS_KEY)
 
-export const useUnreadNotifications = () =>
-  useSWR<UnreadNotificationsResponse>('notifications/unread', apiFetcher, {
+export const useUnreadNotifications = (
+  enabled: boolean = true,
+  config?: SWRConfiguration<UnreadNotificationsResponse>
+) =>
+  useSWR<UnreadNotificationsResponse>(enabled ? UNREAD_NOTIFICATIONS_KEY : null, apiFetcher, {
     ...baseSWRConfig,
     revalidateOnFocus: true,
+    ...config,
   })
 
 export const markNotificationRead = (id: string) =>
-  post<{ message: string }>(`notifications/${id}/read`, {})
+  post<{ message: string }>(`notifications/${id}/read`, {}, { handleError: false })
 
 export const markAllNotificationsRead = () =>
-  post<{ message: string }>('notifications/read-all', {})
+  post<{ message: string }>('notifications/read-all', {}, { handleError: false })

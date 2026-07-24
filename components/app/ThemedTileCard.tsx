@@ -1,4 +1,4 @@
-import { TileCard as DefaultTileCard } from './TileCard'
+import { TileCard } from './TileCard'
 import type { Tile } from '@/app/types'
 import type { ProjectCoverMode } from '@/stores/projectCoverStore'
 
@@ -13,5 +13,5 @@ interface ThemedTileCardProps {
 
 /** 统一卡片入口；保留组件名以兼容现有调用。 */
 export function ThemedTileCard(props: ThemedTileCardProps) {
-  return <DefaultTileCard {...props} />
+  return <TileCard {...props} />
 }

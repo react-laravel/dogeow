@@ -1,9 +1,8 @@
 'use client'
 
-import { ThemeProvider as NextThemesProvider } from 'next-themes'
+import { useEffect, type ReactNode } from 'react'
+import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes'
 import { useThemeStore, getCurrentThemeColor, isRestPeriodNow } from '@/stores/themeStore'
-import { useEffect } from 'react'
-import { useTheme } from 'next-themes'
 
 type ResolvedThemeMode = 'light' | 'dark'
 
@@ -40,9 +39,7 @@ function resolveThemeMode(
 }
 
 function upsertMeta(name: string, content: string) {
-  if (typeof document === 'undefined') {
-    return
-  }
+  if (typeof document === 'undefined') return
 
   let meta = document.querySelector(`meta[name="${name}"]`)
   if (!meta) {
@@ -55,20 +52,14 @@ function upsertMeta(name: string, content: string) {
 }
 
 function syncThemeChrome(themeMode: ResolvedThemeMode) {
-  if (typeof document === 'undefined') {
-    return
-  }
+  if (typeof document === 'undefined') return
 
-  const isDark = themeMode === 'dark'
-  const chromeColor = isDark ? '#181512' : '#fbfaf7'
+  const chromeColor = themeMode === 'dark' ? '#181512' : '#fbfaf7'
   const root = document.documentElement
 
   root.style.colorScheme = themeMode
   root.style.removeProperty('background-color')
-
-  if (document.body) {
-    document.body.style.removeProperty('background-color')
-  }
+  document.body?.style.removeProperty('background-color')
 
   upsertMeta('theme-color', chromeColor)
   upsertMeta('msapplication-TileColor', chromeColor)
@@ -81,34 +72,24 @@ function applyTheme(themeMode: ResolvedThemeMode, setTheme: (theme: string) => v
   syncThemeChrome(themeMode)
 }
 
-// 内部组件用于处理系统主题变化与颜色变量应用
+/** 处理系统主题变化与颜色变量应用 */
 function ThemeHandler() {
   const { followSystem, themeMode, restPeriod, currentTheme, customThemes } = useThemeStore()
   const { setTheme, systemTheme } = useTheme()
   const resolvedThemeMode = resolveThemeMode(themeMode, followSystem, restPeriod, systemTheme)
 
-  // 根据 themeMode 设置外观：浅色、深色、跟随系统、休息时段
   useEffect(() => {
     applyTheme(resolvedThemeMode, setTheme)
   }, [resolvedThemeMode, setTheme])
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
     const reapplyTheme = () => {
       applyTheme(resolvedThemeMode, setTheme)
-
-      window.requestAnimationFrame(() => {
-        applyTheme(resolvedThemeMode, setTheme)
-      })
+      window.requestAnimationFrame(() => applyTheme(resolvedThemeMode, setTheme))
     }
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        reapplyTheme()
-      }
+      if (document.visibilityState === 'visible') reapplyTheme()
     }
 
     window.addEventListener('pageshow', reapplyTheme)
@@ -122,33 +103,27 @@ function ThemeHandler() {
     }
   }, [resolvedThemeMode, setTheme])
 
-  // 休息时段模式：每分钟检查一次，到点自动切换
   useEffect(() => {
     if (themeMode !== 'rest') return
+
     const tick = () => {
-      const nextThemeMode = isRestPeriodNow(restPeriod) ? 'dark' : 'light'
-      applyTheme(nextThemeMode, setTheme)
+      applyTheme(isRestPeriodNow(restPeriod) ? 'dark' : 'light', setTheme)
     }
-    const id = setInterval(tick, 60 * 1000)
-    return () => clearInterval(id)
+    const id = window.setInterval(tick, 60_000)
+    return () => window.clearInterval(id)
   }, [themeMode, restPeriod, setTheme])
 
-  // 动态应用主题颜色到CSS变量
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const themeColor = getCurrentThemeColor(currentTheme, customThemes)
-      const root = document.documentElement
-
-      // 应用主题颜色到CSS变量
-      root.style.setProperty('--primary', themeColor.primary)
-      root.style.setProperty('--primary-color', themeColor.color)
-    }
+    const themeColor = getCurrentThemeColor(currentTheme, customThemes)
+    const root = document.documentElement
+    root.style.setProperty('--primary', themeColor.primary)
+    root.style.setProperty('--primary-color', themeColor.color)
   }, [currentTheme, customThemes])
 
   return null
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <NextThemesProvider attribute="class" defaultTheme="light" enableSystem>
       <ThemeHandler />

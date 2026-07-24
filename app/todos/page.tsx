@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import useSWR from 'swr'
 import {
   DndContext,
   DragEndEvent,
@@ -27,7 +28,7 @@ import {
   reorderTodoTasks,
   updateTodoTask,
 } from './api'
-import type { TodoList, TodoTask } from './types'
+import type { TodoTask } from './types'
 import { TodoItemRow } from './components/TodoItemRow'
 import {
   getDefaultListPayload,
@@ -40,11 +41,23 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import useAuthStore from '@/stores/authStore'
 
+async function loadTodoLists(): Promise<TodoListWithTasks[]> {
+  let nextLists = (await fetchTodoLists()).map(normalizeList)
+
+  if (nextLists.length === 0) {
+    const createdList = await createTodoList(getDefaultListPayload())
+    nextLists = [normalizeList(await fetchTodoList(String(createdList.id)))]
+  }
+
+  if (nextLists.length === 0) {
+    throw new Error('初始化待办列表失败')
+  }
+
+  return nextLists
+}
+
 export default function TodosPage() {
   const { isAuthenticated, loading: authLoading } = useAuthStore()
-  const [lists, setLists] = useState<TodoListWithTasks[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -54,52 +67,42 @@ export default function TodosPage() {
   const [initiallyCompletedTaskIds, setInitiallyCompletedTaskIds] = useState<Set<number>>(
     () => new Set()
   )
-  const hasInitializedRef = useRef(false)
+
+  const swrKey = !authLoading && isAuthenticated ? '/todos' : null
+  const {
+    data: lists = [],
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<TodoListWithTasks[]>(swrKey, loadTodoLists, {
+    revalidateOnFocus: false,
+  })
+
+  const loadError = error instanceof Error ? error.message : error ? '加载待办失败' : null
+
+  useEffect(() => {
+    if (!lists[0]) return
+    setInitiallyCompletedTaskIds(
+      new Set(lists[0].tasks.filter(task => task.is_completed).map(task => task.id))
+    )
+  }, [lists[0]?.id])
 
   const updateCurrentList = useCallback(
     (updater: (prev: TodoListWithTasks) => TodoListWithTasks) => {
-      setLists(prev => {
-        if (prev.length === 0) return prev
-        return [normalizeList(updater(prev[0])), ...prev.slice(1)]
-      })
+      void mutate(
+        prev => {
+          if (!prev || prev.length === 0) return prev
+          return [normalizeList(updater(prev[0])), ...prev.slice(1)]
+        },
+        { revalidate: false }
+      )
     },
-    []
+    [mutate]
   )
 
-  const initializeLists = useCallback(async () => {
-    setIsLoading(true)
-    setLoadError(null)
-
-    try {
-      let nextLists = (await fetchTodoLists()).map(normalizeList)
-
-      if (nextLists.length === 0) {
-        const createdList = await createTodoList(getDefaultListPayload())
-        nextLists = [normalizeList(await fetchTodoList(String(createdList.id)))]
-      }
-
-      if (nextLists.length === 0) {
-        throw new Error('初始化待办列表失败')
-      }
-
-      setInitiallyCompletedTaskIds(
-        new Set(nextLists[0]?.tasks.filter(task => task.is_completed).map(task => task.id) ?? [])
-      )
-
-      setLists(nextLists)
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : '加载待办失败')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (authLoading || !isAuthenticated || hasInitializedRef.current) return
-
-    hasInitializedRef.current = true
-    void initializeLists()
-  }, [authLoading, initializeLists, isAuthenticated])
+  const reloadLists = useCallback(async () => {
+    await mutate()
+  }, [mutate])
 
   const list = lists[0] ?? null
   const tasks = sortTasks(list?.tasks)
@@ -211,11 +214,11 @@ export default function TodosPage() {
       await deleteTodoList(String(list.id))
       setDeleteDialogOpen(false)
       toast.success('已删除列表')
-      await initializeLists()
+      await reloadLists()
     } finally {
       setIsDeletingList(false)
     }
-  }, [initializeLists, isDeletingList, list])
+  }, [isDeletingList, list, reloadLists])
 
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -255,7 +258,7 @@ export default function TodosPage() {
       <PageContainer maxWidth="2xl">
         <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
           <p className="text-muted-foreground text-sm">{loadError}</p>
-          <Button onClick={() => void initializeLists()}>重试</Button>
+          <Button onClick={() => void reloadLists()}>重试</Button>
         </div>
       </PageContainer>
     )
@@ -266,7 +269,7 @@ export default function TodosPage() {
       <PageContainer maxWidth="2xl">
         <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
           <p className="text-muted-foreground text-sm">暂无待办列表</p>
-          <Button onClick={() => void initializeLists()}>重新加载</Button>
+          <Button onClick={() => void reloadLists()}>重新加载</Button>
         </div>
       </PageContainer>
     )

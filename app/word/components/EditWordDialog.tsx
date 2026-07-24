@@ -3,6 +3,7 @@ import { Word } from '../types'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
 import { patch, ApiRequestError } from '@/lib/api'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { useState, useEffect } from 'react'
 import { WordEditFields } from './WordEditFields'
 
@@ -36,7 +37,7 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
         messages: [{ role: 'user' as const, content: prompt }],
         command: '你是一个英语学习助手。请严格按照用户要求的格式返回数据。',
       }
-      const response = await fetch('/api/generate', {
+      const response = await authenticatedInternalFetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -108,7 +109,7 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
 
       console.log('PATCH /word payload:', payload)
 
-      await patch(`/word/${word.id}`, payload)
+      await patch(`/word/${word.id}`, payload, { handleError: false })
 
       toast.success('单词数据已更新')
       mutate('/word/daily')

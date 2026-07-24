@@ -4,14 +4,40 @@ import Link from 'next/link'
 
 const assetBaseUrl = process.env.NEXT_PUBLIC_ASSET_BASE_URL || ''
 
-const techIcons = {
-  laravel: `${assetBaseUrl}/images/tech/laravel.svg`,
-  react: `${assetBaseUrl}/images/tech/react.svg`,
-  nextJs: `${assetBaseUrl}/images/tech/next-js.svg`,
-  shadcn: `${assetBaseUrl}/images/tech/shadcn.svg`,
-  typescript: `${assetBaseUrl}/images/tech/typescript.svg`,
-  tailwind: `${assetBaseUrl}/images/tech/tailwind.svg`,
-}
+const techLinks = [
+  {
+    href: 'https://laravel.com',
+    src: `${assetBaseUrl}/images/tech/laravel.svg`,
+    alt: 'Laravel',
+  },
+  {
+    href: 'https://react.dev',
+    src: `${assetBaseUrl}/images/tech/react.svg`,
+    alt: 'React',
+  },
+  {
+    href: 'https://nextjs.org',
+    src: `${assetBaseUrl}/images/tech/next-js.svg`,
+    alt: 'Next.js',
+    needsInvert: true,
+  },
+  {
+    href: 'https://www.typescriptlang.org',
+    src: `${assetBaseUrl}/images/tech/typescript.svg`,
+    alt: 'TypeScript',
+  },
+  {
+    href: 'https://tailwindcss.com',
+    src: `${assetBaseUrl}/images/tech/tailwind.svg`,
+    alt: 'Tailwind CSS',
+  },
+  {
+    href: 'https://ui.shadcn.com',
+    src: `${assetBaseUrl}/images/tech/shadcn.svg`,
+    alt: 'shadcn/ui',
+    needsInvert: true,
+  },
+] as const
 
 interface TechLinkProps {
   href: string
@@ -40,32 +66,9 @@ const TechLink: React.FC<TechLinkProps> = ({ href, src, alt, needsInvert }) => (
 const PoweredBy: React.FC = () => (
   <div className="text-muted-foreground flex items-center gap-1 text-xs sm:text-sm">
     <span className="mr-1">Powered by</span>
-    <TechLink
-      href="https://laravel.com"
-      src={techIcons.laravel}
-      alt="Laravel"
-      needsInvert={false}
-    />
-    <TechLink href="https://react.dev" src={techIcons.react} alt="React" needsInvert={false} />
-    <TechLink href="https://nextjs.org" src={techIcons.nextJs} alt="Next.js" needsInvert={true} />
-    <TechLink
-      href="https://www.typescriptlang.org"
-      src={techIcons.typescript}
-      alt="TypeScript"
-      needsInvert={false}
-    />
-    <TechLink
-      href="https://tailwindcss.com"
-      src={techIcons.tailwind}
-      alt="Tailwind CSS"
-      needsInvert={false}
-    />
-    <TechLink
-      href="https://ui.shadcn.com"
-      src={techIcons.shadcn}
-      alt="shadcn/ui"
-      needsInvert={true}
-    />
+    {techLinks.map(link => (
+      <TechLink key={link.href} {...link} />
+    ))}
   </div>
 )
 

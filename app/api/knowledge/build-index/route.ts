@@ -236,7 +236,10 @@ export async function POST(request: NextRequest) {
  * 获取索引状态
  * GET /api/knowledge/build-index
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAiAccess(request)
+  if (authError) return authError
+
   try {
     const index = loadVectorIndex()
     if (!index) {

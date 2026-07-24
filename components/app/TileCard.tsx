@@ -65,7 +65,17 @@ const getImageSizes = (gridArea: string): string => {
 
 // 提取图标组件
 const TileIcon = memo(
-  ({ tile, tileName, decorated }: { tile: Tile; tileName: string; decorated: boolean }) => {
+  ({
+    tile,
+    tileName,
+    decorated,
+    priority,
+  }: {
+    tile: Tile
+    tileName: string
+    decorated: boolean
+    priority: boolean
+  }) => {
     if (!tile.icon) return null
 
     if (typeof tile.icon === 'string' && tile.icon.length > 0) {
@@ -77,7 +87,7 @@ const TileIcon = memo(
           height={24}
           className="object-contain sm:h-6 sm:w-6"
           sizes={IMAGE_SIZES.ICON}
-          priority
+          priority={priority}
           quality={PERFORMANCE.IMAGE_QUALITY}
         />
       )
@@ -143,6 +153,7 @@ export const TileCard = memo(
     }, [needsLogin, tile.color, usesDecoratedCover])
 
     const showSkeleton = hasBackgroundImage && !imageLoaded
+    const prioritizeImage = index < 3
     return (
       <button
         type="button"
@@ -169,8 +180,7 @@ export const TileCard = memo(
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               sizes={getImageSizes(gridArea)}
-              loading={index < 3 ? 'eager' : 'lazy'}
-              fetchPriority={index < 3 ? 'high' : 'auto'}
+              priority={prioritizeImage}
               onError={handleImageError}
               onLoad={handleImageLoad}
               quality={PERFORMANCE.IMAGE_QUALITY}
@@ -209,7 +219,12 @@ export const TileCard = memo(
                 usesDecoratedCover ? 'text-white' : TILE_CLASSES.GLASS_ICON_SHELL
               }`}
             >
-              <TileIcon tile={tile} tileName={tileName} decorated={usesDecoratedCover} />
+              <TileIcon
+                tile={tile}
+                tileName={tileName}
+                decorated={usesDecoratedCover}
+                priority={prioritizeImage}
+              />
             </div>
           )}
 

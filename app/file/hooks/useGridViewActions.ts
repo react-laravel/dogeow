@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
 import { del, put } from '@/lib/api'
-import { getFileDownloadUrl } from '../services/api'
+import { downloadCloudFile } from '../services/api'
 import useFileStore from '../store/useFileStore'
 import type { CloudFile } from '../types'
 
@@ -51,12 +51,13 @@ export function useGridViewActions({
   )
 
   const downloadFile = useCallback((file: CloudFile) => {
-    try {
-      window.open(getFileDownloadUrl(file.id), '_blank')
-      toast.success('开始下载')
-    } catch {
-      toast.error('下载失败')
-    }
+    void downloadCloudFile(file)
+      .then(() => {
+        toast.success('开始下载')
+      })
+      .catch(() => {
+        toast.error('下载失败')
+      })
   }, [])
 
   const deleteFile = useCallback(

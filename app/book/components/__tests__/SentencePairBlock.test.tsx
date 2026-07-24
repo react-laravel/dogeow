@@ -60,7 +60,7 @@ describe('SentencePairBlock', () => {
       <SentencePairBlock
         {...defaultProps}
         isNarrating={true}
-        narrationHighlight={{ role: 'original', start: 0, end: 3 }}
+        narrationHighlight={{ pairIndex: 0, role: 'original', start: 0, end: 3 }}
       />
     )
     // The highlight should be applied - we verify the component renders
@@ -72,7 +72,7 @@ describe('SentencePairBlock', () => {
       <SentencePairBlock
         {...defaultProps}
         isNarrating={true}
-        narrationHighlight={{ role: 'translation', start: 0, end: 3 }}
+        narrationHighlight={{ pairIndex: 0, role: 'translation', start: 0, end: 3 }}
       />
     )
     expect(

@@ -30,8 +30,8 @@ export function useItemEdit() {
   const { categories, tags, fetchCategories, fetchTags, getItem, updateItem } = useItemStore()
 
   const { mutate: refreshAreas } = useAreas()
-  const { data: rooms = [], mutate: refreshRooms } = useRooms<Room[]>()
-  const { data: spots = [], mutate: refreshSpots } = useSpots<Spot[]>()
+  const { data: rooms = [], mutate: refreshRooms } = useRooms()
+  const { data: spots = [], mutate: refreshSpots } = useSpots()
 
   // 定义自动保存数据类型
   interface AutoSaveData {

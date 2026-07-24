@@ -3,7 +3,8 @@
 import { useState, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/helpers'
 import useFileStore from '../../store/useFileStore'
-import { getFileDownloadUrl } from '../../services/api'
+import { toast } from 'sonner'
+import { downloadCloudFile } from '../../services/api'
 import { FolderTree } from './tree/components/FolderTree'
 import { FileList } from './tree/components/FileList'
 import { findNodePath, findNodeName } from './tree/utils/treeUtils'
@@ -54,7 +55,9 @@ export default function TreeView({ folderTree, files, isLoading = false }: TreeV
         navigateToFolder(file.id)
         expandToNode(file.id)
       } else {
-        window.open(getFileDownloadUrl(file.id), '_blank')
+        void downloadCloudFile(file)
+          .then(() => toast.success('开始下载'))
+          .catch(() => toast.error('下载失败'))
       }
     },
     [navigateToFolder, expandToNode]

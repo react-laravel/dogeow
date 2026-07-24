@@ -1,41 +1,22 @@
 import { createImageUpload } from 'novel'
 import { toast } from 'sonner'
+import { uploadImageToServer } from '@/app/ai/features/chat/hooks/uploadImage'
 
 const onUpload = (file: File) => {
-  const promise = fetch('/api/upload', {
-    method: 'POST',
-    headers: {
-      'content-type': file?.type || 'application/octet-stream',
-      'x-vercel-filename': file?.name || 'image.png',
-    },
-    body: file,
-  })
+  const promise = uploadImageToServer(file)
 
-  return new Promise((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     toast.promise(
-      promise.then(async res => {
-        // Successfully uploaded image
-        if (res.status === 200) {
-          const { url } = (await res.json()) as { url: string }
-          // 直接返回URL，不等待图片加载
-          resolve(url)
-          // No blob store configured
-        } else if (res.status === 401) {
-          resolve(file)
-          throw new Error(
-            '`BLOB_READ_WRITE_TOKEN` environment variable not found, reading image locally instead.'
-          )
-          // Unknown error
-        } else {
-          throw new Error('Error uploading image. Please try again.')
-        }
+      promise.then(url => {
+        resolve(url)
+        return url
       }),
       {
-        loading: 'Uploading image...',
-        success: 'Image uploaded successfully.',
-        error: e => {
-          reject(e)
-          return e.message
+        loading: '正在上传图片…',
+        success: '图片上传成功',
+        error: (error: Error) => {
+          reject(error)
+          return error.message || '图片上传失败，请重试'
         },
       }
     )
@@ -46,11 +27,11 @@ export const uploadFn = createImageUpload({
   onUpload,
   validateFn: file => {
     if (!file.type.includes('image/')) {
-      toast.error('File type not supported.')
+      toast.error('不支持的文件类型')
       return false
     }
     if (file.size / 1024 / 1024 > 20) {
-      toast.error('File size too big (max 20MB).')
+      toast.error('图片过大（最大 20MB）')
       return false
     }
     return true

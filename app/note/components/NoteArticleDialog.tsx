@@ -2,6 +2,7 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { NodeData, ThemeColors, JSONContent } from '../types/graph'
+import { sanitizeHtml } from '@/lib/sanitizeHtml'
 
 const ReadonlyEditor = dynamic(() => import('@/components/novel-editor/readonly'), {
   ssr: false,
@@ -136,7 +137,7 @@ export function NoteArticleDialog({
               ) : articleHtml ? (
                 <div
                   className={`prose prose-slate max-w-none ${isDark ? 'prose-invert' : ''}`}
-                  dangerouslySetInnerHTML={{ __html: articleHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(articleHtml) }}
                 />
               ) : articleJson ? (
                 <ReadonlyEditor content={articleJson} />

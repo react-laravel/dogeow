@@ -59,7 +59,7 @@ function PairLine({
           {prefix}
         </span>
         <span className="min-w-0 flex-1">
-          <NarrationHighlightedText text={text} highlight={highlight} />
+          <NarrationHighlightedText text={text} highlight={highlight} theme={theme} />
         </span>
       </p>
     )
@@ -67,7 +67,7 @@ function PairLine({
 
   return (
     <p className={className} style={lineStyle}>
-      <NarrationHighlightedText text={text} highlight={highlight} />
+      <NarrationHighlightedText text={text} highlight={highlight} theme={theme} />
     </p>
   )
 }

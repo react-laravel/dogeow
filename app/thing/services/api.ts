@@ -1,9 +1,46 @@
 import useSWR, { mutate } from 'swr'
 import { apiRequest, createMutation } from '@/lib/api'
 import type { Category, Area, Room, Spot, Item } from '../types'
+import {
+  assertPaginatedItemsResponse,
+  buildThingItemQueryString,
+  normalizeCategories,
+  type ItemFilters,
+  type PaginatedItemsResponse,
+} from '@/app/thing/contracts'
+import { refreshItemLists as refreshAllItemLists } from '@/app/thing/services/swrCache'
+
+export {
+  refreshItemLists,
+  refreshCategories as invalidateCategories,
+} from '@/app/thing/services/swrCache'
 
 // Fetcher function
 const fetcher = <T>(url: string): Promise<T> => apiRequest<T>(url)
+
+function asNamedList<T>(payload: unknown, key: string): T[] {
+  if (Array.isArray(payload)) return payload as T[]
+  if (payload && typeof payload === 'object' && key in payload) {
+    const value = (payload as Record<string, unknown>)[key]
+    return Array.isArray(value) ? (value as T[]) : []
+  }
+  return []
+}
+
+const areasFetcher = async (url: string): Promise<Area[]> =>
+  asNamedList<Area>(await apiRequest<unknown>(url), 'areas')
+
+const roomsFetcher = async (url: string): Promise<Room[]> =>
+  asNamedList<Room>(await apiRequest<unknown>(url), 'rooms')
+
+const spotsFetcher = async (url: string): Promise<Spot[]> =>
+  asNamedList<Spot>(await apiRequest<unknown>(url), 'spots')
+
+const itemsFetcher = async (url: string): Promise<PaginatedItemsResponse> =>
+  assertPaginatedItemsResponse(await apiRequest<PaginatedItemsResponse>(url))
+
+const categoriesFetcher = async (): Promise<Category[]> =>
+  normalizeCategories(await apiRequest<Category[]>('/things/categories'))
 
 // SWR 默认缓存配置
 const swrOptions = {
@@ -15,29 +52,17 @@ const swrOptions = {
 // ==================== SWR Hooks ====================
 
 // 物品相关 hooks
-export const useItems = (params?: Record<string, unknown>) => {
-  const buildQueryString = (params?: Record<string, unknown>): string => {
-    if (!params || Object.keys(params).length === 0) return ''
-
-    const searchParams = new URLSearchParams()
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, String(value))
-      }
-    })
-
-    return searchParams.toString() ? `?${searchParams.toString()}` : ''
-  }
-
-  const queryString = buildQueryString(params)
-  return useSWR(`/things/items${queryString}`, fetcher, swrOptions)
+export const useItems = (params?: ItemFilters) => {
+  const queryString = buildThingItemQueryString(params ?? {})
+  return useSWR<PaginatedItemsResponse>(`/things/items${queryString}`, itemsFetcher, swrOptions)
 }
 
 export const useItem = (id: number) =>
   useSWR<Item>(id ? `/things/items/${id}` : null, fetcher, swrOptions)
 
 // 分类相关 hooks
-export const useCategories = () => useSWR('/things/categories', fetcher, swrOptions)
+export const useCategories = () =>
+  useSWR<Category[]>('/things/categories', categoriesFetcher, swrOptions)
 
 export const useCategory = (id: number) =>
   useSWR(id ? `/things/categories/${id}` : null, fetcher, swrOptions)
@@ -45,17 +70,17 @@ export const useCategory = (id: number) =>
 // 位置相关 hooks
 export const useLocations = () => useSWR('/locations/tree', fetcher, swrOptions)
 
-export const useAreas = <T = unknown>() => useSWR<T>('/areas', fetcher, swrOptions)
+export const useAreas = () => useSWR<Area[]>('/areas', areasFetcher, swrOptions)
 
 export const useArea = (id?: number) => useSWR(id ? `/areas/${id}` : null, fetcher, swrOptions)
 
-export const useRooms = <T = unknown>(areaId?: number) =>
-  useSWR<T>(areaId ? `/areas/${areaId}/rooms` : '/rooms', fetcher, swrOptions)
+export const useRooms = (areaId?: number) =>
+  useSWR<Room[]>(areaId ? `/areas/${areaId}/rooms` : '/rooms', roomsFetcher, swrOptions)
 
 export const useRoom = (id?: number) => useSWR(id ? `/rooms/${id}` : null, fetcher, swrOptions)
 
-export const useSpots = <T = unknown>(roomId?: number) =>
-  useSWR<T>(roomId ? `/rooms/${roomId}/spots` : '/spots', fetcher, swrOptions)
+export const useSpots = (roomId?: number) =>
+  useSWR<Spot[]>(roomId ? `/rooms/${roomId}/spots` : '/spots', spotsFetcher, swrOptions)
 
 export const useSpot = (id?: number) => useSWR(id ? `/spots/${id}` : null, fetcher, swrOptions)
 
@@ -91,32 +116,20 @@ export const deleteSpot = (id: number) => createMutation<void>(`/spots/${id}`, '
 // ==================== 便捷函数 ====================
 
 /**
- * 刷新物品列表
+ * 刷新物品列表（指定查询或全部 item 列表缓存）
  */
-export const refreshItems = (params?: Record<string, unknown>) => {
-  const buildQueryString = (params?: Record<string, unknown>): string => {
-    if (!params || Object.keys(params).length === 0) return ''
-
-    const searchParams = new URLSearchParams()
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, String(value))
-      }
-    })
-
-    return searchParams.toString() ? `?${searchParams.toString()}` : ''
+export const refreshItems = (params?: ItemFilters) => {
+  if (!params) {
+    return refreshAllItemLists()
   }
-
-  const queryString = buildQueryString(params)
+  const queryString = buildThingItemQueryString(params)
   return mutate(`/things/items${queryString}`)
 }
 
 /**
  * 刷新分类列表
  */
-export const refreshCategories = () => {
-  return mutate('/things/categories')
-}
+export const refreshCategories = () => mutate('/things/categories')
 
 /**
  * 刷新位置树

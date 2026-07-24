@@ -80,7 +80,9 @@ export default function NewNotePage() {
         is_draft: isPrivate,
       }
 
-      const result = await apiRequest<Note | { note: Note }>('/notes', 'POST', data)
+      const result = await apiRequest<Note | { note: Note }>('/notes', 'POST', data, {
+        handleError: false,
+      })
       const normalizedNote = normalizeNote<Note>(result)
       if (!normalizedNote) {
         throw new Error('创建笔记失败')

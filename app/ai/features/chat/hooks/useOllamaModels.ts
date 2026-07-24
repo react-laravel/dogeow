@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { OllamaModelListItem } from '@/lib/utils/ollama-models'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { fetchBrowserLocalOllamaModels, useBrowserOllamaAddress } from './browserOllama'
 import { useOllamaAccessMode } from './ollamaAccessMode'
 
@@ -18,7 +19,7 @@ interface UseOllamaModelsReturn {
 }
 
 async function fetchServerOllamaModels(): Promise<OllamaModelListItem[]> {
-  const response = await fetch('/api/ollama/models')
+  const response = await authenticatedInternalFetch('/api/ollama/models')
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
   }

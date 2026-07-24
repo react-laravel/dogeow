@@ -1,22 +1,18 @@
 'use client'
 
-import React, { useState, useMemo, useCallback, useEffect, useRef, startTransition } from 'react'
+import React, { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import type { CustomBackground } from './SettingsPanel'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import useAuthStore from '@/stores/authStore'
 import { useAudioManager } from '@/hooks/useAudioManager'
 import { useSearchManager } from '@/hooks/useSearchManager'
 import { useBackgroundManager } from '@/hooks/useBackgroundManager'
-import { AppsView } from './views/AppsView'
-import { SearchResultView } from './views/SearchResultView'
-import { ViewWrapper } from './views/ViewWrapper'
-import { useMusicStore, type PlayMode } from '@/stores/musicStore'
+import { useMusicStore } from '@/stores/musicStore'
 import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
-import { useMediaKeys } from './hooks/useMediaKeys'
-import { useMediaSession } from './hooks/useMediaSession'
-import { useTrackLyrics } from './music/useTrackLyrics'
-import { LogoButton } from './common/LogoButton'
+import { useLauncherDisplayMode } from './hooks/useLauncherDisplayMode'
+import { useLauncherPlayback } from './hooks/useLauncherPlayback'
+import { LauncherContent } from './LauncherContent'
 
 const AiDialog = dynamic(
   () => import('@/components/app/AiDialog').then(m => ({ default: m.AiDialog })),
@@ -34,19 +30,10 @@ const SettingsDialog = dynamic(
   () => import('./settings/SettingsDialog').then(mod => mod.SettingsDialog),
   { ssr: false }
 )
-const MusicPlayer = dynamic(() => import('./MusicPlayer').then(mod => mod.MusicPlayer), {
-  ssr: false,
-})
-const AudioVisualizer = dynamic(
-  () => import('./music/visualizer').then(mod => mod.AudioVisualizer),
-  { ssr: false }
-)
 const FullscreenVisualizer = dynamic(
   () => import('./music/FullscreenVisualizer').then(mod => mod.FullscreenVisualizer),
   { ssr: false }
 )
-
-type DisplayMode = 'music' | 'apps' | 'settings' | 'auth' | 'search-result'
 
 export interface AppLauncherProps {
   /** 点击 AI 按钮时切换通用 AI 面板（打开/关闭） */
@@ -83,29 +70,17 @@ export function AppLauncher({
 
     setIsAiDialogOpen(prev => !prev)
   }, [onOpenAi])
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
-  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false)
+  const [customBackgrounds, setCustomBackgrounds] = useState<CustomBackground[]>([])
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { isAuthenticated } = useAuthStore()
-
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('apps')
-  const [customBackgrounds, setCustomBackgrounds] = useState<CustomBackground[]>([])
-  const [isFullscreenViz, setIsFullscreenViz] = useState(false)
-  const [fullscreenPanel, setFullscreenPanel] = useState<'lyrics' | 'playlist'>('lyrics')
   const { clearFilters } = useFilterPersistenceStore()
-  // 使用音乐存储中的播放模式状态
   const { playMode, setPlayMode } = useMusicStore()
-  const lastAppliedShareTrackRef = useRef<string | null>(null)
-  const pendingSharedTrackIndexRef = useRef<number | null>(null)
 
-  // 使用自定义 hooks
   const audioManager = useAudioManager()
   const searchManager = useSearchManager(pathname)
   const { backgroundImage, setBackgroundImage } = useBackgroundManager()
 
-  // 解构 audioManager 的所有属性，避免 lint 误报
   const {
     audioRef,
     isPlaying,
@@ -122,9 +97,6 @@ export function AppLauncher({
     fetchAvailableTracks,
     setIsPlaying,
     setCurrentTrack,
-    setupMediaSource,
-    resetCurrentTime,
-    switchTrack,
     togglePlay,
     toggleMute,
     markUserInteracted,
@@ -138,294 +110,41 @@ export function AppLauncher({
     handoffAudioRef,
   } = audioManager
 
-  // 切换显示模式
-  const toggleDisplayMode = useCallback(
-    (mode: DisplayMode) => {
-      // 设置单独使用对话框，不再切换 displayMode
-      if (mode === 'settings') {
-        setIsSettingsDialogOpen(true)
-        return
-      }
-
-      // 登录使用对话框
-      if (mode === 'auth') {
-        setIsAuthDialogOpen(true)
-        return
-      }
-
-      setDisplayMode(mode)
-
-      // 当切换到音乐模式时，只加载音频列表，不改当前播放状态
-      if (mode === 'music') {
-        fetchAvailableTracks()
-      }
-    },
-    [fetchAvailableTracks]
-  )
-
-  const switchToNextTrack = useCallback(() => {
-    // 根据播放模式决定播放行为
-    if (playMode === 'one') {
-      // 单曲循环：重新播放当前歌曲
-      resetCurrentTime()
-      const audioElement = audioRef.current
-      if (audioElement) {
-        audioElement.play().catch(console.error)
-      }
-    } else {
-      // 列表循环、不循环、随机播放：播放下一首，如果到末尾则循环到第一首
-      switchTrack('next')
-    }
-  }, [playMode, resetCurrentTime, audioRef, switchTrack])
-  const switchToPrevTrack = useCallback(() => switchTrack('prev'), [switchTrack])
-  const currentTrackInfo = useMemo(
-    () => availableTracks.find(track => track.path === currentTrack),
-    [availableTracks, currentTrack]
-  )
-  const handleFullscreenTrackPlay = useCallback(
-    (trackPath: string) => {
-      markUserInteracted()
-
-      if (trackPath === currentTrack) {
-        if (!audioRef.current?.src) {
-          setupMediaSource()
-          setIsPlaying(true)
-          return
-        }
-
-        togglePlay()
-        return
-      }
-
-      setCurrentTrack?.(trackPath)
-      setIsPlaying(true)
-    },
-    [
-      markUserInteracted,
-      currentTrack,
-      audioRef,
-      setupMediaSource,
-      setCurrentTrack,
-      setIsPlaying,
-      togglePlay,
-    ]
-  )
   const {
+    displayMode,
+    isSettingsDialogOpen,
+    setIsSettingsDialogOpen,
+    isAuthDialogOpen,
+    setIsAuthDialogOpen,
+    isFullscreenViz,
+    setIsFullscreenViz,
+    fullscreenPanel,
+    setFullscreenPanel,
+    toggleDisplayMode,
+    resetSearchResult,
+    clearSharedTrackParam,
+    handlePersistentLogoClick,
+    shouldShowPersistentLogo,
+  } = useLauncherDisplayMode({
+    fetchAvailableTracks,
+    availableTracks: availableTracks || [],
+    setCurrentTrack,
+    searchManager,
+    clearFilters,
+    closeAi,
+    isAiOpen,
+  })
+
+  const {
+    switchToNextTrack,
+    switchToPrevTrack,
+    handleFullscreenTrackPlay,
     currentLyric,
     lyrics,
     activeLyricIndex,
-    status: lyricsStatus,
+    lyricsStatus,
     hasLyrics,
-  } = useTrackLyrics(currentTrack || '', currentTime, currentTrackInfo?.hasLyrics)
-  // 媒体键盘事件处理
-  useMediaKeys({ togglePlay, switchToPrevTrack, switchToNextTrack })
-
-  // Media Session API 支持
-  useMediaSession({
-    currentTrack,
-    availableTracks,
-    isPlaying,
-    togglePlay,
-    switchToPrevTrack,
-    switchToNextTrack,
-  })
-
-  // 重置搜索结果
-  const resetSearchResult = useCallback(() => {
-    setDisplayMode('apps')
-    searchManager.setSearchText('')
-  }, [searchManager])
-
-  const clearSharedTrackParam = useCallback(() => {
-    if (!searchParams.get('m')) {
-      return
-    }
-
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('m')
-
-    const nextQuery = params.toString()
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
-  }, [pathname, router, searchParams])
-
-  const navigateHome = useCallback(() => {
-    if (searchManager.isHomePage) {
-      return
-    }
-
-    router.push('/')
-  }, [router, searchManager.isHomePage])
-
-  const handlePersistentLogoClick = useCallback(() => {
-    if (displayMode === 'apps') {
-      if (isAiOpen) {
-        closeAi()
-        return
-      }
-
-      clearFilters()
-      navigateHome()
-      return
-    }
-
-    if (displayMode === 'music') {
-      clearFilters()
-      setDisplayMode('apps')
-
-      if (pathname !== '/') {
-        router.push('/')
-      }
-    }
-  }, [clearFilters, closeAi, displayMode, isAiOpen, navigateHome, pathname, router])
-
-  const shouldShowPersistentLogo = displayMode === 'apps' || displayMode === 'music'
-
-  useEffect(() => {
-    const sharedTrackValue = searchParams.get('m')
-    if (lastAppliedShareTrackRef.current === sharedTrackValue) return
-
-    const sharedTrackIndex = Number(sharedTrackValue ?? '')
-
-    if (!Number.isInteger(sharedTrackIndex) || sharedTrackIndex <= 0) {
-      lastAppliedShareTrackRef.current = sharedTrackValue
-      return
-    }
-
-    lastAppliedShareTrackRef.current = sharedTrackValue
-    pendingSharedTrackIndexRef.current = sharedTrackIndex - 1
-    startTransition(() => {
-      setDisplayMode('music')
-      setFullscreenPanel('lyrics')
-      setIsFullscreenViz(true)
-    })
-    void fetchAvailableTracks()
-  }, [fetchAvailableTracks, searchParams])
-
-  useEffect(() => {
-    const pendingIndex = pendingSharedTrackIndexRef.current
-    if (pendingIndex === null || pendingIndex < 0 || pendingIndex >= availableTracks.length) {
-      return
-    }
-
-    const sharedTrack = availableTracks[pendingIndex]
-    if (!sharedTrack) {
-      return
-    }
-
-    pendingSharedTrackIndexRef.current = null
-    startTransition(() => {
-      setCurrentTrack(sharedTrack.path)
-    })
-  }, [availableTracks, setCurrentTrack])
-
-  // 渲染内容的配置
-  const contentConfig = useMemo(
-    () => ({
-      music: {
-        component: MusicPlayer,
-        props: {
-          isPlaying,
-          audioError,
-          isLoadingTracks,
-          currentTime,
-          duration,
-          volume,
-          isMuted,
-          availableTracks: availableTracks || [],
-          currentTrack: currentTrack || '',
-          playMode: playMode,
-          analyserNode: audioManager.analyserNode,
-          readyToPlay,
-          toggleMute,
-          switchToPrevTrack,
-          switchToNextTrack,
-          togglePlay: () => {
-            markUserInteracted()
-            togglePlay()
-          },
-          handleProgressChange,
-          getCurrentTrackName,
-          currentLyric,
-          hasLyrics,
-          lyrics,
-          activeLyricIndex,
-          lyricsStatus,
-          formatTime,
-          toggleDisplayMode,
-          showLogo: false,
-          onTrackSelect: (trackPath: string) => setCurrentTrack?.(trackPath),
-          onSetPlayMode: (mode: PlayMode) => setPlayMode(mode),
-          onOpenFullscreen: () => setIsFullscreenViz(true),
-        },
-      },
-    }),
-    [
-      isPlaying,
-      audioError,
-      isLoadingTracks,
-      currentTime,
-      duration,
-      volume,
-      isMuted,
-      availableTracks,
-      currentTrack,
-      playMode,
-      readyToPlay,
-      toggleMute,
-      switchToPrevTrack,
-      switchToNextTrack,
-      togglePlay,
-      handleProgressChange,
-      getCurrentTrackName,
-      currentLyric,
-      hasLyrics,
-      lyrics,
-      activeLyricIndex,
-      lyricsStatus,
-      formatTime,
-      setCurrentTrack,
-      toggleDisplayMode,
-      setPlayMode,
-      markUserInteracted,
-      audioManager.analyserNode,
-    ]
-  )
-
-  const renderContent = () => {
-    switch (displayMode) {
-      case 'music': {
-        const { component: Component, props } = contentConfig.music
-        return (
-          <ViewWrapper>
-            <Component {...props} />
-          </ViewWrapper>
-        )
-      }
-
-      case 'apps':
-        return (
-          <AppsView
-            router={router}
-            searchManager={searchManager}
-            isAuthenticated={isAuthenticated}
-            toggleDisplayMode={toggleDisplayMode}
-            onOpenAi={toggleAi}
-            analyserNode={audioManager.analyserNode}
-            isAiOpen={isAiOpen}
-            onCloseAi={closeAi}
-            showLogo={false}
-          />
-        )
-
-      case 'search-result':
-        return (
-          <SearchResultView searchText={searchManager.searchText} onReset={resetSearchResult} />
-        )
-
-      default:
-        return null
-    }
-  }
+  } = useLauncherPlayback({ audioManager })
 
   return (
     <>
@@ -444,7 +163,6 @@ export function AppLauncher({
         />
       )}
 
-      {/* 设置对话框 */}
       {isSettingsDialogOpen && (
         <SettingsDialog
           open={isSettingsDialogOpen}
@@ -456,7 +174,6 @@ export function AppLauncher({
         />
       )}
 
-      {/* 全屏音频可视化 */}
       {isFullscreenViz && (
         <FullscreenVisualizer
           analyserNode={audioManager.analyserNode}
@@ -497,62 +214,54 @@ export function AppLauncher({
         />
       )}
 
-      <div id="app-launcher-bar" className="relative z-50 flex h-full w-full flex-col">
-        {shouldShowPersistentLogo && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex items-center">
-            <div className="pointer-events-auto">
-              <LogoButton onClick={handlePersistentLogoClick} />
-            </div>
-          </div>
-        )}
-
-        {/* 音频可视化 - 作为背景层，覆盖整个 app-launcher-bar，包括 padding */}
-        {displayMode === 'music' && audioManager.analyserNode && (
-          <div className="pointer-events-none absolute inset-y-0 left-1/2 z-0 w-screen -translate-x-1/2 overflow-hidden">
-            <AudioVisualizer
-              analyserNode={audioManager.analyserNode}
-              isPlaying={isPlaying}
-              type="bars"
-              barCount={40}
-              barGap={2}
-              barColor="rainbow"
-              showGradient={false}
-              fitWidth={true}
-              className="h-full w-full"
-            />
-          </div>
-        )}
-
-        {renderContent()}
-
-        <audio
-          key={audioMountKey}
-          ref={audioRef}
-          onLoadedMetadata={handleLoadedMetadata}
-          onTimeUpdate={handleTimeUpdate}
-          onError={handleAudioError}
-          onEnded={switchToNextTrack}
-          onCanPlay={() => setReadyToPlay(true)}
-          loop={false}
-          hidden
-          preload="none"
-          crossOrigin="anonymous"
-          // 手机端特殊属性
-          playsInline={true}
-          webkit-playsinline="true"
-          controls={false}
-        />
-        <audio
-          ref={handoffAudioRef}
-          onEnded={switchToNextTrack}
-          hidden
-          preload="none"
-          crossOrigin="anonymous"
-          playsInline={true}
-          webkit-playsinline="true"
-          controls={false}
-        />
-      </div>
+      <LauncherContent
+        displayMode={displayMode}
+        shouldShowPersistentLogo={shouldShowPersistentLogo}
+        onPersistentLogoClick={handlePersistentLogoClick}
+        router={router}
+        searchManager={searchManager}
+        isAuthenticated={isAuthenticated}
+        toggleDisplayMode={toggleDisplayMode}
+        onOpenAi={toggleAi}
+        isAiOpen={isAiOpen}
+        onCloseAi={closeAi}
+        resetSearchResult={resetSearchResult}
+        audioManager={audioManager}
+        isPlaying={isPlaying}
+        audioError={audioError}
+        isLoadingTracks={isLoadingTracks}
+        currentTime={currentTime}
+        duration={duration}
+        volume={volume}
+        isMuted={isMuted}
+        availableTracks={availableTracks}
+        currentTrack={currentTrack || ''}
+        playMode={playMode}
+        readyToPlay={readyToPlay}
+        toggleMute={toggleMute}
+        switchToPrevTrack={switchToPrevTrack}
+        switchToNextTrack={switchToNextTrack}
+        togglePlay={togglePlay}
+        markUserInteracted={markUserInteracted}
+        handleProgressChange={handleProgressChange}
+        getCurrentTrackName={getCurrentTrackName}
+        currentLyric={currentLyric}
+        hasLyrics={hasLyrics}
+        lyrics={lyrics}
+        activeLyricIndex={activeLyricIndex}
+        lyricsStatus={lyricsStatus}
+        formatTime={formatTime}
+        setCurrentTrack={trackPath => setCurrentTrack?.(trackPath)}
+        setPlayMode={setPlayMode}
+        onOpenFullscreen={() => setIsFullscreenViz(true)}
+        audioRef={audioRef}
+        handoffAudioRef={handoffAudioRef}
+        audioMountKey={audioMountKey}
+        handleLoadedMetadata={handleLoadedMetadata}
+        handleTimeUpdate={handleTimeUpdate}
+        handleAudioError={handleAudioError}
+        setReadyToPlay={setReadyToPlay}
+      />
     </>
   )
 }

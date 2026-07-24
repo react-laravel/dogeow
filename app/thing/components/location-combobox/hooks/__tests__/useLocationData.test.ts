@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useLocationData } from '../useLocationData'
 import { apiRequest } from '@/lib/api'
 import { toast } from 'sonner'
@@ -17,49 +17,52 @@ vi.mock('sonner', () => ({
 describe('useLocationData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(apiRequest).mockResolvedValue({ areas: [] })
   })
 
-  it('should initialize with empty data', () => {
+  it('should initialize with empty data', async () => {
     const { result } = renderHook(() => useLocationData())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
 
     expect(result.current.areas).toEqual([])
     expect(result.current.rooms).toEqual([])
     expect(result.current.spots).toEqual([])
-    expect(result.current.loading).toBe(false)
   })
 
-  it('should load areas successfully', async () => {
-    vi.mocked(apiRequest).mockResolvedValueOnce([{ id: 1, name: '客厅' }] as any)
+  it('should load areas successfully from { areas } payload', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ areas: [{ id: 1, name: '客厅' }] })
 
     const { result } = renderHook(() => useLocationData())
 
-    await act(async () => {
-      await result.current.loadAreas()
+    await waitFor(() => {
+      expect(result.current.areas).toEqual([{ id: 1, name: '客厅' }])
     })
 
     expect(apiRequest).toHaveBeenCalledWith('/areas')
-    expect(result.current.areas).toEqual([{ id: 1, name: '客厅' }])
-    expect(result.current.loading).toBe(false)
   })
 
   it('should handle load areas failure', async () => {
-    vi.mocked(apiRequest).mockRejectedValueOnce(new Error('network error'))
+    vi.mocked(apiRequest).mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useLocationData())
 
-    await act(async () => {
-      await result.current.loadAreas()
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('加载区域失败')
     })
 
-    expect(toast.error).toHaveBeenCalledWith('加载区域失败')
     expect(result.current.loading).toBe(false)
   })
 
   it('should clear rooms when areaId is empty', async () => {
     const { result } = renderHook(() => useLocationData())
 
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
     act(() => {
-      result.current.setRooms([{ id: 11, name: '主客厅', area_id: 1 }] as any)
+      result.current.setRooms([{ id: 11, name: '主客厅', area_id: 1 }] as never)
     })
 
     await act(async () => {
@@ -69,10 +72,13 @@ describe('useLocationData', () => {
     expect(result.current.rooms).toEqual([])
   })
 
-  it('should load rooms successfully', async () => {
-    vi.mocked(apiRequest).mockResolvedValueOnce([{ id: 11, name: '主客厅', area_id: 1 }] as any)
-
+  it('should load rooms successfully from { rooms } payload', async () => {
     const { result } = renderHook(() => useLocationData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      rooms: [{ id: 11, name: '主客厅', area_id: 1 }],
+    })
 
     await act(async () => {
       await result.current.loadRooms('1')
@@ -83,9 +89,10 @@ describe('useLocationData', () => {
   })
 
   it('should handle load rooms failure', async () => {
-    vi.mocked(apiRequest).mockRejectedValueOnce(new Error('network error'))
-
     const { result } = renderHook(() => useLocationData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    vi.mocked(apiRequest).mockRejectedValueOnce(new Error('network error'))
 
     await act(async () => {
       await result.current.loadRooms('1')
@@ -96,9 +103,10 @@ describe('useLocationData', () => {
 
   it('should clear spots when roomId is empty', async () => {
     const { result } = renderHook(() => useLocationData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
 
     act(() => {
-      result.current.setSpots([{ id: 111, name: '沙发', room_id: 11 }] as any)
+      result.current.setSpots([{ id: 111, name: '沙发', room_id: 11 }] as never)
     })
 
     await act(async () => {
@@ -108,10 +116,13 @@ describe('useLocationData', () => {
     expect(result.current.spots).toEqual([])
   })
 
-  it('should load spots successfully', async () => {
-    vi.mocked(apiRequest).mockResolvedValueOnce([{ id: 111, name: '沙发', room_id: 11 }] as any)
-
+  it('should load spots successfully from { spots } payload', async () => {
     const { result } = renderHook(() => useLocationData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      spots: [{ id: 111, name: '沙发', room_id: 11 }],
+    })
 
     await act(async () => {
       await result.current.loadSpots('11')
@@ -122,9 +133,10 @@ describe('useLocationData', () => {
   })
 
   it('should handle load spots failure', async () => {
-    vi.mocked(apiRequest).mockRejectedValueOnce(new Error('network error'))
-
     const { result } = renderHook(() => useLocationData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    vi.mocked(apiRequest).mockRejectedValueOnce(new Error('network error'))
 
     await act(async () => {
       await result.current.loadSpots('11')

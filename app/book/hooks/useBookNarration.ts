@@ -33,7 +33,7 @@ const SPEECH_RATE = 0.92
 const PROGRESS_INTERVAL_MS = 80
 const HIGHLIGHT_WINDOW = 2
 
-function getPairNarrationParts(
+export function getPairNarrationParts(
   pair: SentencePair,
   narrationMode: BookNarrationMode
 ): { text: string; segments: NarrationSegment[] } {

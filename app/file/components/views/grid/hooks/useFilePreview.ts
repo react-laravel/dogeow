@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { apiRequest } from '@/lib/api'
-import { getFileStorageUrl } from '@/app/file/services/api'
+import { getFileStorageUrl, withOptionalCacheBust } from '@/app/file/services/api'
 import { PREVIEW_TYPES, type PreviewType } from '../utils/previewTypes'
 import type { CloudFile, FilePreviewResponse } from '@/app/file/types'
 
@@ -22,7 +22,7 @@ export const useFilePreview = () => {
     try {
       if (file.type === 'image') {
         setPreviewType(PREVIEW_TYPES.IMAGE)
-        setPreviewUrl(`${getFileStorageUrl(file.path)}?t=${Date.now()}`)
+        setPreviewUrl(withOptionalCacheBust(getFileStorageUrl(file.path)))
         return
       }
 

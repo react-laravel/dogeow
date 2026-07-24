@@ -38,7 +38,7 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
       scrollTop: number
       pairIndex?: number | null
       excerpt?: string
-    }) => void
+    }) => { mark: BookMarkType; created: boolean }
     removeMark: (id: string) => void
   }
 
@@ -76,6 +76,10 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
   hasTextSelection: boolean
   hasPairDisplayMode: boolean
   hasContentMode: boolean
+  /** 设置面板是否显示原文/译文字体分别选择 */
+  hasDualFonts?: boolean
+  /** 听书模式选择是否隐藏译文/全部（仅原文书） */
+  narrationOriginalOnly?: boolean
 
   /** sessionStorage key for scroll position; omit to reset scroll on chapter change */
   scrollStorageKey?: string

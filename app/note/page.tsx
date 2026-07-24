@@ -1,9 +1,10 @@
 'use client'
 
 import './note-styles.css'
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { apiRequest } from '@/lib/api'
+import useSWR from 'swr'
+import { get } from '@/lib/api'
 import { logger } from '@/lib/logger'
 import { List, Network, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -19,6 +20,11 @@ import NoteCard from './components/NoteCard'
 import NotePageGraphToolbar from './components/NotePageGraphToolbar'
 
 type ViewMode = 'list' | 'graph'
+
+async function fetchNotesList(): Promise<Note[]> {
+  const data = await get<Note[] | { notes: Note[] }>('/notes', { handleError: false })
+  return normalizeNotes<Note>(data)
+}
 
 function ViewModeSwitch({
   viewMode,
@@ -69,60 +75,44 @@ function ViewModeSwitch({
 
 export default function NotePage() {
   const pathname = usePathname()
-  const [notes, setNotes] = useState<Note[]>([])
-  const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [graphQuery, setGraphQuery] = useState<string>('')
   const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false)
-  const [graphNodeCount, setGraphNodeCount] = useState<number>(0)
   const graphNewNodeRef = useRef<(() => void) | null>(null)
   const graphCreateLinkRef = useRef<(() => void) | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
-  const fetchNotes = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await apiRequest<Note[] | { notes: Note[] }>('/notes')
-      setNotes(normalizeNotes<Note>(data))
-    } catch (error) {
-      logger.error('获取笔记列表失败:', error)
+  const notesKey = pathname === '/note' ? '/notes' : null
+  const {
+    data: notes = [],
+    isLoading: loading,
+    error: notesError,
+  } = useSWR<Note[]>(notesKey, fetchNotesList, {
+    revalidateOnFocus: false,
+  })
+
+  useEffect(() => {
+    if (notesError) {
+      logger.error('获取笔记列表失败:', notesError)
       toast.error('无法加载笔记列表')
-      setNotes([])
-    } finally {
-      setLoading(false)
     }
-  }, [])
+  }, [notesError])
 
-  useEffect(() => {
-    if (pathname === '/note') {
-      void fetchNotes()
-    }
-  }, [pathname, fetchNotes])
-
-  // 获取图谱节点数量
-  const fetchGraphNodeCount = useCallback(async () => {
-    try {
+  const { data: graphNodeCount = 0, mutate: mutateGraphCount } = useSWR(
+    'notes/graph-node-count',
+    async () => {
       const graphData = await getWikiGraph()
-      setGraphNodeCount(graphData.nodes.length)
-    } catch (error) {
-      logger.error('获取图谱数据失败:', error)
-      setGraphNodeCount(0)
-    }
-  }, [])
+      return graphData.nodes.length
+    },
+    { revalidateOnFocus: false }
+  )
 
-  // 初始化时获取图谱节点数量
-  useEffect(() => {
-    fetchGraphNodeCount()
-  }, [fetchGraphNodeCount])
-
-  // 切换到图谱视图时刷新节点数量
   useEffect(() => {
     if (viewMode === 'graph') {
-      fetchGraphNodeCount()
+      void mutateGraphCount()
     }
-  }, [viewMode, fetchGraphNodeCount])
+  }, [viewMode, mutateGraphCount])
 
-  // 使用 useMemo 优化排序性能
   const sortedNotes = useMemo(() => {
     if (!Array.isArray(notes)) {
       return []
@@ -136,7 +126,6 @@ export default function NotePage() {
 
   const noteCount = sortedNotes.length
 
-  // 渲染图谱视图
   if (viewMode === 'graph') {
     return (
       <PageContainer>
@@ -226,7 +215,6 @@ export default function NotePage() {
     )
   }
 
-  // 渲染列表视图
   return (
     <PageContainer>
       <header className="mb-6 flex min-w-0 items-center gap-4 overflow-hidden">

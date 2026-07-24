@@ -9,7 +9,7 @@ import {
   Folder,
 } from 'lucide-react'
 import Image from 'next/image'
-import { getFileStorageUrl } from '@/app/file/services/api'
+import { getFileStorageUrl, withOptionalCacheBust } from '@/app/file/services/api'
 import type { CloudFile } from '@/app/file/types'
 
 export const FILE_TYPE_ICONS = {
@@ -22,7 +22,7 @@ export const FILE_TYPE_ICONS = {
   default: { icon: File, color: 'text-gray-500' },
 } as const
 
-// 在模块加载时设置时间戳，用于图片缓存控制
+// 在模块加载时设置时间戳，用于非签名图片缓存控制
 const IMAGE_TIMESTAMP = Date.now()
 
 interface FileIconProps {
@@ -30,13 +30,11 @@ interface FileIconProps {
 }
 
 export const FileIcon = ({ file }: FileIconProps) => {
-  const imageTimestamp = IMAGE_TIMESTAMP
-
   if (file.is_folder) {
     return <Folder className="h-12 w-12 text-yellow-500" />
   }
   if (file.type === 'image') {
-    const storageUrl = `${getFileStorageUrl(file.path)}?t=${imageTimestamp}`
+    const storageUrl = withOptionalCacheBust(getFileStorageUrl(file.path), IMAGE_TIMESTAMP)
     return (
       <div className="bg-muted relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-md">
         <Image

@@ -111,13 +111,19 @@ export function VolumeBookReader({
 
   const loadChapter = useCallback(
     async (chapterId: string) => {
-      if (!index) return
+      if (!index) {
+        throw new Error('书目索引尚未加载完成')
+      }
 
       const [volIdx, chIdx] = parseChapterPosition(chapterId)
-      if (Number.isNaN(volIdx) || Number.isNaN(chIdx)) return
+      if (Number.isNaN(volIdx) || Number.isNaN(chIdx)) {
+        throw new Error('无效的章节编号')
+      }
 
       const ch = index.volumes[volIdx]?.chapters[chIdx]
-      if (!ch) return
+      if (!ch) {
+        throw new Error('未找到该章节')
+      }
 
       setChapterContent(null)
 
@@ -167,10 +173,12 @@ export function VolumeBookReader({
 
   const renderContent = useCallback(
     ({
+      settings: readerSettings,
       themeColor,
       activePairIndex = null,
       activeHighlight = null,
     }: {
+      settings: VolumeReaderSettings
       themeColor?: string
       activePairIndex?: number | null
       activeHighlight?: {
@@ -213,7 +221,11 @@ export function VolumeBookReader({
                         'rounded-md bg-current/5 px-2 py-1 ring-1 ring-current/15 transition-colors'
                     )}
                   >
-                    <NarrationHighlightedText text={paragraph} highlight={highlight} />
+                    <NarrationHighlightedText
+                      text={paragraph}
+                      highlight={highlight}
+                      theme={readerSettings.theme}
+                    />
                   </p>
                 )
               })}
@@ -251,6 +263,7 @@ export function VolumeBookReader({
       hasTextSelection: true,
       hasPairDisplayMode: false,
       hasContentMode: false,
+      narrationOriginalOnly: true,
       scrollStorageKey: storageKey,
       chapterSelectPlaceholder,
       renderContent,
@@ -282,7 +295,9 @@ export function VolumeBookReader({
 
   if (!index) {
     return (
-      <div className="text-destructive flex h-full items-center justify-center p-6 text-sm">
+      <div
+        className={`flex h-full items-center justify-center p-6 text-sm ${indexError ? 'text-destructive' : 'text-muted-foreground'}`}
+      >
         {indexError ?? '正在加载书目…'}
       </div>
     )

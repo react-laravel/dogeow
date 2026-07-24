@@ -1,58 +1,318 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import useSWR from 'swr'
-import { get, post } from '@/lib/api'
-import type { UnreadNotificationsResponse } from '@/lib/api'
-import useAuthStore from '@/stores/authStore'
-import usePushSubscriptionStore from '@/stores/pushSubscriptionStore'
-import { Switch } from '@/components/ui/switch'
-import { BottomHourPicker } from '@/components/ui/bottom-hour-picker'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { Bell, BellOff, BellRing, ChevronDown, Loader2, Volume2, VolumeX, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { isPushSupported, usePushSubscription } from '@/hooks/usePushSubscription'
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+  useUnreadNotifications,
+  type UnreadNotificationsResponse,
+} from '@/lib/api'
+import { Switch } from '@/components/ui/switch'
+import { BottomHourPicker } from '@/components/ui/bottom-hour-picker'
+import { usePushSubscription } from '@/hooks/usePushSubscription'
 import {
   getNotificationPreferences,
   saveNotificationPreferences,
   type NotificationPreferences,
 } from '@/lib/push/notificationPreferences'
 import { syncPushNotificationPreferences } from '@/lib/push/serviceWorker'
+import useAuthStore from '@/stores/authStore'
+import usePushSubscriptionStore from '@/stores/pushSubscriptionStore'
 
-const fetcher = (url: string) => get<UnreadNotificationsResponse>(url)
+function formatHour(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`
+}
 
 function getPushControlLabel(
   permission: ReturnType<typeof usePushSubscriptionStore.getState>['permission'],
   hasSubscription: boolean,
   isLoading: boolean
 ): string {
-  if (isLoading) {
-    return '正在注册本站推送…'
-  }
-
-  if (hasSubscription) {
-    return '系统通知已开启'
-  }
-
-  if (permission === 'granted') {
-    return '浏览器已授权，本站推送未开启'
-  }
-
+  if (isLoading) return '正在注册本站推送…'
+  if (hasSubscription) return '系统通知已开启'
+  if (permission === 'granted') return '浏览器已授权，本站推送未开启'
   return '开启系统通知'
+}
+
+function getSoundSummary(preferences: NotificationPreferences): string {
+  if (!preferences.soundEnabled) return '声音已关闭'
+  return `声音开启 · ${formatHour(preferences.quietHoursStart)}–${formatHour(preferences.quietHoursEnd)} 静音`
+}
+
+function useClickOutside(
+  open: boolean,
+  containerRef: RefObject<HTMLElement | null>,
+  onClose: () => void
+) {
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+
+      if (target.closest('[data-slot="sheet-content"], [data-slot="sheet-overlay"]')) {
+        return
+      }
+
+      if (containerRef.current?.contains(target)) return
+      onClose()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open, containerRef, onClose])
+}
+
+function useSyncedNotificationPreferences() {
+  const [preferences, setPreferences] = useState(getNotificationPreferences)
+  const preferencesRef = useRef(preferences)
+  const revisionRef = useRef(0)
+  const confirmedRef = useRef(preferences)
+  const confirmedRevisionRef = useRef(0)
+
+  useEffect(() => {
+    preferencesRef.current = preferences
+  }, [preferences])
+
+  const updatePreferences = useCallback((next: NotificationPreferences) => {
+    const previous = preferencesRef.current
+    if (!saveNotificationPreferences(next)) {
+      saveNotificationPreferences(previous)
+      toast.error('通知声音设置无法保存，请检查浏览器存储权限')
+      return
+    }
+
+    const revision = revisionRef.current + 1
+    revisionRef.current = revision
+    setPreferences(next)
+
+    void syncPushNotificationPreferences(next)
+      .then(() => {
+        if (revision <= confirmedRevisionRef.current) return
+        confirmedRef.current = next
+        confirmedRevisionRef.current = revision
+      })
+      .catch(() => {
+        if (revisionRef.current !== revision) return
+
+        const confirmed = confirmedRef.current
+        setPreferences(confirmed)
+        saveNotificationPreferences(confirmed)
+        void syncPushNotificationPreferences(confirmed).catch(() => undefined)
+        toast.error('通知声音设置保存失败，请稍后重试')
+      })
+  }, [])
+
+  return { preferences, updatePreferences }
+}
+
+function SoundSettingsPanel({
+  preferences,
+  onSoundChange,
+  onQuietHoursChange,
+}: {
+  preferences: NotificationPreferences
+  onSoundChange: (enabled: boolean) => void
+  onQuietHoursChange: (start: number, end: number) => void
+}) {
+  return (
+    <div id="notification-sound-settings" className="space-y-2 border-t pt-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          {preferences.soundEnabled ? (
+            <Volume2 className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+          ) : (
+            <VolumeX className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+          )}
+          <div className="min-w-0">
+            <div className="text-sm font-medium">通知声音</div>
+            <div className="text-muted-foreground text-xs leading-5">按本设备设置</div>
+          </div>
+        </div>
+        <Switch
+          checked={preferences.soundEnabled}
+          onCheckedChange={onSoundChange}
+          aria-label="通知声音开关"
+        />
+      </div>
+
+      {preferences.soundEnabled && (
+        <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-md p-2">
+          <span className="shrink-0 text-xs font-medium">自动静音</span>
+          <div className="flex items-center gap-1.5">
+            <BottomHourPicker
+              id="notification-quiet-start"
+              value={preferences.quietHoursStart}
+              onChange={hour => onQuietHoursChange(hour, preferences.quietHoursEnd)}
+              label="通知静音开始时间"
+              title="静音开始时间；支持跨天，开始与结束相同表示不自动静音"
+              className="h-8 min-w-[4.25rem] px-2"
+            />
+            <span className="text-muted-foreground text-xs">至</span>
+            <BottomHourPicker
+              id="notification-quiet-end"
+              value={preferences.quietHoursEnd}
+              onChange={hour => onQuietHoursChange(preferences.quietHoursStart, hour)}
+              label="通知静音结束时间"
+              title="静音结束时间；支持跨天，开始与结束相同表示不自动静音"
+              className="h-8 min-w-[4.25rem] px-2"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PushControls({
+  permission,
+  hasSubscription,
+  isLoading,
+  label,
+  soundSettingsOpen,
+  preferences,
+  onToggleSoundSettings,
+  onPushSwitchChange,
+  onSoundChange,
+  onQuietHoursChange,
+}: {
+  permission: ReturnType<typeof usePushSubscriptionStore.getState>['permission']
+  hasSubscription: boolean
+  isLoading: boolean
+  label: string
+  soundSettingsOpen: boolean
+  preferences: NotificationPreferences
+  onToggleSoundSettings: () => void
+  onPushSwitchChange: (checked: boolean) => void
+  onSoundChange: (enabled: boolean) => void
+  onQuietHoursChange: (start: number, end: number) => void
+}) {
+  if (permission === 'denied') {
+    return (
+      <div className="shrink-0 border-b px-4 py-2.5">
+        <div className="flex items-start gap-2 text-sm">
+          <BellOff className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-1">
+            <div className="font-medium">系统通知已被阻止</div>
+            <div className="text-muted-foreground text-xs leading-5">
+              请在浏览器或系统设置中允许通知。
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="shrink-0 border-b px-4 py-2.5">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          {hasSubscription ? (
+            <button
+              type="button"
+              onClick={onToggleSoundSettings}
+              className="hover:text-primary flex min-w-0 flex-1 items-center gap-2 text-left text-sm transition-colors"
+              aria-expanded={soundSettingsOpen}
+              aria-controls="notification-sound-settings"
+              aria-label={`${soundSettingsOpen ? '收起' : '展开'}声音与静音设置`}
+            >
+              {isLoading ? (
+                <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+              ) : (
+                <BellRing className="text-primary h-4 w-4 shrink-0" />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{label}</span>
+                <span className="text-muted-foreground block truncate text-xs">
+                  {getSoundSummary(preferences)}
+                </span>
+              </span>
+              <ChevronDown
+                className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${soundSettingsOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+          ) : (
+            <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+              {isLoading ? (
+                <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+              ) : (
+                <Bell className="text-muted-foreground h-4 w-4 shrink-0" />
+              )}
+              <span className="font-medium">{label}</span>
+            </div>
+          )}
+          <Switch
+            checked={hasSubscription}
+            onCheckedChange={onPushSwitchChange}
+            disabled={isLoading}
+            aria-label="系统通知开关"
+          />
+        </div>
+
+        {hasSubscription && soundSettingsOpen && (
+          <SoundSettingsPanel
+            preferences={preferences}
+            onSoundChange={onSoundChange}
+            onQuietHoursChange={onQuietHoursChange}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function NotificationList({
+  items,
+  onMarkRead,
+}: {
+  items: UnreadNotificationsResponse['items'] | undefined
+  onMarkRead: (id: string, url: string) => void
+}) {
+  if (!items || items.length === 0) {
+    return <div className="text-muted-foreground py-4 text-center text-sm">暂无未读通知</div>
+  }
+
+  return (
+    <>
+      {items.map(item => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onMarkRead(item.id, item.data.url || '/')}
+          className="hover:bg-muted flex w-full flex-col items-start gap-1 border-b px-4 py-3 text-left last:border-0"
+        >
+          <span className="font-medium">{item.data.title || '通知'}</span>
+          {item.data.body ? (
+            <span className="text-muted-foreground line-clamp-2 text-sm">{item.data.body}</span>
+          ) : null}
+          <span className="text-muted-foreground text-xs">
+            {new Date(item.created_at).toLocaleString('zh-CN')}
+          </span>
+        </button>
+      ))}
+    </>
+  )
 }
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
   const [soundSettingsOpen, setSoundSettingsOpen] = useState(false)
-  const [notificationPreferences, setNotificationPreferences] = useState(() =>
-    getNotificationPreferences()
-  )
+  const containerRef = useRef<HTMLDivElement>(null)
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
-  const ref = useRef<HTMLDivElement>(null)
-  const preferencesRevisionRef = useRef(0)
-  const confirmedPreferencesRef = useRef(notificationPreferences)
-  const confirmedPreferencesRevisionRef = useRef(0)
   const pushPermission = usePushSubscriptionStore(s => s.permission)
   const hasPushSubscription = usePushSubscriptionStore(s => s.hasSubscription)
+  const { preferences, updatePreferences } = useSyncedNotificationPreferences()
   const {
     register,
     unregister,
@@ -62,34 +322,18 @@ export function NotificationDropdown() {
     errorMessage,
   } = usePushSubscription()
 
-  const { data, mutate } = useSWR<UnreadNotificationsResponse>(
-    isAuthenticated ? 'notifications/unread' : null,
-    fetcher,
-    {
-      revalidateOnMount: false,
-    }
-  )
+  const { data, mutate } = useUnreadNotifications(isAuthenticated, {
+    revalidateOnMount: false,
+    revalidateOnFocus: false,
+  })
 
-  // 点击外部关闭
-  useEffect(() => {
-    if (!open) return
-    const handle = (e: MouseEvent) => {
-      if (
-        e.target instanceof Element &&
-        e.target.closest('[data-slot="sheet-content"], [data-slot="sheet-overlay"]')
-      ) {
-        return
-      }
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const close = useCallback(() => {
+    setOpen(false)
+    queueMicrotask(() => triggerRef.current?.focus())
+  }, [])
+  useClickOutside(open, containerRef, close)
 
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [open])
-
-  // 打开下拉时主动刷新一次，确保列表和角标是最新
   useEffect(() => {
     if (!open || !isAuthenticated) return
     void mutate()
@@ -104,10 +348,9 @@ export function NotificationDropdown() {
   const handleToggleOpen = () => {
     const nextOpen = !open
     setOpen(nextOpen)
-    if (nextOpen) {
-      setSoundSettingsOpen(false)
-      void refreshState()
-    }
+    if (!nextOpen) return
+    setSoundSettingsOpen(false)
+    void refreshState()
   }
 
   const handleEnablePush = async () => {
@@ -139,66 +382,13 @@ export function NotificationDropdown() {
   const handleDisablePush = async () => {
     const ok = await unregister()
     await refreshState()
-    if (ok) {
-      toast.success('已关闭本站推送')
-    }
-  }
-
-  const handlePushSwitchChange = async (checked: boolean) => {
-    if (checked) {
-      await handleEnablePush()
-    } else {
-      await handleDisablePush()
-    }
-  }
-
-  const updateNotificationPreferences = (preferences: NotificationPreferences) => {
-    const previousPreferences = notificationPreferences
-    if (!saveNotificationPreferences(preferences)) {
-      saveNotificationPreferences(previousPreferences)
-      toast.error('通知声音设置无法保存，请检查浏览器存储权限')
-      return
-    }
-
-    const revision = preferencesRevisionRef.current + 1
-    preferencesRevisionRef.current = revision
-    setNotificationPreferences(preferences)
-    void syncPushNotificationPreferences(preferences)
-      .then(() => {
-        if (revision <= confirmedPreferencesRevisionRef.current) return
-        confirmedPreferencesRef.current = preferences
-        confirmedPreferencesRevisionRef.current = revision
-      })
-      .catch(() => {
-        if (preferencesRevisionRef.current !== revision) return
-
-        const confirmedPreferences = confirmedPreferencesRef.current
-        setNotificationPreferences(confirmedPreferences)
-        saveNotificationPreferences(confirmedPreferences)
-        void syncPushNotificationPreferences(confirmedPreferences).catch(() => undefined)
-        toast.error('通知声音设置保存失败，请稍后重试')
-      })
-  }
-
-  const handleSoundSwitchChange = (checked: boolean) => {
-    updateNotificationPreferences({
-      ...notificationPreferences,
-      soundEnabled: checked,
-    })
-  }
-
-  const handleQuietHoursChange = (quietHoursStart: number, quietHoursEnd: number) => {
-    updateNotificationPreferences({
-      ...notificationPreferences,
-      quietHoursStart,
-      quietHoursEnd,
-    })
+    if (ok) toast.success('已关闭本站推送')
   }
 
   const handleMarkRead = async (id: string, url: string) => {
     try {
-      await post<{ message: string }>(`notifications/${id}/read`, {})
-      mutate()
+      await markNotificationRead(id)
+      void mutate()
       window.location.assign(url)
       setOpen(false)
     } catch {
@@ -208,8 +398,8 @@ export function NotificationDropdown() {
 
   const handleMarkAllRead = async () => {
     try {
-      await post<{ message: string }>('notifications/read-all', {})
-      mutate()
+      await markAllNotificationsRead()
+      void mutate()
       toast.success('已全部标记为已读')
       setOpen(false)
     } catch {
@@ -223,37 +413,51 @@ export function NotificationDropdown() {
   const pushIsLoading = pushStatus === 'loading'
   const pushLabel = getPushControlLabel(pushPermission, hasPushSubscription, pushIsLoading)
 
+  const NOTIFICATION_PANEL_ID = 'notification-dropdown-panel'
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={containerRef}>
       <button
+        ref={triggerRef}
+        type="button"
         onClick={handleToggleOpen}
         className="hover:bg-accent/70 relative flex size-10 items-center justify-center rounded-xl transition-colors"
         aria-label={count > 0 ? `通知，${renderedCount} 条未读` : '通知'}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={NOTIFICATION_PANEL_ID}
       >
         <Bell className="h-4 w-4" />
-        {count > 0 && (
-          <span className="bg-destructive text-white absolute -top-px -right-px flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] font-medium leading-none">
+        {count > 0 ? (
+          <span className="bg-destructive absolute -top-px -right-px flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] leading-none font-medium text-white">
             {renderedCount}
           </span>
-        )}
+        ) : null}
       </button>
 
-      {open && (
-        <div className="border-border/70 bg-popover/96 text-popover-foreground fixed top-[calc(var(--app-header-total-height)+0.5rem)] right-[max(1rem,env(safe-area-inset-right))] left-[max(1rem,env(safe-area-inset-left))] z-[100] flex max-h-[calc(100dvh-var(--app-header-total-height)-1rem)] flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-[min(22rem,calc(100vw-2rem))]">
+      {open ? (
+        <div
+          id={NOTIFICATION_PANEL_ID}
+          role="dialog"
+          aria-modal="true"
+          aria-label="通知面板"
+          className="border-border/70 bg-popover/96 text-popover-foreground fixed top-[calc(var(--app-header-total-height)+0.5rem)] right-[max(1rem,env(safe-area-inset-right))] left-[max(1rem,env(safe-area-inset-left))] z-[100] flex max-h-[calc(100dvh-var(--app-header-total-height)-1rem)] flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-[min(22rem,calc(100vw-2rem))]"
+        >
           <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
             <span className="font-medium">通知</span>
             <div className="flex items-center gap-1">
-              {count > 0 && (
+              {count > 0 ? (
                 <button
+                  type="button"
                   onClick={handleMarkAllRead}
                   className="text-muted-foreground hover:text-foreground flex min-h-9 items-center rounded-md px-2 text-xs"
                 >
                   全部已读
                 </button>
-              )}
+              ) : null}
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-9 items-center justify-center rounded-lg transition-colors"
                 aria-label="关闭通知面板"
               >
@@ -262,153 +466,30 @@ export function NotificationDropdown() {
             </div>
           </div>
 
-          {showPushControl && (
-            <div className="shrink-0 border-b px-4 py-2.5">
-              {pushPermission === 'denied' ? (
-                <div className="flex items-start gap-2 text-sm">
-                  <BellOff className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                  <div className="space-y-1">
-                    <div className="font-medium">系统通知已被阻止</div>
-                    <div className="text-muted-foreground text-xs leading-5">
-                      请在浏览器或系统设置中允许通知。
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    {hasPushSubscription ? (
-                      <button
-                        type="button"
-                        onClick={() => setSoundSettingsOpen(value => !value)}
-                        className="hover:text-primary flex min-w-0 flex-1 items-center gap-2 text-left text-sm transition-colors"
-                        aria-expanded={soundSettingsOpen}
-                        aria-controls="notification-sound-settings"
-                        aria-label={`${soundSettingsOpen ? '收起' : '展开'}声音与静音设置`}
-                      >
-                        {pushIsLoading ? (
-                          <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
-                        ) : (
-                          <BellRing className="text-primary h-4 w-4 shrink-0" />
-                        )}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{pushLabel}</span>
-                          <span className="text-muted-foreground block truncate text-xs">
-                            {notificationPreferences.soundEnabled
-                              ? `声音开启 · ${String(notificationPreferences.quietHoursStart).padStart(2, '0')}:00–${String(notificationPreferences.quietHoursEnd).padStart(2, '0')}:00 静音`
-                              : '声音已关闭'}
-                          </span>
-                        </span>
-                        <ChevronDown
-                          className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${soundSettingsOpen ? 'rotate-180' : ''}`}
-                        />
-                      </button>
-                    ) : (
-                      <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-                        {pushIsLoading ? (
-                          <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
-                        ) : (
-                          <Bell className="text-muted-foreground h-4 w-4 shrink-0" />
-                        )}
-                        <span className="font-medium">{pushLabel}</span>
-                      </div>
-                    )}
-                    <Switch
-                      checked={hasPushSubscription}
-                      onCheckedChange={handlePushSwitchChange}
-                      disabled={pushIsLoading}
-                      aria-label="系统通知开关"
-                    />
-                  </div>
-
-                  {hasPushSubscription && soundSettingsOpen && (
-                    <div id="notification-sound-settings" className="space-y-2 border-t pt-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 flex-1 items-start gap-2">
-                          {notificationPreferences.soundEnabled ? (
-                            <Volume2 className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-                          ) : (
-                            <VolumeX className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                          )}
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium">通知声音</div>
-                            <div className="text-muted-foreground text-xs leading-5">
-                              按本设备设置
-                            </div>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={notificationPreferences.soundEnabled}
-                          onCheckedChange={handleSoundSwitchChange}
-                          aria-label="通知声音开关"
-                        />
-                      </div>
-
-                      {notificationPreferences.soundEnabled && (
-                        <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-md p-2">
-                          <span className="shrink-0 text-xs font-medium">自动静音</span>
-                          <div className="flex items-center gap-1.5">
-                            <BottomHourPicker
-                              id="notification-quiet-start"
-                              value={notificationPreferences.quietHoursStart}
-                              onChange={hour =>
-                                handleQuietHoursChange(hour, notificationPreferences.quietHoursEnd)
-                              }
-                              label="通知静音开始时间"
-                              title="静音开始时间；支持跨天，开始与结束相同表示不自动静音"
-                              className="h-8 min-w-[4.25rem] px-2"
-                            />
-                            <span className="text-muted-foreground text-xs">至</span>
-                            <BottomHourPicker
-                              id="notification-quiet-end"
-                              value={notificationPreferences.quietHoursEnd}
-                              onChange={hour =>
-                                handleQuietHoursChange(
-                                  notificationPreferences.quietHoursStart,
-                                  hour
-                                )
-                              }
-                              label="通知静音结束时间"
-                              title="静音结束时间；支持跨天，开始与结束相同表示不自动静音"
-                              className="h-8 min-w-[4.25rem] px-2"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          {showPushControl ? (
+            <PushControls
+              permission={pushPermission}
+              hasSubscription={hasPushSubscription}
+              isLoading={pushIsLoading}
+              label={pushLabel}
+              soundSettingsOpen={soundSettingsOpen}
+              preferences={preferences}
+              onToggleSoundSettings={() => setSoundSettingsOpen(value => !value)}
+              onPushSwitchChange={checked => {
+                void (checked ? handleEnablePush() : handleDisablePush())
+              }}
+              onSoundChange={soundEnabled => updatePreferences({ ...preferences, soundEnabled })}
+              onQuietHoursChange={(quietHoursStart, quietHoursEnd) =>
+                updatePreferences({ ...preferences, quietHoursStart, quietHoursEnd })
+              }
+            />
+          ) : null}
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:max-h-96">
-            {!data || data.items.length === 0 ? (
-              <div className="text-muted-foreground py-4 text-center text-sm">暂无未读通知</div>
-            ) : (
-              data.items.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => handleMarkRead(item.id, item.data.url || '/')}
-                  className="hover:bg-muted flex w-full flex-col items-start gap-1 border-b px-4 py-3 text-left last:border-0"
-                >
-                  <div className="flex w-full items-center justify-between">
-                    <span className="font-medium">{item.data.title || '通知'}</span>
-                  </div>
-                  {item.data.body && (
-                    <span className="text-muted-foreground line-clamp-2 text-sm">
-                      {item.data.body}
-                    </span>
-                  )}
-                  <span className="text-muted-foreground text-xs">
-                    {new Date(item.created_at).toLocaleString('zh-CN')}
-                  </span>
-                </button>
-              ))
-            )}
+            <NotificationList items={data?.items} onMarkRead={handleMarkRead} />
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

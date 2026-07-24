@@ -1,22 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 
 const QQ_NUMBER = '5968251'
+const COPY_RESET_MS = 2000
 
 export default function ContactPage() {
   const [copied, setCopied] = useState(false)
+  const resetTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current != null) {
+        window.clearTimeout(resetTimerRef.current)
+      }
+    }
+  }, [])
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(QQ_NUMBER)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+      if (resetTimerRef.current != null) {
+        window.clearTimeout(resetTimerRef.current)
+      }
+      resetTimerRef.current = window.setTimeout(() => setCopied(false), COPY_RESET_MS)
+    } catch {
+      toast.error('复制失败，请手动选择号码')
     }
   }
 

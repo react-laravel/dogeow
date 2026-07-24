@@ -239,36 +239,57 @@ export async function apiRequest<T>(
   }
 }
 
+type ApiRequestOptions = {
+  handleError?: boolean
+  suppressUnauthorizedRedirect?: boolean
+  includeAuthToken?: boolean
+}
+
 // HTTP方法包装器
-export const apiGet = <T>(endpoint: string): Promise<T> => apiRequest<T>(endpoint, 'GET')
+export const apiGet = <T>(endpoint: string, options?: ApiRequestOptions): Promise<T> =>
+  apiRequest<T>(endpoint, 'GET', undefined, options)
 
-export const get = <T>(endpoint: string): Promise<T> => apiGet<T>(endpoint)
+export const get = <T>(endpoint: string, options?: ApiRequestOptions): Promise<T> =>
+  apiGet<T>(endpoint, options)
 
-export const post = <T>(endpoint: string, data: unknown): Promise<T> =>
-  apiRequest<T>(endpoint, 'POST', data)
+export const post = <T>(endpoint: string, data: unknown, options?: ApiRequestOptions): Promise<T> =>
+  apiRequest<T>(endpoint, 'POST', data, options)
 
-export const put = <T>(endpoint: string, data: unknown): Promise<T> =>
-  apiRequest<T>(endpoint, 'PUT', data)
+export const put = <T>(endpoint: string, data: unknown, options?: ApiRequestOptions): Promise<T> =>
+  apiRequest<T>(endpoint, 'PUT', data, options)
 
-export const del = <T>(endpoint: string, data?: unknown): Promise<T> =>
-  apiRequest<T>(endpoint, 'DELETE', data)
+export const del = <T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> =>
+  apiRequest<T>(endpoint, 'DELETE', data, options)
 
-export const patch = <T>(endpoint: string, data: unknown): Promise<T> =>
-  apiRequest<T>(endpoint, 'PATCH', data)
+export const patch = <T>(
+  endpoint: string,
+  data: unknown,
+  options?: ApiRequestOptions
+): Promise<T> => apiRequest<T>(endpoint, 'PATCH', data, options)
 
 /** DELETE 请求并携带 body（用于 endpoint 等较长参数） */
-export const delWithBody = <T>(endpoint: string, data: unknown): Promise<T> =>
-  apiRequest<T>(endpoint, 'DELETE', data)
+export const delWithBody = <T>(
+  endpoint: string,
+  data: unknown,
+  options?: ApiRequestOptions
+): Promise<T> => apiRequest<T>(endpoint, 'DELETE', data, options)
 
-export const uploadFile = <T>(endpoint: string, formData: FormData): Promise<T> =>
-  apiRequest<T>(endpoint, 'POST', formData)
+export const uploadFile = <T>(
+  endpoint: string,
+  formData: FormData,
+  options?: ApiRequestOptions
+): Promise<T> => apiRequest<T>(endpoint, 'POST', formData, options)
 
 // 创建变更函数
-export const createMutation = <T>(endpoint: string, method: string = 'POST') => {
+export const createMutation = <T>(
+  endpoint: string,
+  method: string = 'POST',
+  options?: ApiRequestOptions
+) => {
   const baseSegment = endpoint.split('/').filter(Boolean)[0]
 
   return async (data: unknown): Promise<T> => {
-    const result = await apiRequest<T>(endpoint, method, data)
+    const result = await apiRequest<T>(endpoint, method, data, options)
 
     await mutate(key => {
       if (typeof key !== 'string') return false

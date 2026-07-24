@@ -15,6 +15,7 @@ import Magic from '../ui/icons/magic'
 import { ScrollArea } from '../ui/scroll-area'
 import AICompletionCommands from './ai-completion-command'
 import AISelectorCommands from './ai-selector-commands'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 //TODO: I think it makes more sense to create a custom Tiptap extension for this functionality https://tiptap.dev/docs/editor/ai/introduction
 
 interface AISelectorProps {
@@ -46,11 +47,10 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
     // id: "novel",
     api: '/api/generate', // 使用真实API
     fetch: async (input, init) => {
-      const response = await fetch(input, init)
+      const response = await authenticatedInternalFetch(input, init)
       if (response.status === 429) {
         toast.error('You have reached your request limit for the day.')
       }
-      console.log('API Response status:', response.status)
       return response
     },
     onError: (e: Error) => {

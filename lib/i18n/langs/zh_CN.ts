@@ -5,6 +5,7 @@ export const zh_CN = {
   // Home
   'home.title': 'DogeOW',
   'home.description': '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！',
+  'home.eyebrow': '数字后花园',
   'home.section_tiles': '应用入口',
 
   // Navigation

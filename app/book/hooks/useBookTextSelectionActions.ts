@@ -29,7 +29,7 @@ interface UseBookTextSelectionActionsOptions<ChapterId> {
     scrollTop: number
     pairIndex?: number | null
     excerpt?: string
-  }) => void
+  }) => { created: boolean }
   onPlaySelection?: (selection: TextSelectionState) => void
 }
 
@@ -60,14 +60,14 @@ export function useBookTextSelectionActions<ChapterId>({
   const handleAddCollection = useCallback(
     (selection: TextSelectionState) => {
       const context = getContext()
-      addCollection({
+      const result = addCollection({
         chapterId: context.chapterId,
         chapterTitle: context.chapterTitle,
         scrollTop: context.scrollTop,
         pairIndex: selection.pairIndex,
         excerpt: selection.text,
       })
-      toast.success('已加入收藏')
+      toast[result.created ? 'success' : 'info'](result.created ? '已加入收藏' : '该片段已在收藏中')
     },
     [addCollection, getContext]
   )

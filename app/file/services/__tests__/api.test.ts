@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/api', () => ({ API_URL: 'http://localhost:8000' }))
 
-import { getFileStorageUrl, getFilePreviewUrl, getFileDownloadUrl } from '../api'
+import {
+  getFileStorageUrl,
+  getFilePreviewUrl,
+  getFileDownloadUrl,
+  withOptionalCacheBust,
+} from '../api'
 
 describe('getFileStorageUrl', () => {
   it('returns full absolute urls unchanged', () => {
@@ -36,6 +41,25 @@ describe('getFileStorageUrl', () => {
   it('strips multiple leading slashes', () => {
     expect(getFileStorageUrl('///uploads/file.jpg')).toBe(
       'http://localhost:8000/storage/uploads/file.jpg'
+    )
+  })
+})
+
+describe('withOptionalCacheBust', () => {
+  it('leaves signed URLs untouched', () => {
+    const signed = 'http://localhost:8000/api/cloud/files/1/raw?expires=1&signature=abc'
+    expect(withOptionalCacheBust(signed, 123)).toBe(signed)
+  })
+
+  it('appends t= for unsigned URLs', () => {
+    expect(withOptionalCacheBust('http://localhost:8000/storage/a.jpg', 99)).toBe(
+      'http://localhost:8000/storage/a.jpg?t=99'
+    )
+  })
+
+  it('uses & when query already exists', () => {
+    expect(withOptionalCacheBust('http://localhost:8000/a.jpg?x=1', 99)).toBe(
+      'http://localhost:8000/a.jpg?x=1&t=99'
     )
   })
 })

@@ -11,13 +11,13 @@ import { BasicFiltersTabContent } from './filters/components/BasicFiltersTabCont
 import { DetailedFiltersTab } from './filters/components/DetailedFiltersTab'
 import { FilterActions } from './filters/components/FilterActions'
 import type { CategorySelection } from './CategoryTreeSelect'
-import type { Area, Room, Spot } from '@/app/thing/types'
+import type { Area, Room, Spot, Category } from '@/app/thing/types'
 import { Tag } from '@/components/ui/tag-selector'
 
 interface ItemFiltersProps {
   onApply: (filters: FilterState) => void
   onReset?: () => void
-  categories: unknown[] // As per current useSWR<any[]>
+  categories: Category[]
   areas: Area[]
   rooms: Room[]
   spots: Spot[]
@@ -27,12 +27,14 @@ interface ItemFiltersProps {
 export default function ItemFilters({
   onApply,
   onReset,
+  categories: categoriesProp = [],
   areas = [],
   rooms = [],
   spots = [],
   tags = [],
 }: ItemFiltersProps) {
-  const { categories } = useItemStore()
+  const { categories: storeCategories } = useItemStore()
+  const categories = categoriesProp.length > 0 ? categoriesProp : storeCategories
   const { savedFilters } = useFilterPersistenceStore()
   const [activeTab, setActiveTab] = useState<'basic' | 'detailed'>('basic')
 

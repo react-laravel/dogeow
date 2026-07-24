@@ -12,6 +12,29 @@ vi.mock('@/components/ui/use-toast', () => ({
   toast: vi.fn(),
 }))
 
+vi.mock('@/app/thing/services/swrCache', () => ({
+  refreshItemLists: vi.fn(() => Promise.resolve([])),
+  refreshCategories: vi.fn(() => Promise.resolve(undefined)),
+}))
+
+vi.mock('@/lib/utils/distributed-lock', () => ({
+  distributedLock: {
+    withLock: vi.fn(async (_resource: string, fn: () => Promise<unknown>) => ({
+      success: true,
+      result: fn(),
+    })),
+  },
+}))
+
+vi.mock('@/lib/utils/idempotency', () => ({
+  idempotencyTracker: {
+    generateKey: vi.fn(() => 'test-key'),
+    isRequestPending: vi.fn(() => false),
+    getPendingRequest: vi.fn(),
+    trackRequest: vi.fn((_key: string, promise: Promise<unknown>) => promise),
+  },
+}))
+
 describe('ItemStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -136,17 +159,7 @@ describe('ItemStore', () => {
 
     it('should delete item correctly', async () => {
       const { apiRequest } = await import('@/lib/api')
-      vi.mocked(apiRequest)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({
-          data: [],
-          meta: {
-            current_page: 1,
-            last_page: 1,
-            per_page: 10,
-            total: 0,
-          },
-        })
+      vi.mocked(apiRequest).mockResolvedValueOnce(undefined)
 
       await useItemStore.getState().deleteItem(1)
 

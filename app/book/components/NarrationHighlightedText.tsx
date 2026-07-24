@@ -1,13 +1,20 @@
 'use client'
 
 import type { BookNarrationHighlight } from '@/app/book/hooks/useBookNarration'
+import type { BookTheme } from '@/app/book/utils/theme'
+import { getNarrationHighlightStyle } from '@/app/book/utils/theme'
 
 interface NarrationHighlightedTextProps {
   text: string
   highlight?: Pick<BookNarrationHighlight, 'start' | 'end'> | null
+  theme?: BookTheme
 }
 
-export function NarrationHighlightedText({ text, highlight }: NarrationHighlightedTextProps) {
+export function NarrationHighlightedText({
+  text,
+  highlight,
+  theme = 'light',
+}: NarrationHighlightedTextProps) {
   if (!highlight || highlight.start < 0 || highlight.end <= highlight.start) {
     return <>{text}</>
   }
@@ -20,8 +27,8 @@ export function NarrationHighlightedText({ text, highlight }: NarrationHighlight
     <>
       {text.slice(0, start)}
       <mark
-        className="rounded-sm bg-amber-400/55 text-inherit shadow-[inset_0_-0.12em_0_0_rgba(217,119,6,0.55)]"
-        style={{ color: 'inherit' }}
+        className="rounded-sm text-inherit"
+        style={{ color: 'inherit', ...getNarrationHighlightStyle(theme) }}
       >
         {text.slice(start, end)}
       </mark>

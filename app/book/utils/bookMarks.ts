@@ -20,7 +20,7 @@ export interface BookMark {
 
 export interface CreateBookMarkInput {
   kind: 'position' | 'collection'
-  chapterId: string
+  chapterId: string | number
   chapterTitle: string
   scrollTop: number
   pairIndex?: number | null
@@ -35,7 +35,9 @@ function createBookMarkId(): string {
   return `mark-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function buildPositionKey(input: CreateBookMarkInput): string | null {
+function buildPositionKey(
+  input: Pick<CreateBookMarkInput, 'kind' | 'chapterId' | 'pairIndex' | 'scrollTop'>
+): string | null {
   if (input.kind !== 'position') return null
 
   const chapterId = String(input.chapterId)
@@ -46,10 +48,10 @@ function buildPositionKey(input: CreateBookMarkInput): string | null {
   return `chapter:${chapterId}:scroll:${Math.round(input.scrollTop)}`
 }
 
-function buildBookMark(input: CreateBookMarkInput): BookMark {
+function buildBookMark(bookId: string, input: CreateBookMarkInput): BookMark {
   return {
     id: createBookMarkId(),
-    bookId: '',
+    bookId,
     kind: input.kind,
     chapterId: String(input.chapterId),
     chapterTitle: input.chapterTitle,
@@ -63,6 +65,22 @@ function buildBookMark(input: CreateBookMarkInput): BookMark {
 
 function sortBookMarks(marks: BookMark[]): BookMark[] {
   return [...marks].sort((a, b) => b.createdAt - a.createdAt)
+}
+
+function findDuplicateMark(marks: BookMark[], input: CreateBookMarkInput): BookMark | undefined {
+  if (input.kind === 'position') {
+    const positionKey = buildPositionKey(input)
+    if (!positionKey) return undefined
+    return marks.find(mark => mark.kind === 'position' && buildPositionKey(mark) === positionKey)
+  }
+
+  const excerpt = input.excerpt?.trim() ?? ''
+  return marks.find(
+    mark =>
+      mark.kind === 'collection' &&
+      String(mark.chapterId) === String(input.chapterId) &&
+      mark.excerpt === excerpt
+  )
 }
 
 export function useBookMarks(bookId: string) {
@@ -92,10 +110,9 @@ export function useBookMarks(bookId: string) {
     }
 
     fetchBookMarks(bookId)
-      .then(async remoteMarks => {
+      .then(remoteMarks => {
         if (cancelled) return
-        const nextMarks = sortBookMarks(remoteMarks)
-        setMarks(nextMarks)
+        setMarks(sortBookMarks(remoteMarks))
       })
       .catch(() => {
         if (!cancelled) setMarks([])
@@ -110,28 +127,18 @@ export function useBookMarks(bookId: string) {
 
   const addMark = useCallback(
     (input: CreateBookMarkInput): { mark: BookMark; created: boolean } => {
-      const currentMarks = marksRef.current
-      const positionKey = buildPositionKey(input)
-      const duplicate =
-        input.kind === 'position' && positionKey
-          ? currentMarks.find(
-              mark => mark.kind === 'position' && buildPositionKey(mark) === positionKey
-            )
-          : currentMarks.find(
-              mark => mark.kind === input.kind && String(mark.chapterId) === String(input.chapterId)
-            )
-
+      const currentMarks = marksRef.current.filter(mark => mark.bookId === bookId)
+      const duplicate = findDuplicateMark(currentMarks, input)
       if (duplicate) {
         return { mark: duplicate, created: false }
       }
 
-      const mark = buildBookMark(input)
-      const optimisticMarks = sortBookMarks([mark, ...currentMarks])
+      const mark = buildBookMark(bookId, input)
+      const optimisticMarks = sortBookMarks([mark, ...marksRef.current])
       marksRef.current = optimisticMarks
       setMarks(optimisticMarks)
 
-      const currentToken = tokenRef.current
-      if (currentToken) {
+      if (tokenRef.current) {
         void storeBookMark(bookId, mark)
           .then(result => {
             setMarks(current => {
@@ -153,20 +160,16 @@ export function useBookMarks(bookId: string) {
 
   const removeMark = useCallback(
     (id: string) => {
-      let removed: BookMark | undefined
-      setMarks(current => {
-        removed = current.find(mark => mark.id === id)
-        return current.filter(mark => mark.id !== id)
-      })
+      const removed = marksRef.current.find(mark => mark.id === id)
+      if (!removed) return
 
-      const currentToken = tokenRef.current
-      if (currentToken) {
-        void removeBookMark(bookId, id).catch(() => {
-          if (removed) {
-            setMarks(current => sortBookMarks([removed as BookMark, ...current]))
-          }
-        })
-      }
+      setMarks(current => current.filter(mark => mark.id !== id))
+
+      if (!tokenRef.current) return
+
+      void removeBookMark(bookId, id).catch(() => {
+        setMarks(current => sortBookMarks([removed, ...current]))
+      })
     },
     [bookId]
   )
@@ -181,10 +184,19 @@ export function useBookMarks(bookId: string) {
     [addMark]
   )
 
+  const positionBookmarks = useMemo(
+    () => bookMarks.filter(mark => mark.kind === 'position'),
+    [bookMarks]
+  )
+  const collections = useMemo(
+    () => bookMarks.filter(mark => mark.kind === 'collection'),
+    [bookMarks]
+  )
+
   return {
     marks: bookMarks,
-    positionBookmarks: bookMarks.filter(mark => mark.kind === 'position'),
-    collections: bookMarks.filter(mark => mark.kind === 'collection'),
+    positionBookmarks,
+    collections,
     addPositionBookmark,
     addCollection,
     removeMark,

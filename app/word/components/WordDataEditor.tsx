@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Save, RefreshCw, Bot } from 'lucide-react'
 import { toast } from 'sonner'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { parseEducationLevelNames, getEducationLevelNames } from '../hooks/useWord'
 
 interface WordDataEditorProps {
@@ -65,7 +66,7 @@ export function WordDataEditor({
         command: '你是一个英语学习助手。请严格按照用户要求的格式返回数据。',
       }
 
-      const response = await fetch('/api/generate', {
+      const response = await authenticatedInternalFetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

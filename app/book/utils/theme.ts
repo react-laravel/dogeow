@@ -1,9 +1,10 @@
-import type { CSSProperties } from 'react'
+import { useSyncExternalStore, type CSSProperties } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────
 
 export type BookFont = 'yahei' | 'song' | 'longcang'
 export type BookTheme = 'auto' | 'light' | 'dark' | 'sepia' | 'green'
+export type ResolvedBookTheme = Exclude<BookTheme, 'auto'>
 
 // ─── Labels ──────────────────────────────────────────────────────────
 
@@ -56,6 +57,53 @@ export function getBookThemeStyle(theme: BookTheme): CSSProperties | undefined {
 function getSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function subscribeSystemTheme(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const mql = window.matchMedia('(prefers-color-scheme: dark)')
+  mql.addEventListener('change', onStoreChange)
+  return () => mql.removeEventListener('change', onStoreChange)
+}
+
+/** Subscribes to `prefers-color-scheme` so `theme: auto` re-renders on OS change. */
+export function useSystemColorScheme(): 'light' | 'dark' {
+  return useSyncExternalStore(subscribeSystemTheme, getSystemTheme, () => 'light')
+}
+
+export function resolveBookTheme(
+  theme: BookTheme,
+  systemScheme: 'light' | 'dark' = getSystemTheme()
+): ResolvedBookTheme {
+  return theme === 'auto' ? systemScheme : theme
+}
+
+/** Narration mark colors tuned to each reader theme (not global accent). */
+export function getNarrationHighlightStyle(theme: BookTheme): CSSProperties {
+  const resolved = resolveBookTheme(theme)
+
+  switch (resolved) {
+    case 'dark':
+      return {
+        backgroundColor: 'rgba(251, 191, 36, 0.42)',
+        boxShadow: 'inset 0 -0.12em 0 0 rgba(251, 191, 36, 0.65)',
+      }
+    case 'sepia':
+      return {
+        backgroundColor: 'rgba(180, 120, 40, 0.28)',
+        boxShadow: 'inset 0 -0.12em 0 0 rgba(140, 90, 30, 0.45)',
+      }
+    case 'green':
+      return {
+        backgroundColor: 'rgba(45, 120, 70, 0.28)',
+        boxShadow: 'inset 0 -0.12em 0 0 rgba(30, 90, 50, 0.4)',
+      }
+    default:
+      return {
+        backgroundColor: 'rgba(251, 191, 36, 0.55)',
+        boxShadow: 'inset 0 -0.12em 0 0 rgba(217, 119, 6, 0.55)',
+      }
+  }
 }
 
 export type BookToolbarTheme = {

@@ -2,6 +2,7 @@ import useSWR from 'swr'
 import useSWRInfinite from 'swr/infinite'
 import { format } from 'date-fns'
 import { get, post, put } from '@/lib/api'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import type {
   Word,
   Book,
@@ -229,7 +230,7 @@ export async function classifyWordEducationLevel(word: string): Promise<string[]
     messages: [{ role: 'user' as const, content: prompt }],
     command: '你是一个英语学习助手。只返回阶段名称，多个用逗号分隔。',
   }
-  const response = await fetch('/api/generate', {
+  const response = await authenticatedInternalFetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

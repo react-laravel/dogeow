@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { FileIcon, FILE_TYPE_ICONS } from '../fileIcons'
 
-// Mock next/image - return a plain img element
 vi.mock('next/image', () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => {
@@ -10,9 +9,14 @@ vi.mock('next/image', () => ({
   },
 }))
 
-// Mock getFileStorageUrl
 vi.mock('@/app/file/services/api', () => ({
-  getFileStorageUrl: (path: string) => `http://localhost:8000/storage/${path}`,
+  getFileStorageUrl: (path: string) =>
+    path.startsWith('http') ? path : `http://localhost:8000/storage/${path}`,
+  withOptionalCacheBust: (url: string, bust: number | string = Date.now()) => {
+    if (/[?&](signature|expires)=/i.test(url)) return url
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}t=${bust}`
+  },
 }))
 
 const createFile = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -36,7 +40,7 @@ describe('FILE_TYPE_ICONS', () => {
   })
 
   it('has icon component and color string for each type', () => {
-    for (const [type, config] of Object.entries(FILE_TYPE_ICONS)) {
+    for (const [, config] of Object.entries(FILE_TYPE_ICONS)) {
       expect(config.icon).toBeDefined()
       expect(typeof config.color).toBe('string')
       expect(config.color).toMatch(/^text-/)
@@ -64,9 +68,26 @@ describe('FileIcon', () => {
     const img = screen.getByTestId('next-image')
     expect(img).toBeTruthy()
     expect(img.getAttribute('src')).toContain('/uploads/photo.jpg')
-    expect(img.getAttribute('src')).toContain('?t=')
     expect(img.getAttribute('alt')).toBe('test.txt')
     expect(img.getAttribute('loading')).toBe('lazy')
+  })
+
+  it('does not cache-bust signed media URLs', () => {
+    const signed = 'http://localhost:8000/api/cloud/files/1/raw?expires=999&signature=abc'
+    const file = createFile({ type: 'image', path: signed, name: 'photo.jpg' })
+    render(<FileIcon file={file} />)
+
+    const img = screen.getByTestId('next-image')
+    expect(img.getAttribute('src')).toBe(signed)
+  })
+
+  it('adds cache-busting timestamp to unsigned image src', () => {
+    const file = createFile({ type: 'image', path: '/uploads/photo.jpg' })
+    render(<FileIcon file={file} />)
+
+    const img = screen.getByTestId('next-image')
+    const src = img.getAttribute('src') || ''
+    expect(src).toMatch(/[?&]t=\d+/)
   })
 
   it('renders an icon for unknown file types', () => {
@@ -99,14 +120,5 @@ describe('FileIcon', () => {
 
     const iconEl = container.querySelector('.h-12.w-12')
     expect(iconEl).toBeTruthy()
-  })
-
-  it('adds cache-busting timestamp to image src', () => {
-    const file = createFile({ type: 'image', path: '/uploads/photo.jpg' })
-    render(<FileIcon file={file} />)
-
-    const img = screen.getByTestId('next-image')
-    const src = img.getAttribute('src') || ''
-    expect(src).toMatch(/\?t=\d+$/)
   })
 })

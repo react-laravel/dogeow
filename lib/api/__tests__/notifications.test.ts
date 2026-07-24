@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
+  UNREAD_NOTIFICATIONS_KEY,
   fetchUnreadNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -28,6 +29,12 @@ describe('notifications', () => {
     mockUseSWR.mockReset()
   })
 
+  describe('UNREAD_NOTIFICATIONS_KEY', () => {
+    it('should be notifications/unread', () => {
+      expect(UNREAD_NOTIFICATIONS_KEY).toBe('notifications/unread')
+    })
+  })
+
   describe('fetchUnreadNotifications', () => {
     it('should be a function', () => {
       expect(typeof fetchUnreadNotifications).toBe('function')
@@ -47,8 +54,23 @@ describe('notifications', () => {
         mutate: vi.fn(),
       })
 
-      // Verify the hook structure exists
-      expect(typeof useUnreadNotifications).toBe('function')
+      useUnreadNotifications(true)
+
+      expect(mockUseSWR).toHaveBeenCalled()
+      expect(mockUseSWR.mock.calls[0]?.[0]).toBe(UNREAD_NOTIFICATIONS_KEY)
+    })
+
+    it('should pass null key when disabled', () => {
+      mockUseSWR.mockReturnValue({
+        data: undefined,
+        error: undefined,
+        isLoading: false,
+        mutate: vi.fn(),
+      })
+
+      useUnreadNotifications(false)
+
+      expect(mockUseSWR.mock.calls[0]?.[0]).toBeNull()
     })
   })
 

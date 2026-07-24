@@ -3,17 +3,12 @@ import { apiRequest, post, put, del } from '@/lib/api'
 
 // 获取所有导航分类（及其导航项）
 export async function getCategories(filterName?: string) {
-  try {
-    let url = `/nav/categories`
-    if (filterName) {
-      url += `?filter[name]=${encodeURIComponent(filterName)}`
-    }
-    const result = await apiRequest<NavCategory[]>(url)
-    return Array.isArray(result) ? result : []
-  } catch (error) {
-    console.error('获取分类API错误:', error)
-    return []
+  let url = `/nav/categories`
+  if (filterName) {
+    url += `?filter[name]=${encodeURIComponent(filterName)}`
   }
+  const result = await apiRequest<NavCategory[]>(url, 'GET', undefined, { handleError: false })
+  return Array.isArray(result) ? result : []
 }
 
 // 获取所有导航项
@@ -32,13 +27,10 @@ export async function recordClick(itemId: number) {
 
 // 管理员接口
 export async function getAllCategories() {
-  try {
-    const result = await apiRequest<NavCategory[]>(`/nav/categories?show_all=1`)
-    return Array.isArray(result) ? result : []
-  } catch (error) {
-    console.error('获取所有分类API错误:', error)
-    return []
-  }
+  const result = await apiRequest<NavCategory[]>(`/nav/categories?show_all=1`, 'GET', undefined, {
+    handleError: false,
+  })
+  return Array.isArray(result) ? result : []
 }
 
 export async function createCategory(category: Partial<NavCategory>) {

@@ -1,18 +1,16 @@
 'use client'
 
-import { useEffect, useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useCallback, useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { apiRequest } from '@/lib/api'
 
 // Components
 import ThingHeader from './components/ThingHeader'
 import ThingContent from './components/ThingContent'
-import ThingSpeedDial from './components/SpeedDial'
 import { ItemDetailModal } from './components/ItemDetailModal'
 
 // Hooks and stores
-import { useItemStore } from '@/app/thing/stores/itemStore'
+import { useItems, useCategories } from '@/app/thing/services/api'
 import { useThingFilters } from '@/app/thing/hooks/useThingFilters'
 import { useThingSearch } from '@/app/thing/hooks/useThingSearch'
 import { useFormModal } from '@/hooks/useFormModal'
@@ -20,20 +18,16 @@ import { PageContainer } from '@/components/layout'
 import { PullToRefresh } from '@/components/ui/pull-to-refresh'
 import { preloadThingItemImages } from './utils/imagePreload'
 import type { SizePreset } from './components/ImageSizeControl'
+import type { ItemFilters } from '@/app/thing/contracts'
 
 // Types
 import { Tag, LocationTreeResponse, ViewMode } from '@/app/thing/types'
 
 export default function Thing() {
-  const router = useRouter()
-  const { items, categories, loading, error, fetchItems, fetchCategories, meta } = useItemStore()
-
-  // 视图模式状态
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [imageSizePreset, setImageSizePreset] = useState<SizePreset>('md')
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [, setFilterDrawerOpen] = useState(false)
 
-  // 弹窗状态（抽象到通用 hook）
   const {
     open: modalOpen,
     setOpen: setModalOpen,
@@ -41,80 +35,82 @@ export default function Thing() {
     mode: modalMode,
     setMode: setModalMode,
     openModal,
-    closeModal,
   } = useFormModal<number>('view')
 
-  // 使用自定义hooks管理复杂逻辑
   const { filters, updateFilters, clearFilters, hasActiveFilters, currentPage, setCurrentPage } =
     useThingFilters()
 
   const { searchTerm, setSearchTerm, handleSearch, isSearching } = useThingSearch()
 
-  // 基础数据加载
+  const itemParams = useMemo<ItemFilters>(
+    () => ({
+      ...filters,
+      page: currentPage,
+      ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+    }),
+    [filters, currentPage, searchTerm]
+  )
+
+  const {
+    data: itemsData,
+    error: itemsError,
+    isLoading: itemsLoading,
+    isValidating: itemsValidating,
+    mutate: mutateItems,
+  } = useItems(itemParams)
+
+  const { data: categories = [] } = useCategories()
+
+  const items = itemsData?.data ?? []
+  const meta = itemsData?.meta ?? null
+  const loading = itemsLoading || (itemsValidating && items.length === 0)
+  const error = itemsError
+    ? itemsError instanceof Error
+      ? itemsError.message
+      : '加载物品失败'
+    : null
+
   const { data: tags } = useSWR<Tag[]>('/things/tags', apiRequest)
   const { data: locationData } = useSWR<LocationTreeResponse>('/locations/tree', apiRequest)
 
-  // 初始化数据加载
+  // URL search bootstrap (once)
   useEffect(() => {
-    const initializeData = async () => {
-      if (categories.length === 0) {
-        await fetchCategories()
-      }
-
-      // 处理URL搜索参数
-      const searchParams = new URLSearchParams(window.location.search)
-      const searchFromURL = searchParams.get('search')
-
-      if (searchFromURL) {
-        setSearchTerm(searchFromURL)
-        handleSearch(searchFromURL)
-      } else {
-        // 使用持久化的筛选条件进行初始加载
-        fetchItems()
-      }
+    const searchFromURL = new URLSearchParams(window.location.search).get('search')
+    if (searchFromURL) {
+      setSearchTerm(searchFromURL)
     }
+  }, [setSearchTerm])
 
-    initializeData()
-  }, [categories.length, fetchCategories, setSearchTerm, handleSearch, fetchItems])
-
-  // 处理页面变化
   const handlePageChange = useCallback(
     (page: number) => {
       setCurrentPage(page)
-      fetchItems({ ...filters, page })
     },
-    [filters, fetchItems, setCurrentPage]
+    [setCurrentPage]
   )
 
-  // 处理筛选应用
   const handleApplyFilters = useCallback(
     (newFilters: Record<string, unknown>) => {
       if (isSearching) return
-
       setCurrentPage(1)
       updateFilters(newFilters)
-      fetchItems({ ...newFilters, page: 1 })
     },
-    [isSearching, setCurrentPage, updateFilters, fetchItems]
+    [isSearching, setCurrentPage, updateFilters]
   )
 
-  // 处理重新加载
   const handleReload = useCallback(() => {
-    fetchItems(filters)
-  }, [fetchItems, filters])
+    void mutateItems()
+  }, [mutateItems])
 
   const handlePullToRefresh = useCallback(async () => {
-    await fetchItems(filters)
-  }, [fetchItems, filters])
+    await mutateItems()
+  }, [mutateItems])
 
-  // 处理清除筛选
   const handleClearFilters = useCallback(() => {
     setSearchTerm('')
+    handleSearch('')
     clearFilters()
-    fetchItems({ page: 1 })
-  }, [setSearchTerm, clearFilters, fetchItems])
+  }, [setSearchTerm, handleSearch, clearFilters])
 
-  // 导航处理 - 改为弹窗
   const handleItemEdit = useCallback(
     (id: number) => {
       openModal(id, 'edit')
@@ -131,9 +127,8 @@ export default function Thing() {
   )
 
   const handleItemDeleted = useCallback(() => {
-    // 删除后刷新列表
-    fetchItems(filters)
-  }, [fetchItems, filters])
+    void mutateItems()
+  }, [mutateItems])
 
   return (
     <PageContainer>
@@ -175,7 +170,6 @@ export default function Thing() {
         </div>
       </PullToRefresh>
 
-      {/* 物品详情弹窗 */}
       <ItemDetailModal
         itemId={selectedItemId}
         initialItem={items.find(item => item.id === selectedItemId) ?? null}

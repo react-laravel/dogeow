@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ReaderToolbar } from '@/app/book/components/ReaderToolbar'
 import { ReaderSettingsPanel } from '@/app/book/components/ReaderSettingsPanel'
-import { BookMarksPanel } from '@/app/book/components/BookMarksPanel'
+import { BookMarksPanel, type BookMarkListItem } from '@/app/book/components/BookMarksPanel'
 import {
   type BookJumpTarget,
   findNearestPairIndex,
@@ -18,17 +18,22 @@ import { TextSelectionToolbar } from '@/app/book/components/TextSelectionToolbar
 import { useBookTextSelectionActions } from '@/app/book/hooks/useBookTextSelectionActions'
 import { useBookNarration, type BookNarrationMode } from '@/app/book/hooks/useBookNarration'
 import type { BookReaderConfig } from '@/app/book/types'
-import { getBookFontFamily, getBookThemeStyle } from '@/app/book/utils/theme'
-import type { BookTheme } from '@/app/book/utils/theme'
+import type { BaseReaderSettings } from '@/app/book/types/reader'
+import { getBookFontFamily, getBookThemeStyle, useSystemColorScheme } from '@/app/book/utils/theme'
 
 interface BookReaderProps<
-  ChapterId,
-  Settings extends { theme: BookTheme; fontSize: number; lineHeight: number },
+  ChapterId extends string | number,
+  Settings extends BaseReaderSettings,
+  BookMarkType extends BookMarkListItem,
 > {
-  config: BookReaderConfig<ChapterId, Settings, any>
+  config: BookReaderConfig<ChapterId, Settings, BookMarkType>
 }
 
-export function BookReader({ config }: BookReaderProps<any, any>) {
+export function BookReader<
+  ChapterId extends string | number,
+  Settings extends BaseReaderSettings,
+  BookMarkType extends BookMarkListItem,
+>({ config }: BookReaderProps<ChapterId, Settings, BookMarkType>) {
   const { settings, patchSettings, hydrated } = config.useSettings()
   const { marks, addPositionBookmark, addCollection, removeMark } = config.useBookMarks()
 
@@ -59,12 +64,16 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
     hasTextSelection,
     hasPairDisplayMode,
     hasContentMode,
+    hasDualFonts,
+    narrationOriginalOnly,
     chapterSelectPlaceholder,
     bookTitle,
     renderContent,
     scrollStorageKey,
   } = config
 
+  // Re-render when OS color scheme changes while theme is `auto`
+  useSystemColorScheme()
   const themeStyle = getBookThemeStyle(settings.theme)
   const narration = useBookNarration({
     chapter: narrationChapter ?? null,
@@ -72,14 +81,10 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
     contentRef,
   })
 
-  // ─── Scroll position persistence ──────────────────────────────────
-
   useScrollSaver(contentRef, scrollStorageKey ?? 'book-reader', currentChapterId)
 
-  // ─── Chapter loading ──────────────────────────────────────────────
-
   const loadChapter = useCallback(
-    async (chapterId: typeof currentChapterId) => {
+    async (chapterId: ChapterId) => {
       setLoading(true)
       setError(null)
       try {
@@ -88,6 +93,9 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
         requestAnimationFrame(() => {
           const scrollEl = contentRef.current ? findScrollingAncestor(contentRef.current) : null
           if (!scrollEl) return
+
+          // 跨章跳书签时由 scheduleBookJump 负责定位，避免先恢复旧 scroll 再跳
+          if (pendingJumpRef.current) return
 
           if (scrollStorageKey) {
             scrollEl.scrollTop = getSavedScrollPosition(scrollStorageKey, chapterId)
@@ -104,13 +112,10 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
     [loadChapterFromConfig, scrollStorageKey]
   )
 
-  // Auto-load chapter when hydrated or chapterId changes
   useEffect(() => {
     if (!hydrated) return
-    loadChapter(currentChapterId)
+    void loadChapter(currentChapterId)
   }, [hydrated, currentChapterId, loadChapter])
-
-  // ─── Jump to bookmark ─────────────────────────────────────────────
 
   useEffect(() => {
     const pending = pendingJumpRef.current
@@ -126,11 +131,9 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
     })
   }, [loading, jumpRequest])
 
-  // ─── Handlers ─────────────────────────────────────────────────────
-
   const handleChapterChange = useCallback(
     (chapterId: string) => {
-      const resolvedId = chapters.find((c: { id: unknown }) => String(c.id) === chapterId)?.id
+      const resolvedId = chapters.find(c => String(c.id) === chapterId)?.id
       if (resolvedId !== undefined) {
         narration.stop()
         onChapterIdChange(resolvedId)
@@ -141,12 +144,11 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
 
   const getChapterContext = useCallback(() => {
     const position = getReadingPosition(contentRef.current, findNearestPairIndex)
-    const chapter = chapters.find((c: { id: unknown }) => c.id === currentChapterId)
-    const chapterTitle = (chapter as { title?: string })?.title ?? ''
+    const chapter = chapters.find(c => c.id === currentChapterId)
 
     return {
       chapterId: currentChapterId,
-      chapterTitle,
+      chapterTitle: chapter?.title ?? '',
       scrollTop: position.scrollTop,
       pairIndex: position.pairIndex ?? null,
     }
@@ -178,36 +180,35 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       chapterId: context.chapterId,
       chapterTitle: context.chapterTitle,
       scrollTop: context.scrollTop,
+      pairIndex: context.pairIndex,
     })
     toast[result.created ? 'success' : 'info'](result.created ? '已添加展示' : '该位置已有展示')
   }, [addPositionBookmark, getChapterContext])
 
   const handleJumpToMark = useCallback(
-    (mark: {
-      chapterId: typeof currentChapterId
-      scrollTop: number
-      pairIndex?: number | null
-    }) => {
+    (mark: { chapterId: string | number; scrollTop: number; pairIndex?: number | null }) => {
+      const resolvedChapterId =
+        chapters.find(c => String(c.id) === String(mark.chapterId))?.id ??
+        (mark.chapterId as ChapterId)
+
       pendingJumpRef.current = {
-        chapterId: mark.chapterId,
+        chapterId: resolvedChapterId,
         scrollTop: mark.scrollTop,
         pairIndex: mark.pairIndex ?? null,
       }
 
-      if (mark.chapterId !== currentChapterId) {
-        onChapterIdChange(mark.chapterId)
+      if (String(resolvedChapterId) !== String(currentChapterId)) {
+        onChapterIdChange(resolvedChapterId)
         return
       }
 
       setJumpRequest(value => value + 1)
     },
-    [currentChapterId, onChapterIdChange]
+    [chapters, currentChapterId, onChapterIdChange]
   )
 
-  // ─── Render ───────────────────────────────────────────────────────
-
-  const positionBookmarks = marks.filter((mark: { kind: string }) => mark.kind === 'position')
-  const collections = marks.filter((mark: { kind: string }) => mark.kind === 'collection')
+  const positionBookmarks = marks.filter(mark => mark.kind === 'position')
+  const collections = marks.filter(mark => mark.kind === 'collection')
 
   if (error && chapters.length === 0) {
     return (
@@ -223,21 +224,26 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       style={themeStyle}
       data-reader-theme={settings.theme}
     >
+      {error ? (
+        <div className="text-destructive border-destructive/20 bg-destructive/5 shrink-0 border-b px-4 py-2 text-sm">
+          {error}
+        </div>
+      ) : null}
       {chapters.length > 0 && (
         <ReaderToolbar
-          chapters={chapters.map((c: { id: unknown; title: string }) => ({
+          chapters={chapters.map(c => ({
             id: String(c.id),
             title: c.title,
           }))}
           chapterGroups={chapterGroups?.map(group => ({
             label: group.label,
-            chapters: group.chapters.map((c: { id: unknown; title: string }) => ({
+            chapters: group.chapters.map(c => ({
               id: String(c.id),
               title: c.title,
             })),
           }))}
           currentChapterId={String(currentChapterId)}
-          settings={settings as any}
+          settings={{ theme: settings.theme }}
           bookmarkCount={positionBookmarks.length}
           collectionCount={collections.length}
           onChapterChange={handleChapterChange}
@@ -252,6 +258,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
           onResumeNarration={narration.resume}
           onStopNarration={narration.stop}
           hideNarration={!hasNarration}
+          narrationOriginalOnly={narrationOriginalOnly}
           onPrevChapter={onPrevChapter}
           onNextChapter={onNextChapter}
           hasPrevChapter={hasPrevChapter}
@@ -263,17 +270,18 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
       <ReaderSettingsPanel
         open={settingsPanelOpen}
         onOpenChange={setSettingsPanelOpen}
-        settings={settings as any}
-        onPatchSettings={patchSettings as any}
+        settings={settings}
+        onPatchSettings={patch => patchSettings(patch as Partial<Settings>)}
         hasPairDisplayMode={hasPairDisplayMode}
         hasContentMode={hasContentMode}
+        hasDualFonts={hasDualFonts}
       />
 
       <BookMarksPanel
         kind="position"
         open={bookmarksPanelOpen}
         onOpenChange={setBookmarksPanelOpen}
-        marks={marks as any}
+        marks={marks}
         onJump={handleJumpToMark}
         onRemove={removeMark}
         onAddCurrent={handleAddCurrentBookmark}
@@ -283,7 +291,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
         kind="collection"
         open={collectionsPanelOpen}
         onOpenChange={setCollectionsPanelOpen}
-        marks={marks as any}
+        marks={marks}
         onJump={handleJumpToMark}
         onRemove={removeMark}
       />
@@ -294,7 +302,7 @@ export function BookReader({ config }: BookReaderProps<any, any>) {
           style={{
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
-            fontFamily: getBookFontFamily((settings as any).originalFontFamily ?? 'yahei'),
+            fontFamily: getBookFontFamily(settings.originalFontFamily ?? 'yahei'),
             color: themeStyle?.color,
           }}
         >

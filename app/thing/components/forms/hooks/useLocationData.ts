@@ -2,6 +2,15 @@ import { useState, useCallback, useEffect, startTransition } from 'react'
 import { apiRequest } from '@/lib/api'
 import type { Location } from '../formConstants'
 
+function unwrapList<T>(payload: unknown, key: string): T[] {
+  if (Array.isArray(payload)) return payload as T[]
+  if (payload && typeof payload === 'object' && key in payload) {
+    const value = (payload as Record<string, unknown>)[key]
+    return Array.isArray(value) ? (value as T[]) : []
+  }
+  return []
+}
+
 export function useLocationData(isCreateMode: boolean) {
   const [areas, setAreas] = useState<Location[]>([])
   const [rooms, setRooms] = useState<Location[]>([])
@@ -10,9 +19,10 @@ export function useLocationData(isCreateMode: boolean) {
   const loadAreas = useCallback(async () => {
     if (!isCreateMode) return []
     try {
-      const data = await apiRequest<Location[]>('/areas')
-      setAreas(data)
-      return data
+      const data = await apiRequest<unknown>('/areas')
+      const list = unwrapList<Location>(data, 'areas')
+      setAreas(list)
+      return list
     } catch (error) {
       console.error('加载区域失败', error)
       return []
@@ -27,9 +37,10 @@ export function useLocationData(isCreateMode: boolean) {
       }
 
       try {
-        const data = await apiRequest<Location[]>(`/areas/${areaId}/rooms`)
-        setRooms(data)
-        return data
+        const data = await apiRequest<unknown>(`/areas/${areaId}/rooms`)
+        const list = unwrapList<Location>(data, 'rooms')
+        setRooms(list)
+        return list
       } catch (error) {
         console.error('加载房间失败', error)
         return []
@@ -46,9 +57,10 @@ export function useLocationData(isCreateMode: boolean) {
       }
 
       try {
-        const data = await apiRequest<Location[]>(`/rooms/${roomId}/spots`)
-        setSpots(data)
-        return data
+        const data = await apiRequest<unknown>(`/rooms/${roomId}/spots`)
+        const list = unwrapList<Location>(data, 'spots')
+        setSpots(list)
+        return list
       } catch (error) {
         console.error('加载位置失败', error)
         return []
@@ -60,7 +72,7 @@ export function useLocationData(isCreateMode: boolean) {
   useEffect(() => {
     if (isCreateMode) {
       startTransition(() => {
-        loadAreas()
+        void loadAreas()
       })
     }
   }, [isCreateMode, loadAreas])

@@ -7,19 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { PageContainer } from '@/components/layout'
 import { toast } from 'sonner'
+import { translateEnToZh } from '@/app/word/utils/translate'
 
 const VIDEO_WIDTH = 1280
 const VIDEO_HEIGHT = 720
-
-async function translateEnToZh(text: string): Promise<string> {
-  const trimmed = text.trim()
-  if (!trimmed) return ''
-  const res = await fetch(
-    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=en|zh`
-  )
-  const data = (await res.json()) as { responseData?: { translatedText?: string } }
-  return data.responseData?.translatedText ?? trimmed
-}
 
 export default function WordScanPage() {
   const videoRef = useRef<HTMLVideoElement>(null)

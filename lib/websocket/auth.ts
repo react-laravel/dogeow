@@ -1,6 +1,11 @@
 import { createEchoInstance, destroyEchoInstance, getEchoInstance } from './echo'
 import { getAuthTokenFromStorage } from '@/lib/utils/storage'
 
+const isDev = process.env.NODE_ENV === 'development'
+function authLog(...args: unknown[]): void {
+  if (isDev) console.log(...args)
+}
+
 export interface AuthTokenManager {
   getToken: () => string | null
   setToken: (token: string) => void
@@ -64,7 +69,7 @@ class WebSocketAuthManager {
         const authData = JSON.parse(authStorage)
         authData.state = { ...authData.state, token }
         localStorage.setItem('auth-storage', JSON.stringify(authData))
-        console.log('WebSocket 认证: 已更新localStorage中的token')
+        authLog('WebSocket 认证: 已更新localStorage中的token')
       }
     } catch (error) {
       console.warn('更新 auth storage 失败:', error)
@@ -118,14 +123,14 @@ class WebSocketAuthManager {
 
   public async initializeConnection(): Promise<boolean> {
     const token = this.getToken()
-    console.log('WebSocket 认证: 认证方式:', token ? 'Bearer Token' : 'Session Cookie')
+    authLog('WebSocket 认证: 认证方式:', token ? 'Bearer Token' : 'Session Cookie')
 
     try {
-      console.log('WebSocket 认证: 创建 Echo 实例')
+      authLog('WebSocket 认证: 创建 Echo 实例')
       const instance = createEchoInstance()
 
       if (instance) {
-        console.log('WebSocket 认证: Echo 实例创建成功')
+        authLog('WebSocket 认证: Echo 实例创建成功')
         return true
       } else {
         console.error('WebSocket 认证: Echo 实例创建失败')
@@ -164,25 +169,25 @@ export const destroyAuthManager = (): void => {
 
 export const refreshEchoAuth = async () => {
   try {
-    console.log('WebSocket 认证: 正在刷新 Echo 认证')
+    authLog('WebSocket 认证: 正在刷新 Echo 认证')
 
     // 销毁当前实例
     destroyEchoInstance()
 
     // 用新 token 创建新实例
     try {
-      console.log('WebSocket 认证: 使用刷新后的 token 重试')
+      authLog('WebSocket 认证: 使用刷新后的 token 重试')
       const retryInstance = createEchoInstance()
 
       if (retryInstance) {
-        console.log('WebSocket 认证: 重试成功')
+        authLog('WebSocket 认证: 重试成功')
         return retryInstance
       }
     } catch (retryError) {
       console.error('WebSocket 认证: 重试失败:', retryError)
     }
 
-    console.log('WebSocket 认证: Echo 认证刷新成功')
+    authLog('WebSocket 认证: Echo 认证刷新成功')
     return true
   } catch (error) {
     console.error('WebSocket 认证: 刷新 Echo 认证失败:', error)

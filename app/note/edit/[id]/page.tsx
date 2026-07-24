@@ -131,7 +131,7 @@ export default function EditNotePage() {
         is_draft: newPrivacyStatus, // 私密状态对应 is_draft
       }
 
-      const updateNote = createMutation<Note>(`/notes/${noteId}`, 'PUT')
+      const updateNote = createMutation<Note>(`/notes/${noteId}`, 'PUT', { handleError: false })
       await updateNote(data)
 
       if (
@@ -204,7 +204,7 @@ export default function EditNotePage() {
         is_draft: isPrivate, // 保持当前隐私状态
       }
 
-      const updateNote = createMutation<Note>(`/notes/${noteId}`, 'PUT')
+      const updateNote = createMutation<Note>(`/notes/${noteId}`, 'PUT', { handleError: false })
       await updateNote(data)
 
       if (

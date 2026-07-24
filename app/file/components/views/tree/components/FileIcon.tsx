@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/helpers'
 import { TREE_CONSTANTS } from '../constants'
-import { getFilePreviewUrl } from '../../../../services/api'
+import { getFileStorageUrl } from '../../../../services/api'
 import type { CloudFile } from '../../../../types'
 
 const FILE_TYPE_ICONS = {
@@ -47,7 +47,7 @@ export const FileIcon = memo<FileIconProps>(({ file, className }) => {
       >
         <Image
           ref={imgRef}
-          src={getFilePreviewUrl(file.id)}
+          src={getFileStorageUrl(file.path)}
           alt={file.name}
           width={TREE_CONSTANTS.PREVIEW_SIZE.width}
           height={TREE_CONSTANTS.PREVIEW_SIZE.height}

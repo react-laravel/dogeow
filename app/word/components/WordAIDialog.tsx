@@ -9,6 +9,9 @@ import { Word } from '../types'
 import { Send, Bot, MessageSquare, Edit, Copy, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
+import { patch } from '@/lib/api'
+import { ApiRequestError } from '@/lib/api/errors'
+import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 import { WordEditFields } from './WordEditFields'
 
 interface WordAIDialogProps {
@@ -94,7 +97,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
           command: '你是一个英语学习助手，帮助用户学习英语单词。请用中文回答。',
         }
 
-        const response = await fetch('/api/generate', {
+        const response = await authenticatedInternalFetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -202,7 +205,7 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
         command: '你是一个英语学习助手。请严格按照用户要求的格式返回数据。',
       }
 
-      const response = await fetch('/api/generate', {
+      const response = await authenticatedInternalFetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -275,26 +278,31 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
         })
         .filter(e => e.en)
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/word/${word.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
+      await patch(
+        `/word/${word.id}`,
+        {
           explanation: editedExplanation,
           example_sentences: examplePairs,
-        }),
-      })
-
-      if (!response.ok) throw new Error('保存失败')
+        },
+        { handleError: false }
+      )
 
       toast.success('单词数据已更新')
-      mutate('/api/word/learn/daily')
+      mutate('/word/daily')
       onOpenChange(false)
     } catch (error) {
-      console.error('保存失败:', error)
-      toast.error('保存失败')
+      if (error instanceof ApiRequestError && error.data?.errors) {
+        const errors = error.data.errors
+        const firstField = Object.keys(errors)[0]
+        const firstMsg = Array.isArray(errors[firstField])
+          ? errors[firstField][0]
+          : String(errors[firstField])
+        toast.error(firstMsg)
+      } else if (error instanceof Error) {
+        toast.error(error.message)
+      } else {
+        toast.error('保存失败')
+      }
     } finally {
       setIsSaving(false)
     }

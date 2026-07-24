@@ -70,12 +70,16 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
               if (isEditing && noteId) {
                 result = await idempotencyTracker.trackRequest(
                   idempotencyKey,
-                  apiRequest<Note | { note: Note }>(`/notes/${noteId}`, 'PUT', data)
+                  apiRequest<Note | { note: Note }>(`/notes/${noteId}`, 'PUT', data, {
+                    handleError: false,
+                  })
                 )
               } else {
                 result = await idempotencyTracker.trackRequest(
                   idempotencyKey,
-                  apiRequest<Note | { note: Note }>('/notes', 'POST', data)
+                  apiRequest<Note | { note: Note }>('/notes', 'POST', data, {
+                    handleError: false,
+                  })
                 )
               }
 
@@ -165,12 +169,16 @@ export function useNoteSave({ noteId, isEditing, draft }: UseNoteSaveOptions) {
         if (isEditing && noteId) {
           await idempotencyTracker.trackRequest(
             idempotencyKey,
-            apiRequest<Note | { note: Note }>(`/notes/${noteId}`, 'PUT', data)
+            apiRequest<Note | { note: Note }>(`/notes/${noteId}`, 'PUT', data, {
+              handleError: false,
+            })
           )
         } else {
           await idempotencyTracker.trackRequest(
             idempotencyKey,
-            apiRequest<Note | { note: Note }>('/notes', 'POST', data)
+            apiRequest<Note | { note: Note }>('/notes', 'POST', data, {
+              handleError: false,
+            })
           )
         }
         toast.success('已保存为草稿')

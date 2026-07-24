@@ -1,14 +1,15 @@
 'use client'
 
-import { useMemo, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import dynamic from 'next/dynamic'
 import { configs } from '@/app/configs'
+import type { Tile } from '@/app/types'
 import { ThemedTileCard } from '@/components/app/ThemedTileCard'
-import { HomeTilesSkeleton } from '@/components/app/HomeTilesSkeleton'
-import { useTileManagement } from '@/hooks/useTileManagement'
 import { PageContainer } from '@/components/layout'
-import { useLayoutStore } from '@/stores/layoutStore'
+import { useTileManagement } from '@/hooks/useTileManagement'
 import { useTranslation } from '@/hooks/useTranslation'
+import { useLayoutStore, type SiteLayout } from '@/stores/layoutStore'
+import type { ProjectCoverMode } from '@/stores/projectCoverStore'
 
 const MagazineLayout = dynamic(
   () => import('@/components/app/MagazineLayout').then(mod => mod.MagazineLayout),
@@ -16,18 +17,22 @@ const MagazineLayout = dynamic(
 )
 const IconLayout = dynamic(
   () => import('@/components/app/IconLayout').then(mod => mod.IconLayout),
-  {
-    ssr: true,
-  }
+  { ssr: true }
 )
-
-const Footer = dynamic(() => import('@/components/app/Footer'), {
-  ssr: true,
-})
+const Footer = dynamic(() => import('@/components/app/Footer'), { ssr: true })
 
 const HOME_TILES_GAP = 'gap-4'
-const HOME_SECTION_SPACING = 'space-y-6'
-const getInitialTileStatus = (tile: { needLogin?: boolean }) => ({
+
+type TileStatusGetter = (tile: Tile) => { needsLogin: boolean }
+
+interface TileLayoutProps {
+  tiles: Tile[]
+  projectCoverMode: ProjectCoverMode
+  getTileStatus: TileStatusGetter
+  handleTileClick: (tile: Tile) => void
+}
+
+const getInitialTileStatus: TileStatusGetter = tile => ({
   needsLogin: Boolean(tile.needLogin),
 })
 
@@ -39,25 +44,55 @@ function useHydrated() {
   )
 }
 
+function GridLayout({ tiles, projectCoverMode, getTileStatus, handleTileClick }: TileLayoutProps) {
+  const { t } = useTranslation()
+
+  return (
+    <div
+      className={`grid ${HOME_TILES_GAP}`}
+      style={{
+        gridTemplateAreas: configs.gridLayout.templateAreas,
+        gridTemplateColumns: `repeat(${configs.gridLayout.columns}, minmax(0, 1fr))`,
+      }}
+    >
+      {tiles.map((tile, index) => (
+        <div key={tile.name} style={{ gridArea: tile.name }}>
+          <ThemedTileCard
+            tile={tile}
+            index={index}
+            projectCoverMode={projectCoverMode}
+            needsLogin={getTileStatus(tile).needsLogin}
+            onClick={() => handleTileClick(tile)}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function HomeTiles({ layout, ...layoutProps }: TileLayoutProps & { layout: SiteLayout }) {
+  if (layout === 'magazine') return <MagazineLayout {...layoutProps} />
+  if (layout === 'grid') return <GridLayout {...layoutProps} />
+  return <IconLayout {...layoutProps} />
+}
+
 export function HomePage() {
   const { tiles, projectCoverMode, handleTileClick, getTileStatus } = useTileManagement()
-  const { siteLayout } = useLayoutStore()
+  const siteLayout = useLayoutStore(state => state.siteLayout)
   const { t } = useTranslation()
   const isHydrated = useHydrated()
-  const hydratedProjectCoverMode = isHydrated ? projectCoverMode : 'image'
 
-  const layoutType = useMemo(() => {
-    if (siteLayout === 'icon') return 'icon'
-    if (siteLayout === 'magazine') return 'magazine'
-    return 'grid'
-  }, [siteLayout])
+  // SSR / 首屏固定 icon，避免与本地持久化布局不一致导致闪烁
+  const layout: SiteLayout = isHydrated ? siteLayout : 'icon'
+  const coverMode: ProjectCoverMode = isHydrated ? projectCoverMode : 'image'
+  const statusGetter = isHydrated ? getTileStatus : getInitialTileStatus
 
   return (
     <>
-      <PageContainer className={`py-5 sm:py-8 ${HOME_SECTION_SPACING}`}>
+      <PageContainer className="space-y-6 py-5 sm:py-8">
         <header className="max-w-3xl space-y-2">
           <div className="bg-primary/12 text-primary inline-flex rounded-full px-3 py-1 text-xs font-semibold tracking-wide">
-            DIGITAL GARDEN
+            {t('home.eyebrow', '数字后花园')}
           </div>
           <h1 className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
             {t('home.title', 'DogeOW - 个人工具和游戏平台')}
@@ -68,55 +103,13 @@ export function HomePage() {
         </header>
 
         <section aria-label={t('home.section_tiles', '应用入口')}>
-          {!isHydrated ? (
-            <IconLayout
-              tiles={tiles}
-              projectCoverMode={hydratedProjectCoverMode}
-              getTileStatus={getInitialTileStatus}
-              handleTileClick={handleTileClick}
-            />
-          ) : layoutType === 'magazine' ? (
-            <MagazineLayout
-              tiles={tiles}
-              projectCoverMode={projectCoverMode}
-              getTileStatus={getTileStatus}
-              handleTileClick={handleTileClick}
-            />
-          ) : layoutType === 'icon' ? (
-            <IconLayout
-              tiles={tiles}
-              projectCoverMode={projectCoverMode}
-              getTileStatus={getTileStatus}
-              handleTileClick={handleTileClick}
-            />
-          ) : layoutType === 'grid' ? (
-            <div
-              className={`grid ${HOME_TILES_GAP}`}
-              style={{
-                gridTemplateAreas: configs.gridLayout.templateAreas,
-                gridTemplateColumns: `repeat(${configs.gridLayout.columns}, minmax(0, 1fr))`,
-              }}
-              role="grid"
-              aria-label="应用程序网格"
-            >
-              {tiles.map((tile, index) => {
-                const tileStatus = getTileStatus(tile)
-                return (
-                  <div key={tile.name} style={{ gridArea: tile.name }}>
-                    <ThemedTileCard
-                      tile={tile}
-                      index={index}
-                      projectCoverMode={projectCoverMode}
-                      needsLogin={tileStatus.needsLogin}
-                      onClick={() => handleTileClick(tile)}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <HomeTilesSkeleton />
-          )}
+          <HomeTiles
+            layout={layout}
+            tiles={tiles}
+            projectCoverMode={coverMode}
+            getTileStatus={statusGetter}
+            handleTileClick={handleTileClick}
+          />
         </section>
       </PageContainer>
 

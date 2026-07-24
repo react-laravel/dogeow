@@ -12,11 +12,12 @@ describe('NarrationHighlightedText', () => {
 
   it('highlights the active narration slice', () => {
     const { container } = render(
-      <NarrationHighlightedText text="满纸荒唐言" highlight={{ start: 0, end: 2 }} />
+      <NarrationHighlightedText text="满纸荒唐言" highlight={{ start: 0, end: 2 }} theme="green" />
     )
     const mark = container.querySelector('mark')
     expect(mark).not.toBeNull()
     expect(mark?.textContent).toBe('满纸')
+    expect(mark?.getAttribute('style')).toContain('background-color')
     expect(container.textContent).toBe('满纸荒唐言')
   })
 

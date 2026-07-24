@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -17,6 +17,8 @@ import { useAiDialogStore } from '@/stores/aiDialogStore'
 import useAuthStore from '@/stores/authStore'
 import { canUseAi } from '@/lib/ai/access'
 
+type ChatMode = 'ai' | 'knowledge'
+
 interface AiDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -29,7 +31,9 @@ interface KnowledgeDocumentsResponse {
   error?: string
 }
 
-const docsFetcher = async (url: string): Promise<KnowledgeDocumentsResponse> => {
+const KNOWLEDGE_GREETING = '你好！欢迎了解我的知识库。'
+
+async function fetchKnowledgeDocuments(url: string): Promise<KnowledgeDocumentsResponse> {
   const res = await authenticatedInternalFetch(url)
   const data = (await res.json()) as KnowledgeDocumentsResponse
 
@@ -40,70 +44,81 @@ const docsFetcher = async (url: string): Promise<KnowledgeDocumentsResponse> => 
   return data
 }
 
+function buildKnowledgeWelcomeMessages(
+  docsData: KnowledgeDocumentsResponse | undefined,
+  docsError: unknown
+): ChatMessage[] {
+  if (docsError) {
+    return [
+      {
+        role: 'assistant',
+        content: `${KNOWLEDGE_GREETING}\n\n当前知识库文档暂时不可用，请稍后重试。`,
+      },
+    ]
+  }
+
+  if (!docsData) return []
+
+  const hasDocs = (docsData.documents?.length ?? 0) > 0
+  return [
+    {
+      role: 'assistant',
+      content: hasDocs
+        ? `${KNOWLEDGE_GREETING}\n\n我会基于知识库内容为你解答。\n\n有什么想了解的吗？`
+        : `${KNOWLEDGE_GREETING}\n\n目前知识库中还没有文档。\n\n有什么想了解的吗？`,
+    },
+  ]
+}
+
+function formatKnowledgeSubtitle(updatedAt: string | null | undefined): string | undefined {
+  if (!updatedAt) return undefined
+
+  try {
+    const text = formatDistanceToNow(new Date(updatedAt), {
+      addSuffix: true,
+      locale: zhCN,
+    })
+    return text.replace(/^(大约|不到)\s*/, '')
+  } catch {
+    return undefined
+  }
+}
+
 export function AiDialog({ open, onOpenChange }: AiDialogProps) {
   const user = useAuthStore(state => state.user)
   const allowedOpen = open && canUseAi(user)
   const consumeSeedPrompt = useAiDialogStore(state => state.consumeSeedPrompt)
-  const [chatMode, setChatMode] = useState<'ai' | 'knowledge'>('ai')
+  const [chatMode, setChatMode] = useState<ChatMode>('ai')
+  const isKnowledgeMode = chatMode === 'knowledge'
 
-  const shouldFetchDocs = allowedOpen && chatMode === 'knowledge'
+  const shouldFetchDocs = allowedOpen && isKnowledgeMode
   const { data: docsData, error: docsError } = useSWR(
     shouldFetchDocs ? '/api/knowledge/documents' : null,
-    docsFetcher,
+    fetchKnowledgeDocuments,
     { revalidateOnFocus: false }
   )
 
-  const knowledgeInitialMessages = useMemo<ChatMessage[]>(() => {
-    if (!shouldFetchDocs) return []
-    if (docsError) {
-      return [
-        {
-          role: 'assistant',
-          content: '你好！欢迎了解我的知识库。\n\n当前知识库文档暂时不可用，请稍后重试。',
-        },
-      ]
-    }
-    if (!docsData) return []
-    const hasDocs = docsData.success && (docsData.documents?.length ?? 0) > 0
-    return [
-      {
-        role: 'assistant' as const,
-        content: hasDocs
-          ? `你好！欢迎了解我的知识库。\n\n我会基于知识库内容为你解答。\n\n有什么想了解的吗？`
-          : `你好！欢迎了解我的知识库。\n\n目前知识库中还没有文档。\n\n有什么想了解的吗？`,
-      },
-    ]
-  }, [shouldFetchDocs, docsData, docsError])
+  const knowledgeInitialMessages = useMemo(
+    () => (shouldFetchDocs ? buildKnowledgeWelcomeMessages(docsData, docsError) : []),
+    [shouldFetchDocs, docsData, docsError]
+  )
 
   const aiChat = useAiChat({ open: allowedOpen })
   const knowledgeChat = useKnowledgeChat({
     open: allowedOpen,
     initialMessages: knowledgeInitialMessages,
   })
-  const knowledgeIndexEnabled = allowedOpen && chatMode === 'knowledge'
-  const { updatedAt: knowledgeUpdatedAt } = useKnowledgeIndexStatus(knowledgeIndexEnabled)
-  const knowledgeSubtitle = useMemo(() => {
-    if (!knowledgeUpdatedAt) return undefined
-    try {
-      const date = new Date(knowledgeUpdatedAt)
-      const text = formatDistanceToNow(date, { addSuffix: true, locale: zhCN })
-      // 去掉「不到」和「大约」等模糊词，保持简洁
-      return `${text.replace(/^(大约|不到)\s*/, '')}`
-    } catch {
-      return undefined
-    }
-  }, [knowledgeUpdatedAt])
 
-  const [lastKnowledgeSubtitle, setLastKnowledgeSubtitle] = useState<string | undefined>(undefined)
-  useEffect(() => {
-    if (knowledgeSubtitle !== undefined) {
-      queueMicrotask(() => setLastKnowledgeSubtitle(knowledgeSubtitle))
-    }
-  }, [knowledgeSubtitle])
-  const headerSubtitle = knowledgeSubtitle ?? lastKnowledgeSubtitle
-  const headerTitle = chatMode === 'knowledge' ? '知识库问答' : 'AI 助理'
+  const { updatedAt: knowledgeUpdatedAt } = useKnowledgeIndexStatus(allowedOpen && isKnowledgeMode)
+  const knowledgeSubtitle = useMemo(
+    () => formatKnowledgeSubtitle(knowledgeUpdatedAt),
+    [knowledgeUpdatedAt]
+  )
 
-  const activeChat = chatMode === 'knowledge' ? knowledgeChat : aiChat
+  const headerTitle = isKnowledgeMode ? '知识库问答' : 'AI 助理'
+  const headerSubtitle = isKnowledgeMode ? knowledgeSubtitle : undefined
+
+  const activeChat = isKnowledgeMode ? knowledgeChat : aiChat
   const {
     prompt,
     setPrompt,
@@ -113,92 +128,33 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     isLoading,
     model,
     setModel,
+    provider,
+    setProvider,
+    ollamaModels,
+    isLoadingOllamaModels,
+    codexReasoningEffort,
+    setCodexReasoningEffort,
     stop,
     handleSend,
     handleClear,
     messagesEndRef,
-  } = activeChat as typeof knowledgeChat
+  } = activeChat
 
   useEffect(() => {
     if (!allowedOpen) return
+
     const seedPrompt = consumeSeedPrompt()
     if (!seedPrompt) return
+
     queueMicrotask(() => {
       setChatMode('ai')
       aiChat.setPrompt(seedPrompt)
     })
-  }, [allowedOpen, consumeSeedPrompt, aiChat])
-
-  const { ollamaModels, isLoadingOllamaModels, supportsImages } = aiChat
-  const currentProvider = chatMode === 'knowledge' ? knowledgeChat.provider : aiChat.provider
-  const setCurrentProvider =
-    chatMode === 'knowledge' ? knowledgeChat.setProvider : aiChat.setProvider
-  const currentOllamaModels = chatMode === 'knowledge' ? knowledgeChat.ollamaModels : ollamaModels
-  const currentIsLoadingOllamaModels =
-    chatMode === 'knowledge' ? knowledgeChat.isLoadingOllamaModels : isLoadingOllamaModels
-
-  const chatBody = (
-    <>
-      <ChatMessageList
-        messages={messages}
-        isLoading={isLoading}
-        completion={completion}
-        messagesEndRef={messagesEndRef}
-        variant="dialog"
-      />
-
-      <div className="relative flex-none p-2">
-        {(chatMode === 'knowledge' ? knowledgeChat.hasMessages : aiChat.hasMessages) && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleClear}
-            disabled={isLoading}
-            className="absolute right-4 bottom-full mb-2 h-9 gap-1.5 rounded-full px-3 shadow-md"
-          >
-            <MessageSquarePlus className="h-4 w-4" />
-            新会话
-          </Button>
-        )}
-        <ChatInput
-          prompt={prompt}
-          onPromptChange={setPrompt}
-          onSend={handleSend}
-          onStop={stop}
-          isLoading={isLoading}
-          ollamaModels={currentOllamaModels}
-          isLoadingOllamaModels={currentIsLoadingOllamaModels}
-          supportsImages={chatMode === 'ai' ? supportsImages : false}
-          model={model}
-          onModelChange={setModel}
-          codexReasoningEffort={
-            chatMode === 'knowledge'
-              ? knowledgeChat.codexReasoningEffort
-              : aiChat.codexReasoningEffort
-          }
-          onCodexReasoningEffortChange={
-            chatMode === 'knowledge'
-              ? knowledgeChat.setCodexReasoningEffort
-              : aiChat.setCodexReasoningEffort
-          }
-          provider={currentProvider}
-          onProviderChange={setCurrentProvider}
-          chatMode={chatMode}
-          onChatModeChange={value => setChatMode(value as 'ai' | 'knowledge')}
-          images={chatMode === 'ai' ? aiChat.images : []}
-          isUploadingImages={chatMode === 'ai' ? aiChat.isUploadingImages : false}
-          onImageSelect={chatMode === 'ai' ? aiChat.handleImageSelect : undefined}
-          onRemoveImage={chatMode === 'ai' ? aiChat.removeImage : undefined}
-          variant="dialog"
-          placeholder={chatMode === 'knowledge' ? '与知识库AI对话' : '与通用AI对话'}
-        />
-      </div>
-    </>
-  )
+  }, [allowedOpen, consumeSeedPrompt, aiChat.setPrompt])
 
   if (!allowedOpen) return null
 
-  const panelEl = (
+  return createPortal(
     <div
       className="bg-background fixed inset-x-0 bottom-0 z-[29] flex flex-col overflow-hidden shadow-lg"
       style={{ top: 'var(--app-header-height, 50px)' }}
@@ -216,7 +172,7 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
             onClear={handleClear}
             hideClear
             chatMode={chatMode}
-            onChatModeChange={value => setChatMode(value as 'ai' | 'knowledge')}
+            onChatModeChange={setChatMode}
           />
         </div>
         <Button
@@ -229,9 +185,54 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           <X className="h-4 w-4" />
         </Button>
       </div>
-      {chatBody}
-    </div>
-  )
 
-  return createPortal(panelEl, document.body)
+      <ChatMessageList
+        messages={messages}
+        isLoading={isLoading}
+        completion={completion}
+        messagesEndRef={messagesEndRef}
+        variant="dialog"
+      />
+
+      <div className="relative flex-none p-2">
+        {hasMessages && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleClear}
+            disabled={isLoading}
+            className="absolute right-4 bottom-full mb-2 h-9 gap-1.5 rounded-full px-3 shadow-md"
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+            新会话
+          </Button>
+        )}
+        <ChatInput
+          prompt={prompt}
+          onPromptChange={setPrompt}
+          onSend={handleSend}
+          onStop={stop}
+          isLoading={isLoading}
+          ollamaModels={ollamaModels}
+          isLoadingOllamaModels={isLoadingOllamaModels}
+          supportsImages={!isKnowledgeMode && aiChat.supportsImages}
+          model={model}
+          onModelChange={setModel}
+          codexReasoningEffort={codexReasoningEffort}
+          onCodexReasoningEffortChange={setCodexReasoningEffort}
+          provider={provider}
+          onProviderChange={setProvider}
+          chatMode={chatMode}
+          onChatModeChange={setChatMode}
+          images={isKnowledgeMode ? [] : aiChat.images}
+          isUploadingImages={!isKnowledgeMode && aiChat.isUploadingImages}
+          onImageSelect={isKnowledgeMode ? undefined : aiChat.handleImageSelect}
+          onRemoveImage={isKnowledgeMode ? undefined : aiChat.removeImage}
+          variant="dialog"
+          placeholder={isKnowledgeMode ? '与知识库AI对话' : '与通用AI对话'}
+        />
+      </div>
+    </div>,
+    document.body
+  )
 }

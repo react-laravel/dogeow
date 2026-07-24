@@ -21,16 +21,22 @@ const mocks = vi.hoisted(() => ({
   refreshState: vi.fn(async () => undefined),
 }))
 
-vi.mock('swr', () => ({
-  default: () => ({
+vi.mock('@/lib/api', () => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  markNotificationRead: vi.fn(),
+  markAllNotificationsRead: vi.fn(),
+  useUnreadNotifications: () => ({
     data: { count: 0, items: [] },
     mutate: mocks.mutate,
   }),
 }))
 
-vi.mock('@/lib/api', () => ({
-  get: vi.fn(),
-  post: vi.fn(),
+vi.mock('swr', () => ({
+  default: () => ({
+    data: { count: 0, items: [] },
+    mutate: mocks.mutate,
+  }),
 }))
 
 vi.mock('@/stores/authStore', () => ({

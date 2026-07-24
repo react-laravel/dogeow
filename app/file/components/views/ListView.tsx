@@ -21,7 +21,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/helpers'
 import { CloudFile, SortField } from '../../types'
 import useFileStore from '../../store/useFileStore'
-import { getFileDownloadUrl, getFilePreviewUrl } from '../../services/api'
+import { getFileStorageUrl, downloadCloudFile } from '../../services/api'
 import { formatFileSize } from '../../constants'
 import { useMoveFiles } from '@/app/file/hooks/useFileOperations'
 
@@ -86,7 +86,7 @@ const FileIcon = ({ file }: { file: CloudFile }) => {
     return (
       <div className="bg-muted relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-sm">
         <Image
-          src={getFilePreviewUrl(file.id)}
+          src={getFileStorageUrl(file.path)}
           alt={file.name}
           width={24}
           height={24}
@@ -201,9 +201,9 @@ export default function ListView({ files }: ListViewProps) {
       if (file.is_folder) {
         navigateToFolder(file.id)
       } else {
-        // 下载文件
-        window.open(getFileDownloadUrl(file.id), '_blank')
-        toast.success('开始下载')
+        void downloadCloudFile(file)
+          .then(() => toast.success('开始下载'))
+          .catch(() => toast.error('下载失败'))
       }
     },
     [navigateToFolder]

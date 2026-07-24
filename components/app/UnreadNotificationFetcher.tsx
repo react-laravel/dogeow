@@ -1,13 +1,27 @@
 'use client'
 
-import useSWR from 'swr'
-import { get } from '@/lib/api'
-import type { UnreadNotificationsResponse } from '@/lib/api'
-import useAuthStore from '@/stores/authStore'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
+import { useUnreadNotifications } from '@/lib/api'
+import useAuthStore from '@/stores/authStore'
 
-const fetcher = (url: string) => get<UnreadNotificationsResponse>(url)
+const UNREAD_TOAST_SESSION_KEY = 'unread-notification-toast-shown'
+
+function markUnreadToastShown(): boolean {
+  try {
+    if (sessionStorage.getItem(UNREAD_TOAST_SESSION_KEY)) return false
+    sessionStorage.setItem(UNREAD_TOAST_SESSION_KEY, '1')
+    return true
+  } catch {
+    return false
+  }
+}
+
+function resolveUnreadViewUrl(items: { data?: { url?: string } }[] | undefined): string {
+  const fromItem = items?.find(item => item.data?.url)?.data?.url
+  if (fromItem && fromItem.startsWith('/')) return fromItem
+  return '/'
+}
 
 /**
  * 登录状态下拉取未读通知：触发后端「打开时补发汇总推送」；
@@ -15,24 +29,21 @@ const fetcher = (url: string) => get<UnreadNotificationsResponse>(url)
  */
 export function UnreadNotificationFetcher() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
-  const { data } = useSWR<UnreadNotificationsResponse>(
-    isAuthenticated ? 'notifications/unread' : null,
-    fetcher,
-    { revalidateOnFocus: true }
-  )
+  const { data } = useUnreadNotifications(isAuthenticated)
 
   useEffect(() => {
     if (!isAuthenticated || !data?.count) return
-    const key = 'unread-notification-toast-shown'
-    if (sessionStorage.getItem(key)) return
-    sessionStorage.setItem(key, '1')
+    if (!markUnreadToastShown()) return
+
+    const viewUrl = resolveUnreadViewUrl(data.items)
+
     toast.info(`你有 ${data.count} 条未读消息`, {
       action: {
         label: '查看',
-        onClick: () => window.location.assign('/chat'),
+        onClick: () => window.location.assign(viewUrl),
       },
     })
-  }, [isAuthenticated, data?.count])
+  }, [isAuthenticated, data?.count, data?.items])
 
   return null
 }

@@ -14,6 +14,7 @@ import {
   type PaginationMeta,
   prepareThingItemFormData,
 } from '@/app/thing/contracts'
+import { refreshCategories, refreshItemLists } from '@/app/thing/services/swrCache'
 
 // 统一错误处理
 const handleError = (error: unknown, defaultMessage = '未知错误'): string => {
@@ -129,8 +130,9 @@ export const useItemStore = create<ItemState>((set, get) => ({
         await apiRequest<Category>('/things/categories', 'POST', data)
       )
 
-      // 刷新分类列表
+      // 刷新分类列表（store + SWR）
       await get().fetchCategories()
+      void refreshCategories()
 
       return category
     } catch (error) {
@@ -202,8 +204,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
     try {
       const item = assertItem(await lockResult.result)
       set({ loading: false })
-      // 刷新列表
-      await get().fetchItems()
+      void refreshItemLists()
 
       return item
     } catch (error) {
@@ -262,8 +263,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
     try {
       const item = assertItem(await lockResult.result)
       set({ loading: false })
-      // 刷新列表
-      await get().fetchItems()
+      void refreshItemLists()
 
       return item
     } catch (error) {
@@ -299,9 +299,7 @@ export const useItemStore = create<ItemState>((set, get) => ({
         items: state.items.filter(item => item.id !== id),
         loading: false,
       }))
-
-      // 刷新列表以确保数据一致性
-      await get().fetchItems()
+      void refreshItemLists()
     } catch (error) {
       const errorMessage = handleError(error, '删除物品失败')
       set({ loading: false, error: errorMessage })

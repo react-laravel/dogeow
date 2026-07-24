@@ -34,6 +34,8 @@ interface ReaderToolbarProps {
   onResumeNarration: () => void
   onStopNarration: () => void
   hideNarration?: boolean
+  /** 听书仅原文（隐藏译文/全部选项） */
+  narrationOriginalOnly?: boolean
   onPrevChapter?: () => void
   onNextChapter?: () => void
   hasPrevChapter?: boolean
@@ -59,6 +61,7 @@ export function ReaderToolbar({
   onResumeNarration,
   onStopNarration,
   hideNarration,
+  narrationOriginalOnly,
   onPrevChapter,
   onNextChapter,
   hasPrevChapter,
@@ -127,7 +130,7 @@ export function ReaderToolbar({
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-2 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
-          {!hideNarration && (
+          {(onPrevChapter || onNextChapter) && (
             <>
               <Button
                 type="button"
@@ -160,23 +163,25 @@ export function ReaderToolbar({
         <div className="flex items-center justify-between gap-2">
           {!hideNarration ? (
             <div className="flex items-center gap-1.5">
-              <Select
-                value={narrationMode}
-                onValueChange={value => onNarrationModeChange(value as BookNarrationMode)}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className={`w-[6.25rem] shrink-0 ${controlClass ?? ''}`}
-                  aria-label="选择朗读内容"
+              {!narrationOriginalOnly ? (
+                <Select
+                  value={narrationMode}
+                  onValueChange={value => onNarrationModeChange(value as BookNarrationMode)}
                 >
-                  <SelectValue placeholder="朗读" />
-                </SelectTrigger>
-                <SelectContent className={overlayClass} style={overlayStyle}>
-                  <SelectItem value="original">原文</SelectItem>
-                  <SelectItem value="translation">译文</SelectItem>
-                  <SelectItem value="both">全部</SelectItem>
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    size="sm"
+                    className={`w-[6.25rem] shrink-0 ${controlClass ?? ''}`}
+                    aria-label="选择朗读内容"
+                  >
+                    <SelectValue placeholder="朗读" />
+                  </SelectTrigger>
+                  <SelectContent className={overlayClass} style={overlayStyle}>
+                    <SelectItem value="original">原文</SelectItem>
+                    <SelectItem value="translation">译文</SelectItem>
+                    <SelectItem value="both">全部</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : null}
               {narrationStatus === 'idle' ? (
                 <Button
                   type="button"

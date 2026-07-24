@@ -75,4 +75,15 @@ describe('bilingualParse', () => {
       body: '甄士隐梦幻识通灵 贾雨村风尘怀闺秀',
     })
   })
+
+  it('aligns when sentence counts differ beyond the merge window', () => {
+    const originals = ['甲句。', '乙句。', '丙句。', '丁句。']
+    const translations = ['甲乙丙丁合并译文。']
+
+    const pairs = alignSentencePairs(originals, translations)
+
+    expect(pairs.some(pair => pair.o.includes('甲句') || pair.t.includes('合并译文'))).toBe(true)
+    expect(pairs.map(pair => pair.o).join('')).toBe(originals.join(''))
+    expect(pairs.map(pair => pair.t).join('')).toBe(translations.join(''))
+  })
 })

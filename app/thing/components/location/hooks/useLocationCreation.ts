@@ -35,9 +35,14 @@ export const useLocationCreation = ({
   const handleCreateArea = useCallback(
     async (areaName: string) => {
       try {
-        const response = await apiRequest<{ message: string; area: Area }>('/areas', 'POST', {
-          name: areaName,
-        })
+        const response = await apiRequest<{ message: string; area: Area }>(
+          '/areas',
+          'POST',
+          {
+            name: areaName,
+          },
+          { handleError: false }
+        )
         const newArea = response.area
 
         if (!newArea || !newArea.id) {
@@ -64,10 +69,15 @@ export const useLocationCreation = ({
       }
 
       try {
-        const response = await apiRequest<{ message: string; room: Room }>('/rooms', 'POST', {
-          name: roomName,
-          area_id: Number(selectedAreaId),
-        })
+        const response = await apiRequest<{ message: string; room: Room }>(
+          '/rooms',
+          'POST',
+          {
+            name: roomName,
+            area_id: Number(selectedAreaId),
+          },
+          { handleError: false }
+        )
         const newRoom = response.room
 
         if (!newRoom || !newRoom.id) {
@@ -98,10 +108,15 @@ export const useLocationCreation = ({
       }
 
       try {
-        const response = await apiRequest<{ message: string; spot: Spot }>('/spots', 'POST', {
-          name: spotName,
-          room_id: Number(selectedRoomId),
-        })
+        const response = await apiRequest<{ message: string; spot: Spot }>(
+          '/spots',
+          'POST',
+          {
+            name: spotName,
+            room_id: Number(selectedRoomId),
+          },
+          { handleError: false }
+        )
         const newSpot = response.spot
 
         if (!newSpot || !newSpot.id) {

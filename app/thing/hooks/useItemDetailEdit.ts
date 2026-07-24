@@ -58,8 +58,8 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
 
   const { categories, tags, fetchCategories, fetchTags, updateItem } = useItemStore()
   const { mutate: refreshAreas } = useAreas()
-  const { data: rooms = [], mutate: refreshRooms } = useRooms<Room[]>()
-  const { data: spots = [], mutate: refreshSpots } = useSpots<Spot[]>()
+  const { data: rooms = [], mutate: refreshRooms } = useRooms()
+  const { data: spots = [], mutate: refreshSpots } = useSpots()
 
   const refreshAreasRef = useRef(refreshAreas)
   useEffect(() => {

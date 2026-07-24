@@ -12,64 +12,62 @@ export interface PairLinePresentation {
 const ORIGINAL_LABEL = '原文'
 const TRANSLATION_LABEL = '译文'
 
+type ThemePalette = {
+  base: string
+  translation: string
+  originalCard: string
+  translationCard: string
+}
+
+const THEME_PALETTE: Record<Exclude<ReaderTheme, 'auto'>, ThemePalette> = {
+  light: {
+    base: '#1a1a1a',
+    translation: '#1d4f91',
+    originalCard: 'rgba(0,0,0,0.04)',
+    translationCard: 'rgba(29,79,145,0.06)',
+  },
+  dark: {
+    base: '#e8e8e8',
+    translation: '#8eb4d4',
+    originalCard: 'rgba(255,255,255,0.06)',
+    translationCard: 'rgba(142,180,212,0.1)',
+  },
+  sepia: {
+    base: '#5c4b37',
+    translation: '#8b5e3c',
+    originalCard: 'rgba(92,75,55,0.08)',
+    translationCard: 'rgba(139,94,60,0.1)',
+  },
+  green: {
+    base: '#2d3a2d',
+    translation: '#3d6b45',
+    originalCard: 'rgba(45,58,45,0.08)',
+    translationCard: 'rgba(61,107,69,0.12)',
+  },
+}
+
+const AUTO_PALETTE: ThemePalette = {
+  base: 'inherit',
+  translation: 'hsl(var(--primary))',
+  originalCard: 'hsl(var(--muted) / 0.45)',
+  translationCard: 'hsl(var(--muted) / 0.25)',
+}
+
+function themePalette(theme: ReaderTheme): ThemePalette {
+  return theme === 'auto' ? AUTO_PALETTE : THEME_PALETTE[theme]
+}
+
 function themeBaseColor(theme: ReaderTheme): string {
-  switch (theme) {
-    case 'dark':
-      return '#e8e8e8'
-    case 'sepia':
-      return '#5c4b37'
-    case 'green':
-      return '#2d3a2d'
-    case 'light':
-      return '#1a1a1a'
-    default:
-      return 'inherit'
-  }
+  return themePalette(theme).base
 }
 
 function themeTranslationHue(theme: ReaderTheme): string {
-  switch (theme) {
-    case 'dark':
-      return '#8eb4d4'
-    case 'sepia':
-      return '#8b5e3c'
-    case 'green':
-      return '#3d6b45'
-    case 'light':
-      return '#1d4f91'
-    default:
-      return 'hsl(var(--primary))'
-  }
+  return themePalette(theme).translation
 }
 
 function themeCardBackground(theme: ReaderTheme, role: PairLineRole): string {
-  if (role === 'original') {
-    switch (theme) {
-      case 'dark':
-        return 'rgba(255,255,255,0.06)'
-      case 'sepia':
-        return 'rgba(92,75,55,0.08)'
-      case 'green':
-        return 'rgba(45,58,45,0.08)'
-      case 'light':
-        return 'rgba(0,0,0,0.04)'
-      default:
-        return 'hsl(var(--muted) / 0.45)'
-    }
-  }
-
-  switch (theme) {
-    case 'dark':
-      return 'rgba(142,180,212,0.1)'
-    case 'sepia':
-      return 'rgba(139,94,60,0.1)'
-    case 'green':
-      return 'rgba(61,107,69,0.12)'
-    case 'light':
-      return 'rgba(29,79,145,0.06)'
-    default:
-      return 'hsl(var(--muted) / 0.25)'
-  }
+  const palette = themePalette(theme)
+  return role === 'original' ? palette.originalCard : palette.translationCard
 }
 
 export function getPairLinePresentation(
@@ -149,15 +147,17 @@ export function getPairLinePresentation(
   }
 }
 
+const PAIR_DISPLAY_MODES: ReadonlySet<PairDisplayMode> = new Set([
+  'muted',
+  'contrast',
+  'color',
+  'label',
+  'card',
+  'border',
+])
+
 export function isValidPairDisplayMode(value: unknown): value is PairDisplayMode {
-  return (
-    value === 'muted' ||
-    value === 'contrast' ||
-    value === 'color' ||
-    value === 'label' ||
-    value === 'card' ||
-    value === 'border'
-  )
+  return typeof value === 'string' && PAIR_DISPLAY_MODES.has(value as PairDisplayMode)
 }
 
 export function getTranslationMutedColor(theme: ReaderTheme): string {
