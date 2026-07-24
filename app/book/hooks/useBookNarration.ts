@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { BookChapter, SentencePair } from '@/app/book/utils/bilingualParse'
 import type { BookNarrationMode, BookNarrationStatus } from '@/app/book/types/narration'
-import { scrollNarrationPairIntoView } from '@/app/book/utils/scroll'
+import {
+  scrollNarrationHighlightIntoView,
+  scrollNarrationPairIntoView,
+} from '@/app/book/utils/scroll'
 
 export type { BookNarrationMode, BookNarrationStatus }
 export interface BookNarrationHighlight {
@@ -262,6 +265,15 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
   useEffect(() => {
     speakNextRef.current = speakNext
   }, [speakNext])
+
+  useEffect(() => {
+    if (!activeHighlight) return
+
+    const frame = requestAnimationFrame(() => {
+      scrollNarrationHighlightIntoView(contentRef.current, activeHighlight.pairIndex)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [activeHighlight, contentRef])
 
   const start = useCallback(
     (pairIndex = 0): boolean => {

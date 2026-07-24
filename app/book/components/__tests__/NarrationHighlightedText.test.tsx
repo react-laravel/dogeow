@@ -16,6 +16,7 @@ describe('NarrationHighlightedText', () => {
     )
     const mark = container.querySelector('mark')
     expect(mark).not.toBeNull()
+    expect(mark).toHaveAttribute('data-narration-highlight')
     expect(mark?.textContent).toBe('满纸')
     expect(mark?.getAttribute('style')).toContain('background-color')
     expect(container.textContent).toBe('满纸荒唐言')

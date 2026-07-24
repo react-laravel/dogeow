@@ -27,6 +27,7 @@ export function NarrationHighlightedText({
     <>
       {text.slice(0, start)}
       <mark
+        data-narration-highlight
         className="rounded-sm text-inherit"
         style={{ color: 'inherit', ...getNarrationHighlightStyle(theme) }}
       >

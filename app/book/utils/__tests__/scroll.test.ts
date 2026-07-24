@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { applyBookJump, scrollElementIntoContainer } from '../scroll'
+import {
+  applyBookJump,
+  scrollElementIntoContainer,
+  scrollNarrationHighlightIntoView,
+} from '../scroll'
 
 describe('book scroll helpers', () => {
   it('applyBookJump prefers pairIndex over scrollTop', () => {
@@ -40,5 +44,59 @@ describe('book scroll helpers', () => {
 
     // delta 300 - 500 * 0.28 = 160
     expect(container.scrollTop).toBeCloseTo(160, 0)
+  })
+
+  it('turns one viewport when narration reaches the last visible line', () => {
+    const container = document.createElement('div')
+    Object.defineProperties(container, {
+      clientHeight: { value: 500 },
+      scrollHeight: { value: 1600 },
+    })
+    container.style.overflowY = 'auto'
+    container.getBoundingClientRect = () =>
+      ({ top: 0, bottom: 500, left: 0, right: 300, width: 300, height: 500 }) as DOMRect
+
+    const pair = document.createElement('p')
+    pair.setAttribute('data-pair-index', '2')
+    const highlight = document.createElement('mark')
+    highlight.setAttribute('data-narration-highlight', '')
+    highlight.getBoundingClientRect = () =>
+      ({ top: 470, bottom: 494, left: 0, right: 30, width: 30, height: 24 }) as DOMRect
+    pair.appendChild(highlight)
+    container.appendChild(pair)
+    document.body.appendChild(container)
+
+    container.scrollTop = 100
+    scrollNarrationHighlightIntoView(container, 2)
+
+    expect(container.scrollTop).toBe(552)
+    container.remove()
+  })
+
+  it('keeps the page still while narration highlight remains visible', () => {
+    const container = document.createElement('div')
+    Object.defineProperties(container, {
+      clientHeight: { value: 500 },
+      scrollHeight: { value: 1600 },
+    })
+    container.style.overflowY = 'auto'
+    container.getBoundingClientRect = () =>
+      ({ top: 0, bottom: 500, left: 0, right: 300, width: 300, height: 500 }) as DOMRect
+
+    const pair = document.createElement('p')
+    pair.setAttribute('data-pair-index', '2')
+    const highlight = document.createElement('mark')
+    highlight.setAttribute('data-narration-highlight', '')
+    highlight.getBoundingClientRect = () =>
+      ({ top: 240, bottom: 264, left: 0, right: 30, width: 30, height: 24 }) as DOMRect
+    pair.appendChild(highlight)
+    container.appendChild(pair)
+    document.body.appendChild(container)
+
+    container.scrollTop = 100
+    scrollNarrationHighlightIntoView(container, 2)
+
+    expect(container.scrollTop).toBe(100)
+    container.remove()
   })
 })

@@ -156,6 +156,39 @@ export function scrollNarrationPairIntoView(
   scrollElementIntoContainer(scrollContainer, target, 'anchor')
 }
 
+/**
+ * Turn the reading viewport when the spoken word reaches its last visible line.
+ * A small overlap keeps the previous line visible so the page change is easy to follow.
+ */
+export function scrollNarrationHighlightIntoView(
+  container: HTMLElement | null,
+  pairIndex: number
+): void {
+  if (!container) return
+
+  const pair = container.querySelector(`[data-pair-index="${pairIndex}"]`)
+  const highlight = pair?.querySelector('[data-narration-highlight]')
+  if (!(highlight instanceof HTMLElement)) return
+
+  const scrollContainer = findScrollingAncestor(container) ?? container
+  const containerRect = scrollContainer.getBoundingClientRect()
+  const highlightRect = highlight.getBoundingClientRect()
+  const topPadding = 12
+  const bottomPadding = 20
+  const pageOverlap = 48
+
+  if (highlightRect.top < containerRect.top + topPadding) {
+    scrollElementIntoContainer(scrollContainer, highlight, 'anchor')
+    return
+  }
+
+  if (highlightRect.bottom <= containerRect.bottom - bottomPadding) return
+
+  const pageHeight = Math.max(scrollContainer.clientHeight - pageOverlap, 1)
+  const maxScrollTop = Math.max(scrollContainer.scrollHeight - scrollContainer.clientHeight, 0)
+  scrollContainer.scrollTop = Math.min(scrollContainer.scrollTop + pageHeight, maxScrollTop)
+}
+
 // ─── Jump scheduling ────────────────────────────────────────────────
 
 const MAX_JUMP_ATTEMPTS = 20
