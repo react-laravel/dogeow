@@ -4,16 +4,12 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Word } from '../types'
-import { Send, Bot, MessageSquare, Edit, Copy, Check } from 'lucide-react'
+import { Send, Bot, Copy, Check } from 'lucide-react'
 import { toast } from 'sonner'
-import { mutate } from 'swr'
-import { patch } from '@/lib/api'
-import { ApiRequestError } from '@/lib/api/errors'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
-import { WordEditFields } from './WordEditFields'
 import { getWordAIRequestConfig } from '../utils/aiRequest'
+import { cn } from '@/lib/helpers'
 
 interface WordAIDialogProps {
   word: Word
@@ -30,37 +26,25 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
-  const [editedExplanation, setEditedExplanation] = useState(word.explanation ?? '')
-  const [editedExamples, setEditedExamples] = useState(
-    word.example_sentences?.map(e => `${e.en}\n${e.zh}`).join('\n\n') ?? ''
-  )
-  const [autoQueryDone, setAutoQueryDone] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 重置状态
   useEffect(() => {
     if (open) {
       setMessages([])
+      setInput('')
       setErrorMessage(null)
       setCopiedIdx(null)
-      setAutoQueryDone(false)
-      setEditedExplanation(word.explanation ?? '')
-      setEditedExamples(word.example_sentences?.map(e => `${e.en}\n${e.zh}`).join('\n\n') ?? '')
     }
   }, [open, word])
 
-  // 自动滚动到底部
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
 
-  // 复制消息内容
   const copyMessage = async (content: string, idx: number) => {
     try {
       await navigator.clipboard.writeText(content)
@@ -72,7 +56,6 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
     }
   }
 
-  // 发送消息给 AI（用 useCallback 稳定引用，供下方 effect 正确声明依赖）
   const sendMessage = useCallback(
     async (content: string) => {
       if (!content.trim() || isLoading) return
@@ -96,7 +79,13 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
           ...getWordAIRequestConfig(),
           useChat: true,
           messages: chatMessages,
-          command: '你是一个英语学习助手，帮助用户学习英语单词。请用中文回答。',
+          command: [
+            '你是一个英语学习助手，专门解答用户对当前单词的疑问。',
+            '请用中文清晰、简洁地回答；需要时解释词义、语法、搭配、语境和例句。',
+            `当前单词：${word.content}`,
+            `当前释义：${word.explanation || '暂无'}`,
+            `当前例句：${word.example_sentences?.map(example => `${example.en}（${example.zh}）`).join('；') || '暂无'}`,
+          ].join('\n'),
         }
 
         const response = await authenticatedInternalFetch('/api/generate', {
@@ -167,171 +156,123 @@ export function WordAIDialog({ word, open, onOpenChange }: WordAIDialogProps) {
             : 'AI 请求失败，请稍后重试'
         setErrorMessage(toShow)
         toast.error(toShow)
-        setMessages(prev => prev.slice(0, -1))
+        setMessages(prev => {
+          const lastMessage = prev.at(-1)
+          return lastMessage?.role === 'assistant' && !lastMessage.content
+            ? prev.slice(0, -1)
+            : prev
+        })
       } finally {
         setIsLoading(false)
       }
     },
-    [messages, isLoading]
+    [isLoading, messages, word]
   )
 
-  // 打开弹窗时自动发送一次单词解释请求（仅一次，由 autoQueryDone 保证）
-  useEffect(() => {
-    if (open && !autoQueryDone && !isLoading) {
-      setAutoQueryDone(true)
-      const prompt = `请详细解释英语单词 "${word.content}" 的含义、用法、词性、常见搭配和例句。请用中文回答。`
-      sendMessage(prompt)
-    }
-  }, [open, autoQueryDone, isLoading, sendMessage, word.content])
-
-  // AI 生成数据
-  const generateData = async () => {
-    setIsGenerating(true)
-    try {
-      const prompt = `请帮我生成这个英语单词的数据：
-
-单词: ${word.content}
-当前释义: ${word.explanation || '(无)'}
-当前例句: ${word.example_sentences?.map(e => e.en).join('; ') || '(无)'}
-
-请严格按以下格式返回（不要有其他内容）：
-【释义】(完整的中文释义，包含词性)
-【例句1】英文句子
-【翻译1】中文翻译
-【例句2】英文句子
-【翻译2】中文翻译`
-
-      const body = {
-        ...getWordAIRequestConfig(),
-        useChat: true,
-        messages: [{ role: 'user' as const, content: prompt }],
-        command: '你是一个英语学习助手。请严格按照用户要求的格式返回数据。',
-      }
-
-      const response = await authenticatedInternalFetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-
-      if (!response.ok) throw new Error('生成失败')
-
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('无法读取响应')
-
-      let content = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const text = new TextDecoder().decode(value)
-        const lines = text.split('\n').filter(line => line.trim())
-        for (const line of lines) {
-          if (line.startsWith('0:')) {
-            const match = line.match(/^0:"(.*)"$/)
-            if (match) {
-              content += match[1]
-                .replace(/\\n/g, '\n')
-                .replace(/\\r/g, '\r')
-                .replace(/\\t/g, '\t')
-                .replace(/\\"/g, '"')
-                .replace(/\\\\/g, '\\')
-            }
-          }
-        }
-      }
-
-      // 解析生成的内容
-      const explanationMatch = content.match(/【释义】([\s\S]+?)(?=【例句|$)/)
-      if (explanationMatch) {
-        setEditedExplanation(explanationMatch[1].trim())
-      }
-
-      const examples: string[] = []
-      const exampleMatches = content.matchAll(
-        /【例句\d+】([\s\S]+?)【翻译\d+】([\s\S]+?)(?=【例句|$)/g
-      )
-      for (const m of exampleMatches) {
-        examples.push(`${m[1].trim()}\n${m[2].trim()}`)
-      }
-      if (examples.length > 0) {
-        setEditedExamples(examples.join('\n\n'))
-      }
-
-      toast.success('数据已生成，请检查后保存')
-    } catch (error) {
-      console.error('生成数据失败:', error)
-      toast.error('生成数据失败')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      const examplePairs = editedExamples
-        .split('\n\n')
-        .filter(p => p.trim())
-        .map(pair => {
-          const lines = pair.split('\n').filter(l => l.trim())
-          return {
-            en: lines[0] || '',
-            zh: lines[1] || '',
-          }
-        })
-        .filter(e => e.en)
-
-      await patch(
-        `/word/${word.id}`,
-        {
-          explanation: editedExplanation,
-          example_sentences: examplePairs,
-        },
-        { handleError: false }
-      )
-
-      toast.success('单词数据已更新')
-      mutate('/word/daily')
-      onOpenChange(false)
-    } catch (error) {
-      if (error instanceof ApiRequestError && error.data?.errors) {
-        const errors = error.data.errors
-        const firstField = Object.keys(errors)[0]
-        const firstMsg = Array.isArray(errors[firstField])
-          ? errors[firstField][0]
-          : String(errors[firstField])
-        toast.error(firstMsg)
-      } else if (error instanceof Error) {
-        toast.error(error.message)
-      } else {
-        toast.error('保存失败')
-      }
-    } finally {
-      setIsSaving(false)
-    }
+  const handleSubmit = () => {
+    void sendMessage(input)
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="flex h-[85vh] flex-col p-0">
-        <SheetHeader className="border-b p-4 pb-2">
+        <SheetHeader className="shrink-0 border-b p-4">
           <SheetTitle className="flex items-center gap-2 text-base">
             <Bot className="text-primary h-4 w-4" />
-            编辑单词 - {word.content}
+            AI 解答 - {word.content}
           </SheetTitle>
         </SheetHeader>
-        {/* 只显示编辑数据部分，无tabs */}
-        <div className="flex-1 overflow-y-auto p-4 pt-2">
-          <WordEditFields
-            explanation={editedExplanation}
-            examples={editedExamples}
-            isGenerating={isGenerating}
-            isSaving={isSaving}
-            onExplanationChange={setEditedExplanation}
-            onExamplesChange={setEditedExamples}
-            onGenerate={generateData}
-            onSave={handleSave}
-          />
+
+        <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          {messages.length === 0 ? (
+            <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
+              <div className="bg-primary/10 text-primary mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                <Bot className="h-6 w-6" />
+              </div>
+              <h3 className="font-medium">关于 “{word.content}” 有什么疑问？</h3>
+              <p className="text-muted-foreground mt-2 max-w-md text-sm">
+                可以询问词义区别、语法、常见搭配、使用场景或例句。
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4" aria-live="polite">
+              {messages.map((message, index) => (
+                <div
+                  key={`${message.role}-${index}`}
+                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
+                >
+                  <div
+                    className={cn(
+                      'group relative max-w-[88%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        : 'bg-muted rounded-bl-md pr-10'
+                    )}
+                  >
+                    {message.content || (isLoading ? '正在思考…' : '')}
+                    {message.role === 'assistant' && message.content ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-7 w-7 opacity-70 hover:opacity-100"
+                        onClick={() => void copyMessage(message.content, index)}
+                        aria-label="复制回答"
+                      >
+                        {copiedIdx === index ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              {isLoading && messages.at(-1)?.role !== 'assistant' ? (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 text-sm">
+                    正在思考…
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {errorMessage ? (
+            <p className="text-destructive bg-destructive/10 rounded-lg px-3 py-2 text-sm">
+              {errorMessage}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="bg-background/95 shrink-0 border-t p-3">
+          <div className="mx-auto flex max-w-3xl items-end gap-2">
+            <Textarea
+              value={input}
+              onChange={event => setInput(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault()
+                  handleSubmit()
+                }
+              }}
+              placeholder={`询问关于 ${word.content} 的问题…`}
+              aria-label="输入问题"
+              rows={2}
+              className="max-h-32 min-h-11 resize-none"
+              disabled={isLoading}
+            />
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!input.trim() || isLoading}
+              className="h-11 shrink-0 gap-2 px-4"
+            >
+              <Send className="h-4 w-4" />
+              <span className="hidden sm:inline">发送</span>
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
