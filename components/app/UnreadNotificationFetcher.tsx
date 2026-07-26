@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { toast } from 'sonner'
+import { BellDot } from 'lucide-react'
 import { useUnreadNotifications } from '@/lib/api'
 import useAuthStore from '@/stores/authStore'
 
@@ -37,10 +38,23 @@ export function UnreadNotificationFetcher() {
 
     const viewUrl = resolveUnreadViewUrl(data.items)
 
-    toast.info(`你有 ${data.count} 条未读消息`, {
+    toast.message(`你有 ${data.count} 条未读消息`, {
+      icon: <BellDot className="h-4 w-4" style={{ color: 'var(--primary)' }} />,
+      style: {
+        background: 'var(--popover)',
+        borderColor: 'var(--border)',
+        color: 'var(--popover-foreground)',
+        boxShadow: 'var(--surface-shadow-hover)',
+      },
       action: {
         label: '查看',
         onClick: () => window.location.assign(viewUrl),
+      },
+      actionButtonStyle: {
+        background: 'var(--primary)',
+        color: 'var(--primary-foreground)',
+        borderRadius: '0.5rem',
+        fontWeight: 600,
       },
     })
   }, [isAuthenticated, data?.count, data?.items])
