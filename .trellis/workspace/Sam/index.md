@@ -9,8 +9,8 @@
 <!-- @@@auto:current-status -->
 
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
-- **Last Active**: 2026-07-27
+- **Total Sessions**: 2
+- **Last Active**: 2026-07-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -21,7 +21,7 @@
 
 | File           | Lines | Status |
 | -------------- | ----- | ------ |
-| `journal-1.md` | ~38   | Active |
+| `journal-1.md` | ~69   | Active |
 
 <!-- @@@/auto:active-documents -->
 
@@ -31,9 +31,10 @@
 
 <!-- @@@auto:session-history -->
 
-| #   | Date       | Title                               | Commits     | Branch |
-| --- | ---------- | ----------------------------------- | ----------- | ------ |
-| 1   | 2026-07-27 | Bootstrap DogeOW Trellis guidelines | `b1688565a` | `main` |
+| #   | Date       | Title                                      | Commits     | Branch |
+| --- | ---------- | ------------------------------------------ | ----------- | ------ |
+| 2   | 2026-07-29 | Fix about page scroll and reading controls | `fc27b5975` | `main` |
+| 1   | 2026-07-27 | Bootstrap DogeOW Trellis guidelines        | `b1688565a` | `main` |
 
 <!-- @@@/auto:session-history -->
 
