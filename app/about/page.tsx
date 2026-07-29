@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Columns3, Rows3, Settings2 } from 'lucide-react'
 import { PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Slider } from '@/components/ui/slider'
 
 const QUOTES = [
@@ -79,6 +81,7 @@ function parseSettings(value: string | null): ReadingSettings | null {
 export default function AboutPage() {
   const [settings, setSettings] = useState<ReadingSettings>(DEFAULT_SETTINGS)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     const savedSettings = parseSettings(window.localStorage.getItem(STORAGE_KEY))
@@ -96,58 +99,87 @@ export default function AboutPage() {
   const isVertical = settings.direction === 'vertical'
 
   return (
-    <PageContainer className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-1 flex-col gap-8 overflow-auto p-6">
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+    <PageContainer className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
+        <section className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex shrink-0 items-center gap-3">
             <h2 className="text-lg font-medium text-foreground">自言自语</h2>
-            <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-3">
-              <label className="grid min-w-40 gap-2 text-sm text-foreground">
-                <span>字体大小：{settings.fontSize}px</span>
-                <Slider
-                  aria-label="字体大小"
-                  min={18}
-                  max={48}
-                  step={1}
-                  value={[settings.fontSize]}
-                  onValueChange={([fontSize]) => setSettings(current => ({ ...current, fontSize }))}
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm text-foreground">
-                <span>文字颜色</span>
-                <input
-                  aria-label="文字颜色"
-                  type="color"
-                  value={settings.color}
-                  onChange={event =>
-                    setSettings(current => ({ ...current, color: event.target.value }))
-                  }
-                  className="h-8 w-14 cursor-pointer rounded border border-input bg-background p-1"
-                />
-              </label>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setSettings(current => ({
-                    ...current,
-                    direction: current.direction === 'horizontal' ? 'vertical' : 'horizontal',
-                  }))
-                }
+            <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-haspopup="dialog"
+                  aria-expanded={settingsOpen}
+                >
+                  <Settings2 aria-hidden="true" />
+                  阅读设置
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                collisionPadding={16}
+                className="w-[min(calc(100vw-2rem),20rem)] space-y-4"
+                aria-labelledby="about-reading-settings-title"
               >
-                {isVertical ? '切换为横排' : '切换为竖排'}
-              </Button>
-            </div>
+                <h3 id="about-reading-settings-title" className="font-medium">
+                  阅读设置
+                </h3>
+
+                <label className="grid gap-2 text-sm text-foreground">
+                  <span>字体大小：{settings.fontSize}px</span>
+                  <Slider
+                    aria-label="字体大小"
+                    min={18}
+                    max={48}
+                    step={1}
+                    value={[settings.fontSize]}
+                    onValueChange={([fontSize]) =>
+                      setSettings(current => ({ ...current, fontSize }))
+                    }
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-4 text-sm text-foreground">
+                  <span>文字颜色</span>
+                  <input
+                    aria-label="文字颜色"
+                    type="color"
+                    value={settings.color}
+                    onChange={event =>
+                      setSettings(current => ({ ...current, color: event.target.value }))
+                    }
+                    className="h-8 w-14 cursor-pointer rounded border border-input bg-background p-1"
+                  />
+                </label>
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-foreground">排列方向</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setSettings(current => ({
+                        ...current,
+                        direction: current.direction === 'horizontal' ? 'vertical' : 'horizontal',
+                      }))
+                    }
+                  >
+                    {isVertical ? <Rows3 aria-hidden="true" /> : <Columns3 aria-hidden="true" />}
+                    {isVertical ? '切换为横排' : '切换为竖排'}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <ul
             aria-label="自言自语内容"
             className={
               isVertical
-                ? 'flex h-[calc(100dvh-14rem)] min-h-[28rem] flex-row-reverse items-stretch gap-5 overflow-x-auto overflow-y-hidden py-2'
-                : 'flex flex-col gap-3'
+                ? 'flex min-h-0 flex-1 flex-row-reverse items-stretch gap-5 overflow-x-auto overflow-y-hidden py-2'
+                : 'flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto'
             }
             style={{
               color: settings.color,
