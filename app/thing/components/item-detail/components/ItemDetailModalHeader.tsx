@@ -76,17 +76,6 @@ export function ItemDetailModalHeader({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onEdit}
-                className="h-8 px-2"
-                aria-label="编辑物品"
-                title="编辑物品"
-              >
-                <Edit className="h-4 w-4" />
-                <span>编辑</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
                 onClick={onDelete}
                 aria-label="删除物品"
@@ -94,6 +83,17 @@ export function ItemDetailModalHeader({
               >
                 <Trash2 className="h-4 w-4" />
                 <span>删除</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onEdit}
+                className="h-8 px-2"
+                aria-label="编辑物品"
+                title="编辑物品"
+              >
+                <Edit className="h-4 w-4" />
+                <span>编辑</span>
               </Button>
             </>
           ) : null}

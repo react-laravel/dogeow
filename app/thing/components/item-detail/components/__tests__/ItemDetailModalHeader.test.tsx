@@ -72,6 +72,17 @@ describe('ItemDetailModalHeader', () => {
     expect(screen.getByLabelText('删除物品')).toHaveTextContent('删除')
   })
 
+  it('keeps delete away from close by placing edit between them', () => {
+    render(<ItemDetailModalHeader {...defaultProps} />)
+
+    const deleteButton = screen.getByLabelText('删除物品')
+    const editButton = screen.getByLabelText('编辑物品')
+    const closeButton = screen.getByLabelText('关闭')
+
+    expect(deleteButton.nextElementSibling).toBe(editButton)
+    expect(editButton.nextElementSibling).toBe(closeButton)
+  })
+
   it('hides edit/delete when canEdit is false', () => {
     render(<ItemDetailModalHeader {...defaultProps} canEdit={false} />)
     expect(screen.queryByLabelText('编辑物品')).toBeNull()

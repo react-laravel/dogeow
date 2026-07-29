@@ -284,7 +284,9 @@ describe('ItemDetailModal', () => {
       expect(screen.getByText('加载中...')).toBeInTheDocument()
       expect(modal).toHaveAttribute(
         'data-content-class',
-        expect.stringContaining('h-[calc(100dvh-var(--app-header-height,50px)-1rem)]')
+        expect.stringContaining(
+          'h-[calc(100dvh-var(--app-header-height,50px)-var(--app-header-height,50px)-1rem)]'
+        )
       )
       expect(modal).toHaveAttribute('data-content-class', expect.stringContaining('p-0'))
     })
@@ -319,7 +321,13 @@ describe('ItemDetailModal', () => {
       const modal = screen.getByTestId('modal')
       expect(modal).toHaveAttribute(
         'data-content-class',
-        expect.stringContaining('h-[calc(100dvh-var(--app-header-height,50px)-1rem)]')
+        expect.stringContaining(
+          'h-[calc(100dvh-var(--app-header-height,50px)-var(--app-header-height,50px)-1rem)]'
+        )
+      )
+      expect(modal).toHaveAttribute(
+        'data-content-class',
+        expect.stringContaining('top-[calc(var(--app-header-height,50px)+0.5rem)]')
       )
       expect(modal).toHaveAttribute('data-content-class', expect.stringContaining('translate-y-0'))
     })

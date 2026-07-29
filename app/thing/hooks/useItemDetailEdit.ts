@@ -52,9 +52,6 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
   const editInitializedRef = useRef<number | null>(null)
   const itemRef = useRef(item)
   const initialDataRef = useRef<AutoSaveData | null>(null)
-  const formDataRef = useRef(formData)
-  const selectedTagsRef = useRef(selectedTags)
-  const uploadedImagesRef = useRef(uploadedImages)
 
   const { categories, tags, fetchCategories, fetchTags, updateItem } = useItemStore()
   const { mutate: refreshAreas } = useAreas()
@@ -69,13 +66,6 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
   useEffect(() => {
     itemRef.current = item
   }, [item])
-
-  // Update refs on state changes
-  useEffect(() => {
-    formDataRef.current = formData
-    selectedTagsRef.current = selectedTags
-    uploadedImagesRef.current = uploadedImages
-  }, [formData, selectedTags, uploadedImages])
 
   // Auto-save handler
   const handleAutoSave = useCallback(
@@ -257,6 +247,7 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
         selectedTags: currentItem.tags ? tagsToIdStrings(currentItem.tags) : [],
         uploadedImages: currentItem.images ? convertImagesToUploadedFormat(currentItem.images) : [],
       }
+      initialDataRef.current = initialData
       setInitialData(initialData)
     } catch (error) {
       logger.error('初始化编辑数据失败', error)
@@ -287,20 +278,6 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
       initialDataRef.current = currentData
     }
   }, [formData, selectedTags, uploadedImages, mode, editLoading, item, open, triggerAutoSave])
-
-  // Initialize data effect
-  useEffect(() => {
-    if (mode === 'edit' && !editLoading && item && formData.name) {
-      const currentData: AutoSaveData = {
-        formData: formDataRef.current,
-        selectedTags: selectedTagsRef.current,
-        uploadedImages: uploadedImagesRef.current,
-      }
-      if (!initialDataRef.current) {
-        initialDataRef.current = currentData
-      }
-    }
-  }, [mode, editLoading, item, formData.name])
 
   // Area change effect
   useEffect(() => {
@@ -344,6 +321,7 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
       if (editInitializedRef.current !== null) {
         editInitializedRef.current = null
       }
+      initialDataRef.current = null
     }
   }, [itemId])
 
@@ -363,6 +341,7 @@ export function useItemDetailEdit({ itemId, item, mode, open }: UseItemDetailEdi
         selectedTags: [],
         uploadedImages: [],
       })
+      initialDataRef.current = null
       editInitializedRef.current = null
     }
   }, [open, cancelAutoSave, resetAutoSaveStatus, setInitialData])
