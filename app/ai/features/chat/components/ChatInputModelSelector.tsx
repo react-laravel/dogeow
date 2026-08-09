@@ -11,9 +11,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/helpers'
+import {
+  CODEX_ULTRA_MODELS,
+  FALLBACK_CODEX_MODELS,
+  type CodexModelListItem,
+  getCodexModelLabel,
+} from '@/lib/utils/codex-models'
 import type { CodexReasoningEffort } from '../request-model'
 
 export type AIProvider = 'ollama' | 'codex'
+export type { CodexModelListItem }
 
 export interface OllamaModelListItem {
   name: string
@@ -37,16 +44,6 @@ const PROVIDER_DESCRIPTIONS: Record<AIProvider, string> = {
   codex: '设备登录',
 }
 
-const CODEX_MODELS = [
-  { value: 'gpt-5.6-sol', label: '5.6 Sol' },
-  { value: 'gpt-5.6-terra', label: '5.6 Terra' },
-  { value: 'gpt-5.6-luna', label: '5.6 Luna' },
-  { value: 'gpt-5.5', label: '5.5' },
-  { value: 'gpt-5.4', label: '5.4' },
-  { value: 'gpt-5.4-mini', label: '5.4 Mini' },
-  { value: 'gpt-5.3-codex-spark', label: '5.3 Codex Spark' },
-]
-
 const CODEX_REASONING_EFFORTS: Array<{
   value: CodexReasoningEffort
   label: string
@@ -60,14 +57,15 @@ const CODEX_REASONING_EFFORTS: Array<{
   { value: 'ultra', label: 'Ultra', desc: '自动任务委派' },
 ]
 
-const CODEX_ULTRA_MODELS = new Set(['gpt-5.6-sol', 'gpt-5.6-terra'])
-
-export function getModelLabel(provider: AIProvider | undefined, model: string | undefined): string {
+export function getModelLabel(
+  provider: AIProvider | undefined,
+  model: string | undefined,
+  codexModels: CodexModelListItem[] = FALLBACK_CODEX_MODELS
+): string {
   if (!provider || !model) return ''
   if (provider === 'ollama') return model
   if (provider === 'codex') {
-    const found = CODEX_MODELS.find(m => m.value === model)
-    return found?.label ?? model
+    return getCodexModelLabel(model, codexModels)
   }
   return model
 }
@@ -254,11 +252,23 @@ interface CodexModelSelectorProps {
   model: string
   onModelChange: (value: string) => void
   isLoading: boolean
+  codexModels?: CodexModelListItem[]
+  isLoadingCodexModels?: boolean
 }
 
 export const CodexModelSelector = React.memo<CodexModelSelectorProps>(
-  ({ model, onModelChange, isLoading }) => {
+  ({
+    model,
+    onModelChange,
+    isLoading,
+    codexModels = FALLBACK_CODEX_MODELS,
+    isLoadingCodexModels = false,
+  }) => {
     const [open, setOpen] = React.useState(false)
+    const availableModels = codexModels.length > 0 ? codexModels : FALLBACK_CODEX_MODELS
+    const triggerLabel =
+      getModelLabel('codex', model, availableModels) ||
+      (isLoadingCodexModels ? '读取中...' : availableModels.length > 0 ? '选择模型' : '未发现模型')
 
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -269,18 +279,38 @@ export const CodexModelSelector = React.memo<CodexModelSelectorProps>(
             disabled={isLoading}
             className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
           >
-            {getModelLabel('codex', model)}
+            {triggerLabel}
             {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
-            {CODEX_MODELS.map(m => (
-              <DropdownMenuRadioItem key={m.value} value={m.value} className="cursor-pointer">
-                <span>{m.label}</span>
+            {availableModels.map(m => (
+              <DropdownMenuRadioItem
+                key={m.value}
+                value={m.value}
+                className={cn(
+                  'cursor-pointer',
+                  model === m.value &&
+                    'bg-sky-500/10 ring-sky-500 relative z-10 font-medium ring-2 ring-offset-1'
+                )}
+              >
+                <div className="flex flex-col">
+                  <span>{m.label}</span>
+                  {m.description ? (
+                    <span className="text-muted-foreground text-xs line-clamp-1">
+                      {m.description}
+                    </span>
+                  ) : null}
+                </div>
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
+          {isLoadingCodexModels && (
+            <div className="text-muted-foreground px-2 py-1 text-xs">
+              正在探测 ChatGPT 可用模型...
+            </div>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     )

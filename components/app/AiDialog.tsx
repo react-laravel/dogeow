@@ -132,6 +132,8 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
     setProvider,
     ollamaModels,
     isLoadingOllamaModels,
+    codexModels,
+    isLoadingCodexModels,
     codexReasoningEffort,
     setCodexReasoningEffort,
     stop,
@@ -215,6 +217,8 @@ export function AiDialog({ open, onOpenChange }: AiDialogProps) {
           isLoading={isLoading}
           ollamaModels={ollamaModels}
           isLoadingOllamaModels={isLoadingOllamaModels}
+          codexModels={codexModels}
+          isLoadingCodexModels={isLoadingCodexModels}
           supportsImages={!isKnowledgeMode && aiChat.supportsImages}
           model={model}
           onModelChange={setModel}

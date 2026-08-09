@@ -9,6 +9,7 @@ import {
   getStoredCodexReasoningEffort,
   getStoredOllamaModel,
   resolveOllamaModelSelection,
+  resolveCodexModelSelection,
   setStoredCodexModel,
   setStoredCodexReasoningEffort,
   setStoredOllamaModel,
@@ -16,6 +17,8 @@ import {
 import type { AIProvider, CodexReasoningEffort } from '../../chat/request-model'
 import { useOllamaAccessMode } from '../../chat/hooks/ollamaAccessMode'
 import { useOllamaModels, type OllamaModelListItem } from '../../chat/hooks/useOllamaModels'
+import { useCodexModels, type CodexModelListItem } from '../../chat/hooks/useCodexModels'
+import { CODEX_ULTRA_MODELS } from '@/lib/utils/codex-models'
 import { authenticatedInternalFetch } from '@/lib/api/internal-auth'
 
 interface UseKnowledgeChatOptions {
@@ -47,6 +50,8 @@ interface UseKnowledgeChatReturn {
   isLoading: boolean
   ollamaModels: OllamaModelListItem[]
   isLoadingOllamaModels: boolean
+  codexModels: CodexModelListItem[]
+  isLoadingCodexModels: boolean
   useContext: boolean
   setUseContext: (value: boolean) => void
   searchMethod: SearchMethod
@@ -130,6 +135,9 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
   const { ollamaModels, isLoadingOllamaModels } = useOllamaModels({
     enabled: Boolean(open) && provider === 'ollama',
   })
+  const { codexModels, isLoadingCodexModels } = useCodexModels({
+    enabled: Boolean(open) && provider === 'codex',
+  })
 
   // 过滤掉 system 消息用于显示
   const displayMessages = messages.filter(m => m.role !== 'system')
@@ -145,6 +153,17 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
       setModel(nextModel)
     }
   }, [isLoadingOllamaModels, model, ollamaModels, provider])
+
+  useEffect(() => {
+    if (provider !== 'codex' || isLoadingCodexModels) {
+      return
+    }
+
+    const nextModel = resolveCodexModelSelection(model, codexModels)
+    if (nextModel !== model) {
+      setModel(nextModel)
+    }
+  }, [codexModels, isLoadingCodexModels, model, provider])
 
   useEffect(() => {
     if (hasAppliedInitialMessagesRef.current || initialMessages.length === 0) {
@@ -344,8 +363,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     if (
       provider === 'codex' &&
       codexReasoningEffort === 'ultra' &&
-      model !== 'gpt-5.6-sol' &&
-      model !== 'gpt-5.6-terra'
+      !CODEX_ULTRA_MODELS.has(model)
     ) {
       setCodexReasoningEffort('medium')
     }
@@ -368,6 +386,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     isLoading,
     ollamaModels,
     isLoadingOllamaModels,
+    codexModels,
+    isLoadingCodexModels,
     useContext,
     setUseContext,
     searchMethod,

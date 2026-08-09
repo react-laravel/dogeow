@@ -11,7 +11,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/helpers'
 import { ChatInputImagePreview } from './ChatInputImagePreview'
-import { type AIProvider, type OllamaModelListItem } from './ChatInputModelSelector'
+import {
+  type AIProvider,
+  type CodexModelListItem,
+  type OllamaModelListItem,
+} from './ChatInputModelSelector'
 import { ChatInputModelRow } from './ChatInputModelRow'
 import type { CodexReasoningEffort } from '../request-model'
 
@@ -23,6 +27,8 @@ interface ChatInputProps {
   isLoading: boolean
   ollamaModels?: OllamaModelListItem[]
   isLoadingOllamaModels?: boolean
+  codexModels?: CodexModelListItem[]
+  isLoadingCodexModels?: boolean
   supportsImages?: boolean
   model?: string
   onModelChange?: (value: string) => void
@@ -49,6 +55,8 @@ export const ChatInput = React.memo<ChatInputProps>(
     isLoading,
     ollamaModels = [],
     isLoadingOllamaModels = false,
+    codexModels = [],
+    isLoadingCodexModels = false,
     supportsImages = false,
     model,
     onModelChange,
@@ -112,8 +120,10 @@ export const ChatInput = React.memo<ChatInputProps>(
         codexReasoningEffort={codexReasoningEffort}
         onCodexReasoningEffortChange={onCodexReasoningEffortChange}
         ollamaModels={ollamaModels}
+        codexModels={codexModels}
         isLoading={isLoading}
         isLoadingOllamaModels={isLoadingOllamaModels}
+        isLoadingCodexModels={isLoadingCodexModels}
       />
     )
 

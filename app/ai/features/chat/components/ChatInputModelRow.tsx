@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   type AIProvider,
+  type CodexModelListItem,
   CodexModelSelector,
   CodexReasoningEffortSelector,
   type OllamaModelListItem,
@@ -18,8 +19,10 @@ interface ChatInputModelRowProps {
   codexReasoningEffort?: CodexReasoningEffort
   onCodexReasoningEffortChange?: (value: CodexReasoningEffort) => void
   ollamaModels: OllamaModelListItem[]
+  codexModels?: CodexModelListItem[]
   isLoading: boolean
   isLoadingOllamaModels: boolean
+  isLoadingCodexModels?: boolean
 }
 
 export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
@@ -31,8 +34,10 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
     codexReasoningEffort,
     onCodexReasoningEffortChange,
     ollamaModels,
+    codexModels,
     isLoading,
     isLoadingOllamaModels,
+    isLoadingCodexModels = false,
   }) => {
     const selectedModel = model ?? ''
 
@@ -62,6 +67,8 @@ export const ChatInputModelRow = React.memo<ChatInputModelRowProps>(
                     model={selectedModel}
                     onModelChange={onModelChange}
                     isLoading={isLoading}
+                    codexModels={codexModels}
+                    isLoadingCodexModels={isLoadingCodexModels}
                   />
                   {codexReasoningEffort && onCodexReasoningEffortChange && (
                     <>

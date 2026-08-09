@@ -1,11 +1,16 @@
 import type { AIProvider, CodexReasoningEffort } from '../request-model'
+import {
+  DEFAULT_CODEX_MODEL,
+  type CodexModelListItem,
+  normalizeCodexModel,
+  resolveCodexModelSelection as resolveCodexModelSelectionShared,
+} from '@/lib/utils/codex-models'
 
 const AI_PROVIDER_STORAGE_KEY = 'ai_provider'
 const OLLAMA_MODEL_STORAGE_KEY = 'ollama_model'
 const CODEX_MODEL_STORAGE_KEY = 'codex_model'
 const CODEX_REASONING_EFFORT_STORAGE_KEY = 'codex_reasoning_effort'
 const DEFAULT_OLLAMA_MODEL = ''
-const DEFAULT_CODEX_MODEL = 'gpt-5.6-luna'
 const DEFAULT_CODEX_REASONING_EFFORT: CodexReasoningEffort = 'medium'
 const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>([
   'minimal',
@@ -33,8 +38,9 @@ export const getStoredOllamaModel = (): string => {
 }
 
 export const getStoredCodexModel = (fallbackModel = DEFAULT_CODEX_MODEL): string => {
-  if (typeof window === 'undefined') return fallbackModel
-  return localStorage.getItem(CODEX_MODEL_STORAGE_KEY) || fallbackModel
+  if (typeof window === 'undefined') return normalizeCodexModel(fallbackModel)
+  const saved = localStorage.getItem(CODEX_MODEL_STORAGE_KEY) || fallbackModel
+  return normalizeCodexModel(saved)
 }
 
 export const getStoredCodexReasoningEffort = (): CodexReasoningEffort => {
@@ -93,4 +99,11 @@ export function resolveOllamaModelSelection(
   }
 
   return availableModels[0].name
+}
+
+export function resolveCodexModelSelection(
+  currentModel: string,
+  availableModels: CodexModelListItem[]
+): string {
+  return resolveCodexModelSelectionShared(currentModel, availableModels)
 }

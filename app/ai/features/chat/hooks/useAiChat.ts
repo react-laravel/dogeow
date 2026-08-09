@@ -6,6 +6,7 @@ import { getRequestModel, type AIProvider, type CodexReasoningEffort } from '../
 import { readAiChatStream, readOllamaChatStream } from './chatStream'
 import { useAiChatImages, type ImageItem } from './useAiChatImages'
 import { useOllamaModels, type OllamaModelListItem } from './useOllamaModels'
+import { useCodexModels, type CodexModelListItem } from './useCodexModels'
 import { uploadImageToServer } from './uploadImage'
 import { callBrowserLocalOllamaChatAPI } from './browserOllama'
 import { useOllamaAccessMode } from './ollamaAccessMode'
@@ -14,6 +15,7 @@ import {
   getStoredProvider,
   getStoredOllamaModel,
   resolveOllamaModelSelection,
+  resolveCodexModelSelection,
   getStoredCodexModel,
   getStoredCodexReasoningEffort,
   setStoredProvider,
@@ -21,6 +23,7 @@ import {
   setStoredCodexReasoningEffort,
   setStoredOllamaModel,
 } from './modelStorage'
+import { CODEX_ULTRA_MODELS } from '@/lib/utils/codex-models'
 import { toast } from 'sonner'
 
 interface UseAiChatOptions {
@@ -43,6 +46,8 @@ interface UseAiChatReturn {
   isLoading: boolean
   ollamaModels: OllamaModelListItem[]
   isLoadingOllamaModels: boolean
+  codexModels: CodexModelListItem[]
+  isLoadingCodexModels: boolean
   supportsImages: boolean
   model: string
   setModel: (value: string) => void
@@ -128,6 +133,9 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   const { ollamaModels, isLoadingOllamaModels } = useOllamaModels({
     enabled: Boolean(open) && provider === 'ollama',
   })
+  const { codexModels, isLoadingCodexModels } = useCodexModels({
+    enabled: Boolean(open) && provider === 'codex',
+  })
 
   // Filter out system messages for display
   const displayMessages = messages.filter(m => m.role !== 'system')
@@ -144,6 +152,17 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       setModel(nextModel)
     }
   }, [isLoadingOllamaModels, model, ollamaModels, provider])
+
+  useEffect(() => {
+    if (provider !== 'codex' || isLoadingCodexModels) {
+      return
+    }
+
+    const nextModel = resolveCodexModelSelection(model, codexModels)
+    if (nextModel !== model) {
+      setModel(nextModel)
+    }
+  }, [codexModels, isLoadingCodexModels, model, provider])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -380,8 +399,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     if (
       provider === 'codex' &&
       codexReasoningEffort === 'ultra' &&
-      model !== 'gpt-5.6-sol' &&
-      model !== 'gpt-5.6-terra'
+      !CODEX_ULTRA_MODELS.has(model)
     ) {
       setCodexReasoningEffort('medium')
     }
@@ -403,6 +421,8 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     isLoading,
     ollamaModels,
     isLoadingOllamaModels,
+    codexModels,
+    isLoadingCodexModels,
     supportsImages,
     model,
     setModel,

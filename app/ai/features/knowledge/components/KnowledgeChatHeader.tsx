@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import Link from 'next/link'
 import type { OllamaModelListItem } from '@/lib/utils/ollama-models'
+import type { CodexModelListItem } from '@/lib/utils/codex-models'
 import type { AIProvider } from '../../chat/request-model'
 
 type SearchMethod = 'simple' | 'rag'
@@ -31,6 +32,8 @@ interface KnowledgeChatHeaderProps {
   onModelChange?: (value: string) => void
   ollamaModels?: OllamaModelListItem[]
   isLoadingOllamaModels?: boolean
+  codexModels?: CodexModelListItem[]
+  isLoadingCodexModels?: boolean
   provider?: AIProvider
   onProviderChange?: (value: AIProvider) => void
   onClear: () => void
@@ -58,6 +61,8 @@ export function KnowledgeChatHeader({
   onModelChange,
   ollamaModels = [],
   isLoadingOllamaModels = false,
+  codexModels = [],
+  isLoadingCodexModels = false,
   provider,
   onProviderChange,
   onClear,
@@ -70,8 +75,21 @@ export function KnowledgeChatHeader({
   hideTitle = false,
   hideClear = false,
 }: KnowledgeChatHeaderProps) {
+  const isCodex = provider === 'codex'
   const hasOllamaModels = ollamaModels.length > 0
-  const modelPlaceholder = isLoadingOllamaModels ? '读取中...' : '未发现模型'
+  const hasCodexModels = codexModels.length > 0
+  const modelPlaceholder = isCodex
+    ? isLoadingCodexModels
+      ? '读取中...'
+      : hasCodexModels
+        ? '选择模型'
+        : '未发现模型'
+    : isLoadingOllamaModels
+      ? '读取中...'
+      : '未发现模型'
+  const modelSelectDisabled = isCodex
+    ? isLoading || (!isLoadingCodexModels && !hasCodexModels)
+    : isLoading || (!isLoadingOllamaModels && !hasOllamaModels)
 
   return (
     <header className="bg-background flex items-center justify-between px-4 py-3">
@@ -120,20 +138,31 @@ export function KnowledgeChatHeader({
             <Select
               value={model || undefined}
               onValueChange={onModelChange}
-              disabled={isLoading || (!isLoadingOllamaModels && !hasOllamaModels)}
+              disabled={modelSelectDisabled}
             >
               <SelectTrigger id="model" className="h-8 w-36 text-xs">
                 <SelectValue placeholder={modelPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                {ollamaModels.map(item => (
-                  <SelectItem key={item.name} value={item.name}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-                {!isLoadingOllamaModels && !hasOllamaModels && (
+                {isCodex
+                  ? codexModels.map(item => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))
+                  : ollamaModels.map(item => (
+                      <SelectItem key={item.name} value={item.name}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                {!isCodex && !isLoadingOllamaModels && !hasOllamaModels && (
                   <div className="text-muted-foreground px-2 py-1 text-xs">
                     当前地址下未发现可用 Ollama 模型
+                  </div>
+                )}
+                {isCodex && !isLoadingCodexModels && !hasCodexModels && (
+                  <div className="text-muted-foreground px-2 py-1 text-xs">
+                    未探测到 ChatGPT 可用模型
                   </div>
                 )}
               </SelectContent>
