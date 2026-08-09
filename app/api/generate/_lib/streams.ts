@@ -1,5 +1,3 @@
-import type { ChildProcessByStdio } from 'node:child_process'
-import type { Readable } from 'node:stream'
 import type { OllamaResponse } from './types'
 
 const STREAM_HEADERS = {
@@ -17,37 +15,82 @@ export const escapeJsonString = (str: string): string =>
     .replace(/\r/g, '\\r')
     .replace(/\t/g, '\\t')
 
-export function createCodexExecStreamResponse(
-  codexProcess: ChildProcessByStdio<null, Readable, Readable>,
+interface CodexSseEvent {
+  type?: string
+  delta?: string
+  error?: { message?: string } | string
+  response?: {
+    usage?: {
+      input_tokens?: number
+      output_tokens?: number
+      total_tokens?: number
+    }
+  }
+}
+
+function parseSseChunk(buffer: string): { events: string[]; rest: string } {
+  const normalized = buffer.replace(/\r\n/g, '\n')
+  const parts = normalized.split('\n\n')
+  const rest = parts.pop() ?? ''
+  return { events: parts.filter(Boolean), rest }
+}
+
+function extractSseDataLines(eventBlock: string): string[] {
+  return eventBlock
+    .split('\n')
+    .filter(line => line.startsWith('data:'))
+    .map(line => line.slice(5).trim())
+    .filter(Boolean)
+}
+
+export function createCodexResponsesStreamResponse(
+  codexResponse: Response,
   promptTokens: number
 ): Response {
   const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
 
   const stream = new ReadableStream({
-    start(controller) {
-      let outputTokens = 0
-      let hasOutput = false
-      let stderr = ''
-      let closed = false
-
-      const heartbeat = setInterval(() => {
-        if (!closed) {
-          controller.enqueue(encoder.encode(`0:""\n`))
-        }
-      }, 10000)
-
-      const closeWithDone = () => {
-        if (closed) return
-        closed = true
-        clearInterval(heartbeat)
+    async start(controller) {
+      const reader = codexResponse.body?.getReader()
+      if (!reader) {
+        controller.enqueue(
+          encoder.encode(`0:"${escapeJsonString('ChatGPT 调用失败：响应体为空。')}"\n`)
+        )
         controller.enqueue(
           encoder.encode(
             `d:${JSON.stringify({
-              finishReason: 'stop',
+              finishReason: 'error',
               usage: {
                 promptTokens,
-                completionTokens: outputTokens,
-                totalTokens: promptTokens + outputTokens,
+                completionTokens: 0,
+                totalTokens: promptTokens,
+              },
+            })}\n`
+          )
+        )
+        controller.close()
+        return
+      }
+
+      let buffer = ''
+      let outputTokens = 0
+      let hasOutput = false
+      let closed = false
+      let usagePromptTokens = promptTokens
+      let usageCompletionTokens = 0
+
+      const closeWithDone = (finishReason: 'stop' | 'error' = 'stop') => {
+        if (closed) return
+        closed = true
+        controller.enqueue(
+          encoder.encode(
+            `d:${JSON.stringify({
+              finishReason,
+              usage: {
+                promptTokens: usagePromptTokens,
+                completionTokens: usageCompletionTokens || outputTokens,
+                totalTokens: usagePromptTokens + (usageCompletionTokens || outputTokens),
               },
             })}\n`
           )
@@ -62,35 +105,93 @@ export function createCodexExecStreamResponse(
         controller.enqueue(encoder.encode(`0:"${escapeJsonString(text)}"\n`))
       }
 
-      codexProcess.stdout.on('data', chunk => {
-        enqueueText(String(chunk))
-      })
+      const processEventBlock = (eventBlock: string): 'continue' | 'stop' | 'error' => {
+        for (const data of extractSseDataLines(eventBlock)) {
+          if (data === '[DONE]') {
+            return hasOutput ? 'stop' : 'error'
+          }
 
-      codexProcess.stderr.on('data', chunk => {
-        stderr += String(chunk)
-      })
+          let payload: CodexSseEvent
+          try {
+            payload = JSON.parse(data) as CodexSseEvent
+          } catch {
+            continue
+          }
 
-      codexProcess.on('error', error => {
-        enqueueText(
-          `Codex CLI 无法启动：${error.message}。请确认服务器已安装 Codex CLI，并执行 codex login --device-auth 完成设备登录。`
-        )
-        closeWithDone()
-      })
+          if (payload.type === 'response.output_text.delta' && typeof payload.delta === 'string') {
+            enqueueText(payload.delta)
+            continue
+          }
 
-      codexProcess.on('close', code => {
-        if (code !== 0 && !hasOutput) {
-          const detail = stderr.trim() || `codex exec exited with code ${code}`
-          enqueueText(
-            `ChatGPT 调用失败：${detail}\n\n请确认服务器已安装 Codex CLI，并执行 codex login --device-auth 完成设备登录。`
-          )
+          if (payload.type === 'response.failed' || payload.type === 'error') {
+            const message =
+              typeof payload.error === 'string'
+                ? payload.error
+                : payload.error?.message || 'ChatGPT 响应失败'
+            if (!hasOutput) {
+              enqueueText(`ChatGPT 调用失败：${message}`)
+            }
+            return 'error'
+          }
+
+          if (payload.type === 'response.completed') {
+            const usage = payload.response?.usage
+            if (usage) {
+              usagePromptTokens = usage.input_tokens ?? usagePromptTokens
+              usageCompletionTokens = usage.output_tokens ?? usageCompletionTokens
+            }
+            return 'stop'
+          }
         }
 
-        closeWithDone()
-      })
-    },
+        return 'continue'
+      }
 
-    cancel() {
-      codexProcess.kill('SIGTERM')
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const { events, rest } = parseSseChunk(buffer)
+          buffer = rest
+
+          for (const eventBlock of events) {
+            const result = processEventBlock(eventBlock)
+            if (result !== 'continue') {
+              closeWithDone(result)
+              return
+            }
+          }
+        }
+
+        // Flush trailing SSE block that may lack a final blank line.
+        if (buffer.trim()) {
+          const result = processEventBlock(buffer)
+          if (result !== 'continue') {
+            closeWithDone(result)
+            return
+          }
+        }
+
+        if (!hasOutput) {
+          enqueueText(
+            'ChatGPT 调用失败：未收到模型输出。请确认已执行 codex login --device-auth 完成设备登录。'
+          )
+          closeWithDone('error')
+          return
+        }
+
+        closeWithDone('stop')
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '未知错误'
+        if (!hasOutput) {
+          enqueueText(`ChatGPT 调用失败：${message}`)
+        }
+        closeWithDone('error')
+      } finally {
+        reader.releaseLock()
+      }
     },
   })
 

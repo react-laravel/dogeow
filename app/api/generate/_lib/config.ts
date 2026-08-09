@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import type { AIProvider, GenerateOption } from './types'
 
 export const PROMPT_TEMPLATES: Record<GenerateOption, (text: string, command?: string) => string> =
@@ -15,8 +16,19 @@ export const OLLAMA_GENERATE_URL = `${OLLAMA_BASE_URL}/api/generate`
 export const OLLAMA_CHAT_URL = `${OLLAMA_BASE_URL}/api/chat`
 export const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? 'qwen3:0.6b'
 
-export const CODEX_CLI_PATH = process.env.CODEX_CLI_PATH?.trim() || 'codex'
+const CODEX_RUNTIME_HOME = process.env.CODEX_HOME_DIR?.trim() || '/home/actions-runner'
+export const CODEX_HOME = process.env.CODEX_HOME?.trim() || join(CODEX_RUNTIME_HOME, '.codex')
 export const CODEX_MODEL = process.env.CODEX_MODEL?.trim() || ''
+export const CODEX_BACKEND_BASE_URL =
+  process.env.CODEX_BACKEND_BASE_URL?.trim() || 'https://chatgpt.com/backend-api/codex'
+export const CODEX_RESPONSES_URL = `${CODEX_BACKEND_BASE_URL.replace(/\/$/, '')}/responses`
+export const CODEX_AUTH_URL =
+  process.env.CODEX_AUTH_URL?.trim() || 'https://auth.openai.com/oauth/token'
+/** Public OAuth client id used by Codex CLI ChatGPT device login. */
+export const CODEX_OAUTH_CLIENT_ID =
+  process.env.CODEX_OAUTH_CLIENT_ID?.trim() || 'app_EMoamEEZ73f0CkXaXp7hrann'
+export const DEFAULT_CODEX_INSTRUCTIONS =
+  '你现在作为 DogeOW 聊天面板中的 ChatGPT provider 回复。请只回答用户的问题，不要修改文件，不要执行命令，除非用户明确要求代码仓库操作。默认使用中文回答。'
 
 const EMBEDDING_MODEL_PREFIXES = ['qwen3-embedding', 'embeddinggemma', 'nomic-embed-text']
 export const isEmbeddingModel = (model: string) =>
@@ -33,7 +45,7 @@ export const getAIProvider = (requestedProvider?: AIProvider): AIProvider => {
 
 export const getProviderFallbackMessage = (provider: AIProvider): string => {
   if (provider === 'codex') {
-    return 'ChatGPT 暂时不可用，请确认服务器已安装 Codex CLI，并执行 codex login --device-auth 完成设备登录'
+    return 'ChatGPT 暂时不可用，请确认已执行 codex login --device-auth，并配置出站代理（CODEX_HTTP_PROXY 或 WEBPUSH_HTTP_PROXY）以便访问 chatgpt.com'
   }
   return 'AI 服务暂时不可用，请确保 Ollama 服务正在运行'
 }

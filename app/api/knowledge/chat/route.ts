@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchDocuments, loadAllDocuments } from '@/lib/knowledge/search'
 import { searchWithRAG } from '@/lib/knowledge/rag-search'
 import { getKnowledgeConfig, type KnowledgeSearchMethod } from '@/lib/knowledge/config'
-import { callCodexExecAPI } from '@/app/api/generate/_lib/clients'
-import { createCodexExecStreamResponse } from '@/app/api/generate/_lib/streams'
+import { callCodexChatAPI } from '@/app/api/generate/_lib/clients'
+import { createCodexResponsesStreamResponse } from '@/app/api/generate/_lib/streams'
 import type { CodexReasoningEffort } from '@/app/api/generate/_lib/types'
 import { requireAiAccess } from '../../_lib/auth-guard'
 
@@ -339,9 +339,9 @@ export async function POST(request: NextRequest) {
     const promptTokens = Math.ceil(chatMessages.reduce((acc, m) => acc + m.content.length, 0) / 4)
 
     if (provider === 'codex') {
-      console.log('[知识库] 使用 ChatGPT AI')
-      const codexProcess = callCodexExecAPI(chatMessages, model, codexReasoningEffort)
-      return createCodexExecStreamResponse(codexProcess, promptTokens)
+      console.log('[知识库] 使用 ChatGPT AI（直接 API）')
+      const codexResponse = await callCodexChatAPI(chatMessages, model, codexReasoningEffort)
+      return createCodexResponsesStreamResponse(codexResponse, promptTokens)
     }
 
     // 默认使用 Ollama

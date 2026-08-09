@@ -5,8 +5,8 @@ import {
   getAIProvider,
   getProviderFallbackMessage,
 } from './_lib/config'
-import { callCodexExecAPI, callOllamaChatAPI, callOllamaGenerateAPI } from './_lib/clients'
-import { createCodexExecStreamResponse, createStreamResponse } from './_lib/streams'
+import { callCodexChatAPI, callOllamaChatAPI, callOllamaGenerateAPI } from './_lib/clients'
+import { createCodexResponsesStreamResponse, createStreamResponse } from './_lib/streams'
 import type { ChatMessage, GenerateRequestBody } from './_lib/types'
 import { requireAiAccess } from '../_lib/auth-guard'
 import { idempotencyTracker, generateRequestId } from '@/lib/utils/idempotency'
@@ -47,8 +47,8 @@ async function handleChatRequest(
   const promptTokens = getPromptTokens(chatMessages)
 
   if (actualProvider === 'codex') {
-    const codexProcess = callCodexExecAPI(chatMessages, model, codexReasoningEffort)
-    return createCodexExecStreamResponse(codexProcess, promptTokens)
+    const codexResponse = await callCodexChatAPI(chatMessages, model, codexReasoningEffort)
+    return createCodexResponsesStreamResponse(codexResponse, promptTokens)
   }
 
   const ollamaResponse = await callOllamaChatAPI(chatMessages, model)
