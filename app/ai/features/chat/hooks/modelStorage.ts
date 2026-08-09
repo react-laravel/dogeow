@@ -5,7 +5,7 @@ const OLLAMA_MODEL_STORAGE_KEY = 'ollama_model'
 const CODEX_MODEL_STORAGE_KEY = 'codex_model'
 const CODEX_REASONING_EFFORT_STORAGE_KEY = 'codex_reasoning_effort'
 const DEFAULT_OLLAMA_MODEL = ''
-const DEFAULT_CODEX_MODEL = 'gpt-5.6-sol'
+const DEFAULT_CODEX_MODEL = 'gpt-5.6-luna'
 const DEFAULT_CODEX_REASONING_EFFORT: CodexReasoningEffort = 'medium'
 const CODEX_REASONING_EFFORTS = new Set<CodexReasoningEffort>([
   'minimal',
