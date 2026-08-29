@@ -45,7 +45,12 @@ export const getAIProvider = (requestedProvider?: AIProvider): AIProvider => {
 
 export const getProviderFallbackMessage = (provider: AIProvider): string => {
   if (provider === 'codex') {
-    return 'ChatGPT 暂时不可用，请确认已执行 codex login --device-auth，并配置出站代理（CODEX_HTTP_PROXY 或 WEBPUSH_HTTP_PROXY）以便访问 chatgpt.com'
+    return [
+      'ChatGPT 暂时不可用（服务端调用失败）。',
+      '说明：前端「设备登录」不是网页点登录，而是服务器上的 Codex 订阅凭据。',
+      '请在运行 Next 的机器上：1) codex login --device-auth 写入 auth.json；',
+      '2) 配置出站代理 CODEX_HTTP_PROXY 或 WEBPUSH_HTTP_PROXY（如 Squid）并重启 Next。',
+    ].join('')
   }
   return 'AI 服务暂时不可用，请确保 Ollama 服务正在运行'
 }

@@ -57,4 +57,21 @@ describe('codexFetch', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://example.com', { method: 'GET' })
   })
+
+  it('surfaces network failures with a clear Chinese message', async () => {
+    delete process.env.CODEX_HTTP_PROXY
+    delete process.env.WEBPUSH_HTTP_PROXY
+    delete process.env.HTTPS_PROXY
+    delete process.env.https_proxy
+    delete process.env.HTTP_PROXY
+    delete process.env.http_proxy
+
+    const fetchMock = vi.fn().mockRejectedValue(new Error('fetch failed'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { codexFetch } = await import('../codex-fetch')
+    await expect(codexFetch('https://chatgpt.com/backend-api/codex/responses')).rejects.toThrow(
+      /ChatGPT 网络请求失败/
+    )
+  })
 })

@@ -41,7 +41,8 @@ const PROVIDER_STYLES: Record<AIProvider, string> = {
 
 const PROVIDER_DESCRIPTIONS: Record<AIProvider, string> = {
   ollama: '本地模型',
-  codex: '设备登录',
+  // Server-side ChatGPT subscription via Codex auth.json — not a browser OAuth click.
+  codex: '服务端订阅',
 }
 
 const CODEX_REASONING_EFFORTS: Array<{

@@ -29,12 +29,18 @@ function getPromptTokens(messages: ChatMessage[]): number {
 }
 
 function getErrorMessage(error: unknown, provider?: GenerateRequestBody['provider']): string {
-  const isNetworkOrFetch = error instanceof Error && (error.message?.includes('fetch') ?? false)
   const actualProvider = getAIProvider(provider)
-  if (error instanceof Error) {
-    return isNetworkOrFetch ? getProviderFallbackMessage(actualProvider) : error.message
+  if (!(error instanceof Error)) {
+    return 'AI服务发生未知错误'
   }
-  return 'AI服务发生未知错误'
+
+  // Prefer the real error. Only fall back when the message is empty or useless.
+  const message = error.message?.trim()
+  if (!message || message === 'fetch failed' || message === 'Failed to fetch') {
+    return getProviderFallbackMessage(actualProvider)
+  }
+
+  return message
 }
 
 async function handleChatRequest(

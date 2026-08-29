@@ -305,7 +305,15 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       }
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        let detail = `API error: ${response.status}`
+        try {
+          const raw = await response.text()
+          const parsed = JSON.parse(raw) as { error?: string; message?: string }
+          detail = parsed.error || parsed.message || raw || detail
+        } catch {
+          // keep status-only detail
+        }
+        throw new Error(detail)
       }
 
       const accumulatedContent = isBrowserLocalOllamaResponse
