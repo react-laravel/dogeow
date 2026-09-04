@@ -31,6 +31,12 @@ interface UseBookTextSelectionActionsOptions<ChapterId> {
     excerpt?: string
   }) => { created: boolean }
   onPlaySelection?: (selection: TextSelectionState) => void
+  /**
+   * Handles the built prompt when "问 AI" is tapped. Defaults to opening the
+   * global full-screen AI dialog; the reader passes its own handler to show an
+   * in-page chat panel instead.
+   */
+  onAskAi?: (prompt: string) => void
 }
 
 export function useBookTextSelectionActions<ChapterId>({
@@ -39,6 +45,7 @@ export function useBookTextSelectionActions<ChapterId>({
   addPositionBookmark,
   addCollection,
   onPlaySelection,
+  onAskAi,
 }: UseBookTextSelectionActionsOptions<ChapterId>) {
   const requestOpenAi = useAiDialogStore(state => state.requestOpen)
 
@@ -76,9 +83,13 @@ export function useBookTextSelectionActions<ChapterId>({
     (selection: TextSelectionState) => {
       const context = getContext()
       const prompt = buildAiPromptForExcerpt(selection.text, context.chapterTitle, bookTitle)
+      if (onAskAi) {
+        onAskAi(prompt)
+        return
+      }
       requestOpenAi(prompt)
     },
-    [bookTitle, getContext, requestOpenAi]
+    [bookTitle, getContext, onAskAi, requestOpenAi]
   )
 
   const handlePlaySelection = useCallback(
