@@ -131,7 +131,8 @@ function ThingHeaderFilterDrawer({
         aria-expanded={open}
         onClick={() => onOpenChange(true)}
       >
-        <SlidersHorizontal className={`mr-2 h-4 w-4 ${hasActiveFilters ? 'text-primary' : ''}`} />
+        <SlidersHorizontal className={`mr-1.5 h-4 w-4 ${hasActiveFilters ? 'text-primary' : ''}`} />
+        <span className="text-xs font-medium">筛选</span>
       </Button>
       {filterDrawerPortal}
     </>

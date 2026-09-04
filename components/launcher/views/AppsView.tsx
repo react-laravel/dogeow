@@ -9,6 +9,7 @@ import { UserButton } from './UserButton'
 import { NotificationDropdown } from '@/components/app/NotificationDropdown'
 import { useFilterPersistenceStore } from '@/app/thing/stores/filterPersistenceStore'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/hooks/useTranslation'
 
 type DisplayMode = 'music' | 'apps' | 'settings' | 'auth' | 'search-result'
 
@@ -47,6 +48,7 @@ export function AppsView({
   showLogo = true,
 }: AppsViewProps) {
   const { clearFilters } = useFilterPersistenceStore()
+  const { t } = useTranslation()
 
   const navigateHome = () => {
     // 不要用 window.location.assign('/')，否则会触发浏览器级整页刷新，
@@ -61,7 +63,6 @@ export function AppsView({
   const handleLogoClick = () => {
     if (isAiOpen && onCloseAi) {
       onCloseAi()
-      return
     }
     clearFilters()
     navigateHome()
@@ -110,11 +111,13 @@ export function AppsView({
             size="icon"
             className="size-10 gap-2 rounded-xl lg:w-auto lg:px-3"
             onClick={() => toggleDisplayMode('settings')}
-            aria-label="打开设置"
-            title="打开设置"
+            aria-label={t('appgrid.settings', '打开设置')}
+            title={t('appgrid.settings', '打开设置')}
           >
             <Settings className="h-5 w-5" />
-            <span className="hidden text-sm font-medium lg:inline">设置</span>
+            <span className="hidden text-sm font-medium lg:inline">
+              {t('appgrid.settings_short', '设置')}
+            </span>
           </Button>
         )}
 

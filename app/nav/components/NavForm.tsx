@@ -4,7 +4,6 @@ import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavStore } from '@/app/nav/stores/navStore'
 import { useForm } from 'react-hook-form'
@@ -20,14 +19,12 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Combobox } from '@/components/ui/combobox'
 import { apiRequest } from '@/lib/api'
-import { PageContainer } from '@/components/layout'
+import { useTranslation } from '@/hooks/useTranslation'
 import { NavItem } from '@/app/nav/types'
 
-// 定义表单数据类型
 type FormData = {
   nav_category_id: string
   name: string
@@ -39,7 +36,8 @@ type FormData = {
   icon?: string
 }
 
-// 创建表单的验证模式
+// Keep schema identity stable across language/store re-renders so RHF
+// does not thrash the resolver (field values still live in RHF state).
 const navItemSchema = z.object({
   nav_category_id: z.string().min(1, '请选择分类'),
   name: z.string().min(1, '名称不能为空').max(50, '名称不能超过50个字符'),
@@ -52,19 +50,22 @@ const navItemSchema = z.object({
 })
 
 interface NavFormProps {
-  item?: NavItem // 传入 item 表示编辑模式
+  item?: NavItem
 }
 
 export function NavForm({ item }: NavFormProps) {
   const router = useRouter()
-  const { fetchAllCategories, allCategories, createItem, updateItem, createCategory } =
-    useNavStore()
+  const { t } = useTranslation()
+  const fetchAllCategories = useNavStore(state => state.fetchAllCategories)
+  const allCategories = useNavStore(state => state.allCategories)
+  const createItem = useNavStore(state => state.createItem)
+  const updateItem = useNavStore(state => state.updateItem)
+  const createCategory = useNavStore(state => state.createCategory)
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(false)
 
   const isEditMode = !!item
 
-  // 使用 react-hook-form 管理表单状态
   const form = useForm<FormData>({
     resolver: zodResolver(navItemSchema),
     defaultValues: {
@@ -79,12 +80,10 @@ export function NavForm({ item }: NavFormProps) {
     },
   })
 
-  // 加载分类数据
   useEffect(() => {
-    fetchAllCategories()
+    void fetchAllCategories()
   }, [fetchAllCategories])
 
-  // 处理创建新分类
   const handleCreateCategory = async (categoryName: string) => {
     try {
       const newCategory = await createCategory({
@@ -93,13 +92,17 @@ export function NavForm({ item }: NavFormProps) {
         sort_order: 0,
       })
       form.setValue('nav_category_id', newCategory.id.toString())
-      toast.success(`已创建分类 "${categoryName}"`)
+      toast.success(
+        t('nav.toast.category_created', '已创建分类 "{name}"').replace('{name}', categoryName)
+      )
     } catch (error) {
-      toast.error('创建分类失败：' + (error instanceof Error ? error.message : '未知错误'))
+      toast.error(
+        t('nav.toast.category_create_failed', '创建分类失败：') +
+          (error instanceof Error ? error.message : t('common.unknown_error', '未知错误'))
+      )
     }
   }
 
-  // 提交表单
   const onSubmit = async (data: FormData) => {
     setLoading(true)
 
@@ -109,53 +112,55 @@ export function NavForm({ item }: NavFormProps) {
         nav_category_id: Number(data.nav_category_id),
       }
 
-      const toastId = toast.loading(isEditMode ? '正在更新导航项...' : '正在创建导航项...')
+      const toastId = toast.loading(
+        isEditMode
+          ? t('nav.toast.updating', '正在更新导航项...')
+          : t('nav.toast.creating', '正在创建导航项...')
+      )
 
       if (isEditMode) {
         await updateItem(item.id, navItemData)
-        toast.success('导航项更新成功', { id: toastId })
+        toast.success(t('nav.toast.updated', '导航项更新成功'), { id: toastId })
       } else {
         await createItem(navItemData)
-        toast.success('导航项创建成功', { id: toastId })
+        toast.success(t('nav.toast.created', '导航项创建成功'), { id: toastId })
       }
 
       router.push('/nav')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '发生错误，请重试')
+      toast.error(error instanceof Error ? error.message : t('nav.toast.error', '发生错误，请重试'))
     } finally {
       setLoading(false)
     }
   }
 
-  // 将分类数据转换为Combobox选项格式
   const categoryOptions =
     (allCategories ?? [])
       .filter(category => category && typeof category === 'object' && category.id !== undefined)
       .map(category => ({
         value: category.id.toString(),
-        label: category.name || '未命名分类',
+        label: category.name || t('nav.unnamed_category', '未命名分类'),
       })) ?? []
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* 分类选择 */}
         <FormField
           control={form.control}
           name="nav_category_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>分类</FormLabel>
+              <FormLabel>{t('form.category', '分类')}</FormLabel>
               <FormControl>
                 <Combobox
                   options={categoryOptions}
                   value={field.value}
                   onChange={field.onChange}
                   onCreateOption={handleCreateCategory}
-                  placeholder="选择分类"
-                  emptyText="没有找到分类"
-                  createText="创建分类"
-                  searchText="搜索分类..."
+                  placeholder={t('nav.form.select_category', '选择分类')}
+                  emptyText={t('nav.form.no_category', '没有找到分类')}
+                  createText={t('nav.form.create_category', '创建分类')}
+                  searchText={t('nav.form.search_category', '搜索分类...')}
                 />
               </FormControl>
               <FormMessage />
@@ -163,13 +168,12 @@ export function NavForm({ item }: NavFormProps) {
           )}
         />
 
-        {/* URL */}
         <FormField
           control={form.control}
           name="url"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>网站地址</FormLabel>
+              <FormLabel>{t('nav.form.url', '网站地址')}</FormLabel>
               <FormControl>
                 <Input placeholder="https://example.com" {...field} />
               </FormControl>
@@ -178,18 +182,17 @@ export function NavForm({ item }: NavFormProps) {
           )}
         />
 
-        {/* 名称 */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>网站名称</FormLabel>
+              <FormLabel>{t('nav.form.site_name', '网站名称')}</FormLabel>
               <div className="flex items-center gap-2">
                 {form.watch('icon') && (
                   <Image
                     src={form.watch('icon')!}
-                    alt="网站图标"
+                    alt={t('nav.form.site_icon', '网站图标')}
                     width={32}
                     height={32}
                     className="h-8 w-8 border bg-white"
@@ -197,7 +200,10 @@ export function NavForm({ item }: NavFormProps) {
                   />
                 )}
                 <FormControl>
-                  <Input placeholder="输入网站名称" {...field} />
+                  <Input
+                    placeholder={t('nav.form.site_name_placeholder', '输入网站名称')}
+                    {...field}
+                  />
                 </FormControl>
                 {!isEditMode && (
                   <Button
@@ -207,7 +213,7 @@ export function NavForm({ item }: NavFormProps) {
                     onClick={async () => {
                       const url = form.getValues('url')
                       if (!url) {
-                        toast.error('请先填写网站地址')
+                        toast.error(t('nav.toast.url_required_first', '请先填写网站地址'))
                         return
                       }
                       setFetching(true)
@@ -218,19 +224,21 @@ export function NavForm({ item }: NavFormProps) {
                         )
                         if (data.title) {
                           form.setValue('name', data.title)
-                          toast.success('已自动获取网站名称')
+                          toast.success(t('nav.toast.title_fetched', '已自动获取网站名称'))
                         }
                         if (data.favicon) {
                           form.setValue('icon', data.favicon)
                         }
                       } catch {
-                        toast.error('获取失败')
+                        toast.error(t('nav.toast.fetch_failed', '获取失败'))
                       } finally {
                         setFetching(false)
                       }
                     }}
                   >
-                    {fetching ? '获取中...' : '自动获取'}
+                    {fetching
+                      ? t('nav.form.fetching', '获取中...')
+                      : t('nav.form.auto_fetch', '自动获取')}
                   </Button>
                 )}
               </div>
@@ -239,16 +247,15 @@ export function NavForm({ item }: NavFormProps) {
           )}
         />
 
-        {/* 描述 */}
         <FormField
           control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>描述</FormLabel>
+              <FormLabel>{t('form.description', '描述')}</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="网站简短描述 (选填)"
+                  placeholder={t('nav.form.description_placeholder', '网站简短描述 (选填)')}
                   className="resize-none"
                   rows={3}
                   {...field}
@@ -259,13 +266,12 @@ export function NavForm({ item }: NavFormProps) {
           )}
         />
 
-        {/* 新窗口打开 */}
         <FormField
           control={form.control}
           name="is_new_window"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between">
-              <FormLabel className="text-base">新窗口打开</FormLabel>
+              <FormLabel className="text-base">{t('nav.form.new_window', '新窗口打开')}</FormLabel>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
@@ -273,13 +279,12 @@ export function NavForm({ item }: NavFormProps) {
           )}
         />
 
-        {/* 可见性 */}
         <FormField
           control={form.control}
           name="is_visible"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between">
-              <FormLabel className="text-base">显示</FormLabel>
+              <FormLabel className="text-base">{t('nav.form.visible', '显示')}</FormLabel>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
@@ -287,13 +292,12 @@ export function NavForm({ item }: NavFormProps) {
           )}
         />
 
-        {/* 排序 */}
         <FormField
           control={form.control}
           name="sort_order"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>排序 (数字越小，排序越靠前)</FormLabel>
+              <FormLabel>{t('nav.form.sort_order', '排序 (数字越小，排序越靠前)')}</FormLabel>
               <FormControl>
                 <Input type="number" min="0" {...field} />
               </FormControl>
@@ -305,42 +309,13 @@ export function NavForm({ item }: NavFormProps) {
         <Button type="submit" className="w-full" disabled={loading}>
           {loading
             ? isEditMode
-              ? '更新中...'
-              : '创建中...'
+              ? t('nav.form.updating', '更新中...')
+              : t('nav.form.creating', '创建中...')
             : isEditMode
-              ? '更新导航项'
-              : '创建导航项'}
+              ? t('nav.form.update', '更新导航项')
+              : t('nav.form.create', '创建导航项')}
         </Button>
       </form>
     </Form>
-  )
-}
-
-// 添加导航页面
-export default function AddNavPage() {
-  const router = useRouter()
-
-  return (
-    <PageContainer>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => router.push('/nav')}
-            className="mr-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight">添加导航</h1>
-        </div>
-      </div>
-
-      <Card className="mx-auto max-w-2xl">
-        <CardContent className="pt-6">
-          <NavForm />
-        </CardContent>
-      </Card>
-    </PageContainer>
   )
 }

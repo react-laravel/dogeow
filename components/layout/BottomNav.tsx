@@ -119,4 +119,5 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
  * Tailwind padding utility to reserve space for the BottomNav. Apply on the
  * scrollable wrapper of pages that render <BottomNav />.
  */
-export const BOTTOM_NAV_CONTENT_PADDING = 'pb-[calc(3.75rem+env(safe-area-inset-bottom))]'
+export const BOTTOM_NAV_CONTENT_PADDING =
+  'pb-[calc(5.5rem+env(safe-area-inset-bottom))] scroll-mb-[calc(5.5rem+env(safe-area-inset-bottom))]'

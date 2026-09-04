@@ -18,6 +18,12 @@ function convertTimestampValue(rawTimestamp: string, dateFormat: string): string
   }
 
   const cleanTs = cleanTimestamp(rawTimestamp)
+  // Non-numeric garbage (e.g. "abc") cleans to "" → Number("") === 0 → epoch.
+  // Reject empty cleaned input instead of converting to 1970/1969.
+  if (!cleanTs) {
+    return ERROR_MESSAGES.INVALID_TIMESTAMP
+  }
+
   const timestampNum = Number(cleanTs)
   if (isNaN(timestampNum)) {
     return ERROR_MESSAGES.INVALID_TIMESTAMP

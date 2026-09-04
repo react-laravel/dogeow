@@ -21,6 +21,18 @@ import NotePageGraphToolbar from './components/NotePageGraphToolbar'
 
 type ViewMode = 'list' | 'graph'
 
+const NOTE_VIEW_MODE_KEY = 'dogeow-note-view-mode'
+
+function readStoredViewMode(): ViewMode {
+  if (typeof window === 'undefined') return 'list'
+  try {
+    const stored = sessionStorage.getItem(NOTE_VIEW_MODE_KEY)
+    return stored === 'graph' || stored === 'list' ? stored : 'list'
+  } catch {
+    return 'list'
+  }
+}
+
 async function fetchNotesList(): Promise<Note[]> {
   const data = await get<Note[] | { notes: Note[] }>('/notes', { handleError: false })
   return normalizeNotes<Note>(data)
@@ -75,12 +87,21 @@ function ViewModeSwitch({
 
 export default function NotePage() {
   const pathname = usePathname()
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>(() => readStoredViewMode())
   const [graphQuery, setGraphQuery] = useState<string>('')
   const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false)
   const graphNewNodeRef = useRef<(() => void) | null>(null)
   const graphCreateLinkRef = useRef<(() => void) | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    try {
+      sessionStorage.setItem(NOTE_VIEW_MODE_KEY, mode)
+    } catch {
+      // ignore storage failures
+    }
+  }
 
   const notesKey = pathname === '/note' ? '/notes' : null
   const {
@@ -132,7 +153,7 @@ export default function NotePage() {
         <header className="mb-6 flex min-w-0 items-center gap-4 overflow-hidden">
           <ViewModeSwitch
             viewMode={viewMode}
-            onChangeMode={setViewMode}
+            onChangeMode={handleViewModeChange}
             listCount={noteCount}
             graphCount={graphNodeCount}
           />
@@ -220,7 +241,7 @@ export default function NotePage() {
       <header className="mb-6 flex min-w-0 items-center gap-4 overflow-hidden">
         <ViewModeSwitch
           viewMode={viewMode}
-          onChangeMode={setViewMode}
+          onChangeMode={handleViewModeChange}
           listCount={noteCount}
           graphCount={graphNodeCount}
         />

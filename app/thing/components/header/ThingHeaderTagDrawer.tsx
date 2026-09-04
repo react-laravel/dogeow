@@ -43,28 +43,29 @@ function ThingHeaderTagDrawer({
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          size="icon"
-          className={`border-primary/20 h-10 w-10 rounded-lg bg-white/90 shadow dark:bg-background/80 ${
+          size="sm"
+          className={`border-primary/20 h-10 gap-1.5 rounded-lg bg-white/90 px-2.5 shadow dark:bg-background/80 ${
             selectedTags.length > 0 ? 'text-primary border-primary/60 bg-primary/10' : ''
           }`}
           aria-label="打开标签筛选"
           title="标签"
         >
-          <TagIcon className="h-4 w-4" />
+          <TagIcon className="h-4 w-4 shrink-0" />
+          <span className="text-xs font-medium">标签</span>
         </Button>
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="w-[calc(100vw-6rem)] max-w-[12rem] gap-0 p-0 sm:w-[12rem]"
+        className="flex h-[calc(100dvh-var(--app-header-total-height,56px))] max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]"
         onOpenAutoFocus={event => event.preventDefault()}
       >
-        <SheetHeader className="border-border border-b px-4 py-3">
+        <SheetHeader className="border-border shrink-0 border-b px-4 py-3">
           <SheetTitle>标签</SheetTitle>
           <SheetDescription className="sr-only">选择物品标签筛选条件</SheetDescription>
         </SheetHeader>
 
         {selectedTags.length > 0 ? (
-          <div className="border-border border-b px-4 py-3">
+          <div className="border-border shrink-0 border-b px-4 py-3">
             <Button
               type="button"
               variant="outline"
@@ -77,7 +78,7 @@ function ThingHeaderTagDrawer({
           </div>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
           {tags.length === 0 ? (
             <div className="text-muted-foreground px-3 py-8 text-center text-sm">暂无标签</div>
           ) : (

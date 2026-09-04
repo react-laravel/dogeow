@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Brain, CircleHelp, Gauge, RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -73,6 +73,8 @@ function parseBookWordsResponse(response: unknown): BookWordsResponse {
 const QUIZ_FETCH_PER_PAGE = 200
 const QUIZ_RECENT_SIZE = 20
 const UNKNOWN_SUBMISSION_ID = '__unknown__'
+/** Overall budget for loading the quiz corpus (many paginated requests). */
+const QUIZ_LOAD_TIMEOUT_MS = 20_000
 
 function getOptionClasses(submitted: boolean, isSelected: boolean, isCorrect: boolean): string {
   if (!submitted) {
@@ -92,8 +94,12 @@ function getOptionClasses(submitted: boolean, isSelected: boolean, isCorrect: bo
   return 'border-border opacity-60'
 }
 
-async function fetchAllSystemQuizWords(): Promise<EligibleQuizWord[]> {
+async function fetchAllSystemQuizWords(signal?: AbortSignal): Promise<EligibleQuizWord[]> {
   const booksResponse = await get<unknown>('/word/books')
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError')
+  }
+
   const books = parseBooksResponse(booksResponse)
 
   if (!books.length) {
@@ -107,6 +113,10 @@ async function fetchAllSystemQuizWords(): Promise<EligibleQuizWord[]> {
     let lastPage = 1
 
     while (currentPage <= lastPage) {
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+
       const response = await get<unknown>(
         `/word/books/${book.id}/words?page=${currentPage}&per_page=${QUIZ_FETCH_PER_PAGE}&filter=all`
       )
@@ -121,10 +131,29 @@ async function fetchAllSystemQuizWords(): Promise<EligibleQuizWord[]> {
   return getQuizEligibleWords(collectedWords)
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, signal: AbortController): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.abort()
+      reject(new Error('加载测验超时，请检查网络后重试'))
+    }, ms)
+
+    promise
+      .then(value => {
+        clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(error => {
+        clearTimeout(timer)
+        reject(error)
+      })
+  })
+}
+
 export default function WordQuizPage() {
   const [quizWords, setQuizWords] = useState<EligibleQuizWord[]>([])
   const [currentQuestion, setCurrentQuestion] = useState<WordQuizQuestion | null>(null)
-  const [isQuizLoading, setIsQuizLoading] = useState(false)
+  const [isQuizLoading, setIsQuizLoading] = useState(true)
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
@@ -153,9 +182,16 @@ export default function WordQuizPage() {
     setRecentWordIds([])
     setSubmittedAnswers([])
     setVocabularyEstimate(0)
+    setCurrentQuestion(null)
+
+    const abortController = new AbortController()
 
     try {
-      const words = await fetchAllSystemQuizWords()
+      const words = await withTimeout(
+        fetchAllSystemQuizWords(abortController.signal),
+        QUIZ_LOAD_TIMEOUT_MS,
+        abortController
+      )
       setQuizWords(words)
 
       if (words.length < 4) {
@@ -174,6 +210,13 @@ export default function WordQuizPage() {
 
       setCurrentQuestion(nextQuestion)
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setQuizWords([])
+        setCurrentQuestion(null)
+        setLoadError('加载测验超时，请检查网络后重试')
+        return
+      }
+
       setQuizWords([])
       setCurrentQuestion(null)
       setLoadError(error instanceof Error ? error.message : '加载测验失败')
@@ -251,15 +294,17 @@ export default function WordQuizPage() {
 
   if (isQuizLoading) {
     return (
-      <PageContainer className="flex min-h-[60vh] items-center justify-center">
+      <PageContainer className="flex min-h-[60vh] flex-col items-center justify-center gap-3 pb-8">
         <LoadingSpinner />
+        <p className="text-muted-foreground text-sm">正在加载词库，请稍候…</p>
+        <p className="text-muted-foreground text-xs">若长时间无响应将自动提示重试</p>
       </PageContainer>
     )
   }
 
   if (loadError && !currentQuestion) {
     return (
-      <PageContainer maxWidth="md">
+      <PageContainer maxWidth="md" className="pb-8">
         <Card>
           <CardContent className="space-y-4 p-6 text-center">
             <CircleHelp className="text-muted-foreground mx-auto h-12 w-12" />
@@ -283,8 +328,24 @@ export default function WordQuizPage() {
 
   if (!currentQuestion) {
     return (
-      <PageContainer className="flex min-h-[60vh] items-center justify-center">
-        <LoadingSpinner />
+      <PageContainer maxWidth="md" className="pb-8">
+        <Card>
+          <CardContent className="space-y-4 p-6 text-center">
+            <CircleHelp className="text-muted-foreground mx-auto h-12 w-12" />
+            <div>
+              <h2 className="mb-1 text-lg font-semibold">暂时无法开始测验</h2>
+              <p className="text-muted-foreground text-sm">当前没有可用题目，请稍后重试。</p>
+            </div>
+            <div className="flex justify-center gap-2">
+              <Button onClick={() => void loadQuiz()} variant="outline">
+                重试
+              </Button>
+              <Link href="/word">
+                <Button>返回首页</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </PageContainer>
     )
   }
@@ -306,7 +367,7 @@ export default function WordQuizPage() {
   }
 
   return (
-    <PageContainer maxWidth="4xl" className="space-y-3">
+    <PageContainer maxWidth="4xl" className="space-y-3 pb-8">
       <div className="flex items-center justify-between">
         <Link href="/word">
           <Button variant="ghost" size="icon" aria-label="返回背单词首页">
@@ -394,15 +455,7 @@ export default function WordQuizPage() {
                       >
                         {String.fromCharCode(65 + index)}
                       </div>
-                      <span
-                        className="text-sm leading-5 sm:text-[15px]"
-                        style={{
-                          display: '-webkit-box',
-                          WebkitBoxOrient: 'vertical',
-                          WebkitLineClamp: 3,
-                          overflow: 'hidden',
-                        }}
-                      >
+                      <span className="text-sm leading-5 break-words whitespace-normal sm:text-[15px]">
                         {option.text}
                       </span>
                     </div>

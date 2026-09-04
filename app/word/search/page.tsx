@@ -24,15 +24,20 @@ export default function SearchWordPage() {
   } | null>(null)
 
   const handleSearch = async () => {
-    if (!keyword.trim()) {
+    const trimmed = keyword.trim()
+    if (!trimmed) {
       toast.error('请输入要搜索的单词')
       return
     }
 
     setIsSearching(true)
     try {
-      const result = await searchWord(keyword.trim())
-      setSearchResult(result)
+      const result = await searchWord(trimmed)
+      // Preserve the query even if API omits `keyword` when not found.
+      setSearchResult({
+        ...result,
+        keyword: result.keyword?.trim() || trimmed,
+      })
 
       if (result.found) {
         toast.success('找到单词！')
@@ -41,7 +46,8 @@ export default function SearchWordPage() {
       }
     } catch (error) {
       console.error('搜索失败:', error)
-      toast.error('搜索失败')
+      setSearchResult(null)
+      toast.error(error instanceof Error ? error.message : '搜索失败，请稍后重试')
     } finally {
       setIsSearching(false)
     }
@@ -203,10 +209,20 @@ export default function SearchWordPage() {
               </CardContent>
             </Card>
           ) : (
-            // 未找到单词 - 直接显示创建表单
+            // 未找到单词 - 显示明确空态 + 创建表单
             <div className="space-y-4">
+              <Card>
+                <CardContent className="space-y-2 p-4 text-center">
+                  <p className="text-sm font-medium">
+                    未找到单词「{searchResult.keyword ?? keyword}」
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    可以使用下方表单或 AI 生成释义并添加到词库
+                  </p>
+                </CardContent>
+              </Card>
               <WordDataEditor
-                wordContent={searchResult.keyword ?? ''}
+                wordContent={searchResult.keyword ?? keyword}
                 onSave={handleCreateWord}
                 saveButtonText="创建并保存"
               />

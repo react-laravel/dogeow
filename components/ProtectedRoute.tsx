@@ -6,7 +6,6 @@ import useAuthStore from '@/stores/authStore'
 import { isProtectedPath } from '@/lib/constants/protected-routes'
 import { useTranslation } from '@/hooks/useTranslation'
 
-
 interface ProtectedRouteProps {
   children: React.ReactNode
 }
@@ -52,8 +51,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <>{children}</>
   }
 
-  // 在服务端渲染或客户端初始化时，显示加载状态
-  if (!isClient || loading) {
+  // Avoid unmounting authenticated pages during brief auth rehydrate/loading
+  // flashes — that would wipe in-progress form state (e.g. /nav/add).
+  if (!isClient || (loading && !isAuthenticated)) {
     return (
       <div className="flex min-h-[200px] items-center justify-center">
         <div className="text-muted-foreground">{t('loading.text')}</div>
@@ -61,6 +61,5 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  // 如果不需要保护，或者用户已认证，显示内容
-  return !needsProtection || isAuthenticated ? <>{children}</> : null
+  return isAuthenticated ? <>{children}</> : null
 }

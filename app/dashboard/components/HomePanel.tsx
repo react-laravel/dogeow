@@ -45,16 +45,17 @@ export function HomePanel() {
           >
             <div
               className={cn(
-                'relative flex aspect-square w-full max-w-[104px] items-center justify-center overflow-hidden rounded-[24px] shadow-[0_16px_32px_rgba(15,23,42,0.18)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98]',
+                'relative flex aspect-square w-full max-w-[104px] items-center justify-center overflow-hidden rounded-[24px] shadow-[0_16px_32px_rgba(15,23,42,0.22)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98]',
                 link.gradientClassName
               )}
             >
-              <div className="absolute inset-[1px] rounded-[23px] bg-gradient-to-br from-white/28 via-white/10 to-transparent" />
-              <div className="absolute inset-x-3 top-2 h-5 rounded-full bg-white/25 blur-xl" />
-              <div className="relative z-[1] flex h-11 w-11 items-center justify-center rounded-[18px] bg-white/14 shadow-[inset_0_1px_1px_rgba(255,255,255,0.28)] ring-1 ring-white/20 backdrop-blur-sm">
-                <Icon className="h-6 w-6 text-white drop-shadow-[0_2px_8px_rgba(15,23,42,0.2)]" />
+              {/* Darken pastel API gradients so the icon plate stays ≥ ~4.5:1 */}
+              <div className="absolute inset-0 bg-slate-950/35" />
+              <div className="absolute inset-[1px] rounded-[23px] bg-gradient-to-br from-white/10 via-transparent to-black/25" />
+              <div className="relative z-[1] flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.4)] ring-1 ring-white/40">
+                <Icon className="h-6 w-6 text-white" strokeWidth={2.35} aria-hidden />
               </div>
-              <span className="absolute right-2 bottom-2 z-[1] flex h-6 w-6 items-center justify-center rounded-full bg-black/20 text-white/90 opacity-0 ring-1 ring-white/18 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+              <span className="absolute right-2 bottom-2 z-[1] flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-0 ring-1 ring-white/30 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
                 <ExternalLink className="h-3.5 w-3.5" />
               </span>
             </div>

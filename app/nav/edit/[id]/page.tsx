@@ -6,18 +6,19 @@ import { toast } from 'sonner'
 import { useNavStore } from '@/app/nav/stores/navStore'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageContainer, PageHeader } from '@/components/layout'
+import { useTranslation } from '@/hooks/useTranslation'
 import { NavForm } from '../../components/NavForm'
 import { NavItem } from '@/app/nav/types'
 
 export default function EditNavPage() {
   const params = useParams()
   const router = useRouter()
+  const { t } = useTranslation()
   const { fetchAllCategories, fetchItems } = useNavStore()
   const [loading, setLoading] = useState(true)
   const [item, setItem] = useState<NavItem | null>(null)
   const itemId = Number(params.id)
 
-  // 加载数据
   useEffect(() => {
     let isMounted = true
 
@@ -27,7 +28,7 @@ export default function EditNavPage() {
         const currentItem = itemsResult.find(i => i.id === itemId)
 
         if (!currentItem) {
-          toast.error('找不到导航项')
+          toast.error(t('nav.item_not_found', '找不到导航项'))
           router.push('/nav')
           return
         }
@@ -38,7 +39,7 @@ export default function EditNavPage() {
       } catch (error) {
         console.error('加载数据失败:', error)
         if (isMounted) {
-          toast.error('加载数据失败')
+          toast.error(t('nav.load_failed', '加载数据失败'))
         }
       } finally {
         if (isMounted) {
@@ -47,18 +48,18 @@ export default function EditNavPage() {
       }
     }
 
-    loadData()
+    void loadData()
 
     return () => {
       isMounted = false
     }
-  }, [fetchAllCategories, fetchItems, itemId, router])
+  }, [fetchAllCategories, fetchItems, itemId, router, t])
 
   if (loading) {
     return (
       <PageContainer className="py-2">
         <div className="flex h-40 items-center justify-center">
-          <p className="text-muted-foreground">加载中...</p>
+          <p className="text-muted-foreground">{t('common.loading', '加载中...')}</p>
         </div>
       </PageContainer>
     )
@@ -67,8 +68,8 @@ export default function EditNavPage() {
   return (
     <PageContainer className="py-2">
       <PageHeader
-        title="编辑导航"
-        description="更新站点信息后保存即可生效。"
+        title={t('nav.edit_nav', '编辑导航')}
+        description={t('nav.edit_description', '更新站点信息后保存即可生效。')}
         showBackButton
         onBackClick={() => router.push('/nav')}
       />
