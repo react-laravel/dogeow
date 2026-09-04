@@ -3,6 +3,15 @@ import type { NodeData, GraphPalette } from '../types/graph'
 // 图标缓存
 const iconCache = new Map<string, HTMLImageElement>()
 
+/** Below this scale, non-focused labels stay hidden (extreme overview). */
+export const GRAPH_LABEL_HIDE_SCALE = 0.28
+/** Default / fit zoom should keep labels visible at or above this scale. */
+export const GRAPH_LABEL_MIN_SCALE = 0.55
+/** Neighbor labels when a node is selected. */
+export const GRAPH_NEIGHBOR_LABEL_MIN_SCALE = 0.75
+/** After zoomToFit, bump toward this so first paint isn't an empty-label overview. */
+export const GRAPH_DEFAULT_READABLE_SCALE = 0.95
+
 // 加载图标
 const loadIcon = (iconPath: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
@@ -26,6 +35,36 @@ loadIcon('/favicon.ico').catch(() => {
   // 如果加载失败，忽略错误
 })
 
+function resolveLabelVisibility(options: {
+  isActive: boolean
+  isHover: boolean
+  isNeighbor: boolean
+  globalScale: number
+}): boolean {
+  const { isActive, isHover, isNeighbor, globalScale } = options
+
+  if (isActive || isHover) {
+    return true
+  }
+
+  if (globalScale < GRAPH_LABEL_HIDE_SCALE) {
+    return false
+  }
+
+  if (isNeighbor) {
+    return globalScale >= GRAPH_NEIGHBOR_LABEL_MIN_SCALE
+  }
+
+  return globalScale >= GRAPH_LABEL_MIN_SCALE
+}
+
+function resolveMaxChars(isFocused: boolean, globalScale: number): number {
+  if (isFocused) return 18
+  if (globalScale < 0.85) return 6
+  if (globalScale < 1.4) return 10
+  return 14
+}
+
 export const createNodeCanvasRenderer = (
   activeNode: NodeData | null,
   hoverNode: NodeData | null,
@@ -38,7 +77,7 @@ export const createNodeCanvasRenderer = (
     const isHover = String(hoverNode?.id) === String(node.id)
 
     // 使用缓存的邻居集合，避免重复遍历
-    const isNeighbor = activeNode && !isActive && neighborIds.has(String(node.id))
+    const isNeighbor = Boolean(activeNode && !isActive && neighborIds.has(String(node.id)))
 
     // 检查是否是根节点（标题为"我"或其他根节点标识）
     const isRootNode = node.title === '我' || node.title === 'root' || node.title === 'Root'
@@ -88,22 +127,18 @@ export const createNodeCanvasRenderer = (
       ctx.fill()
     }
 
-    // Prefer hiding/shrinking labels over stacking.
-    // Zoomed out: only the focused node (active/hover). Neighbor labels wait until zoomed in.
-    const minScaleForLabel = 1.8
-    const minScaleForNeighborLabel = 2.2
-    const shouldShowLabel =
-      isActive ||
-      isHover ||
-      (Boolean(isNeighbor) && globalScale >= minScaleForNeighborLabel) ||
-      (!isNeighbor && globalScale >= minScaleForLabel)
+    // Prefer shrinking/truncating labels over stacking; only hide when extremely zoomed out.
+    const shouldShowLabel = resolveLabelVisibility({
+      isActive,
+      isHover,
+      isNeighbor,
+      globalScale,
+    })
     if (shouldShowLabel) {
-      const maxChars = isActive || isHover ? 18 : 8
+      const isFocused = isActive || isHover
+      const maxChars = resolveMaxChars(isFocused, globalScale)
       const displayLabel = label.length > maxChars ? `${label.slice(0, maxChars - 1)}…` : label
-      const scaledFont = Math.min(
-        11 / Math.sqrt(Math.max(globalScale, 1)),
-        isActive || isHover ? 11 : 8
-      )
+      const scaledFont = Math.min(12 / Math.sqrt(Math.max(globalScale, 0.85)), isFocused ? 12 : 9)
       ctx.font = `${scaledFont}px system-ui, -apple-system, Segoe UI, Roboto`
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'

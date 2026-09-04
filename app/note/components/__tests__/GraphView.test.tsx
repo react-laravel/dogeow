@@ -98,33 +98,35 @@ const mockUseGraphPalette = vi.fn(() => ({
 const mockUseGraphZoom = vi.fn(() => ({
   restoreView: vi.fn(),
   handleZoom: vi.fn(),
+  getZoom: vi.fn(() => 1),
+  lastZoomRef: { current: 1 },
 }))
 
-vi.mock('@/note/hooks/useGraphData', () => ({
+vi.mock('@/app/note/hooks/useGraphData', () => ({
   useGraphData: (...args: any[]) => mockUseGraphData(...args),
 }))
 
-vi.mock('@/note/hooks/useArticleLoader', () => ({
+vi.mock('@/app/note/hooks/useArticleLoader', () => ({
   useArticleLoader: (...args: any[]) => mockUseArticleLoader(...args),
 }))
 
-vi.mock('@/note/hooks/useThemeColors', () => ({
+vi.mock('@/app/note/hooks/useThemeColors', () => ({
   useThemeColors: (...args: any[]) => mockUseThemeColors(...args),
 }))
 
-vi.mock('@/note/hooks/useGraphFilter', () => ({
+vi.mock('@/app/note/hooks/useGraphFilter', () => ({
   useGraphFilter: (...args: any[]) => mockUseGraphFilter(...args),
 }))
 
-vi.mock('@/note/hooks/useGraphPalette', () => ({
+vi.mock('@/app/note/hooks/useGraphPalette', () => ({
   useGraphPalette: (...args: any[]) => mockUseGraphPalette(...args),
 }))
 
-vi.mock('@/note/hooks/useGraphZoom', () => ({
+vi.mock('@/app/note/hooks/useGraphZoom', () => ({
   useGraphZoom: () => mockUseGraphZoom(),
 }))
 
-vi.mock('@/note/hooks/useZoomFilter', () => ({
+vi.mock('@/app/note/hooks/useZoomFilter', () => ({
   useZoomFilter: vi.fn(),
 }))
 
@@ -160,6 +162,20 @@ describe('GraphView', () => {
     mockNodes = []
     mockLinks = []
     mockLoading = true
+    mockUseGraphData.mockImplementation(() => ({
+      nodes: mockNodes,
+      setNodes: vi.fn(),
+      links: mockLinks,
+      setLinks: vi.fn(),
+      loading: mockLoading,
+      fgRef: { current: null },
+      loadGraphData: vi.fn(),
+      resumeGraphAnimation: vi.fn(),
+    }))
+    mockUseGraphFilter.mockImplementation(() => ({
+      filtered: { nodes: mockNodes, links: mockLinks },
+      neighborIds: new Set<string>(),
+    }))
   })
 
   describe('Loading state', () => {
@@ -195,22 +211,32 @@ describe('GraphView', () => {
   describe('Data rendering', () => {
     it('should render toolbar', () => {
       mockLoading = false
-      mockNodes.length = 2
-      mockNodes.push(
+      mockNodes = [
         { id: '1', title: 'Node 1', slug: 'node-1', tags: [] },
-        { id: '2', title: 'Node 2', slug: 'node-2', tags: [] }
-      )
+        { id: '2', title: 'Node 2', slug: 'node-2', tags: [] },
+      ]
       render(<GraphView />)
-      // GraphView renders the toolbar when nodes exist
-      expect(document.querySelector('.force-graph-container') || document.body).toBeTruthy()
+      expect(screen.getByText('2 节点')).toBeInTheDocument()
+    })
+
+    it('should render zoom controls when graph has nodes', () => {
+      mockLoading = false
+      mockNodes = [
+        { id: '1', title: 'Node 1', slug: 'node-1', tags: [] },
+        { id: '2', title: 'Node 2', slug: 'node-2', tags: [] },
+      ]
+      render(<GraphView />)
+
+      expect(screen.getByTestId('graph-zoom-controls')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '放大图谱' })).toBeInTheDocument()
+      expect(screen.getByText('滚轮缩放 · 拖拽平移')).toBeInTheDocument()
     })
   })
 
   describe('Ref exposure', () => {
     it('should expose handleNewNode via onNewNodeRef', async () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       const onNewNodeRef = { current: null as (() => void) | null }
       render(<GraphView onNewNodeRef={onNewNodeRef} />)
@@ -225,8 +251,7 @@ describe('GraphView', () => {
 
     it('should expose handleCreateLink via onCreateLinkRef', async () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       const onCreateLinkRef = { current: null as (() => void) | null }
       render(<GraphView onCreateLinkRef={onCreateLinkRef} />)
@@ -240,8 +265,7 @@ describe('GraphView', () => {
 
     it('should clear refs on unmount', async () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       const onNewNodeRef = { current: null as (() => void) | null }
       const onCreateLinkRef = { current: null as (() => void) | null }
@@ -271,8 +295,7 @@ describe('GraphView', () => {
   describe('Query filtering', () => {
     it('should accept query prop', () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       render(<GraphView query="test" />)
       // Component should render without error with query prop
@@ -281,8 +304,7 @@ describe('GraphView', () => {
 
     it('should work with empty query (default)', () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       render(<GraphView />)
       expect(document.body).toBeTruthy()
@@ -292,8 +314,7 @@ describe('GraphView', () => {
   describe('Node interaction', () => {
     it('should handle select target callback', async () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       const onNewNodeRef = { current: null as (() => void) | null }
       render(<GraphView onNewNodeRef={onNewNodeRef} />)
@@ -310,8 +331,7 @@ describe('GraphView', () => {
   describe('Admin behavior', () => {
     it('should render with admin=false (default)', () => {
       mockLoading = false
-      mockNodes.length = 1
-      mockNodes.push({ id: '1', title: 'Node 1', slug: 'node-1', tags: [] })
+      mockNodes = [{ id: '1', title: 'Node 1', slug: 'node-1', tags: [] }]
 
       render(<GraphView />)
       expect(document.body).toBeTruthy()
@@ -321,16 +341,18 @@ describe('GraphView', () => {
   describe('Node data with links', () => {
     it('should render with nodes and links', () => {
       mockLoading = false
-      mockNodes.push(
+      mockNodes = [
         { id: '1', title: 'Node 1', slug: 'node-1', tags: ['a'] },
-        { id: '2', title: 'Node 2', slug: 'node-2', tags: ['b'] }
-      )
-      mockLinks.push({
-        id: 1,
-        source: '1',
-        target: '2',
-        type: 'reference',
-      })
+        { id: '2', title: 'Node 2', slug: 'node-2', tags: ['b'] },
+      ]
+      mockLinks = [
+        {
+          id: 1,
+          source: '1',
+          target: '2',
+          type: 'reference',
+        },
+      ]
 
       render(<GraphView />)
       expect(document.body).toBeTruthy()

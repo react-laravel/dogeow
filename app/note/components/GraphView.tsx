@@ -15,6 +15,7 @@ import {
   createNodeCanvasRenderer,
   createLinkColorGetter,
   createLinkWidthGetter,
+  GRAPH_DEFAULT_READABLE_SCALE,
 } from '../utils/nodeRenderer'
 import { useGraphData } from '../hooks/useGraphData'
 import { useArticleLoader } from '../hooks/useArticleLoader'
@@ -24,6 +25,7 @@ import { useGraphPalette } from '../hooks/useGraphPalette'
 import { useGraphZoom } from '../hooks/useGraphZoom'
 import { useZoomFilter } from '../hooks/useZoomFilter'
 import NoteGraphToolbar from './NoteGraphToolbar'
+import { GraphZoomControls } from './GraphZoomControls'
 import { NoteArticleDialog } from './NoteArticleDialog'
 import { NoteGraphEmptyState } from './NoteGraphEmptyState'
 import { NoteGraphLoadingState } from './NoteGraphLoadingState'
@@ -85,10 +87,54 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
     activeNode
   )
   const graphPalette = useGraphPalette(isDark, themeColors)
-  const { restoreView, handleZoom } = useGraphZoom()
+  const { restoreView, handleZoom, getZoom, lastZoomRef } = useGraphZoom()
 
   // 使用缩放过滤器
   useZoomFilter(fgRef)
+
+  const fitGraphToView = useCallback(
+    (options?: { bumpReadable?: boolean; durationMs?: number }) => {
+      const graph = fgRef.current
+      if (!graph || typeof graph.zoomToFit !== 'function') return
+
+      const durationMs = options?.durationMs ?? 400
+      // Smaller padding = closer fit so more labels land above the LOD threshold.
+      graph.zoomToFit(durationMs, 28)
+
+      if (options?.bumpReadable === false) return
+
+      window.setTimeout(() => {
+        const current = getZoom()
+        if (
+          current > 0 &&
+          current < GRAPH_DEFAULT_READABLE_SCALE &&
+          typeof graph.zoom === 'function'
+        ) {
+          graph.zoom(GRAPH_DEFAULT_READABLE_SCALE, 280)
+        }
+      }, durationMs + 40)
+    },
+    [fgRef, getZoom]
+  )
+
+  const handleZoomIn = useCallback(() => {
+    const graph = fgRef.current
+    if (!graph || typeof graph.zoom !== 'function') return
+    const next = Math.min((lastZoomRef.current || 1) * 1.35, 8)
+    graph.zoom(next, 200)
+  }, [fgRef, lastZoomRef])
+
+  const handleZoomOut = useCallback(() => {
+    const graph = fgRef.current
+    if (!graph || typeof graph.zoom !== 'function') return
+    const next = Math.max((lastZoomRef.current || 1) / 1.35, 0.15)
+    graph.zoom(next, 200)
+  }, [fgRef, lastZoomRef])
+
+  const handleFitClick = useCallback(() => {
+    hasFittedRef.current = true
+    fitGraphToView({ bumpReadable: true, durationMs: 350 })
+  }, [fitGraphToView])
 
   // 初始化加载数据
   useEffect(() => {
@@ -398,8 +444,8 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           onEngineStop={() => {
             if (!fgRef.current) return
             try {
-              if (!hasFittedRef.current && typeof fgRef.current.zoomToFit === 'function') {
-                fgRef.current.zoomToFit(400, 48)
+              if (!hasFittedRef.current) {
+                fitGraphToView({ bumpReadable: true, durationMs: 400 })
                 hasFittedRef.current = true
               }
               if (typeof fgRef.current.pauseAnimation === 'function') {
@@ -410,6 +456,15 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
             }
           }}
         />
+
+        {!loading && nodes.length > 0 && (
+          <GraphZoomControls
+            themeColors={themeColors}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onFit={handleFitClick}
+          />
+        )}
       </div>
 
       <NoteArticleDialog

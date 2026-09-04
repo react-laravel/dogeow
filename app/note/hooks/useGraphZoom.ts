@@ -57,5 +57,6 @@ export function useGraphZoom() {
     allowInternalZoomRef,
     restoreView,
     handleZoom,
+    getZoom: () => lastZoomRef.current,
   }
 }

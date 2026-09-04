@@ -198,7 +198,7 @@ describe('nodeRenderer', () => {
       }).not.toThrow()
     })
 
-    it('should not draw label when scale is too small', () => {
+    it('should not draw label when extremely zoomed out', () => {
       const renderer = createNodeCanvasRenderer(null, null, new Set(), createPalette())
 
       const ctx = {
@@ -211,10 +211,29 @@ describe('nodeRenderer', () => {
         textBaseline: '',
       } as unknown as CanvasRenderingContext2D
 
-      renderer(createNode({ x: 100, y: 200 }), ctx, 1)
+      renderer(createNode({ x: 100, y: 200 }), ctx, 0.2)
 
       expect(ctx.beginPath).toHaveBeenCalled()
       expect(ctx.fillText).not.toHaveBeenCalled()
+    })
+
+    it('should draw default labels near fit/default zoom', () => {
+      const renderer = createNodeCanvasRenderer(null, null, new Set(), createPalette())
+
+      const ctx = {
+        beginPath: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        fillText: vi.fn(),
+        font: '',
+        textAlign: '',
+        textBaseline: '',
+      } as unknown as CanvasRenderingContext2D
+
+      renderer(createNode({ title: '可读标签', x: 100, y: 200 }), ctx, 0.6)
+
+      expect(ctx.fillText).toHaveBeenCalled()
+      expect((ctx.fillText as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toBe('可读标签')
     })
 
     it('should truncate long labels when zoomed in', () => {
@@ -233,16 +252,16 @@ describe('nodeRenderer', () => {
       renderer(
         createNode({ title: 'This is a very long note title for graph', x: 100, y: 200 }),
         ctx,
-        2
+        1.5
       )
 
       expect(ctx.fillText).toHaveBeenCalled()
       const drawn = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string
-      expect(drawn.length).toBeLessThanOrEqual(8)
+      expect(drawn.length).toBeLessThanOrEqual(14)
       expect(drawn.endsWith('…')).toBe(true)
     })
 
-    it('hides neighbor labels until deeply zoomed in', () => {
+    it('shows neighbor labels once past the neighbor LOD threshold', () => {
       const neighborIds = new Set(['2'])
       const renderer = createNodeCanvasRenderer(
         createNode({ id: '1' }),
@@ -261,11 +280,33 @@ describe('nodeRenderer', () => {
         textBaseline: '',
       } as unknown as CanvasRenderingContext2D
 
-      renderer(createNode({ id: '2', x: 100, y: 200 }), ctx, 1.5)
+      renderer(createNode({ id: '2', x: 100, y: 200 }), ctx, 0.5)
       expect(ctx.fillText).not.toHaveBeenCalled()
 
-      renderer(createNode({ id: '2', x: 100, y: 200 }), ctx, 2.5)
+      renderer(createNode({ id: '2', x: 100, y: 200 }), ctx, 0.8)
       expect(ctx.fillText).toHaveBeenCalled()
+    })
+
+    it('still draws labels for active nodes when zoomed out', () => {
+      const renderer = createNodeCanvasRenderer(
+        createNode({ id: '1' }),
+        null,
+        new Set(),
+        createPalette()
+      )
+
+      const ctx = {
+        beginPath: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        fillText: vi.fn(),
+        font: '',
+        textAlign: '',
+        textBaseline: '',
+      } as unknown as CanvasRenderingContext2D
+
+      renderer(createNode({ id: '1', title: '焦点', x: 100, y: 200 }), ctx, 0.15)
+      expect(ctx.fillText).toHaveBeenCalledWith('焦点', 106, 200)
     })
   })
 
