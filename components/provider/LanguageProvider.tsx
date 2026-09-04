@@ -8,14 +8,14 @@ interface LanguageProviderProps {
 }
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
-  const { currentLanguage } = useTranslation()
+  const { currentLanguage, t } = useTranslation()
 
   useEffect(() => {
-    // Update the html lang attribute when language changes
-    if (typeof document !== 'undefined') {
-      document.documentElement.lang = currentLanguage
-    }
-  }, [currentLanguage])
+    if (typeof document === 'undefined') return
+
+    document.documentElement.lang = currentLanguage
+    document.title = t('home.title', 'DogeOW')
+  }, [currentLanguage, t])
 
   return <>{children}</>
 }

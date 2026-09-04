@@ -12,6 +12,59 @@ import {
 } from '../constants'
 import { cleanTimestamp, standardizeDateTime, validateYear } from '../utils/conversionUtils'
 
+function convertTimestampValue(rawTimestamp: string, dateFormat: string): string {
+  if (!rawTimestamp.trim()) {
+    return ''
+  }
+
+  const cleanTs = cleanTimestamp(rawTimestamp)
+  const timestampNum = Number(cleanTs)
+  if (isNaN(timestampNum)) {
+    return ERROR_MESSAGES.INVALID_TIMESTAMP
+  }
+
+  const date =
+    cleanTs.length >= MILLISECOND_THRESHOLD ? new Date(timestampNum) : new Date(timestampNum * 1000)
+
+  if (isNaN(date.getTime()) || date.getTime() < 0) {
+    return ERROR_MESSAGES.INVALID_TIMESTAMP
+  }
+
+  const year = date.getFullYear()
+  if (!validateYear(year)) {
+    return ERROR_MESSAGES.OUT_OF_RANGE(year)
+  }
+
+  return format(date, dateFormat, { locale: zhCN })
+}
+
+function convertDateTimeValue(rawDateTime: string): string {
+  if (!rawDateTime.trim()) {
+    return ''
+  }
+
+  if (!FLEXIBLE_DATE_REGEX.test(rawDateTime)) {
+    return ERROR_MESSAGES.INVALID_DATE_FORMAT
+  }
+
+  const standardDateTimeStr = standardizeDateTime(rawDateTime)
+  const dateTimeWithTime = standardDateTimeStr.includes(' ')
+    ? standardDateTimeStr
+    : `${standardDateTimeStr} 00:00:00`
+  const date = parse(dateTimeWithTime, STANDARD_DATE_FORMAT, new Date())
+
+  if (isNaN(date.getTime())) {
+    return ERROR_MESSAGES.INVALID_DATE
+  }
+
+  const year = date.getFullYear()
+  if (year < MIN_YEAR) {
+    return ERROR_MESSAGES.OUT_OF_RANGE(year)
+  }
+
+  return Math.floor(date.getTime() / 1000).toString()
+}
+
 export const useTimeConversion = () => {
   const [timestamp, setTimestamp] = useState('')
   const [dateTime, setDateTime] = useState('')
@@ -19,67 +72,28 @@ export const useTimeConversion = () => {
   const [inputDateTime, setInputDateTime] = useState('')
   const [outputTimestamp, setOutputTimestamp] = useState('')
 
-  // 时间戳转日期时间
+  // 时间戳转日期时间（基于当前 state，供手动触发）
   const convertTimestampToDateTime = useCallback(() => {
     try {
       if (!timestamp.trim()) {
         setDateTime(ERROR_MESSAGES.EMPTY_TIMESTAMP)
         return
       }
-      const cleanTs = cleanTimestamp(timestamp)
-      const timestampNum = Number(cleanTs)
-      if (isNaN(timestampNum)) {
-        setDateTime(ERROR_MESSAGES.INVALID_TIMESTAMP)
-        return
-      }
-      const date =
-        cleanTs.length >= MILLISECOND_THRESHOLD
-          ? new Date(timestampNum)
-          : new Date(timestampNum * 1000)
-      if (isNaN(date.getTime()) || date.getTime() < 0) {
-        setDateTime(ERROR_MESSAGES.INVALID_TIMESTAMP)
-        return
-      }
-      const year = date.getFullYear()
-      if (!validateYear(year)) {
-        setDateTime(ERROR_MESSAGES.OUT_OF_RANGE(year))
-        return
-      }
-      const result = format(date, dateFormat, { locale: zhCN })
-      setDateTime(result)
+      setDateTime(convertTimestampValue(timestamp, dateFormat))
     } catch (error) {
       console.error('时间戳转换错误:', error)
       setDateTime(ERROR_MESSAGES.CONVERSION_ERROR)
     }
   }, [timestamp, dateFormat])
 
-  // 日期时间转时间戳
+  // 日期时间转时间戳（基于当前 state，供手动触发）
   const convertDateTimeToTimestamp = useCallback(() => {
     try {
       if (!inputDateTime.trim()) {
         setOutputTimestamp(ERROR_MESSAGES.EMPTY_DATETIME)
         return
       }
-      if (!FLEXIBLE_DATE_REGEX.test(inputDateTime)) {
-        setOutputTimestamp(ERROR_MESSAGES.INVALID_DATE_FORMAT)
-        return
-      }
-      const standardDateTimeStr = standardizeDateTime(inputDateTime)
-      const dateTimeWithTime = standardDateTimeStr.includes(' ')
-        ? standardDateTimeStr
-        : `${standardDateTimeStr} 00:00:00`
-      const date = parse(dateTimeWithTime, STANDARD_DATE_FORMAT, new Date())
-      if (isNaN(date.getTime())) {
-        setOutputTimestamp(ERROR_MESSAGES.INVALID_DATE)
-        return
-      }
-      const year = date.getFullYear()
-      if (year < MIN_YEAR) {
-        setOutputTimestamp(ERROR_MESSAGES.OUT_OF_RANGE(year))
-        return
-      }
-      const result = Math.floor(date.getTime() / 1000).toString()
-      setOutputTimestamp(result)
+      setOutputTimestamp(convertDateTimeValue(inputDateTime))
     } catch (error) {
       console.error('日期转换错误:', error)
       setOutputTimestamp(ERROR_MESSAGES.CONVERSION_ERROR)
@@ -120,45 +134,53 @@ export const useTimeConversion = () => {
     }
   }, [])
 
-  // 自动转换的时间戳
+  // 输入变化时用新值直接转换，避免读取到旧的 state
   const handleTimestampChange = useCallback(
     (value: string) => {
       setTimestamp(value)
-      // 空时清空结果
       if (!value.trim()) {
         setDateTime('')
         return
       }
-      convertTimestampToDateTime()
-    },
-
-    [convertTimestampToDateTime]
-  )
-
-  // 自动转换的日期
-  const handleInputDateTimeChange = useCallback(
-    (value: string) => {
-      setInputDateTime(value)
-      if (!value.trim()) {
-        setOutputTimestamp('')
-        return
-      }
-      convertDateTimeToTimestamp()
-    },
-
-    [convertDateTimeToTimestamp]
-  )
-
-  // 日期格式变化时重新格式化已有结果
-  const handleDateFormatChange = useCallback(
-    (value: string) => {
-      setDateFormat(value)
-      if (timestamp.trim()) {
-        convertTimestampToDateTime()
+      try {
+        setDateTime(convertTimestampValue(value, dateFormat))
+      } catch (error) {
+        console.error('时间戳转换错误:', error)
+        setDateTime(ERROR_MESSAGES.CONVERSION_ERROR)
       }
     },
-    [timestamp, convertTimestampToDateTime]
+    [dateFormat]
   )
+
+  const handleInputDateTimeChange = useCallback((value: string) => {
+    setInputDateTime(value)
+    if (!value.trim()) {
+      setOutputTimestamp('')
+      return
+    }
+    try {
+      setOutputTimestamp(convertDateTimeValue(value))
+    } catch (error) {
+      console.error('日期转换错误:', error)
+      setOutputTimestamp(ERROR_MESSAGES.CONVERSION_ERROR)
+    }
+  }, [])
+
+  // 日期格式变化时用当前 timestamp 立即重新格式化
+  const handleDateFormatChange = useCallback((value: string) => {
+    setDateFormat(value)
+    setTimestamp(currentTimestamp => {
+      if (currentTimestamp.trim()) {
+        try {
+          setDateTime(convertTimestampValue(currentTimestamp, value))
+        } catch (error) {
+          console.error('时间戳转换错误:', error)
+          setDateTime(ERROR_MESSAGES.CONVERSION_ERROR)
+        }
+      }
+      return currentTimestamp
+    })
+  }, [])
 
   return {
     timestamp,

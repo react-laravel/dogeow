@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { FileIcon, FILE_TYPE_ICONS } from '../fileIcons'
+import type { CloudFile } from '@/app/file/types'
 
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -19,12 +20,21 @@ vi.mock('@/app/file/services/api', () => ({
   },
 }))
 
-const createFile = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+const createFile = (overrides: Partial<CloudFile> = {}): CloudFile => ({
   id: 1,
   name: 'test.txt',
-  type: 'default',
-  is_folder: false,
+  original_name: null,
   path: '/test/test.txt',
+  mime_type: null,
+  extension: null,
+  size: 0,
+  parent_id: null,
+  user_id: 1,
+  is_folder: false,
+  description: null,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+  type: 'other',
   ...overrides,
 })
 

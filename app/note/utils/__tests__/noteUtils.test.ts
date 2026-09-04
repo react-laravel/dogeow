@@ -109,6 +109,20 @@ describe('noteUtils', () => {
       expect(getNotePreviewText(note)).toBe('Hello World')
     })
 
+    it('should extract plain text when content_markdown is TipTap JSON', () => {
+      const tipTapJson = JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '123' }],
+          },
+        ],
+      })
+      const note = createNote({ content_markdown: tipTapJson, content: '' })
+      expect(getNotePreviewText(note)).toBe('123')
+    })
+
     it('should parse JSON content', () => {
       const note = createNote({
         content: JSON.stringify({

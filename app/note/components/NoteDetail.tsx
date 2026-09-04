@@ -8,7 +8,7 @@ import { PageContainer } from '@/components/layout'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EmptyState } from '@/components/ui/empty-state'
 import { normalizeNote } from '../utils/api'
-import { renderNoteContent } from '../utils/noteContentRenderer'
+import { renderNoteDetailContent } from '../utils/noteContentRenderer'
 import { formatNoteDate } from '../utils/noteDateFormat'
 import { useNoteDelete } from '../hooks/useNoteDelete'
 import { NoteDetailHeader } from './NoteDetailHeader'
@@ -69,15 +69,7 @@ export default function NoteDetail() {
       <div className="text-muted-foreground mb-4 text-center text-xs">
         更新于 {formatNoteDate(note.updated_at)}
       </div>
-      <div className="max-w-none">
-        {note.content ? (
-          renderNoteContent(note.content)
-        ) : (
-          <div className="prose max-w-none py-8">
-            <span className="italic">(无内容)</span>
-          </div>
-        )}
-      </div>
+      <div className="max-w-none">{renderNoteDetailContent(note)}</div>
     </PageContainer>
   )
 }

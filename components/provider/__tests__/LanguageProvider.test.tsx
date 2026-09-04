@@ -22,18 +22,21 @@ describe('LanguageProvider', () => {
           documentElement: {
             lang: 'zh-CN',
           },
+          title: '',
         },
         writable: true,
       })
     } else {
       // Reset DOM
       document.documentElement.lang = 'zh-CN'
+      document.title = ''
     }
 
     // Reset mock
     mockUseTranslation.mockReturnValue({
       currentLanguage: 'en',
-      t: vi.fn(),
+      t: (key: string, fallback?: string) =>
+        key === 'home.title' ? 'DogeOW - Personal Tools & Games' : (fallback ?? key),
       setLanguage: vi.fn(),
       currentLanguageInfo: { code: 'en', name: 'English', nativeName: 'English' },
       availableLanguages: [],
@@ -58,7 +61,7 @@ describe('LanguageProvider', () => {
     // Change language to Chinese
     mockUseTranslation.mockReturnValue({
       currentLanguage: 'zh-CN',
-      t: vi.fn(),
+      t: (key: string, fallback?: string) => (key === 'home.title' ? 'DogeOW' : (fallback ?? key)),
       setLanguage: vi.fn(),
       currentLanguageInfo: { code: 'zh-CN', name: 'Chinese', nativeName: '中文' },
       availableLanguages: [],
@@ -72,6 +75,33 @@ describe('LanguageProvider', () => {
     )
 
     expect(document.documentElement.lang).toBe('zh-CN')
+  })
+
+  it('should update document.title when language changes', () => {
+    const { rerender } = render(
+      <LanguageProvider>
+        <div>Test content</div>
+      </LanguageProvider>
+    )
+
+    expect(document.title).toBe('DogeOW - Personal Tools & Games')
+
+    mockUseTranslation.mockReturnValue({
+      currentLanguage: 'zh-CN',
+      t: (key: string, fallback?: string) => (key === 'home.title' ? 'DogeOW' : (fallback ?? key)),
+      setLanguage: vi.fn(),
+      currentLanguageInfo: { code: 'zh-CN', name: 'Chinese', nativeName: '中文' },
+      availableLanguages: [],
+      isLanguageLoaded: true,
+    })
+
+    rerender(
+      <LanguageProvider>
+        <div>Test content</div>
+      </LanguageProvider>
+    )
+
+    expect(document.title).toBe('DogeOW')
   })
 
   it('should render children correctly', () => {
@@ -102,7 +132,7 @@ describe('LanguageProvider', () => {
     languages.forEach(lang => {
       mockUseTranslation.mockReturnValue({
         currentLanguage: lang,
-        t: vi.fn(),
+        t: (key: string, fallback?: string) => fallback ?? key,
         setLanguage: vi.fn(),
         currentLanguageInfo: { code: lang, name: lang, nativeName: lang },
         availableLanguages: [],

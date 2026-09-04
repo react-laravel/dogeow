@@ -265,13 +265,47 @@ describe('NoteDetail', () => {
       })
     })
 
-    it('should handle JSON parsing errors gracefully', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    it('should render TipTap JSON from content_markdown when content is empty', async () => {
+      const tipTapJson = JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '来自 markdown 字段' }],
+          },
+        ],
+      })
 
       mockUseSWR.mockReturnValueOnce({
         data: {
           id: 123,
-          title: '损坏的笔记',
+          title: 'JSON 在 markdown',
+          content: '',
+          content_markdown: tipTapJson,
+          updated_at: '2024-01-01T00:00:00Z',
+          is_draft: false,
+        } as {
+          id: number
+          title: string
+          content: string
+          content_markdown?: string
+          updated_at: string
+          is_draft: boolean
+        },
+        error: null,
+      })
+
+      render(<NoteDetail />)
+      await waitFor(() => {
+        expect(screen.getByTestId('readonly-editor')).toBeInTheDocument()
+      })
+    })
+
+    it('should render plain text when content is not TipTap JSON', async () => {
+      mockUseSWR.mockReturnValueOnce({
+        data: {
+          id: 123,
+          title: '纯文本笔记',
           content: 'invalid json content',
           updated_at: '2024-01-01T00:00:00Z',
           is_draft: false,
@@ -279,19 +313,10 @@ describe('NoteDetail', () => {
         error: null,
       })
 
-      try {
-        render(<NoteDetail />)
-        await waitFor(() => {
-          expect(screen.getByText('invalid json content')).toBeInTheDocument()
-        })
-
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Failed to parse note content:',
-          expect.any(SyntaxError)
-        )
-      } finally {
-        consoleErrorSpy.mockRestore()
-      }
+      render(<NoteDetail />)
+      await waitFor(() => {
+        expect(screen.getByText('invalid json content')).toBeInTheDocument()
+      })
     })
   })
 
