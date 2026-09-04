@@ -88,13 +88,22 @@ export const createNodeCanvasRenderer = (
       ctx.fill()
     }
 
-    // Prefer hiding/shrinking labels over stacking — only show when zoomed in or focused.
+    // Prefer hiding/shrinking labels over stacking.
+    // Zoomed out: only the focused node (active/hover). Neighbor labels wait until zoomed in.
     const minScaleForLabel = 1.8
-    const shouldShowLabel = globalScale >= minScaleForLabel || isActive || isHover || isNeighbor
+    const minScaleForNeighborLabel = 2.2
+    const shouldShowLabel =
+      isActive ||
+      isHover ||
+      (Boolean(isNeighbor) && globalScale >= minScaleForNeighborLabel) ||
+      (!isNeighbor && globalScale >= minScaleForLabel)
     if (shouldShowLabel) {
-      const maxChars = isActive || isHover ? 20 : 10
+      const maxChars = isActive || isHover ? 18 : 8
       const displayLabel = label.length > maxChars ? `${label.slice(0, maxChars - 1)}…` : label
-      const scaledFont = Math.min(12 / Math.sqrt(globalScale), isActive || isHover ? 11 : 9)
+      const scaledFont = Math.min(
+        11 / Math.sqrt(Math.max(globalScale, 1)),
+        isActive || isHover ? 11 : 8
+      )
       ctx.font = `${scaledFont}px system-ui, -apple-system, Segoe UI, Roboto`
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'

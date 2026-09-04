@@ -49,11 +49,11 @@ export function HomePanel() {
                 link.gradientClassName
               )}
             >
-              {/* Darken pastel API gradients so the icon plate stays ≥ ~4.5:1 */}
-              <div className="absolute inset-0 bg-slate-950/35" />
-              <div className="absolute inset-[1px] rounded-[23px] bg-gradient-to-br from-white/10 via-transparent to-black/25" />
-              <div className="relative z-[1] flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.4)] ring-1 ring-white/40">
-                <Icon className="h-6 w-6 text-white" strokeWidth={2.35} aria-hidden />
+              {/* Darken pastel API gradients so white icons stay ≥ 4.5:1 */}
+              <div className="absolute inset-0 bg-slate-950/45" />
+              <div className="absolute inset-[1px] rounded-[23px] bg-gradient-to-br from-white/8 via-transparent to-black/30" />
+              <div className="relative z-[1] flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.45)] ring-1 ring-white/45">
+                <Icon className="h-6 w-6 text-white" strokeWidth={2.4} aria-hidden />
               </div>
               <span className="absolute right-2 bottom-2 z-[1] flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-0 ring-1 ring-white/30 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
                 <ExternalLink className="h-3.5 w-3.5" />

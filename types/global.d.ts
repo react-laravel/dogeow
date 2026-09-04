@@ -127,3 +127,10 @@ declare global {
     roundRect?(x: number, y: number, w: number, h: number, radii?: number | number[]): void
   }
 }
+
+declare module 'd3-force-3d' {
+  export function forceCollide(radius?: number | ((node: unknown) => number)): {
+    radius: (radius?: number | ((node: unknown) => number)) => unknown
+    strength: (strength?: number) => unknown
+  }
+}

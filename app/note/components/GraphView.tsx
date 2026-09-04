@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import { forceCollide } from 'd3-force-3d'
 import { deleteNode, type WikiNode } from '@/lib/api/wiki'
 import { isAdminSync } from '@/lib/auth'
 import { logger } from '@/lib/logger'
@@ -106,19 +107,18 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
     }
 
     try {
+      // Minimum spacing: push nodes apart, lengthen links, and add collision radius.
       const charge = graph.d3Force('charge') as { strength?: (value: number) => unknown } | null
-      charge?.strength?.(-280)
+      charge?.strength?.(-320)
 
       const link = graph.d3Force('link') as {
         distance?: (value: number) => unknown
         strength?: (value: number) => unknown
       } | null
-      link?.distance?.(110)
-      link?.strength?.(0.45)
+      link?.distance?.(120)
+      link?.strength?.(0.4)
 
-      // Optional collide force if the library exposes it via d3Force API.
-      const collide = graph.d3Force('collide') as { radius?: (value: number) => unknown } | null
-      collide?.radius?.(22)
+      graph.d3Force('collide', forceCollide(20))
 
       hasFittedRef.current = false
       resumeGraphAnimation()

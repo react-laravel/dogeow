@@ -238,8 +238,34 @@ describe('nodeRenderer', () => {
 
       expect(ctx.fillText).toHaveBeenCalled()
       const drawn = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string
-      expect(drawn.length).toBeLessThanOrEqual(10)
+      expect(drawn.length).toBeLessThanOrEqual(8)
       expect(drawn.endsWith('…')).toBe(true)
+    })
+
+    it('hides neighbor labels until deeply zoomed in', () => {
+      const neighborIds = new Set(['2'])
+      const renderer = createNodeCanvasRenderer(
+        createNode({ id: '1' }),
+        null,
+        neighborIds,
+        createPalette()
+      )
+
+      const ctx = {
+        beginPath: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        fillText: vi.fn(),
+        font: '',
+        textAlign: '',
+        textBaseline: '',
+      } as unknown as CanvasRenderingContext2D
+
+      renderer(createNode({ id: '2', x: 100, y: 200 }), ctx, 1.5)
+      expect(ctx.fillText).not.toHaveBeenCalled()
+
+      renderer(createNode({ id: '2', x: 100, y: 200 }), ctx, 2.5)
+      expect(ctx.fillText).toHaveBeenCalled()
     })
   })
 
