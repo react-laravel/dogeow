@@ -15,11 +15,20 @@ import {
   useScrollSaver,
 } from '@/app/book/utils/scroll'
 import { TextSelectionToolbar } from '@/app/book/components/TextSelectionToolbar'
+import { BookAiChatPanel } from '@/app/book/components/BookAiChatPanel'
 import { useBookTextSelectionActions } from '@/app/book/hooks/useBookTextSelectionActions'
+import { useAiDialogStore } from '@/stores/aiDialogStore'
+import useAuthStore from '@/stores/authStore'
+import { canUseAi } from '@/lib/ai/access'
 import { useBookNarration, type BookNarrationMode } from '@/app/book/hooks/useBookNarration'
 import type { BookReaderConfig } from '@/app/book/types'
 import type { BaseReaderSettings } from '@/app/book/types/reader'
-import { getBookFontFamily, getBookThemeStyle, useSystemColorScheme } from '@/app/book/utils/theme'
+import {
+  getBookFontFamily,
+  getBookThemeStyle,
+  resolveBookTheme,
+  useSystemColorScheme,
+} from '@/app/book/utils/theme'
 
 interface BookReaderProps<
   ChapterId extends string | number,
@@ -45,6 +54,12 @@ export function BookReader<
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [jumpRequest, setJumpRequest] = useState(0)
   const [narrationMode, setNarrationMode] = useState<BookNarrationMode>('original')
+  const [aiPanelOpen, setAiPanelOpen] = useState(false)
+  const [aiSeedPrompt, setAiSeedPrompt] = useState<string | null>(null)
+
+  const aiUser = useAuthStore(state => state.user)
+  const canAskAi = canUseAi(aiUser)
+  const requestOpenAiDialog = useAiDialogStore(state => state.requestOpen)
 
   const contentRef = useRef<HTMLDivElement>(null)
   const pendingJumpRef = useRef<BookJumpTarget | null>(null)
@@ -73,8 +88,9 @@ export function BookReader<
   } = config
 
   // Re-render when OS color scheme changes while theme is `auto`
-  useSystemColorScheme()
+  const systemScheme = useSystemColorScheme()
   const themeStyle = getBookThemeStyle(settings.theme)
+  const resolvedTheme = resolveBookTheme(settings.theme, systemScheme)
   const narration = useBookNarration({
     chapter: narrationChapter ?? null,
     narrationMode,
@@ -154,6 +170,15 @@ export function BookReader<
     }
   }, [chapters, currentChapterId])
 
+  const handleOpenAiPanel = useCallback(
+    (prompt: string) => {
+      if (!canAskAi) return
+      setAiSeedPrompt(prompt)
+      setAiPanelOpen(true)
+    },
+    [canAskAi]
+  )
+
   const { handleSelectionBookmark, handleAddCollection, handleAskAi, handlePlaySelection } =
     useBookTextSelectionActions({
       bookTitle,
@@ -165,6 +190,7 @@ export function BookReader<
           toast.error('当前浏览器不支持听书，或章节还没有加载完成')
         }
       },
+      onAskAi: handleOpenAiPanel,
     })
 
   const handleStartNarration = useCallback(() => {
@@ -220,9 +246,9 @@ export function BookReader<
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col overflow-hidden"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden"
       style={themeStyle}
-      data-reader-theme={settings.theme}
+      data-reader-theme={resolvedTheme}
     >
       {error ? (
         <div className="text-destructive border-destructive/20 bg-destructive/5 shrink-0 border-b px-4 py-2 text-sm">
@@ -326,6 +352,18 @@ export function BookReader<
           />
         ) : null}
       </div>
+
+      {canAskAi ? (
+        <BookAiChatPanel
+          open={aiPanelOpen}
+          seedPrompt={aiSeedPrompt}
+          onClose={() => setAiPanelOpen(false)}
+          onExpand={pendingPrompt => {
+            setAiPanelOpen(false)
+            requestOpenAiDialog(pendingPrompt)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
