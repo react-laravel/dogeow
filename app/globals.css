@@ -192,6 +192,25 @@
     color: var(--foreground);
     background: color-mix(in oklab, var(--primary) 28%, transparent);
   }
+  /* Book reader selections must stay legible against the reader's own theme
+     rather than inheriting the app-wide (often dark) foreground/accent, which
+     produced near-invisible light text on a pale highlight. */
+  [data-reader-theme='light'] ::selection {
+    color: #1a1a1a;
+    background: rgba(59, 130, 246, 0.3);
+  }
+  [data-reader-theme='sepia'] ::selection {
+    color: #4a3a29;
+    background: rgba(180, 120, 40, 0.32);
+  }
+  [data-reader-theme='green'] ::selection {
+    color: #23301f;
+    background: rgba(45, 120, 70, 0.3);
+  }
+  [data-reader-theme='dark'] ::selection {
+    color: #f5f5f5;
+    background: rgba(59, 130, 246, 0.5);
+  }
 }
 
 @layer components {
