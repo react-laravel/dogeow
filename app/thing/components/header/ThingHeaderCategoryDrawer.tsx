@@ -79,7 +79,7 @@ function ThingHeaderCategoryDrawer({
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="flex h-[calc(100dvh-var(--app-header-total-height,56px))] max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]"
+        className="flex max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]"
         onOpenAutoFocus={event => event.preventDefault()}
       >
         <SheetHeader className="border-border shrink-0 border-b px-4 py-3">
