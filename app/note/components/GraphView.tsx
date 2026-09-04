@@ -16,6 +16,7 @@ import {
   createLinkColorGetter,
   createLinkWidthGetter,
   GRAPH_DEFAULT_READABLE_SCALE,
+  isGraphLabelHiddenAtScale,
 } from '../utils/nodeRenderer'
 import { useGraphData } from '../hooks/useGraphData'
 import { useArticleLoader } from '../hooks/useArticleLoader'
@@ -65,6 +66,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
     ((nodeId: number) => void) | null
   >(null)
   const [isSelectingFromGraph, setIsSelectingFromGraph] = useState<boolean>(false)
+  const [currentZoom, setCurrentZoom] = useState(1)
 
   // 使用自定义 hooks
   const { nodes, setNodes, links, setLinks, loading, fgRef, loadGraphData, resumeGraphAnimation } =
@@ -111,6 +113,9 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           typeof graph.zoom === 'function'
         ) {
           graph.zoom(GRAPH_DEFAULT_READABLE_SCALE, 280)
+          setCurrentZoom(GRAPH_DEFAULT_READABLE_SCALE)
+        } else if (current > 0) {
+          setCurrentZoom(current)
         }
       }, durationMs + 40)
     },
@@ -440,7 +445,10 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           d3VelocityDecay={0.35}
           d3AlphaMin={0.001}
           nodeRelSize={8}
-          onZoom={transform => handleZoom(fgRef, transform)}
+          onZoom={transform => {
+            handleZoom(fgRef, transform)
+            setCurrentZoom(transform.k)
+          }}
           onEngineStop={() => {
             if (!fgRef.current) return
             try {
@@ -463,6 +471,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onFit={handleFitClick}
+            labelsHidden={isGraphLabelHiddenAtScale(currentZoom)}
           />
         )}
       </div>

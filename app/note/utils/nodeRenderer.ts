@@ -3,14 +3,19 @@ import type { NodeData, GraphPalette } from '../types/graph'
 // 图标缓存
 const iconCache = new Map<string, HTMLImageElement>()
 
-/** Below this scale, non-focused labels stay hidden (extreme overview). */
+/** Below this scale, non-focused labels stay hidden (extreme overview → dot placeholders). */
 export const GRAPH_LABEL_HIDE_SCALE = 0.28
 /** Default / fit zoom should keep labels visible at or above this scale. */
-export const GRAPH_LABEL_MIN_SCALE = 0.55
+export const GRAPH_LABEL_MIN_SCALE = 0.5
 /** Neighbor labels when a node is selected. */
-export const GRAPH_NEIGHBOR_LABEL_MIN_SCALE = 0.75
-/** After zoomToFit, bump toward this so first paint isn't an empty-label overview. */
-export const GRAPH_DEFAULT_READABLE_SCALE = 0.95
+export const GRAPH_NEIGHBOR_LABEL_MIN_SCALE = 0.7
+/** After zoomToFit, bump toward this so main names stay clear on first paint. */
+export const GRAPH_DEFAULT_READABLE_SCALE = 1.25
+
+/** True when default (non-focused) labels are in dot-placeholder mode. */
+export function isGraphLabelHiddenAtScale(globalScale: number): boolean {
+  return globalScale < GRAPH_LABEL_MIN_SCALE
+}
 
 // 加载图标
 const loadIcon = (iconPath: string): Promise<HTMLImageElement> => {
@@ -82,7 +87,16 @@ export const createNodeCanvasRenderer = (
     // 检查是否是根节点（标题为"我"或其他根节点标识）
     const isRootNode = node.title === '我' || node.title === 'root' || node.title === 'Root'
 
-    const radius = isRootNode ? 12 : 4 // 根节点更大一些
+    // Prefer shrinking/truncating labels over stacking; far out → keep dots as placeholders.
+    const shouldShowLabel = resolveLabelVisibility({
+      isActive,
+      isHover,
+      isNeighbor,
+      globalScale,
+    })
+    // Dot placeholders stay visible when text is LOD-hidden so the overview never looks empty.
+    const baseRadius = isRootNode ? 12 : 4
+    const radius = !shouldShowLabel && !isRootNode ? Math.max(baseRadius, 5.5) : baseRadius
 
     // 如果是根节点且有图标，绘制图标
     if (isRootNode && iconCache.has('/favicon.ico')) {
@@ -111,7 +125,7 @@ export const createNodeCanvasRenderer = (
         ctx.stroke()
       }
     } else {
-      // 普通节点绘制
+      // 普通节点绘制（远距时作为点位占位）
       ctx.beginPath()
       ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI, false)
 
@@ -127,13 +141,6 @@ export const createNodeCanvasRenderer = (
       ctx.fill()
     }
 
-    // Prefer shrinking/truncating labels over stacking; only hide when extremely zoomed out.
-    const shouldShowLabel = resolveLabelVisibility({
-      isActive,
-      isHover,
-      isNeighbor,
-      globalScale,
-    })
     if (shouldShowLabel) {
       const isFocused = isActive || isHover
       const maxChars = resolveMaxChars(isFocused, globalScale)

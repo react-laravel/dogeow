@@ -3,6 +3,9 @@ import {
   createNodeCanvasRenderer,
   createLinkColorGetter,
   createLinkWidthGetter,
+  isGraphLabelHiddenAtScale,
+  GRAPH_LABEL_MIN_SCALE,
+  GRAPH_DEFAULT_READABLE_SCALE,
 } from '../nodeRenderer'
 import type { NodeData, LinkData, GraphPalette } from '../../types/graph'
 
@@ -215,6 +218,14 @@ describe('nodeRenderer', () => {
 
       expect(ctx.beginPath).toHaveBeenCalled()
       expect(ctx.fillText).not.toHaveBeenCalled()
+      // Dot placeholder radius stays visible (≥ 5.5) when labels are hidden.
+      expect(ctx.arc).toHaveBeenCalledWith(100, 200, 5.5, 0, 2 * Math.PI, false)
+    })
+
+    it('exposes helper for LOD-hidden label mode', () => {
+      expect(isGraphLabelHiddenAtScale(0.2)).toBe(true)
+      expect(isGraphLabelHiddenAtScale(GRAPH_LABEL_MIN_SCALE)).toBe(false)
+      expect(GRAPH_DEFAULT_READABLE_SCALE).toBeGreaterThan(GRAPH_LABEL_MIN_SCALE)
     })
 
     it('should draw default labels near fit/default zoom', () => {

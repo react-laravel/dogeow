@@ -9,6 +9,8 @@ interface GraphZoomControlsProps {
   onZoomIn: () => void
   onZoomOut: () => void
   onFit: () => void
+  /** When true, labels are in LOD hide mode — remind users dots are placeholders. */
+  labelsHidden?: boolean
 }
 
 export const GraphZoomControls = memo(function GraphZoomControls({
@@ -16,8 +18,9 @@ export const GraphZoomControls = memo(function GraphZoomControls({
   onZoomIn,
   onZoomOut,
   onFit,
+  labelsHidden = false,
 }: GraphZoomControlsProps) {
-  const buttonStyle = {
+  const surfaceStyle = {
     backgroundColor: themeColors.card,
     borderColor: themeColors.border,
     color: themeColors.foreground,
@@ -29,32 +32,24 @@ export const GraphZoomControls = memo(function GraphZoomControls({
       data-testid="graph-zoom-controls"
     >
       <p
-        className="rounded-md border px-2 py-1 text-[11px] shadow-sm"
+        className="max-w-[11rem] rounded-md border px-2 py-1 text-right text-[11px] leading-snug shadow-sm"
         style={{
           backgroundColor: themeColors.card,
           borderColor: themeColors.border,
           color: themeColors.mutedForeground,
         }}
+        data-testid="graph-zoom-hint"
       >
-        滚轮缩放 · 拖拽平移
+        {labelsHidden ? '点位占位 · 点击放大查看标签' : '滚轮缩放 · 拖拽平移'}
       </p>
+
       <div
-        className="flex flex-col overflow-hidden rounded-lg border shadow-sm"
-        style={buttonStyle}
+        className="flex items-stretch overflow-hidden rounded-lg border shadow-sm"
+        style={surfaceStyle}
       >
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center border-b transition-colors hover:opacity-80"
-          style={{ borderColor: themeColors.border }}
-          onClick={onZoomIn}
-          aria-label="放大图谱"
-          title="放大"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center border-b transition-colors hover:opacity-80"
+          className="flex h-9 w-9 items-center justify-center border-r transition-colors hover:opacity-80"
           style={{ borderColor: themeColors.border }}
           onClick={onZoomOut}
           aria-label="缩小图谱"
@@ -64,12 +59,23 @@ export const GraphZoomControls = memo(function GraphZoomControls({
         </button>
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center transition-colors hover:opacity-80"
+          className="flex h-9 w-9 items-center justify-center border-r transition-colors hover:opacity-80"
+          style={{ borderColor: themeColors.border }}
+          onClick={onZoomIn}
+          aria-label="放大图谱"
+          title="放大"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="flex h-9 items-center gap-1.5 px-3 text-xs font-medium transition-colors hover:opacity-80"
           onClick={onFit}
           aria-label="适应画布"
           title="适应画布"
         >
-          <Maximize2 className="h-4 w-4" />
+          <Maximize2 className="h-3.5 w-3.5 shrink-0" />
+          适应画布
         </button>
       </div>
     </div>

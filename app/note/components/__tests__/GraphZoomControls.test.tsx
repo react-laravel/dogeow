@@ -15,7 +15,7 @@ const themeColors = {
 }
 
 describe('GraphZoomControls', () => {
-  it('renders zoom affordances and hint', () => {
+  it('renders always-visible zoom affordances including 适应画布 text', () => {
     render(
       <GraphZoomControls
         themeColors={themeColors}
@@ -26,10 +26,25 @@ describe('GraphZoomControls', () => {
     )
 
     expect(screen.getByTestId('graph-zoom-controls')).toBeInTheDocument()
-    expect(screen.getByText('滚轮缩放 · 拖拽平移')).toBeInTheDocument()
+    expect(screen.getByTestId('graph-zoom-hint')).toHaveTextContent('滚轮缩放 · 拖拽平移')
     expect(screen.getByRole('button', { name: '放大图谱' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '缩小图谱' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '适应画布' })).toBeInTheDocument()
+    expect(screen.getByText('适应画布')).toBeInTheDocument()
+  })
+
+  it('shows dot-placeholder hint when labels are LOD-hidden', () => {
+    render(
+      <GraphZoomControls
+        themeColors={themeColors}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onFit={vi.fn()}
+        labelsHidden
+      />
+    )
+
+    expect(screen.getByTestId('graph-zoom-hint')).toHaveTextContent('点位占位 · 点击放大查看标签')
   })
 
   it('invokes zoom callbacks', () => {
