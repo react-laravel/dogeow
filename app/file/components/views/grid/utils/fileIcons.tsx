@@ -1,3 +1,5 @@
+'use client'
+
 import {
   File,
   FileText,
@@ -7,8 +9,10 @@ import {
   FileType,
   FileSpreadsheet,
   Folder,
+  ImageIcon,
 } from 'lucide-react'
 import Image from 'next/image'
+import { useState } from 'react'
 import { getFileStorageUrl, withOptionalCacheBust } from '@/app/file/services/api'
 import type { CloudFile } from '@/app/file/types'
 
@@ -25,8 +29,34 @@ export const FILE_TYPE_ICONS = {
 // 在模块加载时设置时间戳，用于非签名图片缓存控制
 const IMAGE_TIMESTAMP = Date.now()
 
+/** Pass-through loader so signed CDN hosts are not blocked by remotePatterns. */
+const passthroughLoader = ({ src }: { src: string }) => src
+
 interface FileIconProps {
   file: CloudFile
+}
+
+function ImageThumbnail({ file }: { file: CloudFile }) {
+  const [failed, setFailed] = useState(false)
+  const storageUrl = withOptionalCacheBust(getFileStorageUrl(file.path), IMAGE_TIMESTAMP)
+
+  if (failed || !storageUrl) {
+    return <ImageIcon className="text-muted-foreground h-8 w-8" />
+  }
+
+  return (
+    <Image
+      src={storageUrl}
+      alt={file.name}
+      fill
+      unoptimized
+      loader={passthroughLoader}
+      className="object-cover"
+      loading="lazy"
+      sizes="64px"
+      onError={() => setFailed(true)}
+    />
+  )
 }
 
 export const FileIcon = ({ file }: FileIconProps) => {
@@ -34,18 +64,9 @@ export const FileIcon = ({ file }: FileIconProps) => {
     return <Folder className="h-12 w-12 text-yellow-500" />
   }
   if (file.type === 'image') {
-    const storageUrl = withOptionalCacheBust(getFileStorageUrl(file.path), IMAGE_TIMESTAMP)
     return (
       <div className="bg-muted relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-md">
-        <Image
-          src={storageUrl}
-          alt={file.name}
-          fill
-          className="object-cover"
-          loading="lazy"
-          sizes="64px"
-          onError={() => console.error('图片加载失败:', file.name)}
-        />
+        <ImageThumbnail file={file} />
       </div>
     )
   }

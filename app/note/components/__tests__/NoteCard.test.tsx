@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import NoteCard from '../NoteCard'
-import type { Note } from '../types/note'
+import type { Note } from '../../types/note'
 
 const createNote = (overrides: Partial<Note> = {}): Note => ({
   id: 1,
@@ -49,16 +49,64 @@ describe('NoteCard', () => {
     expect(screen.getByText(/Hello/)).toBeInTheDocument()
   })
 
-  it('should show empty content placeholder when no markdown', () => {
-    render(<NoteCard note={createNote({ content_markdown: '' })} />)
+  it('should extract plain text from TipTap JSON stored in content_markdown', () => {
+    const tipTapJson = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '123' }],
+        },
+      ],
+    })
+    render(
+      <NoteCard
+        note={createNote({
+          content_markdown: tipTapJson,
+          content: '',
+        })}
+      />
+    )
+    expect(screen.getByText('123')).toBeInTheDocument()
+    expect(screen.queryByText(/"type":"doc"/)).not.toBeInTheDocument()
+  })
+
+  it('should fall back to content TipTap JSON when markdown is empty', () => {
+    const tipTapJson = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'from content' }],
+        },
+      ],
+    })
+    render(
+      <NoteCard
+        note={createNote({
+          content_markdown: '',
+          content: tipTapJson,
+        })}
+      />
+    )
+    expect(screen.getByText('from content')).toBeInTheDocument()
+  })
+
+  it('should show empty content placeholder when no readable content', () => {
+    render(<NoteCard note={createNote({ content_markdown: '', content: '' })} />)
     expect(screen.getByText('(无内容)')).toBeInTheDocument()
   })
 
-  it('should show empty content when markdown is whitespace', () => {
-    // Whitespace-only markdown is truthy, so getContentPreview returns '' after trim
-    render(<NoteCard note={createNote({ content_markdown: '   ' })} />)
-    // getContentPreview trims and returns '', rendered as empty span
-    expect(screen.getByText(/更新于/)).toBeInTheDocument()
+  it('should show empty content for empty TipTap JSON', () => {
+    const emptyDoc =
+      '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":""}]}]}'
+    render(<NoteCard note={createNote({ content_markdown: emptyDoc, content: emptyDoc })} />)
+    expect(screen.getByText('(无内容)')).toBeInTheDocument()
+  })
+
+  it('should show empty content when markdown is whitespace and content empty', () => {
+    render(<NoteCard note={createNote({ content_markdown: '   ', content: '' })} />)
+    expect(screen.getByText('(无内容)')).toBeInTheDocument()
   })
 
   it('should link to the correct note page', () => {

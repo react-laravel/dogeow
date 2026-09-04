@@ -84,24 +84,22 @@ export function PWAInstallPrompt() {
     return null
   }
 
-  // Stack above PushNotificationPrompt (same corner)
+  // Compact corner chip above bottom nav — avoid full-bleed banner that covers tool cards
   return (
-    <div className="fixed right-4 bottom-[calc(7.5rem+env(safe-area-inset-bottom))] left-4 z-50 md:right-4 md:left-auto md:w-80">
-      <div className="bg-background border-border space-y-3 rounded-lg border p-4 shadow-lg">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 rounded-full p-2">
-              <Smartphone className="text-primary h-5 w-5" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-foreground font-semibold">安装 DogeOW</h3>
-              <p className="text-muted-foreground text-sm">将应用安装到主屏幕，获得更好的体验</p>
-            </div>
+    <div className="pointer-events-none fixed right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 w-[min(calc(100vw-1.5rem),18rem)] md:right-4 md:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] md:w-80">
+      <div className="pointer-events-auto border-border bg-background/95 space-y-2 rounded-xl border p-3 shadow-lg backdrop-blur">
+        <div className="flex items-start gap-2">
+          <div className="bg-primary/10 mt-0.5 shrink-0 rounded-full p-1.5">
+            <Smartphone className="text-primary h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-foreground text-sm font-semibold">安装 DogeOW</h3>
+            <p className="text-muted-foreground text-xs leading-5">添加到主屏幕，获得更好体验</p>
           </div>
           <button
             type="button"
             onClick={handleDismiss}
-            className="hover:bg-muted rounded-full p-1 transition-colors"
+            className="hover:bg-muted shrink-0 rounded-full p-1 transition-colors"
             aria-label="关闭安装提示"
           >
             <X className="text-muted-foreground h-4 w-4" />
@@ -112,17 +110,17 @@ export function PWAInstallPrompt() {
           <button
             type="button"
             onClick={handleInstallClick}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
           >
-            <Download className="h-4 w-4" />
-            安装应用
+            <Download className="h-3.5 w-3.5" />
+            安装
           </button>
           <button
             type="button"
             onClick={handleDismiss}
-            className="text-muted-foreground hover:text-foreground px-4 py-2 text-sm transition-colors"
+            className="text-muted-foreground hover:text-foreground px-2 py-1.5 text-xs transition-colors"
           >
-            稍后再说
+            稍后
           </button>
         </div>
       </div>

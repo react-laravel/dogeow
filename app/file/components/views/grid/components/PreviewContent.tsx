@@ -1,7 +1,9 @@
-import React, { memo } from 'react'
+'use client'
+
+import React, { memo, useState } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { File, FileText, Download } from 'lucide-react'
+import { File, FileText, Download, ImageOff } from 'lucide-react'
 import { PREVIEW_TYPES, type PreviewType } from '../utils/previewTypes'
 import type { CloudFile } from '@/app/file/types'
 
@@ -12,6 +14,49 @@ interface PreviewContentProps {
   previewFile: CloudFile | null
   onDownload: (file: CloudFile) => void
 }
+
+/** Pass-through loader: signed CDN URLs must not be rewritten by the optimizer. */
+const passthroughLoader = ({ src }: { src: string }) => src
+
+const PreviewImage = memo<{
+  src: string
+  alt: string
+  onDownload: () => void
+}>(({ src, alt, onDownload }) => {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <div className="mx-auto max-w-md text-center">
+        <ImageOff className="text-muted-foreground mx-auto h-16 w-16" />
+        <p className="text-muted-foreground mt-4 font-medium">图片无法加载</p>
+        <p className="text-muted-foreground mt-2 text-sm">
+          链接可能已过期，请尝试重新打开或下载文件
+        </p>
+        <Button variant="outline" className="mt-4" onClick={onDownload}>
+          <Download className="mr-2 h-4 w-4" />
+          下载文件
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative h-[60vh] w-full min-w-0 max-w-full overflow-hidden">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        unoptimized
+        loader={passthroughLoader}
+        className="object-contain"
+        sizes="(max-width: 768px) 100vw, 768px"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  )
+})
+PreviewImage.displayName = 'PreviewImage'
 
 export const PreviewContent = memo<PreviewContentProps>(
   ({ previewType, previewUrl, previewContent, previewFile, onDownload }) => {
@@ -26,20 +71,20 @@ export const PreviewContent = memo<PreviewContentProps>(
 
     if (previewType === PREVIEW_TYPES.IMAGE && previewUrl) {
       return (
-        <Image
-          src={previewUrl}
-          alt={previewFile?.name ?? ''}
-          width={800}
-          height={600}
-          className="max-h-[60vh] max-w-full object-contain"
-        />
+        <div className="flex w-full min-w-0 max-w-full items-center justify-center overflow-hidden">
+          <PreviewImage
+            src={previewUrl}
+            alt={previewFile?.name ?? ''}
+            onDownload={() => previewFile && onDownload(previewFile)}
+          />
+        </div>
       )
     }
 
     if (previewType === PREVIEW_TYPES.PDF && previewUrl) {
       return (
-        <div className="flex h-[60vh] w-full flex-col">
-          <div className="relative flex-1">
+        <div className="flex h-[60vh] w-full min-w-0 max-w-full flex-col overflow-hidden">
+          <div className="relative min-h-0 flex-1">
             <iframe
               src={previewUrl}
               className="h-full w-full border-0"
@@ -71,7 +116,7 @@ export const PreviewContent = memo<PreviewContentProps>(
 
     if (previewType === PREVIEW_TYPES.TEXT && previewContent && !previewContent.startsWith('{')) {
       return (
-        <pre className="bg-muted h-full max-h-[60vh] w-full overflow-auto rounded p-4 text-sm">
+        <pre className="bg-muted h-full max-h-[60vh] w-full max-w-full overflow-auto rounded p-4 text-sm">
           {previewContent}
         </pre>
       )

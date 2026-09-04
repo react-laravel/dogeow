@@ -21,7 +21,7 @@ export const FilePreviewDialog = memo<FilePreviewDialogProps>(
 
     return (
       <Dialog open={!!file} onOpenChange={open => !open && onClose()}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between pr-12">
               <span className="truncate">{file.name}</span>
@@ -36,7 +36,7 @@ export const FilePreviewDialog = memo<FilePreviewDialogProps>(
               </Button>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex min-h-[60vh] items-center justify-center py-4">
+          <div className="flex min-h-[60vh] w-full min-w-0 max-w-full items-center justify-center overflow-x-hidden py-4">
             <PreviewContent
               previewType={previewType}
               previewUrl={previewUrl}

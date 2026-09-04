@@ -48,6 +48,11 @@ export const LoginForm = memo<LoginFormProps>(
         return
       }
 
+      if (!email.trim()) {
+        toast.error('请输入邮箱')
+        return
+      }
+
       if (password.length < 8) {
         toast.error('密码长度至少为8位')
         return
@@ -83,6 +88,17 @@ export const LoginForm = memo<LoginFormProps>(
 
     const handleLoginSubmit = async (e: React.FormEvent) => {
       e.preventDefault()
+
+      if (!email.trim()) {
+        toast.error('请输入邮箱')
+        return
+      }
+
+      if (!password) {
+        toast.error('请输入密码')
+        return
+      }
+
       setLoginLoading(true)
       try {
         await onSubmit(e)
@@ -93,7 +109,7 @@ export const LoginForm = memo<LoginFormProps>(
 
     if (isRegister) {
       return (
-        <form onSubmit={handleRegister} className="flex w-full flex-col gap-4">
+        <form noValidate onSubmit={handleRegister} className="flex w-full flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="name" className="text-sm">
               用户名
@@ -106,7 +122,6 @@ export const LoginForm = memo<LoginFormProps>(
               onChange={e => setName(e.target.value)}
               placeholder="请输入用户名"
               className="h-10"
-              required
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -121,7 +136,6 @@ export const LoginForm = memo<LoginFormProps>(
               onChange={e => onEmailChange(e.target.value)}
               placeholder="请输入邮箱"
               className="h-10"
-              required
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -136,7 +150,6 @@ export const LoginForm = memo<LoginFormProps>(
               onChange={e => onPasswordChange(e.target.value)}
               placeholder="请输入密码（至少8位）"
               className="h-10"
-              required
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -151,7 +164,6 @@ export const LoginForm = memo<LoginFormProps>(
               onChange={e => setConfirmPassword(e.target.value)}
               placeholder="请再次输入密码"
               className="h-10"
-              required
             />
           </div>
           <Button type="submit" className="h-10 w-full" disabled={localLoading}>
@@ -173,7 +185,7 @@ export const LoginForm = memo<LoginFormProps>(
     }
 
     return (
-      <form onSubmit={handleLoginSubmit} className="flex w-full flex-col gap-4">
+      <form noValidate onSubmit={handleLoginSubmit} className="flex w-full flex-col gap-4">
         <Button
           type="button"
           variant="outline"
@@ -207,7 +219,6 @@ export const LoginForm = memo<LoginFormProps>(
             placeholder="请输入邮箱"
             autoFocus={false}
             className="h-10"
-            required
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -222,7 +233,6 @@ export const LoginForm = memo<LoginFormProps>(
             onChange={e => onPasswordChange(e.target.value)}
             placeholder="请输入密码"
             className="h-10"
-            required
           />
         </div>
         <Button type="submit" className="h-10 w-full" disabled={loginLoading}>
