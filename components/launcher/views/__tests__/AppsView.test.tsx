@@ -69,7 +69,7 @@ describe('AppsView', () => {
   it('uses Next router when clicking the logo away from home', async () => {
     const assign = vi.fn()
     Object.defineProperty(window, 'location', {
-      value: { assign },
+      value: { assign, pathname: '/note' },
       configurable: true,
     })
 
@@ -107,11 +107,11 @@ describe('AppsView', () => {
     expect(routerPush).not.toHaveBeenCalled()
   })
 
-  it('closes ai before navigating home', async () => {
+  it('closes ai and still navigates home', async () => {
     const assign = vi.fn()
     const onCloseAi = vi.fn()
     Object.defineProperty(window, 'location', {
-      value: { assign },
+      value: { assign, pathname: '/note' },
       configurable: true,
     })
 
@@ -133,6 +133,35 @@ describe('AppsView', () => {
     expect(clearFilters).toHaveBeenCalledTimes(1)
     expect(routerPush).toHaveBeenCalledWith('/')
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('hard-navigates home from reader routes', async () => {
+    const assign = vi.fn()
+    const cancel = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { assign, pathname: '/book/demo' },
+      configurable: true,
+    })
+    Object.defineProperty(window, 'speechSynthesis', {
+      value: { cancel },
+      configurable: true,
+    })
+
+    const user = userEvent.setup()
+    const { getByRole } = render(
+      <AppsView
+        router={{ push: routerPush }}
+        searchManager={defaultSearchManager}
+        isAuthenticated
+        toggleDisplayMode={toggleDisplayMode}
+      />
+    )
+
+    await user.click(getByRole('button', { name: '返回首页' }))
+
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(assign).toHaveBeenCalledWith('/')
+    expect(routerPush).not.toHaveBeenCalled()
   })
 
   it('gives search the full action area on the home page', () => {

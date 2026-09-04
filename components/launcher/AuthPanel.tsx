@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import useAuthStore from '@/stores/authStore'
-import { useRouter } from 'next/navigation'
+import { redirectTo } from '@/lib/auth/redirect'
 import { ChevronLeft } from 'lucide-react'
 import { LoginForm } from './auth/LoginForm'
 import { ProfileView } from './auth/ProfileView'
@@ -22,7 +22,6 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   const [password, setPassword] = useState('')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const { login, isAuthenticated, user, logout } = useAuthStore()
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,8 +59,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
   }
 
   const handleGoToDashboard = () => {
-    router.push('/dashboard')
     onOpenChange(false)
+    redirectTo('/dashboard')
   }
 
   // 渲染登录视图
@@ -111,7 +110,6 @@ export function AuthPanel({ toggleDisplayMode }: AuthPanelProps) {
   const [password, setPassword] = useState('')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const { login, isAuthenticated, user, logout } = useAuthStore()
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,8 +147,8 @@ export function AuthPanel({ toggleDisplayMode }: AuthPanelProps) {
   }
 
   const handleGoToDashboard = () => {
-    router.push('/dashboard')
     toggleDisplayMode('apps')
+    redirectTo('/dashboard')
   }
 
   // 渲染登录视图 - 简洁一行式

@@ -135,6 +135,19 @@ describe('TodoItemRow', () => {
     expect(dragBtn).toBeTruthy()
   })
 
+  it('calls onDelete when delete button is clicked', () => {
+    const onDelete = vi.fn()
+    render(<TodoItemRow {...defaultProps} onDelete={onDelete} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '删除任务 Test Todo' }))
+    expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides delete button when onDelete is omitted', () => {
+    render(<TodoItemRow {...defaultProps} />)
+    expect(screen.queryByRole('button', { name: /删除任务/ })).toBeNull()
+  })
+
   it('applies dragging class when isDragging is true', () => {
     mockUseSortable.mockReturnValueOnce({
       attributes: {},

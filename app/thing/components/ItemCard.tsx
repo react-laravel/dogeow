@@ -37,8 +37,17 @@ function ItemCard({ item, onView, isLoading = false }: ItemCardProps) {
 
   return (
     <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`查看物品 ${item.name}`}
       className="group hover:bg-accent/30 border-border/50 hover:border-border flex cursor-pointer flex-row items-start gap-2 p-0 transition-all duration-200 hover:shadow-md"
       onClick={onView}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onView()
+        }
+      }}
     >
       {/* 缩略图，优化尺寸和圆角 */}
       <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border bg-transparent transition-shadow group-hover:shadow-sm">
@@ -52,7 +61,7 @@ function ItemCard({ item, onView, isLoading = false }: ItemCardProps) {
       </div>
 
       {/* 右侧信息区，优化布局和响应式 */}
-      <div className="flex min-w-0 flex-grow flex-col space-y-1 h-full justify-between p-2">
+      <div className="flex h-full min-w-0 flex-grow flex-col justify-between space-y-1 p-2">
         {/* 标题和分类行 */}
         <div className="flex items-center justify-between gap-2">
           <h3 className="group-hover:text-foreground max-w-[120px] truncate text-sm font-medium transition-colors sm:max-w-[200px] sm:text-base md:max-w-[300px]">

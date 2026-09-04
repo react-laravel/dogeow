@@ -1,10 +1,10 @@
 'use client'
 
 import React, { memo, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { User, LayoutDashboard, LogOut, Check, X, KeyRound } from 'lucide-react'
 import { useTranslation } from '@/hooks/useTranslation'
-import { useRouter } from 'next/navigation'
 import useAuthStore from '@/stores/authStore'
 import { toast } from 'sonner'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -16,7 +16,6 @@ interface UserButtonProps {
 
 export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth }) => {
   const { t } = useTranslation()
-  const router = useRouter()
   const ref = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
@@ -37,10 +36,9 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
-  const handleGoToDashboard = () => {
+  const closeMenu = () => {
     setOpen(false)
     setConfirmingLogout(false)
-    router.push('/dashboard')
   }
 
   const handleLogoutConfirm = async () => {
@@ -49,8 +47,7 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
       toast.success('已退出登录', {
         position: 'top-center',
       })
-      setOpen(false)
-      setConfirmingLogout(false)
+      closeMenu()
     } catch {
       toast.error('退出登录失败，请稍后重试', {
         position: 'top-center',
@@ -59,8 +56,7 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
   }
 
   const handleOpenChangePassword = () => {
-    setOpen(false)
-    setConfirmingLogout(false)
+    closeMenu()
     setChangePasswordOpen(true)
   }
 
@@ -69,6 +65,7 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
       <>
         <div className="relative" ref={ref}>
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className={`size-10 gap-2 rounded-xl lg:w-auto lg:px-3 ${
@@ -105,16 +102,19 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
               <p className="text-muted-foreground mb-2 px-1 text-xs font-medium">账户操作</p>
               <div className="space-y-1.5">
                 <Button
+                  type="button"
                   variant="outline"
                   className="h-9 w-full justify-start gap-2"
-                  onClick={handleGoToDashboard}
-                  role="menuitem"
+                  asChild
                 >
-                  <LayoutDashboard className="h-4 w-4" />
-                  进入仪表盘
+                  <Link href="/dashboard" role="menuitem" onClick={closeMenu} prefetch>
+                    <LayoutDashboard className="h-4 w-4" />
+                    进入仪表盘
+                  </Link>
                 </Button>
 
                 <Button
+                  type="button"
                   variant="outline"
                   className="h-9 w-full justify-start gap-2"
                   onClick={handleOpenChangePassword}
@@ -125,6 +125,7 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
                 </Button>
 
                 <Button
+                  type="button"
                   variant="outline"
                   className="h-9 w-full justify-start gap-2 text-red-500"
                   onClick={() => setConfirmingLogout(true)}
@@ -135,11 +136,12 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
                 </Button>
                 {confirmingLogout && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Button className="h-9" onClick={handleLogoutConfirm}>
+                    <Button type="button" className="h-9" onClick={handleLogoutConfirm}>
                       <Check className="mr-1 h-4 w-4" />
                       确认
                     </Button>
                     <Button
+                      type="button"
                       variant="outline"
                       className="h-9"
                       onClick={() => setConfirmingLogout(false)}
@@ -160,6 +162,7 @@ export const UserButton = memo<UserButtonProps>(({ isAuthenticated, onToggleAuth
 
   return (
     <Button
+      type="button"
       variant="default"
       className="h-10 rounded-xl px-3 sm:px-4"
       data-login-trigger

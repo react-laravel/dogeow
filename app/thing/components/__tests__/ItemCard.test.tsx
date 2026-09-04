@@ -33,7 +33,16 @@ describe('ItemCard', () => {
   it('calls onView when clicked', () => {
     const onView = vi.fn()
     render(<ItemCard item={mockItem} onEdit={vi.fn()} onView={onView} />)
-    fireEvent.click(screen.getByText('Test Item').closest('div')!.parentElement!)
+    fireEvent.click(screen.getByRole('button', { name: '查看物品 Test Item' }))
+    expect(onView).toHaveBeenCalled()
+  })
+
+  it('calls onView when Enter is pressed', () => {
+    const onView = vi.fn()
+    render(<ItemCard item={mockItem} onEdit={vi.fn()} onView={onView} />)
+    fireEvent.keyDown(screen.getByRole('button', { name: '查看物品 Test Item' }), {
+      key: 'Enter',
+    })
     expect(onView).toHaveBeenCalled()
   })
 

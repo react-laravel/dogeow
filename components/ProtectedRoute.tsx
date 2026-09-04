@@ -52,7 +52,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Avoid unmounting authenticated pages during brief auth rehydrate/loading
-  // flashes — that would wipe in-progress form state (e.g. /nav/add).
+  // flashes — that would wipe in-progress UI state (forms, modals, etc.).
   if (!isClient || (loading && !isAuthenticated)) {
     return (
       <div className="flex min-h-[200px] items-center justify-center">

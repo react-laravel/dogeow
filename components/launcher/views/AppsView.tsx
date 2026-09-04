@@ -57,6 +57,18 @@ export function AppsView({
       return
     }
 
+    // 阅读器页面很重（章节 DOM + TTS）；软导航卸载会卡住数秒。
+    // 从 /book 返回首页时用硬跳转，优先保证响应速度。
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/book')) {
+      try {
+        window.speechSynthesis?.cancel()
+      } catch {
+        // ignore TTS cancel failures
+      }
+      window.location.assign('/')
+      return
+    }
+
     router.push('/')
   }
 

@@ -10,8 +10,18 @@ const { authState } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    onClick,
+    prefetch: _prefetch,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; prefetch?: boolean }) => (
+    <a href={href} onClick={onClick} {...props}>
+      {children}
+    </a>
+  ),
 }))
 
 vi.mock('@/stores/authStore', () => ({
@@ -46,5 +56,15 @@ describe('UserButton', () => {
     )
     expect(screen.getByRole('menu', { name: '账户操作' })).toBeInTheDocument()
     expect(screen.getByText('admin@example.com')).toBeInTheDocument()
+  })
+
+  it('links 进入仪表盘 to /dashboard', async () => {
+    const user = userEvent.setup()
+    render(<UserButton isAuthenticated onToggleAuth={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: '打开用户菜单' }))
+
+    const dashboardLink = screen.getByRole('menuitem', { name: /进入仪表盘/ })
+    expect(dashboardLink).toHaveAttribute('href', '/dashboard')
   })
 })
