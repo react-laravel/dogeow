@@ -101,7 +101,7 @@ describe('FileIcon', () => {
   })
 
   it('renders an icon for unknown file types', () => {
-    const file = createFile({ type: 'unknown_type' })
+    const file = createFile({ type: 'other' })
     const { container } = render(<FileIcon file={file} />)
 
     const svg = container.querySelector('svg')
@@ -109,7 +109,7 @@ describe('FileIcon', () => {
   })
 
   it('applies gray color class for default type', () => {
-    const file = createFile({ type: 'default' })
+    const file = createFile({ type: 'other' })
     const { container } = render(<FileIcon file={file} />)
 
     const iconEl = container.querySelector('.text-gray-500')
@@ -125,7 +125,7 @@ describe('FileIcon', () => {
   })
 
   it('applies h-12 w-12 size classes', () => {
-    const file = createFile({ type: 'default' })
+    const file = createFile({ type: 'other' })
     const { container } = render(<FileIcon file={file} />)
 
     const iconEl = container.querySelector('.h-12.w-12')
