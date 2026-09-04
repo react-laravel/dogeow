@@ -12,6 +12,10 @@ import { Badge } from '@/components/ui/badge'
 import { Check, TagIcon } from 'lucide-react'
 import { Tag } from '@/app/thing/types'
 import { isLightColor } from '@/lib/helpers'
+import { useLockMainScroll } from '@/hooks/useLockMainScroll'
+
+const DRAWER_SHELL_CLASS =
+  'flex h-[calc(100dvh-var(--app-header-total-height,56px))] max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]'
 
 interface ThingHeaderTagDrawerProps {
   open: boolean
@@ -30,6 +34,8 @@ function ThingHeaderTagDrawer({
   onTagClick,
   onClearTags,
 }: ThingHeaderTagDrawerProps) {
+  useLockMainScroll(open)
+
   const getTagStyle = useCallback((color: string = '#3b82f6', isSelected: boolean = false) => {
     return {
       backgroundColor: isSelected ? color : 'transparent',
@@ -39,7 +45,7 @@ function ThingHeaderTagDrawer({
   }, [])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal>
       <SheetTrigger asChild>
         <Button
           variant="outline"
@@ -56,10 +62,10 @@ function ThingHeaderTagDrawer({
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="flex max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]"
+        className={DRAWER_SHELL_CLASS}
         onOpenAutoFocus={event => event.preventDefault()}
       >
-        <SheetHeader className="border-border shrink-0 border-b px-4 py-3">
+        <SheetHeader className="border-border shrink-0 border-b px-4 py-3 pr-12">
           <SheetTitle>标签</SheetTitle>
           <SheetDescription className="sr-only">选择物品标签筛选条件</SheetDescription>
         </SheetHeader>

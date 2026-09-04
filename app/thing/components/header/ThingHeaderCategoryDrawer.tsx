@@ -12,6 +12,11 @@ import {
 import { Check, FolderTree, List, ListTree, Search } from 'lucide-react'
 import { Category } from '@/app/thing/types'
 import { CategorySelection } from '../CategoryTreeSelect'
+import { useLockMainScroll } from '@/hooks/useLockMainScroll'
+
+/** Viewport-clamped drawer shell: no page overflow, inner list scrolls. */
+const DRAWER_SHELL_CLASS =
+  'flex h-[calc(100dvh-var(--app-header-total-height,56px))] max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]'
 
 interface ThingHeaderCategoryDrawerProps {
   open: boolean
@@ -30,6 +35,9 @@ function ThingHeaderCategoryDrawer({
 }: ThingHeaderCategoryDrawerProps) {
   const [showParentCategoriesOnly, setShowParentCategoriesOnly] = useState(false)
   const [categorySearch, setCategorySearch] = useState('')
+
+  // Radix only locks body; this app scrolls #main-scroll.
+  useLockMainScroll(open)
 
   const categoryTree = useMemo(() => {
     const parentCategories = categories.filter(category => !category.parent_id)
@@ -62,7 +70,7 @@ function ThingHeaderCategoryDrawer({
   }, [categorySearch, categoryTree, showParentCategoriesOnly])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal>
       <SheetTrigger asChild>
         <Button
           variant="outline"
@@ -79,10 +87,10 @@ function ThingHeaderCategoryDrawer({
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="flex max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]"
+        className={DRAWER_SHELL_CLASS}
         onOpenAutoFocus={event => event.preventDefault()}
       >
-        <SheetHeader className="border-border shrink-0 border-b px-4 py-3">
+        <SheetHeader className="border-border shrink-0 border-b px-4 py-3 pr-12">
           <SheetTitle>分类</SheetTitle>
           <SheetDescription className="sr-only">选择物品分类筛选条件</SheetDescription>
         </SheetHeader>
@@ -115,7 +123,10 @@ function ThingHeaderCategoryDrawer({
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2"
+          data-testid="thing-category-drawer-scroll"
+        >
           <button
             type="button"
             className="hover:bg-accent flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm"
