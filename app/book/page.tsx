@@ -57,7 +57,7 @@ export default function BookPage() {
                 <h2 className="text-foreground text-base font-medium">{book.name}</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">{book.description}</p>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="text-muted-foreground mt-2 flex items-center gap-1 text-xs opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                 <BookOpen className="h-3 w-3" />
                 <span>{t('book.start_reading', '开始阅读')}</span>
               </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { X, Pencil } from 'lucide-react'
+import { X, Pencil, Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import useSWR, { mutate } from 'swr'
@@ -10,6 +10,7 @@ import { get, put, del } from '@/lib/api'
 import { toast } from 'sonner'
 import { PageContainer } from '@/components/layout'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
+import { EmptyState } from '@/components/ui/empty-state'
 import CategorySpeedDial from './components/CategorySpeedDial'
 
 // 分类类型定义
@@ -27,6 +28,7 @@ export default function NoteCategories() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [editingName, setEditingName] = useState('')
   const [isMobile, setIsMobile] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
 
   // 检测是否为移动设备
   useEffect(() => {
@@ -115,19 +117,35 @@ export default function NoteCategories() {
       <div>
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-foreground text-xl font-semibold">分类列表</h2>
-          <div className="text-muted-foreground text-sm">共 {categories?.length ?? 0} 个分类</div>
+          <div className="flex items-center gap-2">
+            {(categories?.length ?? 0) > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddDialogOpen(true)}
+                className="gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                添加分类
+              </Button>
+            )}
+            <div className="text-muted-foreground text-sm">共 {categories?.length ?? 0} 个分类</div>
+          </div>
         </div>
 
         {error && <p className="text-red-500">加载分类失败</p>}
         {!categories && !error && <p>加载中...</p>}
         {categories?.length === 0 && (
-          <div className="py-12 text-center">
-            <div className="text-muted-foreground">
-              <div className="mb-4 text-4xl">📝</div>
-              <p className="mb-2 text-lg font-medium">暂无分类</p>
-              <p className="text-sm">请添加您的第一个笔记分类</p>
-            </div>
-          </div>
+          <EmptyState
+            icon="📝"
+            title="暂无分类"
+            description="请添加您的第一个笔记分类"
+            primaryAction={{
+              label: '添加分类',
+              onClick: () => setAddDialogOpen(true),
+              variant: 'default',
+            }}
+          />
         )}
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -206,7 +224,12 @@ export default function NoteCategories() {
         }
       />
 
-      <CategorySpeedDial onCategoryAdded={() => mutate('/notes/categories')} />
+      <CategorySpeedDial
+        onCategoryAdded={() => mutate('/notes/categories')}
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        hideFab={(categories?.length ?? 0) === 0}
+      />
     </PageContainer>
   )
 }

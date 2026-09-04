@@ -61,4 +61,16 @@ describe('useTimeConversion', () => {
     expect(second).toMatch(/^\d+$/)
     expect(second).not.toBe(first)
   })
+
+  it('rejects non-numeric garbage instead of converting to epoch/1969', () => {
+    const { result } = renderHook(() => useTimeConversion())
+
+    act(() => {
+      result.current.handleTimestampChange('abc')
+    })
+
+    expect(result.current.timestamp).toBe('abc')
+    expect(result.current.dateTime).toBe('无效的时间戳')
+    expect(result.current.dateTime).not.toMatch(/1969|1970/)
+  })
 })

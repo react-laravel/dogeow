@@ -12,6 +12,11 @@ import {
 import { Check, FolderTree, List, ListTree, Search } from 'lucide-react'
 import { Category } from '@/app/thing/types'
 import { CategorySelection } from '../CategoryTreeSelect'
+import { useLockMainScroll } from '@/hooks/useLockMainScroll'
+
+/** Viewport-clamped drawer shell: no page overflow, inner list scrolls. */
+const DRAWER_SHELL_CLASS =
+  'flex h-[calc(100dvh-var(--app-header-total-height,56px))] max-h-[calc(100dvh-var(--app-header-total-height,56px))] w-[calc(100vw-5rem)] max-w-[16rem] flex-col gap-0 overflow-hidden p-0 sm:w-[16rem]'
 
 interface ThingHeaderCategoryDrawerProps {
   open: boolean
@@ -30,6 +35,9 @@ function ThingHeaderCategoryDrawer({
 }: ThingHeaderCategoryDrawerProps) {
   const [showParentCategoriesOnly, setShowParentCategoriesOnly] = useState(false)
   const [categorySearch, setCategorySearch] = useState('')
+
+  // Radix only locks body; this app scrolls #main-scroll.
+  useLockMainScroll(open)
 
   const categoryTree = useMemo(() => {
     const parentCategories = categories.filter(category => !category.parent_id)
@@ -62,31 +70,32 @@ function ThingHeaderCategoryDrawer({
   }, [categorySearch, categoryTree, showParentCategoriesOnly])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal>
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          size="icon"
-          className={`border-primary/20 h-10 w-10 rounded-lg bg-white/90 shadow dark:bg-background/80 ${
+          size="sm"
+          className={`border-primary/20 h-10 gap-1.5 rounded-lg bg-white/90 px-2.5 shadow dark:bg-background/80 ${
             selectedCategory ? 'text-primary border-primary/60 bg-primary/10' : ''
           }`}
           aria-label="打开分类筛选"
           title="分类"
         >
-          <FolderTree className="h-4 w-4" />
+          <FolderTree className="h-4 w-4 shrink-0" />
+          <span className="text-xs font-medium">分类</span>
         </Button>
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="w-[calc(100vw-6rem)] max-w-[12rem] gap-0 p-0 sm:w-[12rem]"
+        className={DRAWER_SHELL_CLASS}
         onOpenAutoFocus={event => event.preventDefault()}
       >
-        <SheetHeader className="border-border border-b px-4 py-3">
+        <SheetHeader className="border-border shrink-0 border-b px-4 py-3 pr-12">
           <SheetTitle>分类</SheetTitle>
           <SheetDescription className="sr-only">选择物品分类筛选条件</SheetDescription>
         </SheetHeader>
 
-        <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2">
           <div className="relative min-w-0 flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
             <Input
@@ -114,7 +123,10 @@ function ThingHeaderCategoryDrawer({
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2"
+          data-testid="thing-category-drawer-scroll"
+        >
           <button
             type="button"
             className="hover:bg-accent flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm"

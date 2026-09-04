@@ -51,7 +51,7 @@ export const useLanguageStore = create<LanguageState>()(
       }
 
       return {
-        currentLanguage: 'en', // 默认回退语言，初始化后会被覆盖
+        currentLanguage: 'zh-CN', // 产品默认中文；初始化后可被偏好/检测覆盖
         availableLanguages: getAvailableLanguages(),
         detectedLanguage: null,
         detectionResult: null,

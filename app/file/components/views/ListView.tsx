@@ -227,13 +227,15 @@ export default function ListView({ files }: ListViewProps) {
           <tr>
             <th className="px-4 py-3 text-left font-medium" scope="col">
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  className="border-primary h-4 w-4 rounded-sm border"
-                  checked={isAllSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="全选文件"
-                />
+                <label className="flex h-11 w-11 cursor-pointer items-center justify-center">
+                  <input
+                    type="checkbox"
+                    className="border-primary h-4 w-4 rounded-sm border"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="全选文件"
+                  />
+                </label>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -310,14 +312,19 @@ export default function ListView({ files }: ListViewProps) {
             >
               <td className="px-4 py-3" role="gridcell">
                 <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    className="border-primary h-4 w-4 rounded-sm border"
-                    checked={selectedFiles.includes(file.id)}
-                    onChange={() => {}}
-                    onClick={e => toggleSelection(file.id, e)}
-                    aria-label={`选择文件 ${file.name}`}
-                  />
+                  <label
+                    className="flex h-11 w-11 cursor-pointer items-center justify-center"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      className="border-primary h-4 w-4 rounded-sm border"
+                      checked={selectedFiles.includes(file.id)}
+                      onChange={() => {}}
+                      onClick={e => toggleSelection(file.id, e)}
+                      aria-label={`选择文件 ${file.name}`}
+                    />
+                  </label>
                   <div className="flex items-center space-x-2">
                     <FileIcon file={file} />
                     <span className="max-w-[200px] truncate" title={file.name}>

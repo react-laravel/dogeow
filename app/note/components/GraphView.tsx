@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import { forceCollide } from 'd3-force-3d'
 import { deleteNode, type WikiNode } from '@/lib/api/wiki'
 import { isAdminSync } from '@/lib/auth'
 import { logger } from '@/lib/logger'
@@ -47,6 +48,7 @@ interface GraphViewProps {
 export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }: GraphViewProps) {
   const router = useRouter()
   const isDraggingRef = useRef<boolean>(false)
+  const hasFittedRef = useRef(false)
   const [hoverNode, setHoverNode] = useState<NodeData | null>(null)
   const [activeNode, setActiveNode] = useState<NodeData | null>(null)
   const [activeLink, setActiveLink] = useState<LinkData | null>(null)
@@ -92,6 +94,38 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
   useEffect(() => {
     loadGraphData()
   }, [loadGraphData])
+
+  // Configure force layout once the graph instance is ready / data changes.
+  useEffect(() => {
+    if (loading || nodes.length === 0) {
+      return
+    }
+
+    const graph = fgRef.current
+    if (!graph || typeof graph.d3Force !== 'function') {
+      return
+    }
+
+    try {
+      // Minimum spacing: push nodes apart, lengthen links, and add collision radius.
+      const charge = graph.d3Force('charge') as { strength?: (value: number) => unknown } | null
+      charge?.strength?.(-320)
+
+      const link = graph.d3Force('link') as {
+        distance?: (value: number) => unknown
+        strength?: (value: number) => unknown
+      } | null
+      link?.distance?.(120)
+      link?.strength?.(0.4)
+
+      graph.d3Force('collide', forceCollide(20))
+
+      hasFittedRef.current = false
+      resumeGraphAnimation()
+    } catch (error) {
+      logger.warn('配置图谱力导向参数失败:', error)
+    }
+  }, [fgRef, loading, nodes.length, links.length, resumeGraphAnimation])
 
   // 处理节点点击
   const handleNodeClick = useCallback(
@@ -308,7 +342,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
       }}
     >
       {loading && <NoteGraphLoadingState themeColors={themeColors} isDark={isDark} />}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <NoteGraphToolbar
           query={query}
           onQueryChange={() => {}}
@@ -355,15 +389,19 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
             ctx.arc(node.x ?? 0, node.y ?? 0, 8, 0, 2 * Math.PI, false)
             ctx.fill()
           }}
-          cooldownTime={showNeighborsOnly ? 2000 : 3000}
-          d3AlphaDecay={0.0228}
-          d3VelocityDecay={0.4}
+          cooldownTime={showNeighborsOnly ? 2500 : 4000}
+          d3AlphaDecay={0.02}
+          d3VelocityDecay={0.35}
           d3AlphaMin={0.001}
           nodeRelSize={8}
           onZoom={transform => handleZoom(fgRef, transform)}
           onEngineStop={() => {
             if (!fgRef.current) return
             try {
+              if (!hasFittedRef.current && typeof fgRef.current.zoomToFit === 'function') {
+                fgRef.current.zoomToFit(400, 48)
+                hasFittedRef.current = true
+              }
               if (typeof fgRef.current.pauseAnimation === 'function') {
                 fgRef.current.pauseAnimation()
               }

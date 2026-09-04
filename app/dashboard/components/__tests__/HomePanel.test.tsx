@@ -51,8 +51,10 @@ describe('HomePanel', () => {
     })
   })
 
-  it('renders the ExternalLink icon on each card', () => {
+  it('uses a high-contrast icon plate so glyphs stay visible on light cards', () => {
     const { container } = render(<HomePanel />)
-    expect(container.querySelectorAll('svg').length).toBeGreaterThan(0)
+    const iconPlate = container.querySelector('.bg-slate-950')
+    expect(iconPlate).toBeTruthy()
+    expect(iconPlate?.querySelector('svg')).toBeTruthy()
   })
 })

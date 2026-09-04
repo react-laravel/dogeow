@@ -22,7 +22,12 @@ vi.mock('@/lib/ai/access', () => ({
 
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({
-    t: (key: string) => (key === 'appgrid.music' ? '音乐' : key),
+    t: (key: string, fallback?: string) => {
+      if (key === 'appgrid.music') return '音乐'
+      if (key === 'appgrid.ai') return 'AI 助理'
+      if (key === 'appgrid.search') return '搜索'
+      return fallback ?? key
+    },
   }),
 }))
 

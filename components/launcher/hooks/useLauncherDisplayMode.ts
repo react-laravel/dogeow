@@ -87,7 +87,6 @@ export function useLauncherDisplayMode({
     if (displayMode === 'apps') {
       if (isAiOpen) {
         closeAi()
-        return
       }
 
       clearFilters()

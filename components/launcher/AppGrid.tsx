@@ -127,14 +127,14 @@ export function AppGrid({
       ? [
           {
             icon: <Bot className="h-5 w-5" />,
-            label: 'AI 助理',
+            label: t('appgrid.ai', 'AI 助理'),
             onClick: () => onOpenAi?.(),
           },
         ]
       : []),
     {
       icon: <Search className="h-5 w-5" />,
-      label: '搜索',
+      label: t('appgrid.search', '搜索'),
       onClick: () => onToggleSearch?.(),
     },
   ]

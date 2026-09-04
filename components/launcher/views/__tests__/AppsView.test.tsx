@@ -31,6 +31,13 @@ vi.mock('@/app/thing/stores/filterPersistenceStore', () => ({
   useFilterPersistenceStore: vi.fn(),
 }))
 
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback ?? key,
+    currentLanguage: 'zh-CN',
+  }),
+}))
+
 describe('AppsView', () => {
   const originalLocation = Object.getOwnPropertyDescriptor(window, 'location')
   const clearFilters = vi.fn()
@@ -123,8 +130,9 @@ describe('AppsView', () => {
     await user.click(getByRole('button', { name: '返回首页' }))
 
     expect(onCloseAi).toHaveBeenCalledTimes(1)
+    expect(clearFilters).toHaveBeenCalledTimes(1)
+    expect(routerPush).toHaveBeenCalledWith('/')
     expect(assign).not.toHaveBeenCalled()
-    expect(clearFilters).not.toHaveBeenCalled()
   })
 
   it('gives search the full action area on the home page', () => {

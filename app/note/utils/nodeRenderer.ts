@@ -34,7 +34,6 @@ export const createNodeCanvasRenderer = (
 ) => {
   return (node: NodeData, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.title
-    const fontSize = 12 / Math.sqrt(globalScale)
     const isActive = String(activeNode?.id) === String(node.id)
     const isHover = String(hoverNode?.id) === String(node.id)
 
@@ -89,10 +88,23 @@ export const createNodeCanvasRenderer = (
       ctx.fill()
     }
 
-    // 只在缩放级别足够大时显示标签，避免拥挤时标签重叠
-    const minScaleForLabel = 0.5
-    if (globalScale >= minScaleForLabel || isActive || isHover || isNeighbor) {
-      ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto`
+    // Prefer hiding/shrinking labels over stacking.
+    // Zoomed out: only the focused node (active/hover). Neighbor labels wait until zoomed in.
+    const minScaleForLabel = 1.8
+    const minScaleForNeighborLabel = 2.2
+    const shouldShowLabel =
+      isActive ||
+      isHover ||
+      (Boolean(isNeighbor) && globalScale >= minScaleForNeighborLabel) ||
+      (!isNeighbor && globalScale >= minScaleForLabel)
+    if (shouldShowLabel) {
+      const maxChars = isActive || isHover ? 18 : 8
+      const displayLabel = label.length > maxChars ? `${label.slice(0, maxChars - 1)}…` : label
+      const scaledFont = Math.min(
+        11 / Math.sqrt(Math.max(globalScale, 1)),
+        isActive || isHover ? 11 : 8
+      )
+      ctx.font = `${scaledFont}px system-ui, -apple-system, Segoe UI, Roboto`
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'
       if (isActive) {
@@ -103,9 +115,8 @@ export const createNodeCanvasRenderer = (
         ctx.fillStyle = graphPalette.labelDefault
       }
 
-      // 根节点的标签位置稍微调整
       const labelOffset = isRootNode ? 16 : 6
-      ctx.fillText(label, (node.x ?? 0) + labelOffset, node.y ?? 0)
+      ctx.fillText(displayLabel, (node.x ?? 0) + labelOffset, node.y ?? 0)
     }
   }
 }

@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -154,94 +155,114 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
     const availableModels = ollamaModels
     const textOnly = availableModels.filter(item => !item.supportsVision)
     const vision = availableModels.filter(item => item.supportsVision)
+    const hasModels = availableModels.length > 0
     const triggerLabel =
-      model ||
-      (isLoadingOllamaModels ? '读取中...' : availableModels.length > 0 ? '选择模型' : '未发现模型')
-    const isTriggerDisabled = isLoading || (!isLoadingOllamaModels && availableModels.length === 0)
+      model || (isLoadingOllamaModels ? '读取中...' : hasModels ? '选择模型' : '未发现模型')
 
     return (
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={isTriggerDisabled}
-            className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+      <div className="flex flex-col items-start gap-0.5">
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isLoading}
+              className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+            >
+              {triggerLabel}
+              {open ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronUp className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
+              {textOnly.length > 0 && (
+                <>
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">
+                    文本
+                  </DropdownMenuLabel>
+                  {textOnly.map(item => (
+                    <DropdownMenuRadioItem
+                      key={item.name}
+                      value={item.name}
+                      className={cn(
+                        'cursor-pointer',
+                        model === item.name &&
+                          'bg-primary/10 ring-primary relative z-10 font-medium ring-2 ring-offset-1'
+                      )}
+                    >
+                      <div className="flex flex-col">
+                        <span>{item.name}</span>
+                        {formatOllamaModelMeta(item) && (
+                          <span className="text-muted-foreground text-xs">
+                            {formatOllamaModelMeta(item)}
+                          </span>
+                        )}
+                      </div>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </>
+              )}
+              {textOnly.length > 0 && vision.length > 0 && <DropdownMenuSeparator />}
+              {vision.length > 0 && (
+                <>
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">
+                    图像
+                  </DropdownMenuLabel>
+                  {vision.map(item => (
+                    <DropdownMenuRadioItem
+                      key={item.name}
+                      value={item.name}
+                      className={cn(
+                        'cursor-pointer',
+                        model === item.name &&
+                          'bg-primary/10 ring-primary relative z-10 font-medium ring-2 ring-offset-1'
+                      )}
+                    >
+                      <div className="flex flex-col">
+                        <span>{item.name}</span>
+                        {formatOllamaModelMeta(item) && (
+                          <span className="text-muted-foreground text-xs">
+                            {formatOllamaModelMeta(item)}
+                          </span>
+                        )}
+                      </div>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuRadioGroup>
+            {!isLoadingOllamaModels && !hasModels && (
+              <div className="text-muted-foreground space-y-1.5 px-2 py-2 text-xs">
+                <p>当前地址下未发现可用 Ollama 模型。</p>
+                <Link
+                  href="/dashboard?section=ollama"
+                  className="text-primary font-medium underline-offset-2 hover:underline"
+                  onClick={() => setOpen(false)}
+                >
+                  前往仪表盘配置 Ollama
+                </Link>
+              </div>
+            )}
+            {isLoadingOllamaModels && (
+              <div className="text-muted-foreground px-2 py-1 text-xs">
+                正在读取本地 Ollama 模型...
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {!isLoadingOllamaModels && !hasModels && (
+          <Link
+            href="/dashboard?section=ollama"
+            className="text-primary px-0 text-[11px] font-medium underline-offset-2 hover:underline"
           >
-            {triggerLabel}
-            {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
-            {textOnly.length > 0 && (
-              <>
-                <DropdownMenuLabel className="text-muted-foreground text-xs">
-                  文本
-                </DropdownMenuLabel>
-                {textOnly.map(item => (
-                  <DropdownMenuRadioItem
-                    key={item.name}
-                    value={item.name}
-                    className={cn(
-                      'cursor-pointer',
-                      model === item.name &&
-                        'bg-primary/10 ring-primary relative z-10 font-medium ring-2 ring-offset-1'
-                    )}
-                  >
-                    <div className="flex flex-col">
-                      <span>{item.name}</span>
-                      {formatOllamaModelMeta(item) && (
-                        <span className="text-muted-foreground text-xs">
-                          {formatOllamaModelMeta(item)}
-                        </span>
-                      )}
-                    </div>
-                  </DropdownMenuRadioItem>
-                ))}
-              </>
-            )}
-            {textOnly.length > 0 && vision.length > 0 && <DropdownMenuSeparator />}
-            {vision.length > 0 && (
-              <>
-                <DropdownMenuLabel className="text-muted-foreground text-xs">
-                  图像
-                </DropdownMenuLabel>
-                {vision.map(item => (
-                  <DropdownMenuRadioItem
-                    key={item.name}
-                    value={item.name}
-                    className={cn(
-                      'cursor-pointer',
-                      model === item.name &&
-                        'bg-primary/10 ring-primary relative z-10 font-medium ring-2 ring-offset-1'
-                    )}
-                  >
-                    <div className="flex flex-col">
-                      <span>{item.name}</span>
-                      {formatOllamaModelMeta(item) && (
-                        <span className="text-muted-foreground text-xs">
-                          {formatOllamaModelMeta(item)}
-                        </span>
-                      )}
-                    </div>
-                  </DropdownMenuRadioItem>
-                ))}
-              </>
-            )}
-          </DropdownMenuRadioGroup>
-          {!isLoadingOllamaModels && availableModels.length === 0 && (
-            <div className="text-muted-foreground px-2 py-1 text-xs">
-              当前地址下未发现可用 Ollama 模型
-            </div>
-          )}
-          {isLoadingOllamaModels && (
-            <div className="text-muted-foreground px-2 py-1 text-xs">
-              正在读取本地 Ollama 模型...
-            </div>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            配置模型
+          </Link>
+        )}
+      </div>
     )
   }
 )

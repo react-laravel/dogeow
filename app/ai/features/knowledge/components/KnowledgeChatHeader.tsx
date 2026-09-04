@@ -86,10 +86,12 @@ export function KnowledgeChatHeader({
         : '未发现模型'
     : isLoadingOllamaModels
       ? '读取中...'
-      : '未发现模型'
-  const modelSelectDisabled = isCodex
-    ? isLoading || (!isLoadingCodexModels && !hasCodexModels)
-    : isLoading || (!isLoadingOllamaModels && !hasOllamaModels)
+      : hasOllamaModels
+        ? '选择模型'
+        : '未发现模型'
+  const modelSelectDisabled = isLoading
+  const showOllamaConfigHint = !isCodex && !isLoadingOllamaModels && !hasOllamaModels
+  const showCodexConfigHint = isCodex && !isLoadingCodexModels && !hasCodexModels
 
   return (
     <header className="bg-background flex items-center justify-between px-4 py-3">
@@ -131,42 +133,58 @@ export function KnowledgeChatHeader({
           </Button>
         )}
         {!hideModel && onModelChange && (
-          <div className="flex items-center gap-2">
-            <Label htmlFor="model" className="text-sm">
-              模型:
-            </Label>
-            <Select
-              value={model || undefined}
-              onValueChange={onModelChange}
-              disabled={modelSelectDisabled}
-            >
-              <SelectTrigger id="model" className="h-8 w-36 text-xs">
-                <SelectValue placeholder={modelPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {isCodex
-                  ? codexModels.map(item => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))
-                  : ollamaModels.map(item => (
-                      <SelectItem key={item.name} value={item.name}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                {!isCodex && !isLoadingOllamaModels && !hasOllamaModels && (
-                  <div className="text-muted-foreground px-2 py-1 text-xs">
-                    当前地址下未发现可用 Ollama 模型
-                  </div>
-                )}
-                {isCodex && !isLoadingCodexModels && !hasCodexModels && (
-                  <div className="text-muted-foreground px-2 py-1 text-xs">
-                    未探测到 ChatGPT 可用模型
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="model" className="text-sm">
+                模型:
+              </Label>
+              <Select
+                value={model || undefined}
+                onValueChange={onModelChange}
+                disabled={modelSelectDisabled}
+              >
+                <SelectTrigger id="model" className="h-8 w-36 text-xs">
+                  <SelectValue placeholder={modelPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {isCodex
+                    ? codexModels.map(item => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))
+                    : ollamaModels.map(item => (
+                        <SelectItem key={item.name} value={item.name}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                  {showOllamaConfigHint && (
+                    <div className="text-muted-foreground space-y-1.5 px-2 py-2 text-xs">
+                      <p>当前地址下未发现可用 Ollama 模型。</p>
+                      <Link
+                        href="/dashboard?section=ollama"
+                        className="text-primary font-medium underline-offset-2 hover:underline"
+                      >
+                        前往仪表盘配置 Ollama
+                      </Link>
+                    </div>
+                  )}
+                  {showCodexConfigHint && (
+                    <div className="text-muted-foreground px-2 py-1 text-xs">
+                      未探测到 ChatGPT 可用模型
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            {showOllamaConfigHint && (
+              <Link
+                href="/dashboard?section=ollama"
+                className="text-primary text-[11px] font-medium underline-offset-2 hover:underline"
+              >
+                配置模型
+              </Link>
+            )}
           </div>
         )}
         {useContext && !hideSearchMethod && (

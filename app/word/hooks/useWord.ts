@@ -173,7 +173,8 @@ export const updateWordSettings = async (settings: Partial<UserWordSetting>) => 
 
 // 搜索单词
 export const searchWord = async (keyword: string) => {
-  return get<{ found: boolean; word?: Word; keyword?: string }>(`/word/search/${keyword}`)
+  const encoded = encodeURIComponent(keyword.trim())
+  return get<{ found: boolean; word?: Word; keyword?: string }>(`/word/search/${encoded}`)
 }
 
 // 教育级别名称 -> 后端 code 映射（供 WordDataEditor 等解析阶段用）

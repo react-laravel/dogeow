@@ -54,14 +54,19 @@ export const FileGridItem = memo<FileGridItemProps>(
         />
         <div className="pointer-events-none relative z-10">
           <FileIcon file={file} />
-          <input
-            type="checkbox"
-            className="border-primary pointer-events-auto absolute -top-2 -left-2 z-20 h-4 w-4 rounded-sm border"
-            checked={isSelected}
-            readOnly
-            onClick={e => onSelect(file.id, e)}
-            aria-label={`选择 ${file.name}`}
-          />
+          <label
+            className="pointer-events-auto absolute -top-3 -left-3 z-20 flex h-11 w-11 cursor-pointer items-center justify-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <input
+              type="checkbox"
+              className="border-primary h-4 w-4 rounded-sm border"
+              checked={isSelected}
+              readOnly
+              onClick={e => onSelect(file.id, e)}
+              aria-label={`选择 ${file.name}`}
+            />
+          </label>
         </div>
         <div className="pointer-events-none relative z-10 mt-2 text-center">
           <p
