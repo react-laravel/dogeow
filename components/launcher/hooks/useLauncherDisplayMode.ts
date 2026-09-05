@@ -80,6 +80,16 @@ export function useLauncherDisplayMode({
       return
     }
 
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/book')) {
+      try {
+        window.speechSynthesis?.cancel()
+      } catch {
+        // ignore TTS cancel failures
+      }
+      window.location.assign('/')
+      return
+    }
+
     router.push('/')
   }, [router, searchManager.isHomePage])
 
@@ -99,6 +109,15 @@ export function useLauncherDisplayMode({
       setDisplayMode('apps')
 
       if (pathname !== '/') {
+        if (pathname.startsWith('/book')) {
+          try {
+            window.speechSynthesis?.cancel()
+          } catch {
+            // ignore
+          }
+          window.location.assign('/')
+          return
+        }
         router.push('/')
       }
     }

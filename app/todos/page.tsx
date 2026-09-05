@@ -23,6 +23,7 @@ import {
   createTodoList,
   createTodoTask,
   deleteTodoList,
+  deleteTodoTask,
   fetchTodoList,
   fetchTodoLists,
   reorderTodoTasks,
@@ -64,6 +65,7 @@ export default function TodosPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isSubmittingNewTask, setIsSubmittingNewTask] = useState(false)
   const [isDeletingList, setIsDeletingList] = useState(false)
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null)
   const [initiallyCompletedTaskIds, setInitiallyCompletedTaskIds] = useState<Set<number>>(
     () => new Set()
   )
@@ -220,6 +222,30 @@ export default function TodosPage() {
     }
   }, [isDeletingList, list, reloadLists])
 
+  const handleDeleteTask = useCallback(
+    async (task: TodoTask) => {
+      if (!list || deletingTaskId === task.id) return
+
+      setDeletingTaskId(task.id)
+      try {
+        await deleteTodoTask(String(list.id), task.id)
+        updateCurrentList(prev => ({
+          ...prev,
+          tasks: prev.tasks.filter(current => current.id !== task.id),
+        }))
+        if (editingTaskId === task.id) {
+          setEditingTaskId(null)
+        }
+        toast.success('已删除任务')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : '删除任务失败')
+      } finally {
+        setDeletingTaskId(null)
+      }
+    },
+    [deletingTaskId, editingTaskId, list, updateCurrentList]
+  )
+
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -332,6 +358,8 @@ export default function TodosPage() {
                       onStartEdit={() => handleStartEdit(task)}
                       editTitle={editingTaskId === task.id ? editTitle : ''}
                       onEditTitleChange={setEditTitle}
+                      onDelete={() => void handleDeleteTask(task)}
+                      isDeleting={deletingTaskId === task.id}
                     />
                   </li>
                 ))}

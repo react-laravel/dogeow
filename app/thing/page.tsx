@@ -1,19 +1,18 @@
 'use client'
 
 import { useEffect, useCallback, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { apiRequest } from '@/lib/api'
 
 // Components
 import ThingHeader from './components/ThingHeader'
 import ThingContent from './components/ThingContent'
-import { ItemDetailModal } from './components/ItemDetailModal'
 
 // Hooks and stores
 import { useItems, useCategories } from '@/app/thing/services/api'
 import { useThingFilters } from '@/app/thing/hooks/useThingFilters'
 import { useThingSearch } from '@/app/thing/hooks/useThingSearch'
-import { useFormModal } from '@/hooks/useFormModal'
 import { PageContainer } from '@/components/layout'
 import { PullToRefresh } from '@/components/ui/pull-to-refresh'
 import { preloadThingItemImages } from './utils/imagePreload'
@@ -24,18 +23,10 @@ import type { ItemFilters } from '@/app/thing/contracts'
 import { Tag, LocationTreeResponse, ViewMode } from '@/app/thing/types'
 
 export default function Thing() {
+  const router = useRouter()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [imageSizePreset, setImageSizePreset] = useState<SizePreset>('md')
   const [, setFilterDrawerOpen] = useState(false)
-
-  const {
-    open: modalOpen,
-    setOpen: setModalOpen,
-    selectedId: selectedItemId,
-    mode: modalMode,
-    setMode: setModalMode,
-    openModal,
-  } = useFormModal<number>('view')
 
   const { filters, updateFilters, clearFilters, hasActiveFilters, currentPage, setCurrentPage } =
     useThingFilters()
@@ -113,22 +104,21 @@ export default function Thing() {
 
   const handleItemEdit = useCallback(
     (id: number) => {
-      openModal(id, 'edit')
+      preloadThingItemImages(items.find(item => item.id === id))
+      router.push(`/thing/${id}/edit`)
     },
-    [openModal]
+    [items, router]
   )
 
   const handleItemView = useCallback(
     (id: number) => {
       preloadThingItemImages(items.find(item => item.id === id))
-      openModal(id, 'view')
+      // Prefer route navigation over an in-list modal so detail always opens
+      // even if auth loading flashes remount protected pages.
+      router.push(`/thing/${id}`)
     },
-    [items, openModal]
+    [items, router]
   )
-
-  const handleItemDeleted = useCallback(() => {
-    void mutateItems()
-  }, [mutateItems])
 
   return (
     <PageContainer>
@@ -169,16 +159,6 @@ export default function Thing() {
           />
         </div>
       </PullToRefresh>
-
-      <ItemDetailModal
-        itemId={selectedItemId}
-        initialItem={items.find(item => item.id === selectedItemId) ?? null}
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        mode={modalMode as 'view' | 'edit' | undefined}
-        onModeChange={setModalMode}
-        onItemDeleted={handleItemDeleted}
-      />
     </PageContainer>
   )
 }

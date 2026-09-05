@@ -8,7 +8,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useTranslation } from '@/hooks/useTranslation'
 
 interface DeleteConfirmationDialogProps {
   open: boolean
@@ -17,26 +16,29 @@ interface DeleteConfirmationDialogProps {
   itemName: string
 }
 
+/**
+ * Shared delete confirm dialog.
+ * Copy is Chinese-first to match the surrounding product UI (categories / things /
+ * notes), which is largely hardcoded Chinese even when the browser locale is en.
+ */
 export function DeleteConfirmationDialog({
   open,
   onOpenChange,
   onConfirm,
   itemName,
 }: DeleteConfirmationDialogProps) {
-  const { t } = useTranslation()
-
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t('delete.confirm_title')}</AlertDialogTitle>
+          <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('delete.confirm_description').replace('{itemName}', itemName)}
+            {`此操作将永久删除“${itemName}”。此操作无法撤销。`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t('delete.confirm_cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{t('delete.confirm_action')}</AlertDialogAction>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>删除</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

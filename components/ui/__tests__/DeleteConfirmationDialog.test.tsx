@@ -2,24 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { vi } from 'vitest'
 import { DeleteConfirmationDialog } from '../DeleteConfirmationDialog'
 
-// Mock the translation hook
-const mockT = vi.fn((key: string) => {
-  const translations: Record<string, string> = {
-    'delete.confirm_title': 'Delete Item',
-    'delete.confirm_description':
-      'Are you sure you want to delete {itemName}? This action cannot be undone.',
-    'delete.confirm_cancel': 'Cancel',
-    'delete.confirm_action': 'Delete',
-  }
-  return translations[key] || key
-})
-
-vi.mock('@/hooks/useTranslation', () => ({
-  useTranslation: () => ({
-    t: mockT,
-  }),
-}))
-
 describe('DeleteConfirmationDialog', () => {
   const defaultProps = {
     open: true,
@@ -32,74 +14,44 @@ describe('DeleteConfirmationDialog', () => {
     vi.clearAllMocks()
   })
 
-  it('should render dialog when open is true', () => {
+  it('should render Chinese dialog copy when open is true', () => {
     render(<DeleteConfirmationDialog {...defaultProps} />)
 
-    expect(screen.getByText('Delete Item')).toBeInTheDocument()
-    expect(
-      screen.getByText('Are you sure you want to delete Test Item? This action cannot be undone.')
-    ).toBeInTheDocument()
+    expect(screen.getByText('确定要删除吗？')).toBeInTheDocument()
+    expect(screen.getByText('此操作将永久删除“Test Item”。此操作无法撤销。')).toBeInTheDocument()
+    expect(screen.getByText('取消')).toBeInTheDocument()
+    expect(screen.getByText('删除')).toBeInTheDocument()
   })
 
   it('should not render dialog when open is false', () => {
     render(<DeleteConfirmationDialog {...defaultProps} open={false} />)
 
-    expect(screen.queryByText('Delete Item')).not.toBeInTheDocument()
+    expect(screen.queryByText('确定要删除吗？')).not.toBeInTheDocument()
   })
 
-  it('should render translated button texts', () => {
-    render(<DeleteConfirmationDialog {...defaultProps} />)
+  it('should call onConfirm when delete is clicked', () => {
+    const onConfirm = vi.fn()
+    render(<DeleteConfirmationDialog {...defaultProps} onConfirm={onConfirm} />)
 
-    expect(screen.getByText('Delete')).toBeInTheDocument()
-    expect(screen.getByText('Cancel')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('删除'))
+    expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
-  it('should call onConfirm when delete button is clicked', () => {
-    render(<DeleteConfirmationDialog {...defaultProps} />)
-
-    const deleteButton = screen.getByText('Delete')
-    fireEvent.click(deleteButton)
-
-    expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1)
-  })
-
-  it('should replace itemName in description', () => {
+  it('should interpolate item name into description', () => {
     render(<DeleteConfirmationDialog {...defaultProps} itemName="My Document" />)
 
-    expect(
-      screen.getByText('Are you sure you want to delete My Document? This action cannot be undone.')
-    ).toBeInTheDocument()
+    expect(screen.getByText('此操作将永久删除“My Document”。此操作无法撤销。')).toBeInTheDocument()
   })
 
-  it('should use translation keys correctly', () => {
-    render(<DeleteConfirmationDialog {...defaultProps} />)
-
-    expect(mockT).toHaveBeenCalledWith('delete.confirm_title')
-    expect(mockT).toHaveBeenCalledWith('delete.confirm_description')
-    expect(mockT).toHaveBeenCalledWith('delete.confirm_cancel')
-    expect(mockT).toHaveBeenCalledWith('delete.confirm_action')
-  })
-
-  it('should pass onOpenChange to AlertDialog', () => {
-    render(<DeleteConfirmationDialog {...defaultProps} />)
-
-    // The onOpenChange prop should be passed to the underlying AlertDialog
-    expect(defaultProps.onOpenChange).toBeDefined()
-  })
-
-  it('should handle different item names', () => {
+  it('should update description when itemName changes', () => {
     const { rerender } = render(<DeleteConfirmationDialog {...defaultProps} itemName="File 1" />)
 
-    expect(
-      screen.getByText('Are you sure you want to delete File 1? This action cannot be undone.')
-    ).toBeInTheDocument()
+    expect(screen.getByText('此操作将永久删除“File 1”。此操作无法撤销。')).toBeInTheDocument()
 
     rerender(<DeleteConfirmationDialog {...defaultProps} itemName="Important Document" />)
 
     expect(
-      screen.getByText(
-        'Are you sure you want to delete Important Document? This action cannot be undone.'
-      )
+      screen.getByText('此操作将永久删除“Important Document”。此操作无法撤销。')
     ).toBeInTheDocument()
   })
 })
