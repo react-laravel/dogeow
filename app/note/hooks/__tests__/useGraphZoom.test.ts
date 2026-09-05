@@ -220,7 +220,6 @@ describe('useGraphZoom', () => {
   it('should use default options when not provided', () => {
     const { result } = renderHook(() => useGraphZoom())
 
-    // Set a center so centerAt is actually called with default options
     result.current.lastCenterRef.current = { x: 0, y: 0 }
 
     const mockGraph = {
@@ -235,5 +234,15 @@ describe('useGraphZoom', () => {
 
     expect(mockGraph.zoom).toHaveBeenCalledWith(1)
     expect(mockGraph.centerAt).toHaveBeenCalledWith(0, 0, 0)
+  })
+
+  it('should expose getZoom helper', () => {
+    const { result } = renderHook(() => useGraphZoom())
+
+    act(() => {
+      result.current.handleZoom({ current: null } as never, { x: 0, y: 0, k: 1.25 })
+    })
+
+    expect(result.current.getZoom()).toBe(1.25)
   })
 })
