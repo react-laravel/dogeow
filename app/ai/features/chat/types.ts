@@ -22,6 +22,7 @@ export interface ChatMessage {
   id?: string
   role: 'system' | 'user' | 'assistant'
   content: string
+  error?: boolean
   images?: ChatMessageImage[]
   videos?: ChatMessageVideo[]
   musics?: ChatMessageMusic[]

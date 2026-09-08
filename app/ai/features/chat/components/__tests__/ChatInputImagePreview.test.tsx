@@ -51,7 +51,7 @@ describe('ChatInputImagePreview', () => {
       />
     )
 
-    const removeButton = screen.getByRole('button', { name: '移除图片' })
+    const removeButton = screen.getByRole('button', { name: /移除图片/ })
     removeButton.click()
     expect(onRemoveImage).toHaveBeenCalledWith(0)
   })

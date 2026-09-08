@@ -1,6 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ChatMessageItem } from '../ChatMessageItem'
 
@@ -69,5 +68,18 @@ describe('ChatMessageItem', () => {
   it('renders dialog variant', () => {
     render(<ChatMessageItem variant="dialog" message={{ role: 'user', content: 'Hello' }} />)
     expect(screen.getByText('Hello')).toBeInTheDocument()
+  })
+  it('copies the original answer text', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    render(
+      <ChatMessageItem
+        variant="dialog"
+        message={{ role: 'assistant', content: '**重点**\n\n保留格式。' }}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '复制回答' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('**重点**\n\n保留格式。'))
+    expect(screen.getByRole('button', { name: '已复制回答' })).toBeInTheDocument()
   })
 })

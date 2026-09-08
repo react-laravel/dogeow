@@ -130,6 +130,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
   )
 
   const abortControllerRef = useRef<AbortController | null>(null)
+  const completionRef = useRef('')
   const hasAppliedInitialMessagesRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { ollamaModels, isLoadingOllamaModels } = useOllamaModels({
@@ -177,22 +178,28 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     hasAppliedInitialMessagesRef.current = true
   }, [initialMessages, messages.length])
 
-  // 自动滚动到底部
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages, completion, isLoading])
-
   // 停止生成
   const stop = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-    }
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    const partial = completionRef.current
+    completionRef.current = ''
+    if (partial) setMessages(previous => [...previous, { role: 'assistant', content: partial }])
     setIsLoading(false)
     setCompletion('')
   }, [])
+
+  useEffect(() => {
+    if (open === false) stop()
+  }, [open, stop])
+
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = null
+    },
+    []
+  )
 
   // 清除对话
   const handleClear = useCallback(() => {
@@ -204,7 +211,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
 
   // 发送消息
   const handleSend = useCallback(async () => {
-    if (!prompt.trim() || isLoading) return
+    if (!prompt.trim() || isLoading || abortControllerRef.current) return
 
     if (provider === 'ollama' && !model) {
       setMessages(prev => [
@@ -230,9 +237,18 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
     setIsLoading(true)
     setCompletion('')
 
+    completionRef.current = ''
+
     // 创建 abort controller
     const abortController = new AbortController()
     abortControllerRef.current = abortController
+    const isCurrentRequest = () =>
+      abortControllerRef.current === abortController && !abortController.signal.aborted
+    const updateCompletion = (content: string) => {
+      if (!isCurrentRequest()) return
+      completionRef.current = content
+      setCompletion(content)
+    }
 
     try {
       // 检索/embedding 模型只发当前一条用户消息，减少请求体
@@ -284,13 +300,17 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
         response = await callKnowledgeChatAPI(payload, abortController.signal)
       }
 
+      if (!isCurrentRequest()) return
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
 
       const finalContent = isBrowserLocalOllamaResponse
-        ? await readOllamaChatStream(response, setCompletion)
-        : await readAiChatStream(response, setCompletion)
+        ? await readOllamaChatStream(response, updateCompletion)
+        : await readAiChatStream(response, updateCompletion)
+
+      if (!isCurrentRequest()) return
+      completionRef.current = ''
 
       if (finalContent) {
         setMessages(prev => [
@@ -304,6 +324,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
       setCompletion('')
       setIsLoading(false)
     } catch (error: unknown) {
+      if (!isCurrentRequest()) return
+      completionRef.current = ''
       if (error instanceof Error && error.name === 'AbortError') {
         // 用户主动停止，不显示错误
         return
@@ -323,12 +345,13 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}): UseKnow
         {
           role: 'assistant',
           content: `错误: ${errorMessage}`,
+          error: true,
         },
       ])
       setCompletion('')
       setIsLoading(false)
     } finally {
-      abortControllerRef.current = null
+      if (abortControllerRef.current === abortController) abortControllerRef.current = null
     }
   }, [
     prompt,

@@ -127,6 +127,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
   )
 
   const abortControllerRef = useRef<AbortController | null>(null)
+  const completionRef = useRef('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Ollama models loading - extracted to hook
@@ -164,13 +165,6 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     }
   }, [codexModels, isLoadingCodexModels, model, provider])
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages, completion, isLoading])
-
   // Image handling
   const { images, hasImages, isUploadingImages, handleImageSelect, removeImage, clearImages } =
     useAiChatImages({
@@ -186,13 +180,26 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
   // Stop generation
   const stop = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-    }
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    const partial = completionRef.current
+    completionRef.current = ''
+    if (partial) setMessages(previous => [...previous, { role: 'assistant', content: partial }])
     setIsLoading(false)
     setCompletion('')
   }, [])
+
+  useEffect(() => {
+    if (open === false) stop()
+  }, [open, stop])
+
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = null
+    },
+    []
+  )
 
   // Clear conversation
   const handleClear = useCallback(() => {
@@ -205,7 +212,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
 
   // Send message
   const handleSend = useCallback(async () => {
-    if (isLoading) return
+    if (isLoading || abortControllerRef.current) return
 
     if (provider === 'ollama' && !model) {
       toast.warning('当前 Ollama 地址下没有可用模型，请先在设置中检查 Ollama 列表')
@@ -235,9 +242,18 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
     setIsLoading(true)
     setCompletion('')
 
+    completionRef.current = ''
+
     // Create abort controller
     const abortController = new AbortController()
     abortControllerRef.current = abortController
+    const isCurrentRequest = () =>
+      abortControllerRef.current === abortController && !abortController.signal.aborted
+    const updateCompletion = (content: string) => {
+      if (!isCurrentRequest()) return
+      completionRef.current = content
+      setCompletion(content)
+    }
 
     try {
       // Prepare messages (ensure system message exists)
@@ -304,6 +320,7 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
         })
       }
 
+      if (!isCurrentRequest()) return
       if (!response.ok) {
         let detail = `API error: ${response.status}`
         try {
@@ -317,8 +334,11 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       }
 
       const accumulatedContent = isBrowserLocalOllamaResponse
-        ? await readOllamaChatStream(response, setCompletion)
-        : await readAiChatStream(response, setCompletion)
+        ? await readOllamaChatStream(response, updateCompletion)
+        : await readAiChatStream(response, updateCompletion)
+
+      if (!isCurrentRequest()) return
+      completionRef.current = ''
 
       // Stream ended, add assistant message
       if (accumulatedContent) {
@@ -331,6 +351,8 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
       setCompletion('')
       setIsLoading(false)
     } catch (error: unknown) {
+      if (!isCurrentRequest()) return
+      completionRef.current = ''
       if (error instanceof Error && error.name === 'AbortError') {
         // User stopped, no error to show
         return
@@ -350,12 +372,13 @@ export function useAiChat(options: UseAiChatOptions = {}): UseAiChatReturn {
         {
           role: 'assistant',
           content: `错误: ${errorMessage}`,
+          error: true,
         },
       ])
       setCompletion('')
       setIsLoading(false)
     } finally {
-      abortControllerRef.current = null
+      if (abortControllerRef.current === abortController) abortControllerRef.current = null
     }
   }, [
     prompt,

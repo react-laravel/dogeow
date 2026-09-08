@@ -36,12 +36,13 @@ describe('AppGrid', () => {
     musicState.isPlaying = true
   })
 
-  it('provides desktop labels and exposes the active playback status', () => {
+  it('exposes playback status without marking the launcher button as selected', () => {
     render(<AppGrid toggleDisplayMode={vi.fn()} onOpenAi={vi.fn()} onToggleSearch={vi.fn()} />)
 
     const musicButton = screen.getByRole('button', { name: '音乐，正在播放' })
     expect(musicButton).toHaveAttribute('title', '音乐')
-    expect(musicButton).toHaveAttribute('data-active', 'true')
+    expect(musicButton).toHaveAttribute('data-playing', 'true')
+    expect(musicButton).not.toHaveAttribute('data-active')
     expect(screen.getByRole('button', { name: 'AI 助理' })).toHaveAttribute('title', 'AI 助理')
     expect(screen.getByRole('button', { name: '搜索' })).toHaveAttribute('title', '搜索')
   })

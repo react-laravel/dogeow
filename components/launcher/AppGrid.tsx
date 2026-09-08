@@ -16,7 +16,7 @@ interface AppGridButtonConfig {
   icon: React.ReactNode
   label: string
   onClick: () => void
-  isActive?: boolean
+  isPlaying?: boolean
   buttonClassName?: string
 }
 
@@ -121,7 +121,7 @@ export function AppGrid({
       icon: <div className="transition-transform duration-300">{musicIcon}</div>,
       label: t('appgrid.music'),
       onClick: () => toggleDisplayMode('music'),
-      isActive: isPlaying,
+      isPlaying,
     },
     ...(canUseAi(user)
       ? [
@@ -148,13 +148,13 @@ export function AppGrid({
             size="icon"
             className={cn(
               'size-10 gap-2 rounded-xl hover:bg-accent/70 lg:w-auto lg:px-3',
-              button.isActive && 'bg-primary/12 text-primary hover:bg-primary/18',
+              button.isPlaying && 'text-primary',
               button.buttonClassName
             )}
             onClick={button.onClick}
             title={button.label}
-            aria-label={button.isActive ? `${button.label}，正在播放` : button.label}
-            data-active={button.isActive || undefined}
+            aria-label={button.isPlaying ? `${button.label}，正在播放` : button.label}
+            data-playing={button.isPlaying || undefined}
           >
             {button.icon}
             <span className="hidden text-sm font-medium lg:inline">{button.label}</span>

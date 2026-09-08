@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { ChatMessageItem } from './ChatMessageItem'
 import { ChatLoadingIndicator } from './ChatLoadingIndicator'
 import { ChatEmptyState } from './ChatEmptyState'
@@ -11,68 +12,93 @@ interface ChatMessageListProps {
   completion?: string
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   variant?: 'dialog' | 'page'
+  emptyState?: React.ReactNode
 }
 
 export const ChatMessageList = React.memo<ChatMessageListProps>(
-  ({ messages, isLoading, completion, messagesEndRef, variant = 'page' }) => {
-    // 过滤掉 system 消息
-    const displayMessages = useMemo(() => messages.filter(m => m.role !== 'system'), [messages])
-
-    // 如果正在生成且最后一条是 assistant，不显示最后一条（用 completion 代替）
-    const filteredMessages = useMemo(() => {
-      return displayMessages.filter((msg, idx, arr) => {
-        if (isLoading && idx === arr.length - 1 && msg.role === 'assistant') {
-          return false
-        }
-        return true
-      })
-    }, [displayMessages, isLoading])
-
+  ({ messages, isLoading, completion, messagesEndRef, variant = 'page', emptyState }) => {
+    const viewportRef = useRef<HTMLDivElement>(null)
+    const followEndRef = useRef(true)
+    const previousMessagesRef = useRef(messages)
+    const [showJump, setShowJump] = useState(false)
+    const displayMessages = useMemo(
+      () => messages.filter(message => message.role !== 'system'),
+      [messages]
+    )
     const hasMessages = displayMessages.length > 0 || isLoading
 
-    const content = hasMessages ? (
-      <div className={variant === 'dialog' ? 'space-y-2' : 'space-y-6'}>
-        {/* 显示历史消息 */}
-        {filteredMessages.map((msg, idx) => (
-          <ChatMessageItem key={idx} message={msg} variant={variant} />
-        ))}
+    const jumpToEnd = () => {
+      const viewport = viewportRef.current
+      if (!viewport) return
+      followEndRef.current = true
+      viewport.scrollTop = viewport.scrollHeight
+      setShowJump(false)
+    }
+    useLayoutEffect(() => {
+      const viewport = viewportRef.current
+      const sentMessage =
+        previousMessagesRef.current !== messages && messages.at(-1)?.role === 'user'
+      previousMessagesRef.current = messages
+      if (sentMessage) followEndRef.current = true
+      if (viewport && followEndRef.current) {
+        viewport.scrollTop = viewport.scrollHeight
+      }
+    }, [messages, completion, isLoading])
 
-        {/* 显示正在生成的回复 */}
-        {isLoading && <ChatLoadingIndicator completion={completion} variant={variant} />}
+    useLayoutEffect(() => {
+      const viewport = viewportRef.current
+      if (!viewport || typeof ResizeObserver === 'undefined') return
+      const observer = new ResizeObserver(() => {
+        if (followEndRef.current) viewport.scrollTop = viewport.scrollHeight
+      })
+      observer.observe(viewport)
+      return () => observer.disconnect()
+    }, [])
 
-        {/* 滚动锚点 */}
-        <div ref={messagesEndRef} />
-      </div>
-    ) : (
-      <ChatEmptyState variant={variant} />
-    )
-
-    if (variant === 'dialog') {
-      return (
-        <div className="min-h-0 flex-1 overflow-hidden" style={{ touchAction: 'pan-y' }}>
-          <div
-            className="h-full overflow-y-auto overscroll-contain"
-            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-          >
-            <div className="px-3 py-2 sm:px-4">{content}</div>
+    return (
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={viewportRef}
+          role="region"
+          aria-label="对话内容"
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+          onScroll={event => {
+            const element = event.currentTarget
+            const atEnd = element.scrollHeight - element.scrollTop - element.clientHeight < 80
+            followEndRef.current = atEnd
+            setShowJump(!atEnd)
+          }}
+        >
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-5 sm:px-6 sm:py-6">
+            {hasMessages ? (
+              <div className="space-y-6">
+                {displayMessages.map((message, index) => (
+                  <ChatMessageItem key={message.id ?? index} message={message} variant={variant} />
+                ))}
+                {isLoading && <ChatLoadingIndicator completion={completion} variant={variant} />}
+                <div ref={messagesEndRef} />
+              </div>
+            ) : (
+              (emptyState ?? <ChatEmptyState variant={variant} />)
+            )}
           </div>
         </div>
-      )
-    }
-
-    // page variant
-    return (
-      <div className="flex-1 overflow-hidden">
-        {hasMessages ? (
-          <ScrollArea className="h-full">
-            <div className="mx-auto max-w-4xl px-4 py-6">{content}</div>
-          </ScrollArea>
-        ) : (
-          <div className="flex h-full items-center justify-center">{content}</div>
+        {showJump && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="pointer-events-auto rounded-full border shadow-md"
+              onClick={jumpToEnd}
+            >
+              <ArrowDown className="size-4" />
+              回到最新
+            </Button>
+          </div>
         )}
       </div>
     )
   }
 )
-
 ChatMessageList.displayName = 'ChatMessageList'

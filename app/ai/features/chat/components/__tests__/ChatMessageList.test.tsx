@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ChatMessageList } from '../ChatMessageList'
 import type { ChatMessage } from '../../types'
@@ -36,7 +36,7 @@ const createMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 describe('ChatMessageList', () => {
   it('renders empty state when no messages and not loading', () => {
     render(<ChatMessageList messagesEndRef={{ current: null }} messages={[]} isLoading={false} />)
-    expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
+    expect(screen.getByText('有什么想聊的？')).toBeInTheDocument()
   })
 
   it('renders messages when available', () => {
@@ -81,7 +81,7 @@ describe('ChatMessageList', () => {
     expect(screen.getByText('正在输入...')).toBeInTheDocument()
   })
 
-  it('does not show last assistant message when loading and completion is present', () => {
+  it('keeps earlier assistant messages while a new reply is streaming', () => {
     const messages = [
       createMessage({ role: 'user', content: 'Hello' }),
       createMessage({ role: 'assistant', content: 'Partial answer' }),
@@ -95,7 +95,7 @@ describe('ChatMessageList', () => {
       />
     )
     // The last assistant message should be hidden, replaced by ChatLoadingIndicator
-    expect(screen.queryByText('Partial answer')).not.toBeInTheDocument()
+    expect(screen.getByText('Partial answer')).toBeInTheDocument()
     expect(screen.getByText('more')).toBeInTheDocument()
   })
 
@@ -145,6 +145,28 @@ describe('ChatMessageList', () => {
         variant="dialog"
       />
     )
-    expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
+    expect(screen.getByText('有什么想聊的？')).toBeInTheDocument()
+  })
+  it('does not pull readers away from earlier messages when more text streams in', () => {
+    const messages = [createMessage({ role: 'user', content: 'question' })]
+    const props = {
+      messagesEndRef: { current: null },
+      messages,
+      isLoading: true,
+      variant: 'dialog' as const,
+    }
+    const { rerender } = render(<ChatMessageList {...props} completion="first" />)
+    const viewport = screen.getByRole('region', { name: '对话内容' })
+    Object.defineProperties(viewport, {
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 400 },
+    })
+    viewport.scrollTop = 200
+    fireEvent.scroll(viewport)
+    rerender(<ChatMessageList {...props} completion="first plus more" />)
+    expect(viewport.scrollTop).toBe(200)
+    fireEvent.click(screen.getByRole('button', { name: '回到最新' }))
+    expect(viewport.scrollTop).toBe(2000)
+    expect(screen.queryByRole('button', { name: '回到最新' })).not.toBeInTheDocument()
   })
 })

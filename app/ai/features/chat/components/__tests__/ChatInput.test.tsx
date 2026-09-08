@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ChatInput } from '../ChatInput'
 
+vi.unmock('@/components/ui/popover')
+
 // Mock next/image - supports both default and named imports
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -278,13 +280,13 @@ describe('ChatInput', () => {
 
   it('renders send button', () => {
     render(<ChatInput {...defaultProps} />)
-    expect(screen.getByRole('button', { name: '' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '发送消息' })).toBeInTheDocument()
   })
 
   it('renders stop button when loading', () => {
     render(<ChatInput {...defaultProps} isLoading={true} onStop={vi.fn()} />)
     // When loading, the send button shows Square icon
-    expect(screen.getByRole('button', { name: '' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '停止生成' })).toBeInTheDocument()
   })
 
   it('renders dialog variant', () => {
@@ -304,7 +306,7 @@ describe('ChatInput', () => {
         ollamaModels={[{ name: 'qwen3:0.6b', supportsVision: false }]}
       />
     )
-    expect(screen.getByText('qwen3:0.6b')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '模型设置，当前 qwen3:0.6b' })).toBeInTheDocument()
   })
 
   it('shows image upload button when supported', () => {
@@ -356,5 +358,34 @@ describe('ChatInput', () => {
       const images = screen.queryAllByRole('img')
       expect(images.length).toBeGreaterThanOrEqual(2)
     }
+  })
+  it('does not send while composing Chinese text', () => {
+    const onSend = vi.fn()
+    render(<ChatInput {...defaultProps} prompt="你好" onSend={onSend} />)
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', isComposing: true })
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', keyCode: 229 })
+    expect(onSend).not.toHaveBeenCalled()
+  })
+  it('blocks button and keyboard submission while images are uploading', () => {
+    const onSend = vi.fn()
+    render(
+      <ChatInput
+        {...defaultProps}
+        prompt="看这张图片"
+        images={[{ id: 'one', preview: 'blob:test', uploading: true }]}
+        supportsImages
+        onImageSelect={vi.fn()}
+        onSend={onSend}
+      />
+    )
+    expect(screen.getByRole('button', { name: '发送消息' })).toBeDisabled()
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' })
+    expect(onSend).not.toHaveBeenCalled()
+  })
+  it('stops generation from the labelled stop button', () => {
+    const onStop = vi.fn()
+    render(<ChatInput {...defaultProps} isLoading onStop={onStop} />)
+    fireEvent.click(screen.getByRole('button', { name: '停止生成' }))
+    expect(onStop).toHaveBeenCalledTimes(1)
   })
 })

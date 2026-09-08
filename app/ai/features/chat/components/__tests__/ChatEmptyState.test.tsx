@@ -6,17 +6,17 @@ import { ChatEmptyState } from '../ChatEmptyState'
 describe('ChatEmptyState', () => {
   it('renders default (page) variant', () => {
     render(<ChatEmptyState />)
-    expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
+    expect(screen.getByText('有什么想聊的？')).toBeInTheDocument()
   })
 
   it('renders page variant explicitly', () => {
     render(<ChatEmptyState variant="page" />)
-    expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
+    expect(screen.getByText('有什么想聊的？')).toBeInTheDocument()
   })
 
   it('renders dialog variant', () => {
     render(<ChatEmptyState variant="dialog" />)
-    expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
+    expect(screen.getByText('有什么想聊的？')).toBeInTheDocument()
   })
 
   it('renders bot icon', () => {

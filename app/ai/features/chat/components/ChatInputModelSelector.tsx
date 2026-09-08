@@ -37,13 +37,13 @@ export const PROVIDER_LABELS: Record<AIProvider, string> = {
 
 const PROVIDER_STYLES: Record<AIProvider, string> = {
   ollama: 'bg-primary/10 ring-primary',
-  codex: 'bg-sky-500/10 ring-sky-500',
+  codex: 'bg-primary/10 ring-primary',
 }
 
 const PROVIDER_DESCRIPTIONS: Record<AIProvider, string> = {
   ollama: '本地模型',
   // Server-side ChatGPT subscription via Codex auth.json — not a browser OAuth click.
-  codex: '服务端订阅',
+  codex: 'ChatGPT 模型',
 }
 
 const CODEX_REASONING_EFFORTS: Array<{
@@ -51,12 +51,12 @@ const CODEX_REASONING_EFFORTS: Array<{
   label: string
   desc: string
 }> = [
-  { value: 'minimal', label: 'Minimal', desc: '最快' },
-  { value: 'low', label: 'Low', desc: '轻量' },
-  { value: 'medium', label: 'Medium', desc: '默认' },
-  { value: 'high', label: 'High', desc: '复杂' },
-  { value: 'xhigh', label: 'XHigh', desc: '最深' },
-  { value: 'ultra', label: 'Ultra', desc: '自动任务委派' },
+  { value: 'minimal', label: '最低', desc: '最快' },
+  { value: 'low', label: '较低', desc: '轻量' },
+  { value: 'medium', label: '标准', desc: '默认' },
+  { value: 'high', label: '较高', desc: '复杂' },
+  { value: 'xhigh', label: '深度', desc: '最深' },
+  { value: 'ultra', label: '超深', desc: '自动任务委派' },
 ]
 
 export function getModelLabel(
@@ -104,13 +104,17 @@ export const ProviderSelector = React.memo<ProviderSelectorProps>(
             variant="ghost"
             size="sm"
             disabled={isLoading}
-            className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+            aria-label="选择服务来源"
+            className="h-10 w-full min-w-0 justify-between gap-2 rounded-lg border px-3 font-normal"
           >
-            {PROVIDER_LABELS[provider]}
+            <span className="truncate">{PROVIDER_LABELS[provider]}</span>
             {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-40">
+        <DropdownMenuContent
+          align="start"
+          className="bg-popover z-[150] w-60 max-w-[calc(100vw-24px)]"
+        >
           <DropdownMenuRadioGroup
             value={provider}
             onValueChange={v => onProviderChange(v as AIProvider)}
@@ -120,9 +124,8 @@ export const ProviderSelector = React.memo<ProviderSelectorProps>(
                 key={p}
                 value={p}
                 className={cn(
-                  'cursor-pointer',
-                  provider === p &&
-                    `relative z-10 font-medium ring-2 ring-offset-1 ${PROVIDER_STYLES[p]}`
+                  'min-h-10 cursor-pointer',
+                  provider === p && `font-medium ${PROVIDER_STYLES[p]}`
                 )}
               >
                 <div className="flex flex-col">
@@ -160,16 +163,17 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
       model || (isLoadingOllamaModels ? '读取中...' : hasModels ? '选择模型' : '未发现模型')
 
     return (
-      <div className="flex flex-col items-start gap-0.5">
+      <div className="flex w-full min-w-0 flex-col gap-1.5">
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
               disabled={isLoading}
-              className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+              aria-label="选择模型"
+              className="h-10 w-full min-w-0 justify-between gap-2 rounded-lg border px-3 font-normal"
             >
-              {triggerLabel}
+              <span className="min-w-0 truncate">{triggerLabel}</span>
               {open ? (
                 <ChevronDown className="h-3.5 w-3.5" />
               ) : (
@@ -177,7 +181,10 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuContent
+            align="start"
+            className="bg-popover z-[150] w-72 max-w-[calc(100vw-24px)]"
+          >
             <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
               {textOnly.length > 0 && (
                 <>
@@ -189,13 +196,12 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
                       key={item.name}
                       value={item.name}
                       className={cn(
-                        'cursor-pointer',
-                        model === item.name &&
-                          'bg-primary/10 ring-primary relative z-10 font-medium ring-2 ring-offset-1'
+                        'min-h-10 cursor-pointer',
+                        model === item.name && 'bg-primary/10 ring-primary font-medium'
                       )}
                     >
                       <div className="flex flex-col">
-                        <span>{item.name}</span>
+                        <span className="break-all">{item.name}</span>
                         {formatOllamaModelMeta(item) && (
                           <span className="text-muted-foreground text-xs">
                             {formatOllamaModelMeta(item)}
@@ -217,13 +223,12 @@ export const OllamaModelSelector = React.memo<OllamaModelSelectorProps>(
                       key={item.name}
                       value={item.name}
                       className={cn(
-                        'cursor-pointer',
-                        model === item.name &&
-                          'bg-primary/10 ring-primary relative z-10 font-medium ring-2 ring-offset-1'
+                        'min-h-10 cursor-pointer',
+                        model === item.name && 'bg-primary/10 ring-primary font-medium'
                       )}
                     >
                       <div className="flex flex-col">
-                        <span>{item.name}</span>
+                        <span className="break-all">{item.name}</span>
                         {formatOllamaModelMeta(item) && (
                           <span className="text-muted-foreground text-xs">
                             {formatOllamaModelMeta(item)}
@@ -299,22 +304,25 @@ export const CodexModelSelector = React.memo<CodexModelSelectorProps>(
             variant="ghost"
             size="sm"
             disabled={isLoading}
-            className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+            aria-label="选择模型"
+            className="h-10 w-full min-w-0 justify-between gap-2 rounded-lg border px-3 font-normal"
           >
-            {triggerLabel}
+            <span className="min-w-0 truncate">{triggerLabel}</span>
             {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuContent
+          align="start"
+          className="bg-popover z-[150] w-72 max-w-[calc(100vw-24px)]"
+        >
           <DropdownMenuRadioGroup value={model} onValueChange={onModelChange}>
             {availableModels.map(m => (
               <DropdownMenuRadioItem
                 key={m.value}
                 value={m.value}
                 className={cn(
-                  'cursor-pointer',
-                  model === m.value &&
-                    'bg-sky-500/10 ring-sky-500 relative z-10 font-medium ring-2 ring-offset-1'
+                  'min-h-10 cursor-pointer',
+                  model === m.value && 'bg-primary/10 text-primary font-medium'
                 )}
               >
                 <div className="flex flex-col">
@@ -361,19 +369,27 @@ export const CodexReasoningEffortSelector = React.memo<CodexReasoningEffortSelec
             variant="ghost"
             size="sm"
             disabled={isLoading}
-            className="h-auto gap-1 px-0 py-1 font-normal text-muted-foreground hover:text-foreground"
+            aria-label="选择思考深度"
+            className="h-10 w-full min-w-0 justify-between gap-2 rounded-lg border px-3 font-normal"
           >
-            {getCodexReasoningEffortLabel(effort)}
+            <span>{getCodexReasoningEffortLabel(effort)}</span>
             {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
+        <DropdownMenuContent
+          align="start"
+          className="bg-popover z-[150] w-60 max-w-[calc(100vw-24px)]"
+        >
           <DropdownMenuRadioGroup
             value={effort}
             onValueChange={value => onEffortChange(value as CodexReasoningEffort)}
           >
             {availableEfforts.map(item => (
-              <DropdownMenuRadioItem key={item.value} value={item.value} className="cursor-pointer">
+              <DropdownMenuRadioItem
+                key={item.value}
+                value={item.value}
+                className="min-h-10 cursor-pointer"
+              >
                 <div className="flex flex-col">
                   <span>{item.label}</span>
                   <span className="text-muted-foreground text-xs">{item.desc}</span>

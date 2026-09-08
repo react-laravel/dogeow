@@ -19,9 +19,9 @@ export const ChatInputImagePreview = React.memo<ChatInputImagePreviewProps>(
     if (images.length === 0) return null
 
     return (
-      <div className={`flex flex-wrap gap-2 ${className}`}>
+      <div className={`flex gap-2 overflow-x-auto ${className}`}>
         {images.map((item, index) => (
-          <div key={item.id} className="group relative">
+          <div key={item.id} className="group relative shrink-0">
             <NextImage
               src={item.preview}
               alt={`上传图片 ${index + 1}`}
@@ -37,8 +37,8 @@ export const ChatInputImagePreview = React.memo<ChatInputImagePreviewProps>(
             <button
               type="button"
               onClick={() => onRemoveImage?.(index)}
-              className="absolute -top-1.5 -right-1.5 rounded-full bg-black/70 p-1 opacity-0 transition-opacity group-hover:opacity-100"
-              aria-label="移除图片"
+              className="absolute -top-1.5 -right-1.5 rounded-full bg-black/70 p-1.5 opacity-100 transition-opacity"
+              aria-label={`移除图片 ${index + 1}`}
             >
               <X className="h-3 w-3 text-white" />
             </button>
