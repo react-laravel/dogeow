@@ -1,448 +1,256 @@
 'use client'
 
-import { useState, useEffect, type CSSProperties } from 'react'
-import { createPortal } from 'react-dom'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from 'react'
+import {
+  addDays,
+  addMonths,
+  format,
+  getDaysInMonth,
+  parseISO,
+  startOfMonth,
+  startOfWeek,
+  subDays,
+} from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import {
   useCheckInCalendar,
   useYearCheckInCalendar,
   useLast365CheckInCalendar,
 } from '../hooks/useWord'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { format, startOfMonth, addMonths, subMonths, addDays, subDays, startOfWeek } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
+import { WordPanel } from './WordPanel'
+import type { CalendarDay } from '../types'
+
+function MonthGrid({
+  date,
+  days,
+  compact = false,
+}: {
+  date: Date
+  days: CalendarDay[]
+  compact?: boolean
+}) {
+  const first = startOfMonth(date)
+  const byDate = new Map(days.map(day => [day.date, day]))
+  const today = format(new Date(), 'yyyy-MM-dd')
+  return (
+    <div className="grid grid-cols-7 gap-1 text-center">
+      {['日', '一', '二', '三', '四', '五', '六'].map(day => (
+        <span key={day} className="text-muted-foreground py-1 text-xs">
+          {day}
+        </span>
+      ))}
+      {Array.from({ length: first.getDay() }, (_, index) => (
+        <span key={`empty-${index}`} />
+      ))}
+      {Array.from({ length: getDaysInMonth(date) }, (_, index) => {
+        const key = format(addDays(first, index), 'yyyy-MM-dd')
+        const day = byDate.get(key)
+        return (
+          <span
+            key={key}
+            title={`${key} · ${day?.checked ? `新词 ${day.new_words_count} · 复习 ${day.review_words_count}` : '未打卡'}`}
+            aria-label={`${key}${day?.checked ? ' 已打卡' : ''}`}
+            aria-current={key === today ? 'date' : undefined}
+            className={`flex flex-col items-center justify-center gap-1 rounded-lg text-xs ${compact ? 'h-7' : 'h-10'} ${day?.checked ? 'bg-primary/10 text-primary font-medium' : ''} ${key === today ? 'ring-primary ring-1 ring-inset' : ''}`}
+          >
+            {index + 1}
+            {!compact && (
+              <span
+                className={`size-1 rounded-full ${day?.checked ? 'bg-primary' : 'bg-transparent'}`}
+              />
+            )}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
 
 export function CheckInCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const year = currentDate.getFullYear()
-  const month = currentDate.getMonth() + 1
-
-  const [viewMode, setViewMode] = useState<'month' | 'year' | 'last365'>('month')
-  const [fitOneScreen, setFitOneScreen] = useState(true)
-
-  const { data: calendarData, isLoading: loadingMonth } = useCheckInCalendar(year, month)
-  const { data: yearCalendarData, isLoading: loadingYear } = useYearCheckInCalendar(year)
-  const { data: last365CalendarData, isLoading: loadingLast365 } = useLast365CheckInCalendar()
-
-  const isLoading =
-    viewMode === 'month' ? loadingMonth : viewMode === 'year' ? loadingYear : loadingLast365
-
-  const handlePreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1))
-  }
-
-  // 渲染贡献图（类似 GitHub）——按周列展示近 365 天
-  function renderContributionGraph(
-    days: {
-      date: string
-      checked: boolean
-      new_words_count?: number
-      review_words_count?: number
-    }[],
-    fillHeight = false,
-    range?: { start_date: string; end_date: string }
-  ) {
-    const m = new Map<string, (typeof days)[0]>()
-    days.forEach(d => m.set(d.date, d))
-
-    function colorFor(dayObj?: (typeof days)[0]) {
-      if (!dayObj) return '#ebedf0'
-      const activity =
-        (dayObj.new_words_count ?? 0) + (dayObj.review_words_count ?? 0) + (dayObj.checked ? 1 : 0)
-      if (activity === 0) return '#ebedf0'
-      if (activity === 1) return '#c6e48b'
-      if (activity <= 3) return '#7bc96f'
-      return '#239a3b'
-    }
-
-    const emptyColor = '#ebedf0'
-    const cellStyle = (bg: string) => ({ background: bg, borderRadius: 3 })
-
-    if (fillHeight) {
-      // 全屏模式：使用固定正方形格子，避免被容器高度拉伸成长方形
-      const today = new Date()
-      const dateList: Date[] = []
-      for (let i = 0; i < 365; i++) {
-        dateList.push(subDays(today, i))
-      }
-      const cols = 15
-      const rows = Math.ceil(365 / cols)
-      const gridStyle: CSSProperties = fitOneScreen
-        ? {
-            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-          }
-        : {
-            gridTemplateColumns: `repeat(${cols}, 1.4rem)`,
-            gridAutoRows: '1.4rem',
-          }
-
-      return (
-        <div className="h-full min-h-0 overflow-auto p-4">
-          <div
-            className={`mx-auto grid gap-1.5 ${fitOneScreen ? 'w-full max-w-full' : 'w-fit'}`}
-            style={gridStyle}
-          >
-            {dateList.map(d => {
-              const dateStr = format(d, 'yyyy-MM-dd')
-              const dayObj = m.get(dateStr)
-              const bg = colorFor(dayObj)
-              const isEmpty = bg === emptyColor
-              return (
-                <div
-                  key={dateStr}
-                  title={`${dateStr}${dayObj ? ` — ${(dayObj.new_words_count ?? 0) + (dayObj.review_words_count ?? 0)}` : ''}`}
-                  style={isEmpty ? undefined : cellStyle(bg)}
-                  className={`aspect-square h-full w-full rounded-[3px] ${isEmpty ? 'bg-muted' : ''}`}
-                />
-              )
-            })}
-            {Array.from({ length: cols * rows - 365 }).map((_, i) => (
-              <div
-                key={`empty-${i}`}
-                className="bg-muted aspect-square h-full w-full rounded-[3px]"
-              />
-            ))}
-          </div>
-        </div>
-      )
-    }
-
-    // 非全屏模式：按周列展示（原逻辑）
-    const start = range ? new Date(range.start_date) : new Date(days[0]?.date ?? '')
-    const end = range ? new Date(range.end_date) : new Date(days[days.length - 1]?.date ?? '')
-    if (days.length === 0 && !range) return null
-    const startSunday = startOfWeek(start, { weekStartsOn: 0 })
-
-    const weeks: Date[][] = []
-    let cursor = new Date(startSunday)
-    while (cursor <= end) {
-      const week: Date[] = []
-      for (let i = 0; i < 7; i++) {
-        week.push(new Date(cursor))
-        cursor = addDays(cursor, 1)
-      }
-      weeks.push(week)
-    }
-
-    return (
-      <div className="overflow-auto">
-        <div className="flex items-start gap-1">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-1">
-              {week.map(d => {
-                const dateStr = format(d, 'yyyy-MM-dd')
-                const dayObj = m.get(dateStr)
-                const bg = colorFor(dayObj)
-                return (
-                  <div
-                    key={dateStr}
-                    title={`${dateStr}${dayObj ? ` — ${(dayObj.new_words_count ?? 0) + (dayObj.review_words_count ?? 0)}` : ''}`}
-                    style={{ width: 12, height: 12, ...cellStyle(bg) }}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  const handleNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1))
-  }
-
-  // 打开年/近365视图时禁止背景滚动，关闭时恢复
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-    if (viewMode === 'year' || viewMode === 'last365') {
-      const prev = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = prev
-      }
-    }
-  }, [viewMode])
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-6">
-          <LoadingSpinner />
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (viewMode === 'month' && !calendarData) return null
-  if (viewMode === 'year' && !yearCalendarData) return null
-  if (viewMode === 'last365' && !last365CalendarData) return null
-
-  function buildDayMap(
-    days: { date: string; checked: boolean; new_words_count: number; review_words_count: number }[]
-  ) {
-    const m = new Map<string, (typeof days)[0]>()
-    days.forEach(d => m.set(d.date, d))
-    return m
-  }
-
-  // 渲染某个月小日历
-  function renderMonthMini(
-    monthDate: Date,
-    dayMap: Map<string, any>,
-    monthLabel?: string,
-    compact = false
-  ) {
-    const y = monthDate.getFullYear()
-    const mIndex = monthDate.getMonth()
-    const monthStart = startOfMonth(monthDate)
-    const firstDay = monthStart.getDay()
-    const daysInMonth = new Date(y, mIndex + 1, 0).getDate()
-
-    const calendarDays: (any | null)[] = []
-    for (let i = 0; i < firstDay; i++) calendarDays.push(null)
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${y}-${String(mIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      calendarDays.push(dayMap.get(dateStr) ?? { date: dateStr, checked: false })
-    }
-
-    // compact 模式使用固定高度行和更小字号，避免文字换行造成重叠
-    return (
-      <div key={`${y}-${mIndex}`} className={`${compact ? 'mb-2 overflow-hidden' : 'mb-4'}`}>
-        <div className={`${compact ? 'text-xs' : 'text-sm'} mb-1 font-medium`}>
-          {monthLabel ?? format(monthDate, 'yyyy年M月', { locale: zhCN })}
-        </div>
-        <div
-          className={`grid grid-cols-7 ${compact ? 'gap-0.5' : 'gap-0.5'}`}
-          style={compact ? { gridAutoRows: '1.4rem' } : {}}
-        >
-          {['日', '一', '二', '三', '四', '五', '六'].map(day => (
-            <div
-              key={day}
-              className={`text-muted-foreground ${compact ? 'py-0.5 text-[10px] leading-tight' : 'py-1 text-xs'} text-center font-medium`}
-            >
-              {day}
-            </div>
-          ))}
-          {calendarDays.map((day, idx) => {
-            if (!day)
-              return (
-                <div
-                  key={`empty-${idx}`}
-                  className={compact ? undefined : 'aspect-square'}
-                  style={compact ? { height: '1.4rem' } : undefined}
-                />
-              )
-
-            const date = new Date(day.date)
-            const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-
-            if (compact) {
-              return (
-                <div
-                  key={day.date}
-                  style={{
-                    height: '1.4rem',
-                    lineHeight: '1.4rem',
-                    fontSize: '9px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                  }}
-                  className={`relative flex items-center justify-center rounded ${isToday ? 'ring-primary ring-1 ring-offset-1' : ''}`}
-                >
-                  <span>{date.getDate()}</span>
-                  {day.checked && (
-                    <span
-                      style={{
-                        width: 6,
-                        height: 6,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        top: '62%',
-                        border: '1px solid white',
-                      }}
-                      className="absolute z-10 rounded-full bg-green-500"
-                    />
-                  )}
-                </div>
-              )
-            }
-
-            // non-compact (月视图) 恢复为原始样式：方形格子、竖向布局、较大标记
-            return (
-              <div
-                key={day.date}
-                className={`flex aspect-square flex-col items-center justify-center rounded text-xs ${
-                  isToday ? 'ring-primary ring-1 ring-offset-1' : ''
-                }`}
-              >
-                <span>{date.getDate()}</span>
-                {day.checked && <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-green-500" />}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  const dayMapAll =
-    viewMode === 'month'
-      ? buildDayMap(calendarData?.calendar ?? [])
-      : viewMode === 'year'
-        ? buildDayMap(yearCalendarData?.calendar ?? [])
-        : buildDayMap(last365CalendarData?.calendar ?? [])
+  const [date, setDate] = useState(new Date())
+  const [view, setView] = useState<'year' | 'last365' | null>(null)
+  const year = date.getFullYear()
+  const { data: month, isLoading, error, mutate } = useCheckInCalendar(year, date.getMonth() + 1)
+  const annual = useYearCheckInCalendar(year)
+  const recent = useLast365CheckInCalendar()
+  const checked = month?.calendar.filter(day => day.checked).length ?? 0
+  const detailLoading = view === 'year' ? annual.isLoading : recent.isLoading
+  const detailError = view === 'year' ? annual.error : recent.error
+  const recentDays = new Map(recent.data?.calendar.map(day => [day.date, day]) ?? [])
+  const lastDate = recent.data ? parseISO(recent.data.end_date) : new Date()
+  const firstDate = startOfWeek(
+    recent.data ? parseISO(recent.data.start_date) : subDays(lastDate, 364)
+  )
+  const weekCount = Math.ceil(
+    (Math.round((lastDate.getTime() - firstDate.getTime()) / 86400000) + 1) / 7
+  )
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            {viewMode === 'month' && format(currentDate, 'yyyy年M月', { locale: zhCN })}
-            {viewMode === 'year' && `${year}年`}
-            {viewMode === 'last365' && `近 365 天`}
-          </CardTitle>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePreviousMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNextMonth}>
-              <ChevronRight className="h-4 w-4" />
+    <section className="bg-card overflow-hidden rounded-2xl border">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b p-4">
+        <div>
+          <h2 className="text-sm font-semibold">学习日历</h2>
+          <p className="text-muted-foreground mt-1 text-xs">本月已打卡 {checked} 天</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="上个月"
+            onClick={() => setDate(addMonths(date, -1))}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-sm tabular-nums">{format(date, 'yyyy.MM')}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="下个月"
+            onClick={() => setDate(addMonths(date, 1))}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
+      <div className="p-4">
+        {isLoading ? (
+          <div className="flex justify-center p-10">
+            <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div className="space-y-2 py-6 text-center text-sm">
+            <p>日历加载失败</p>
+            <Button variant="outline" onClick={() => void mutate()}>
+              重试
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {viewMode === 'month' && <div>{renderMonthMini(currentDate, dayMapAll)}</div>}
-
-        {/* 年视图与近365天视图使用全屏覆盖展示 */}
-        {viewMode === 'year' &&
-          typeof document !== 'undefined' &&
-          createPortal(
-            <div
-              className="bg-background text-foreground fixed inset-0 z-[9999]"
-              style={{ margin: 0, padding: 0, width: '100vw', height: '100vh', minHeight: '100vh' }}
-            >
-              <div className="absolute top-3 right-4 left-4 flex items-center">
-                <div className="text-lg font-semibold">{year} 年 — 完整日历</div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="absolute right-0"
-                  onClick={() => setViewMode('month')}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              {(() => {
-                const count = 12
-                const cols = 3 // 强制一行显示 3 列，以便截图时每行仅 3 个月
-                const gridStyle = fitOneScreen
-                  ? {
-                      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-                      height: 'calc(100vh - 72px)',
-                    }
-                  : {}
-                return (
-                  <div
-                    className={`grid ${fitOneScreen ? 'gap-1' : 'gap-6'}`}
-                    style={
-                      {
-                        paddingTop: 56,
-                        paddingLeft: 0,
-                        paddingRight: 0,
-                        ...gridStyle,
-                      } as CSSProperties
-                    }
-                  >
-                    {Array.from({ length: 12 }).map((_, idx) => (
-                      <div
-                        key={idx}
-                        className={`border-border bg-card rounded border ${fitOneScreen ? 'p-1' : 'p-3'}`}
-                      >
-                        {renderMonthMini(
-                          new Date(year, idx, 1),
-                          dayMapAll,
-                          undefined,
-                          fitOneScreen
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()}
-            </div>,
-            document.body
-          )}
-
-        {viewMode === 'last365' &&
-          typeof document !== 'undefined' &&
-          createPortal(
-            <div
-              className="bg-background text-foreground fixed inset-0 z-[9999] flex flex-col"
-              style={{ margin: 0, padding: 0, width: '100vw', height: '100vh', minHeight: '100vh' }}
-            >
-              <div className="flex flex-shrink-0 items-center px-4 pt-3 pb-2">
-                <div className="text-lg font-semibold">近 365 天 — 完整日历</div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto"
-                  onClick={() => setViewMode('month')}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1">
-                {renderContributionGraph(
-                  last365CalendarData?.calendar ?? [],
-                  true,
-                  last365CalendarData
-                    ? {
-                        start_date: last365CalendarData.start_date,
-                        end_date: last365CalendarData.end_date,
-                      }
-                    : undefined
-                )}
-              </div>
-            </div>,
-            document.body
-          )}
-      </CardContent>
-      <CardFooter className="flex gap-2 border-t pt-4">
-        <Button
-          size="sm"
-          variant={viewMode === 'month' ? 'default' : 'ghost'}
-          onClick={() => setViewMode('month')}
-        >
-          月
-        </Button>
-        <Button
-          size="sm"
-          variant={viewMode === 'year' ? 'default' : 'ghost'}
-          onClick={() => setViewMode('year')}
-        >
-          年
-        </Button>
-        <Button
-          size="sm"
-          variant={viewMode === 'last365' ? 'default' : 'ghost'}
-          onClick={() => setViewMode('last365')}
-        >
-          近365天
-        </Button>
-        {(viewMode === 'year' || viewMode === 'last365') && (
-          <Button
-            size="sm"
-            variant={fitOneScreen ? 'default' : 'outline'}
-            onClick={() => setFitOneScreen(v => !v)}
-          >
-            {fitOneScreen ? '一屏' : '还原'}
-          </Button>
+        ) : (
+          <MonthGrid date={date} days={month?.calendar ?? []} />
         )}
-      </CardFooter>
-    </Card>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
+        <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <span className="bg-primary size-1.5 rounded-full" />
+          已打卡
+        </span>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setView('year')}>
+            全年记录
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setView('last365')}>
+            近 365 天
+          </Button>
+        </div>
+      </div>
+      <WordPanel
+        open={view !== null}
+        onOpenChange={open => !open && setView(null)}
+        title="学习记录"
+        description="每一次学习，都在这里留下记录。"
+        className="sm:max-w-3xl"
+      >
+        <div className="space-y-5 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="bg-muted flex gap-1 rounded-lg p-1">
+              <Button
+                size="sm"
+                variant={view === 'year' ? 'secondary' : 'ghost'}
+                onClick={() => setView('year')}
+              >
+                全年
+              </Button>
+              <Button
+                size="sm"
+                variant={view === 'last365' ? 'secondary' : 'ghost'}
+                onClick={() => setView('last365')}
+              >
+                近 365 天
+              </Button>
+            </div>
+            {view === 'year' && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="上一年"
+                  onClick={() => setDate(addMonths(date, -12))}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="text-sm">{year} 年</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="下一年"
+                  onClick={() => setDate(addMonths(date, 12))}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+          {detailLoading ? (
+            <div className="flex justify-center p-12">
+              <LoadingSpinner />
+            </div>
+          ) : detailError ? (
+            <div className="space-y-3 p-6 text-center">
+              <p>学习记录加载失败</p>
+              <Button
+                variant="outline"
+                onClick={() => void (view === 'year' ? annual.mutate() : recent.mutate())}
+              >
+                重试
+              </Button>
+            </div>
+          ) : view === 'year' ? (
+            <div className="grid gap-5 min-[380px]:grid-cols-2 sm:grid-cols-3">
+              {Array.from({ length: 12 }, (_, index) => (
+                <div key={index} className="min-w-0 space-y-2">
+                  <h3 className="text-sm font-medium">{index + 1} 月</h3>
+                  <MonthGrid
+                    date={new Date(year, index, 1)}
+                    days={annual.data?.calendar ?? []}
+                    compact
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-sm">
+                {format(firstDate, 'yyyy.MM.dd')} — {format(lastDate, 'yyyy.MM.dd')}
+              </p>
+              <div
+                className="overflow-x-auto rounded-xl border p-3"
+                tabIndex={0}
+                aria-label="近 365 天学习记录，可横向滚动"
+              >
+                <div className="grid w-max grid-flow-col grid-rows-7 gap-1">
+                  {Array.from({ length: weekCount * 7 }, (_, index) => {
+                    const date = addDays(firstDate, index)
+                    const key = format(date, 'yyyy-MM-dd')
+                    const day = recentDays.get(key)
+                    return (
+                      <span
+                        key={key}
+                        title={`${key} · 新词 ${day?.new_words_count ?? 0} · 复习 ${day?.review_words_count ?? 0}`}
+                        aria-label={`${key}${day?.checked ? ' 已打卡' : ' 未打卡'}`}
+                        className={`size-3 rounded-sm ${date > lastDate ? 'invisible' : day?.checked ? 'bg-primary' : 'bg-muted'}`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                每列为一周，着色方格表示已打卡。左右滑动查看完整记录。
+              </p>
+            </div>
+          )}
+        </div>
+      </WordPanel>
+    </section>
   )
 }

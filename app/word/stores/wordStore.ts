@@ -13,6 +13,7 @@ interface WordState {
   currentIndex: number
   // 当前学习状态
   learningStatus: LearningStatus
+  sessionMode: 'learning' | 'reviewing' | null
   // 当前单词的记忆状态
   currentWordMemoryStatus: WordMemoryStatus
   // 是否显示翻译
@@ -57,6 +58,7 @@ export const useWordStore = create<WordState>()(
       initialStudyCount: 0,
       currentIndex: 0,
       learningStatus: 'idle',
+      sessionMode: null,
       currentWordMemoryStatus: 'unknown',
       showTranslation: false,
       dailyProgress: initialDailyProgress,
@@ -151,6 +153,7 @@ export const useWordStore = create<WordState>()(
         set({
           studyStartTime: new Date(),
           learningStatus: mode,
+          sessionMode: mode,
           dailyProgress: { ...initialDailyProgress },
           showTranslation: false,
           currentWordMemoryStatus: 'unknown',
@@ -220,6 +223,7 @@ export const useWordStore = create<WordState>()(
           initialStudyCount: 0,
           currentIndex: 0,
           learningStatus: 'idle',
+          sessionMode: null,
           currentWordMemoryStatus: 'unknown',
           showTranslation: false,
           dailyProgress: { ...initialDailyProgress },

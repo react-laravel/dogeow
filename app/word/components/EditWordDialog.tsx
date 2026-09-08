@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { WordPanel } from './WordPanel'
 import { Word } from '../types'
 import { toast } from 'sonner'
 import { mutate } from 'swr'
@@ -107,8 +107,6 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
         example_sentences: examplePairs,
       }
 
-      console.log('PATCH /word payload:', payload)
-
       await patch(`/word/${word.id}`, payload, { handleError: false })
 
       toast.success('单词数据已更新')
@@ -137,26 +135,24 @@ export function EditWordDialog({ word, open, onOpenChange }: EditWordDialogProps
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="flex h-[85vh] flex-col p-0">
-        <SheetHeader className="border-b p-4 pb-2">
-          <SheetTitle className="flex items-center gap-2 text-base">
-            编辑单词 - {word.content}
-          </SheetTitle>
-        </SheetHeader>
-        <div className="flex-1 overflow-y-auto p-4 pt-2">
-          <WordEditFields
-            explanation={editedExplanation}
-            examples={editedExamples}
-            isGenerating={isGenerating}
-            isSaving={isSaving}
-            onExplanationChange={setEditedExplanation}
-            onExamplesChange={setEditedExamples}
-            onGenerate={generateData}
-            onSave={handleSave}
-          />
-        </div>
-      </SheetContent>
-    </Sheet>
+    <WordPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`编辑单词 · ${word.content}`}
+      description="修改释义与例句，保存后用于后续学习。"
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <WordEditFields
+          explanation={editedExplanation}
+          examples={editedExamples}
+          isGenerating={isGenerating}
+          isSaving={isSaving}
+          onExplanationChange={setEditedExplanation}
+          onExamplesChange={setEditedExamples}
+          onGenerate={generateData}
+          onSave={handleSave}
+        />
+      </div>
+    </WordPanel>
   )
 }

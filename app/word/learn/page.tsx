@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { toast } from 'sonner'
-import { CheckCircle2, BookX, ArrowLeft } from 'lucide-react'
+import { mutate as mutateCache } from 'swr'
+import { CheckCircle2, BookX } from 'lucide-react'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
+import { StudyHeader } from '../components/WordPageHeader'
 import { normalizeWordsResponse } from '../types'
 
 export default function LearnPage() {
@@ -22,7 +24,8 @@ export default function LearnPage() {
   const { data: stats, isLoading: statsLoading } = useWordStats()
   const { data: words, isLoading: wordsLoading, error, mutate } = useDailyWords()
   const {
-    studyQueue,
+    studyQueue: storedQueue,
+    sessionMode,
     initialStudyCount,
     setCurrentWords,
     learningStatus,
@@ -33,6 +36,9 @@ export default function LearnPage() {
     getCurrentWord,
     reset,
   } = useWordStore()
+  const isCurrentSession = sessionMode === null || sessionMode === 'learning'
+  const studyQueue = isCurrentSession ? storedQueue : []
+  const [completionError, setCompletionError] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
   const [sessionKey, setSessionKey] = useState(0)
   const [isContinuing, setIsContinuing] = useState(false)
@@ -60,7 +66,14 @@ export default function LearnPage() {
   }, [])
 
   useEffect(() => {
-    if (!hasSelectedBook || !words || learningStatus === 'completed') return
+    if (
+      !hasSelectedBook ||
+      !words ||
+      isCompleting ||
+      completionError ||
+      (learningStatus === 'completed' && isCurrentSession)
+    )
+      return
     // 今日已打卡或从首页点「再学一组」时，不自动开新组，等用户确认
     if (shouldPromptContinue && studyQueue.length === 0) return
 
@@ -76,16 +89,23 @@ export default function LearnPage() {
     studyQueue.length,
     beginSession,
     shouldPromptContinue,
+    isCompleting,
+    completionError,
+    isCurrentSession,
   ])
 
   const handleComplete = async () => {
+    setCompletionError(false)
     setIsCompleting(true)
     try {
       await checkIn()
       setLearningStatus('completed')
+      void mutateCache('/word/stats')
+      void mutateCache(key => typeof key === 'string' && key.startsWith('/word/calendar'))
       toast.success('学习完成！已打卡')
     } catch (error) {
-      toast.error('打卡失败')
+      setCompletionError(true)
+      toast.error('打卡失败，请重试')
       console.error('打卡失败:', error)
     } finally {
       setIsCompleting(false)
@@ -130,6 +150,22 @@ export default function LearnPage() {
     )
   }
 
+  if (isCompleting || completionError) {
+    return (
+      <PageContainer maxWidth="3xl">
+        <Card>
+          <CardContent className="space-y-4 p-6 text-center">
+            <h1 className="text-lg font-semibold">学习已完成</h1>
+            <p role="status" className="text-muted-foreground text-sm">
+              {isCompleting ? '正在记录本次学习…' : '打卡暂未成功，本次进度已保留。'}
+            </p>
+            {completionError && <Button onClick={() => void handleComplete()}>重试打卡</Button>}
+          </CardContent>
+        </Card>
+      </PageContainer>
+    )
+  }
+
   // 错误处理
   if (error) {
     return (
@@ -163,13 +199,13 @@ export default function LearnPage() {
             <div>
               <h2 className="mb-1 text-lg font-semibold">请先选择单词书</h2>
               <p className="text-muted-foreground text-sm">
-                请先在首页选择要学习的单词书，再开始学习
+                选择一本适合自己的单词书，即可开始今天的学习
               </p>
             </div>
             <div className="flex justify-center gap-2">
-              <Link href="/word">
-                <Button>返回首页选书</Button>
-              </Link>
+              <Button asChild>
+                <Link href="/word/books">选择单词书</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -178,7 +214,7 @@ export default function LearnPage() {
   }
 
   // 学习完成
-  if (learningStatus === 'completed') {
+  if (learningStatus === 'completed' && isCurrentSession) {
     return (
       <PageContainer maxWidth="md">
         <Card>
@@ -280,26 +316,19 @@ export default function LearnPage() {
   const progressTotal = initialStudyCount || studyQueue.length + completedInSession
 
   return (
-    <PageContainer maxWidth="2xl">
-      <div className="mb-4 flex items-center justify-between">
-        <Link href="/word">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <p className="text-muted-foreground text-sm">
-          {completedInSession} / {progressTotal}
-          {studyQueue.length > 1 && (
-            <span className="text-muted-foreground/70 ml-1">（待完成 {studyQueue.length}）</span>
-          )}
-        </p>
-        <div className="w-9" />
-      </div>
+    <PageContainer maxWidth="3xl">
+      <StudyHeader
+        title="今日学习"
+        description="先回想词义，再查看释义与例句。"
+        completed={completedInSession}
+        total={progressTotal}
+      />
       {currentWord && (
         <div key={`card-wrapper-${currentWord.id}-${cardNonce}`} className="animate-card-enter">
           <WordCard
             key={`${currentWord.id}-${sessionKey}-${cardNonce}`}
             word={currentWord}
+            autoPronounce={settings?.is_auto_pronounce ?? false}
             onResult={handleWordResult}
           />
         </div>

@@ -18,7 +18,7 @@ describe('WordEditFields', () => {
     render(<WordEditFields {...defaultProps} />)
 
     expect(screen.getByText('中文释义')).toBeTruthy()
-    expect(screen.getByText('例句（英文换行+中文，空行分隔多组）')).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: '例句' })).toBeTruthy()
   })
 
   it('displays initial values in textareas', () => {

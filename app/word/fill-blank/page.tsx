@@ -4,21 +4,22 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FillBlankCard } from '../components/FillBlankCard'
 import { useFillBlankWords, useWordSettings } from '../hooks/useWord'
-import { useWordStore } from '../stores/wordStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { toast } from 'sonner'
-import { CheckCircle2, BookX, ArrowLeft, PartyPopper } from 'lucide-react'
+import { CheckCircle2, BookX, PartyPopper } from 'lucide-react'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
-import { normalizeWordsResponse } from '../types'
+import { StudyHeader } from '../components/WordPageHeader'
+import { normalizeWordsResponse, type Word } from '../types'
 
 export default function FillBlankPage() {
   const router = useRouter()
   const { data: settings, isLoading: settingsLoading } = useWordSettings()
   const { data: words, isLoading: wordsLoading, error, mutate } = useFillBlankWords()
-  const { currentWords, setCurrentWords, currentIndex, nextWord, reset } = useWordStore()
+  const [currentWords, setCurrentWords] = useState<Word[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
@@ -27,7 +28,7 @@ export default function FillBlankPage() {
   const hasSelectedBook = !!settings?.current_book_id
 
   useEffect(() => {
-    if (!words) return
+    if (!words || currentWords.length > 0 || isCompleted) return
 
     const wordsArray = normalizeWordsResponse(words)
 
@@ -37,7 +38,7 @@ export default function FillBlankPage() {
         setTotalCount(wordsArray.length)
       })
     }
-  }, [words, setCurrentWords])
+  }, [words, currentWords.length, isCompleted])
 
   const handleNext = (correct: boolean) => {
     if (correct) {
@@ -45,7 +46,7 @@ export default function FillBlankPage() {
     }
 
     if (currentIndex < currentWords.length - 1) {
-      nextWord()
+      setCurrentIndex(index => index + 1)
     } else {
       handleComplete()
     }
@@ -57,7 +58,8 @@ export default function FillBlankPage() {
   }
 
   const handleContinue = () => {
-    reset()
+    setCurrentWords([])
+    setCurrentIndex(0)
     setIsCompleted(false)
     setCorrectCount(0)
     setTotalCount(0)
@@ -110,9 +112,9 @@ export default function FillBlankPage() {
               </p>
             </div>
             <div className="flex justify-center gap-2">
-              <Link href="/word">
-                <Button>返回首页选书</Button>
-              </Link>
+              <Button asChild>
+                <Link href="/word/books">选择单词书</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -189,23 +191,14 @@ export default function FillBlankPage() {
   const currentWord = currentWords[currentIndex]
 
   return (
-    <PageContainer maxWidth="2xl">
-      <div className="mb-4 flex items-center justify-between">
-        <Link href="/word">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="text-center">
-          <p className="text-muted-foreground text-sm">
-            {currentIndex + 1} / {currentWords.length}
-          </p>
-          <p className="text-muted-foreground text-xs">
-            正确：{correctCount} / 错误：{currentIndex - correctCount}
-          </p>
-        </div>
-        <div className="w-9" />
-      </div>
+    <PageContainer maxWidth="3xl">
+      <StudyHeader
+        title="例句填空"
+        description={`已答对 ${correctCount} 题 · 根据语境补全单词`}
+        completed={currentIndex}
+        total={currentWords.length}
+        backHref="/word"
+      />
       {currentWord && <FillBlankCard key={currentWord.id} word={currentWord} onNext={handleNext} />}
     </PageContainer>
   )

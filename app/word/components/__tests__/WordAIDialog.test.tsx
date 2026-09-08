@@ -34,7 +34,7 @@ describe('WordAIDialog', () => {
       />
     )
 
-    expect(screen.getByText('AI 解答 - fabricate')).toBeInTheDocument()
+    expect(screen.getByText('AI 解答 · fabricate')).toBeInTheDocument()
     expect(screen.getByText(/有什么疑问/)).toBeInTheDocument()
     expect(screen.queryByText('编辑单词 - fabricate')).not.toBeInTheDocument()
     expect(fetchMocks.authenticatedInternalFetch).not.toHaveBeenCalled()
@@ -58,7 +58,7 @@ describe('WordAIDialog', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '输入问题' }), {
       target: { value: '和 manufacture 有什么区别？' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送问题' }))
 
     await waitFor(() => expect(fetchMocks.authenticatedInternalFetch).toHaveBeenCalledTimes(1))
 

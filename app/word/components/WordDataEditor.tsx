@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,7 @@ export function WordDataEditor({
   onSave,
   saveButtonText = '保存',
 }: WordDataEditorProps) {
+  const id = useId()
   const [phonetic, setPhonetic] = useState(initialData?.phonetic_us ?? '')
   const [explanation, setExplanation] = useState(initialData?.explanation ?? '')
   const [examples, setExamples] = useState(
@@ -181,20 +182,20 @@ export function WordDataEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-0 rounded-2xl py-0 shadow-none">
+      <CardHeader className="p-5 pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Bot className="text-primary h-5 w-5" />
           单词：{wordContent}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 p-5 pt-0">
         {/* AI 生成按钮 */}
         <Button
           variant="outline"
           size="sm"
           onClick={generateData}
-          disabled={isGenerating}
+          disabled={isGenerating || isSaving}
           className="w-full"
         >
           {isGenerating ? (
@@ -212,8 +213,11 @@ export function WordDataEditor({
 
         {/* 音标 */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">音标（美式）</label>
+          <label htmlFor={`${id}-phonetic`} className="text-sm font-medium">
+            音标（美式）
+          </label>
           <Input
+            id={`${id}-phonetic`}
             value={phonetic}
             onChange={e => setPhonetic(e.target.value)}
             placeholder="例如: ˈeksəmpəl"
@@ -222,25 +226,30 @@ export function WordDataEditor({
 
         {/* 中文释义 */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <label htmlFor={`${id}-explanation`} className="text-sm font-medium">
             中文释义 <span className="text-destructive">*</span>
           </label>
           <Textarea
+            id={`${id}-explanation`}
             value={explanation}
             onChange={e => setExplanation(e.target.value)}
             placeholder="输入中文释义..."
-            className="min-h-[100px]"
+            className="min-h-28 leading-relaxed"
           />
         </div>
 
         {/* 例句 */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">例句（英文换行+中文，空行分隔多组）</label>
+          <label htmlFor={`${id}-examples`} className="text-sm font-medium">
+            例句
+          </label>
+          <p className="text-muted-foreground text-xs">每组英文、中文各一行，多组之间留空行。</p>
           <Textarea
+            id={`${id}-examples`}
             value={examples}
             onChange={e => setExamples(e.target.value)}
             placeholder={`He is a good student.\n他是一个好学生。\n\nShe works hard.\n她努力工作。`}
-            className="min-h-[150px]"
+            className="min-h-44 leading-relaxed"
           />
         </div>
 

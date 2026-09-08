@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Bot, MoreVertical, Edit, CheckCircle, Volume2 } from 'lucide-react'
+import { Bot, MoreHorizontal, Edit, CheckCircle, Volume2, Eye } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { Word } from '../types'
+import type { Word } from '../types'
 import { useWordStore } from '../stores/wordStore'
 import { markWord, markWordAsSimple } from '../hooks/useWord'
 import { WordAIDialog } from './WordAIDialog'
@@ -20,141 +19,91 @@ import { useWordPronunciation } from '../hooks/useWordPronunciation'
 
 interface WordCardProps {
   word: Word
-  /** remembered=true 表示记住了；false 表示记不住（重新入队） */
+  autoPronounce?: boolean
   onResult: (remembered: boolean) => void
 }
 
-export function WordCard({ word, onResult }: WordCardProps) {
+export function WordCard({ word, autoPronounce = true, onResult }: WordCardProps) {
   const { showTranslation, toggleTranslation } = useWordStore()
   const [isMarking, setIsMarking] = useState(false)
-  const [isMarkingSimple, setIsMarkingSimple] = useState(false)
+  const pending = useRef(false)
+  const active = useRef(true)
   const [showAIDialog, setShowAIDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
-
   const { cancel, playBritishPronunciation, playAmericanPronunciation } = useWordPronunciation()
 
-  // 自动发音
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void playAmericanPronunciation(word.content, { suppressErrors: true })
-    }, 200)
-
+    active.current = true
+    const timer = autoPronounce
+      ? setTimeout(() => {
+          void playAmericanPronunciation(word.content, { suppressErrors: true })
+        }, 200)
+      : undefined
     return () => {
+      active.current = false
       clearTimeout(timer)
       cancel()
     }
-  }, [word.content, playAmericanPronunciation, cancel])
+  }, [word.content, autoPronounce, playAmericanPronunciation, cancel])
 
-  const handlePronounce = (accent: 'uk' | 'us') => {
-    if (accent === 'uk') {
-      void playBritishPronunciation(word.content)
-      return
-    }
-
-    void playAmericanPronunciation(word.content)
-  }
-
-  const handleExamplePronounce = (sentence: string) => {
-    void playAmericanPronunciation(sentence)
-  }
-
-  const handleMarkAndNext = async (remembered: boolean) => {
-    if (!remembered && !word.is_review_word) {
-      onResult(false)
-      return
-    }
-
+  const handleMark = async (remembered: boolean, simple = false) => {
+    if (pending.current) return
+    pending.current = true
     setIsMarking(true)
     try {
-      if (remembered || word.is_review_word) {
+      if (simple) {
+        await markWordAsSimple(word.id)
+        toast.success('已设为简单词，后续不再背诵')
+      } else if (remembered || word.is_review_word) {
         await markWord(word.id, remembered)
       }
-      setTimeout(() => onResult(remembered), 150)
-    } catch (error) {
-      console.error('标记单词失败:', error)
+      if (active.current) onResult(remembered)
+    } catch {
       toast.error('标记失败，请重试')
     } finally {
-      setIsMarking(false)
-    }
-  }
-
-  const handleShowTranslation = () => {
-    toggleTranslation()
-  }
-
-  const handleMarkSimpleAndNext = async () => {
-    setIsMarkingSimple(true)
-    try {
-      await markWordAsSimple(word.id)
-      toast.success('已设为简单词，后续不再背诵')
-      onResult(true)
-    } catch (error) {
-      console.error('设为简单词失败:', error)
-      toast.error('操作失败')
-    } finally {
-      setIsMarkingSimple(false)
+      pending.current = false
+      if (active.current) setIsMarking(false)
     }
   }
 
   return (
     <>
-      <Card className="w-full">
-        <CardContent className="relative p-6">
-          {/* 卡片右上角：更多按钮+菜单（仅展示释义时显示） */}
-          {showTranslation && (
-            <div className="absolute top-4 right-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 p-0" aria-label="更多操作">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleMarkSimpleAndNext} disabled={isMarkingSimple}>
-                    <CheckCircle className="text-muted-foreground mr-2 h-4 w-4" />
-                    简单词
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-                    <Edit className="text-muted-foreground mr-2 h-4 w-4" />
-                    编辑单词
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+      <article className="bg-card rounded-2xl border">
+        <div className="space-y-6 p-5 sm:p-8">
+          <div className="text-center">
+            <span className="text-muted-foreground text-xs">
+              {word.is_review_word ? '复习词' : '学习卡片'}
+            </span>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight break-words sm:text-4xl">
+              {word.content}
+            </h2>
+            {word.phonetic_us && (
+              <p className="text-muted-foreground mt-2 text-sm break-words">/{word.phonetic_us}/</p>
+            )}
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => void playBritishPronunciation(word.content)}
+                aria-label="英式发音"
+              >
+                <Volume2 className="size-4" />
+                英音
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void playAmericanPronunciation(word.content)}
+                aria-label="美式发音"
+              >
+                <Volume2 className="size-4" />
+                美音
+              </Button>
             </div>
-          )}
-          {/* 单词和音标 */}
-          <div className="mb-6 text-center">
-            <h2 className="mb-2 text-3xl font-bold">{word.content}</h2>
-            <div className="text-muted-foreground flex items-center justify-center gap-3 text-sm">
-              {word.phonetic_us && <span>/{word.phonetic_us}/</span>}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePronounce('uk')}
-                  className="h-8 min-w-8 px-2 text-xs"
-                  aria-label="英式发音"
-                >
-                  英
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePronounce('us')}
-                  className="h-8 min-w-8 px-2 text-xs"
-                  aria-label="美式发音"
-                >
-                  美
-                </Button>
-              </div>
-            </div>
-            {/* 教育级别标签 */}
-            {word.education_levels && word.education_levels.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+            {!!word.education_levels?.length && (
+              <div className="mt-3 flex flex-wrap justify-center gap-1.5">
                 {word.education_levels.map(level => (
                   <span
                     key={level.id}
-                    className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium"
+                    className="text-muted-foreground bg-muted rounded-md px-2 py-1 text-xs"
                   >
                     {level.name}
                   </span>
@@ -162,104 +111,97 @@ export function WordCard({ word, onResult }: WordCardProps) {
               </div>
             )}
           </div>
-
-          {/* 选择记得/不记得 */}
-          {!showTranslation ? (
-            <div className="space-y-4 text-center">
-              <p className="text-muted-foreground text-sm">你记得这个单词吗？</p>
-              <div className="flex justify-center gap-3">
-                <Button
-                  onClick={handleShowTranslation}
-                  disabled={isMarking}
-                  className="max-w-[120px] flex-1"
-                >
-                  记得
+          {showTranslation ? (
+            <div className="space-y-5">
+              <section>
+                <h3 className="mb-2 text-xs font-medium text-muted-foreground">释义</h3>
+                <p className="bg-muted/50 rounded-xl p-4 leading-relaxed break-words whitespace-pre-line">
+                  {word.explanation || '暂无中文释义'}
+                </p>
+              </section>
+              {!!word.example_sentences?.length && (
+                <section className="space-y-3">
+                  <h3 className="text-xs font-medium text-muted-foreground">例句</h3>
+                  {word.example_sentences.slice(0, 2).map((example, index) => (
+                    <div key={index} className="border-primary/30 border-l-2 pl-3">
+                      <div className="flex items-start gap-2">
+                        <p className="min-w-0 flex-1 text-sm leading-relaxed break-words">
+                          {example.en}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="-mt-2 shrink-0"
+                          onClick={() => void playAmericanPronunciation(example.en)}
+                          aria-label={`朗读例句 ${index + 1}`}
+                        >
+                          <Volume2 className="size-4" />
+                        </Button>
+                      </div>
+                      <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                        {example.zh}
+                      </p>
+                    </div>
+                  ))}
+                </section>
+              )}
+              <div className="flex items-center justify-between gap-2 border-t pt-3">
+                <Button variant="ghost" onClick={() => setShowAIDialog(true)} aria-label="AI 学习">
+                  <Bot className="size-4" />
+                  AI 解答
                 </Button>
-                <Button
-                  onClick={handleShowTranslation}
-                  variant="outline"
-                  className="max-w-[120px] flex-1"
-                >
-                  不记得
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="更多操作">
+                      <MoreHorizontal className="size-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => void handleMark(true, true)}
+                      disabled={isMarking}
+                    >
+                      <CheckCircle className="mr-2 size-4" />
+                      设为简单词
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowEditDialog(true)} disabled={isMarking}>
+                      <Edit className="mr-2 size-4" />
+                      编辑单词
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* 释义 */}
-              <div className="bg-muted/50 rounded-lg p-4">
-                {word.explanation ? (
-                  <div className="text-base whitespace-pre-line">
-                    {word.explanation.split('\n').map((line, idx) => (
-                      <p key={idx} className={idx > 0 ? 'mt-1' : ''}>
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm">暂无中文释义</p>
-                )}
-              </div>
-
-              {/* 例句 */}
-              {word.example_sentences && word.example_sentences.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-muted-foreground text-sm font-medium">例句</h4>
-                  {word.example_sentences.slice(0, 2).map((example, index) => (
-                    <div key={index} className="bg-muted/30 rounded p-3 text-sm">
-                      <div className="mb-1 flex items-start gap-2">
-                        <p className="min-w-0 flex-1">{example.en}</p>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="-mt-1 h-7 w-7 shrink-0"
-                          onClick={() => handleExamplePronounce(example.en)}
-                          aria-label={`朗读例句 ${index + 1}`}
-                          title="朗读例句"
-                        >
-                          <Volume2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <p className="text-muted-foreground text-xs">{example.zh}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* 确认按钮 - 记住了 / AI / 记不住 */}
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <Button
-                  onClick={() => handleMarkAndNext(true)}
-                  disabled={isMarking}
-                  className="max-w-[120px] flex-1"
-                >
-                  记住了
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowAIDialog(true)}
-                  className="h-9 w-9 shrink-0"
-                  aria-label="AI 学习"
-                >
-                  <Bot className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => handleMarkAndNext(false)}
-                  disabled={isMarking}
-                  variant="outline"
-                  className="max-w-[120px] flex-1"
-                >
-                  记不住
-                </Button>
-              </div>
+            <div className="py-6 text-center">
+              <p className="text-muted-foreground text-sm">先回想一下，这个单词是什么意思？</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+        <div className="bg-card sticky bottom-0 z-10 rounded-b-2xl border-t p-4 sm:px-8">
+          {showTranslation ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={isMarking}
+                onClick={() => void handleMark(false)}
+              >
+                记不住
+              </Button>
+              <Button size="lg" disabled={isMarking} onClick={() => void handleMark(true)}>
+                {isMarking ? '保存中…' : '记住了'}
+              </Button>
+            </div>
+          ) : (
+            <Button size="lg" className="w-full" onClick={toggleTranslation}>
+              <Eye className="size-4" />
+              查看释义
+            </Button>
+          )}
+        </div>
+      </article>
       <WordAIDialog word={word} open={showAIDialog} onOpenChange={setShowAIDialog} />
-      {/* 编辑单词Dialog（复用组件，后续实现） */}
       <EditWordDialog word={word} open={showEditDialog} onOpenChange={setShowEditDialog} />
     </>
   )

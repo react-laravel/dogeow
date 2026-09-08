@@ -9,10 +9,14 @@ interface LearningHeroProps {
 }
 
 export function LearningHero({ todayCheckedIn, currentBook }: LearningHeroProps) {
-  const learningHref = todayCheckedIn ? '/word/learn?continue=1' : '/word/learn'
+  const learningHref = !currentBook
+    ? '/word/books'
+    : todayCheckedIn
+      ? '/word/learn?continue=1'
+      : '/word/learn'
 
   return (
-    <section className="bg-card relative overflow-hidden rounded-2xl border p-4 shadow-none sm:p-5">
+    <section className="bg-card relative overflow-hidden rounded-2xl border p-5 shadow-none sm:p-6">
       <BookOpen
         className="text-primary pointer-events-none absolute -top-5 -right-4 size-36 rotate-[-8deg] opacity-[0.06]"
         aria-hidden="true"
@@ -43,7 +47,7 @@ export function LearningHero({ todayCheckedIn, currentBook }: LearningHeroProps)
 
         <Button asChild size="lg" className="mt-4 w-full shadow-sm sm:w-auto">
           <Link href={learningHref}>
-            {todayCheckedIn ? '继续学习' : '开始学习'}
+            {!currentBook ? '选择单词书' : todayCheckedIn ? '继续学习' : '开始学习'}
             <ArrowRight className="size-4" />
           </Link>
         </Button>

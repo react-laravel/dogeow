@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Camera, Loader2, RefreshCw } from 'lucide-react'
+import { Camera, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { PageContainer } from '@/components/layout'
+import { WordPageHeader } from '../components/WordPageHeader'
+import { WordToolsNav } from '../components/WordToolsNav'
 import { toast } from 'sonner'
 import { translateEnToZh } from '@/app/word/utils/translate'
 
@@ -15,6 +16,8 @@ const VIDEO_HEIGHT = 720
 export default function WordScanPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const cameraRequest = useRef(0)
+  const [isStartingCamera, setIsStartingCamera] = useState(false)
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const [recognizedText, setRecognizedText] = useState('')
@@ -22,27 +25,35 @@ export default function WordScanPage() {
   const [ocrProgress, setOcrProgress] = useState('')
 
   const startCamera = useCallback(async () => {
+    const request = ++cameraRequest.current
     if (!navigator.mediaDevices?.getUserMedia) {
       toast.error('当前浏览器不支持摄像头')
       setHasCameraPermission(false)
       return
     }
+    setIsStartingCamera(true)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: VIDEO_WIDTH, height: VIDEO_HEIGHT, facingMode: 'environment' },
       })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
+      if (request !== cameraRequest.current) {
+        stream.getTracks().forEach(track => track.stop())
+        return
       }
+      streamRef.current?.getTracks().forEach(track => track.stop())
+      streamRef.current = stream
       setHasCameraPermission(true)
-    } catch (err) {
+    } catch {
+      if (request !== cameraRequest.current) return
       toast.error('无法访问摄像头，请检查权限')
       setHasCameraPermission(false)
+    } finally {
+      if (request === cameraRequest.current) setIsStartingCamera(false)
     }
   }, [])
 
   const stopCamera = useCallback(() => {
+    cameraRequest.current += 1
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
@@ -53,10 +64,16 @@ export default function WordScanPage() {
   }, [])
 
   useEffect(() => {
-    startCamera()
+    // The video mounts only after permission is granted.
+    if (hasCameraPermission && videoRef.current) videoRef.current.srcObject = streamRef.current
+  }, [hasCameraPermission])
+
+  useEffect(() => {
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         stopCamera()
+        setHasCameraPermission(null)
+        setIsStartingCamera(false)
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
@@ -64,7 +81,7 @@ export default function WordScanPage() {
       document.removeEventListener('visibilitychange', onVisibilityChange)
       stopCamera()
     }
-  }, [startCamera, stopCamera])
+  }, [stopCamera])
 
   const handleCapture = useCallback(async () => {
     const video = videoRef.current
@@ -121,33 +138,29 @@ export default function WordScanPage() {
   }, [isCapturing])
 
   return (
-    <PageContainer maxWidth="2xl" className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/word" onClick={stopCamera}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">摄像头扫描</h1>
+    <PageContainer maxWidth="3xl" className="space-y-6">
+      <div className="mb-5 space-y-5">
+        <WordPageHeader
+          title="拍照识词"
+          description="对准英文文字拍照，识别后查看中文翻译。"
+          backHref="/word"
+        />
+        <WordToolsNav />
       </div>
 
-      <p className="text-muted-foreground text-sm">
-        对准英文文字拍照，自动识别并翻译成中文（需允许使用摄像头）
-      </p>
-
       {/* 摄像头预览 */}
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="gap-0 rounded-2xl py-0 shadow-none">
+        <CardHeader className="p-5 pb-3">
           <span className="text-sm font-medium">实时预览</span>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-5 pt-0">
           {hasCameraPermission === false && (
             <div className="bg-muted/50 flex aspect-video items-center justify-center rounded-lg border border-dashed">
               <div className="text-muted-foreground text-center text-sm">
                 <p className="mb-2">无法使用摄像头</p>
-                <Button variant="outline" size="sm" onClick={startCamera}>
+                <Button variant="outline" onClick={startCamera} disabled={isStartingCamera}>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  重试
+                  {isStartingCamera ? '正在打开…' : '重试'}
                 </Button>
               </div>
             </div>
@@ -179,8 +192,12 @@ export default function WordScanPage() {
             </div>
           )}
           {hasCameraPermission === null && (
-            <div className="bg-muted/50 flex aspect-video items-center justify-center rounded-lg border">
-              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <div className="bg-muted/50 flex aspect-video flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-4 text-center">
+              <Camera className="text-muted-foreground size-8" />
+              <p className="text-muted-foreground text-sm">打开摄像头，对准清晰的英文文字。</p>
+              <Button onClick={startCamera} disabled={isStartingCamera}>
+                {isStartingCamera ? '正在打开…' : '打开摄像头'}
+              </Button>
             </div>
           )}
         </CardContent>
@@ -188,11 +205,11 @@ export default function WordScanPage() {
 
       {/* 识别与翻译结果 */}
       {(recognizedText || translatedText) && (
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="gap-0 rounded-2xl py-0 shadow-none">
+          <CardHeader className="p-5 pb-3">
             <span className="text-sm font-medium">识别与翻译</span>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-5 pt-0">
             {recognizedText && (
               <div>
                 <p className="text-muted-foreground mb-1 text-xs font-medium">识别英文</p>

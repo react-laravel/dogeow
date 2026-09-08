@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { BookOpen, Brain, Library, Settings } from 'lucide-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import { BottomNav, BOTTOM_NAV_CONTENT_PADDING, type BottomNavItem } from '@/components/layout'
+import { BottomNav, type BottomNavItem } from '@/components/layout'
 import { useTranslation } from '@/hooks/useTranslation'
 
 export default function WordLayout({ children }: { children: ReactNode }) {
@@ -35,8 +35,24 @@ export default function WordLayout({ children }: { children: ReactNode }) {
 
   return (
     <ProtectedRoute>
-      <div className={BOTTOM_NAV_CONTENT_PADDING}>{children}</div>
-      <BottomNav items={items} ariaLabel={t('nav.word_module_nav', '单词模块导航')} />
+      <div className="flex h-full min-h-0 flex-col overflow-hidden pb-[calc(3.875rem+env(safe-area-inset-bottom,0px))]">
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+          {children}
+        </main>
+      </div>
+      <BottomNav
+        isActive={(item, pathname) => {
+          if (item.href === '/word/learn')
+            return ['/word/learn', '/word/review', '/word/fill-blank', '/word/quiz'].includes(
+              pathname
+            )
+          if (item.href === '/word')
+            return ['/word', '/word/search', '/word/import', '/word/scan'].includes(pathname)
+          return pathname === item.href || pathname.startsWith(`${item.href}/`)
+        }}
+        items={items}
+        ariaLabel={t('nav.word_module_nav', '单词模块导航')}
+      />
     </ProtectedRoute>
   )
 }

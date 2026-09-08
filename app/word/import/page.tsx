@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { WordPanel } from '../components/WordPanel'
 import { PageContainer } from '@/components/layout'
+import { WordPageHeader } from '../components/WordPageHeader'
+import { WordToolsNav } from '../components/WordToolsNav'
 import { WordDataEditor } from '../components/WordDataEditor'
 import { searchWord, createWord, classifyWordEducationLevel } from '../hooks/useWord'
-import { ArrowLeft, FileInput, Loader2 } from 'lucide-react'
+import { FileInput, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const MIN_WORD_LENGTH = 2
@@ -41,7 +42,6 @@ function getUniqueWords(segments: { type: string; text: string }[]): string[] {
 }
 
 export default function WordImportPage() {
-  const router = useRouter()
   const [pastedText, setPastedText] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [wordStatus, setWordStatus] = useState<Map<string, boolean>>(new Map())
@@ -131,15 +131,17 @@ export default function WordImportPage() {
   const hasResult = wordStatus.size > 0
 
   return (
-    <PageContainer maxWidth="2xl">
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/word')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">导入文本</h1>
+    <PageContainer maxWidth="3xl">
+      <div className="mb-5 space-y-5">
+        <WordPageHeader
+          title="导入文本"
+          description="从英文文章中发现生词，逐个加入词库。"
+          backHref="/word"
+        />
+        <WordToolsNav />
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-5 gap-0 rounded-2xl py-0 shadow-none">
         <CardContent className="p-4">
           <p className="text-muted-foreground mb-2 text-sm">
             粘贴或输入英文文本，点击「分析」后，系统中不存在的单词会以波浪线下划线高亮，点击可 AI
@@ -148,10 +150,15 @@ export default function WordImportPage() {
           <Textarea
             value={pastedText}
             onChange={e => setPastedText(e.target.value)}
-            placeholder="粘贴英文段落或句子..."
-            className="min-h-[120px] resize-y"
+            placeholder="粘贴英文段落或句子…"
+            aria-label="英文文本"
+            className="min-h-48 resize-y text-base leading-relaxed"
           />
-          <Button className="mt-3" onClick={analyze} disabled={isAnalyzing || !pastedText.trim()}>
+          <Button
+            className="mt-4 w-full"
+            onClick={analyze}
+            disabled={isAnalyzing || !pastedText.trim()}
+          >
             {isAnalyzing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -168,12 +175,12 @@ export default function WordImportPage() {
       </Card>
 
       {hasResult && (
-        <Card>
+        <Card className="gap-0 rounded-2xl py-0 shadow-none">
           <CardContent className="p-4">
             <p className="text-muted-foreground mb-3 text-xs">
               带波浪线的词未在系统中，点击可 AI 生成并保存
             </p>
-            <div className="bg-muted/30 rounded-lg p-4 leading-relaxed">
+            <div className="bg-muted/30 rounded-xl p-4 leading-loose break-words">
               {segments.map((seg, idx) => {
                 if (seg.type === 'non-word') {
                   return <span key={idx}>{seg.text}</span>
@@ -186,7 +193,7 @@ export default function WordImportPage() {
                       key={idx}
                       role="button"
                       tabIndex={0}
-                      className="cursor-pointer text-amber-600 underline decoration-amber-500 decoration-wavy hover:bg-amber-500/10 dark:text-amber-400 dark:decoration-amber-400 dark:hover:bg-amber-500/20"
+                      className="cursor-pointer text-primary underline decoration-primary decoration-wavy hover:bg-primary/10"
                       onClick={() => setSelectedKeyword(seg.text)}
                       onKeyDown={e => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -206,22 +213,22 @@ export default function WordImportPage() {
         </Card>
       )}
 
-      <Sheet open={!!selectedKeyword} onOpenChange={open => !open && setSelectedKeyword(null)}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>未找到单词「{selectedKeyword}」— AI 生成并保存</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4">
-            {selectedKeyword && (
-              <WordDataEditor
-                wordContent={selectedKeyword}
-                onSave={handleCreateWord}
-                saveButtonText="创建并保存"
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      <WordPanel
+        open={!!selectedKeyword}
+        onOpenChange={open => !open && setSelectedKeyword(null)}
+        title={`添加单词 · ${selectedKeyword ?? ''}`}
+        description="补充释义与例句，检查后保存到词库。"
+      >
+        <div className="p-4">
+          {selectedKeyword && (
+            <WordDataEditor
+              wordContent={selectedKeyword}
+              onSave={handleCreateWord}
+              saveButtonText="创建并保存"
+            />
+          )}
+        </div>
+      </WordPanel>
     </PageContainer>
   )
 }

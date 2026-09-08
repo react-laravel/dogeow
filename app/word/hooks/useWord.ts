@@ -56,10 +56,13 @@ export const useBookWords = (
   bookId: number | null | undefined,
   page = 1,
   perPage = 20,
-  filter: WordFilter = 'all'
+  filter: WordFilter = 'all',
+  keyword = ''
 ) =>
   useSWR<{ data: Word[]; meta: { current_page: number; last_page: number; total: number } }>(
-    bookId ? `/word/books/${bookId}/words?page=${page}&per_page=${perPage}&filter=${filter}` : null,
+    bookId
+      ? `/word/books/${bookId}/words?page=${page}&per_page=${perPage}&filter=${filter}${keyword.trim() ? `&keyword=${encodeURIComponent(keyword.trim())}` : ''}`
+      : null,
     async (url: string) =>
       get<unknown>(url) as Promise<{
         data: Word[]

@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, RefreshCw, Save } from 'lucide-react'
@@ -23,14 +24,15 @@ export function WordEditFields({
   onGenerate,
   onSave,
 }: WordEditFieldsProps) {
+  const id = useId()
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <Button
         variant="outline"
-        size="sm"
+        size="lg"
         onClick={onGenerate}
-        disabled={isGenerating}
-        className="w-full text-xs"
+        disabled={isGenerating || isSaving}
+        className="w-full"
       >
         {isGenerating ? (
           <>
@@ -45,24 +47,31 @@ export function WordEditFields({
         )}
       </Button>
       <div className="space-y-1">
-        <label className="text-xs font-medium">中文释义</label>
+        <label htmlFor={`${id}-explanation`} className="text-sm font-medium">
+          中文释义
+        </label>
         <Textarea
+          id={`${id}-explanation`}
           value={explanation}
           onChange={e => onExplanationChange(e.target.value)}
           placeholder="输入中文释义..."
-          className="min-h-[80px] resize-none text-xs"
+          className="min-h-28 resize-y text-sm leading-relaxed"
         />
       </div>
       <div className="space-y-1">
-        <label className="text-xs font-medium">例句（英文换行+中文，空行分隔多组）</label>
+        <label htmlFor={`${id}-examples`} className="text-sm font-medium">
+          例句
+        </label>
+        <p className="text-muted-foreground text-xs">每组英文、中文各一行，多组之间留空行。</p>
         <Textarea
+          id={`${id}-examples`}
           value={examples}
           onChange={e => onExamplesChange(e.target.value)}
           placeholder={`He is a good student.\n他是一个好学生。\n\nShe works hard.\n她努力工作。`}
-          className="min-h-[120px] resize-none text-xs"
+          className="min-h-44 resize-y text-sm leading-relaxed"
         />
       </div>
-      <Button onClick={onSave} disabled={isSaving} className="w-full" size="sm">
+      <Button onClick={onSave} disabled={isSaving || isGenerating} className="w-full" size="lg">
         {isSaving ? (
           <>
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />

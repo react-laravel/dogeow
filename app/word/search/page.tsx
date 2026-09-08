@@ -1,20 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageContainer } from '@/components/layout'
+import { WordPageHeader } from '../components/WordPageHeader'
+import { WordToolsNav } from '../components/WordToolsNav'
 import { WordDataEditor } from '../components/WordDataEditor'
 import { searchWord, createWord, classifyWordEducationLevel } from '../hooks/useWord'
 import { Word } from '../types'
-import { Search, ArrowLeft, Loader2, BookOpen } from 'lucide-react'
+import { Search, Loader2, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
 export default function SearchWordPage() {
-  const router = useRouter()
   const [keyword, setKeyword] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [searchResult, setSearchResult] = useState<{
@@ -100,17 +100,18 @@ export default function SearchWordPage() {
   }
 
   return (
-    <PageContainer maxWidth="2xl">
+    <PageContainer maxWidth="3xl">
       {/* 标题栏 */}
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/word')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">搜索单词</h1>
+      <div className="mb-5 space-y-5">
+        <WordPageHeader
+          title="查单词"
+          description="查找释义与例句，也可以补充词库中没有的单词。"
+          backHref="/word"
+        />
+        <WordToolsNav />
       </div>
 
-      {/* 搜索框 */}
-      <Card className="mb-6">
+      <Card className="mb-5 gap-0 rounded-2xl py-0 shadow-none">
         <CardContent className="p-4">
           <div className="flex gap-2">
             <Input
@@ -118,11 +119,15 @@ export default function SearchWordPage() {
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入要搜索的单词..."
-              className="flex-1"
+              placeholder="输入英文单词"
+              aria-label="搜索单词"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="min-w-0 flex-1"
               autoFocus
             />
-            <Button onClick={handleSearch} disabled={isSearching}>
+            <Button onClick={handleSearch} disabled={isSearching} aria-label="搜索">
               {isSearching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -141,11 +146,13 @@ export default function SearchWordPage() {
         <>
           {searchResult.found && searchResult.word ? (
             // 找到单词 - 显示单词详情
-            <Card>
-              <CardContent className="space-y-4 p-6">
+            <Card className="gap-0 rounded-2xl py-0 shadow-none">
+              <CardContent className="space-y-5 p-5 sm:p-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="mb-2 text-3xl font-bold">{searchResult.word.content}</h2>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="mb-2 text-3xl font-semibold break-words">
+                      {searchResult.word.content}
+                    </h2>
                     {searchResult.word.phonetic_us && (
                       <p className="text-muted-foreground mb-4">
                         /{searchResult.word.phonetic_us}/
@@ -171,7 +178,7 @@ export default function SearchWordPage() {
                     {searchResult.word.explanation && (
                       <div className="bg-muted/50 mb-4 rounded-lg p-4">
                         <h3 className="mb-2 text-sm font-semibold">释义</h3>
-                        <div className="whitespace-pre-line">
+                        <div className="break-words whitespace-pre-line">
                           {searchResult.word.explanation.split('\n').map((line, idx) => (
                             <p key={idx} className={idx > 0 ? 'mt-1' : ''}>
                               {line}
@@ -198,7 +205,7 @@ export default function SearchWordPage() {
                 </div>
 
                 {/* 操作按钮 */}
-                <div className="flex justify-center gap-3 border-t pt-4">
+                <div className="flex flex-wrap justify-center gap-3 border-t pt-4">
                   <Button onClick={() => setSearchResult(null)} variant="outline">
                     继续搜索
                   </Button>
@@ -211,7 +218,7 @@ export default function SearchWordPage() {
           ) : (
             // 未找到单词 - 显示明确空态 + 创建表单
             <div className="space-y-4">
-              <Card>
+              <Card className="gap-0 rounded-2xl py-0 shadow-none">
                 <CardContent className="space-y-2 p-4 text-center">
                   <p className="text-sm font-medium">
                     未找到单词「{searchResult.keyword ?? keyword}」
@@ -239,8 +246,8 @@ export default function SearchWordPage() {
 
       {/* 空状态提示 */}
       {!searchResult && (
-        <Card>
-          <CardContent className="space-y-4 p-12 text-center">
+        <Card className="gap-0 rounded-2xl py-0 shadow-none">
+          <CardContent className="space-y-4 p-8 text-center">
             <BookOpen className="text-muted-foreground mx-auto h-12 w-12" />
             <div>
               <h2 className="mb-1 text-lg font-semibold">搜索单词</h2>

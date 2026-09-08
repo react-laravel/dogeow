@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { toast } from 'sonner'
-import { CheckCircle2, BookX, ArrowLeft, PartyPopper } from 'lucide-react'
+import { mutate as mutateCache } from 'swr'
+import { CheckCircle2, BookX, PartyPopper } from 'lucide-react'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
+import { StudyHeader } from '../components/WordPageHeader'
 import { normalizeWordsResponse } from '../types'
 
 export default function ReviewPage() {
@@ -20,7 +22,8 @@ export default function ReviewPage() {
   const { data: words, isLoading: wordsLoading, error, mutate } = useReviewWords()
   const { data: dailyWords, isLoading: dailyWordsLoading } = useDailyWords()
   const {
-    studyQueue,
+    studyQueue: storedQueue,
+    sessionMode,
     initialStudyCount,
     setCurrentWords,
     learningStatus,
@@ -31,6 +34,9 @@ export default function ReviewPage() {
     getCurrentWord,
     reset,
   } = useWordStore()
+  const isCurrentSession = sessionMode === null || sessionMode === 'reviewing'
+  const studyQueue = isCurrentSession ? storedQueue : []
+  const [completionError, setCompletionError] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
   const [sessionKey, setSessionKey] = useState(0)
   const [isContinuing, setIsContinuing] = useState(false)
@@ -49,22 +55,43 @@ export default function ReviewPage() {
   )
 
   useEffect(() => {
-    if (!words || learningStatus === 'completed') return
+    if (
+      !hasSelectedBook ||
+      !words ||
+      isCompleting ||
+      completionError ||
+      (learningStatus === 'completed' && isCurrentSession)
+    )
+      return
 
     const wordsArray = normalizeWordsResponse(words)
     if (wordsArray.length > 0 && studyQueue.length === 0) {
       beginSession(wordsArray)
     }
-  }, [words, sessionKey, learningStatus, studyQueue.length, beginSession])
+  }, [
+    words,
+    sessionKey,
+    learningStatus,
+    studyQueue.length,
+    beginSession,
+    isCompleting,
+    completionError,
+    isCurrentSession,
+    hasSelectedBook,
+  ])
 
   const handleComplete = async () => {
+    setCompletionError(false)
     setIsCompleting(true)
     try {
       await checkIn()
       setLearningStatus('completed')
+      void mutateCache('/word/stats')
+      void mutateCache(key => typeof key === 'string' && key.startsWith('/word/calendar'))
       toast.success('复习完成！已打卡')
     } catch (error) {
-      toast.error('打卡失败')
+      setCompletionError(true)
+      toast.error('打卡失败，请重试')
       console.error('打卡失败:', error)
     } finally {
       setIsCompleting(false)
@@ -89,6 +116,8 @@ export default function ReviewPage() {
       if (wordsArray.length > 0) {
         beginSession(wordsArray)
       }
+    } catch {
+      toast.error('加载复习内容失败，请重试')
     } finally {
       setIsContinuing(false)
     }
@@ -99,6 +128,22 @@ export default function ReviewPage() {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
+      </PageContainer>
+    )
+  }
+
+  if (isCompleting || completionError) {
+    return (
+      <PageContainer maxWidth="3xl">
+        <Card>
+          <CardContent className="space-y-4 p-6 text-center">
+            <h1 className="text-lg font-semibold">复习已完成</h1>
+            <p role="status" className="text-muted-foreground text-sm">
+              {isCompleting ? '正在记录本次学习…' : '打卡暂未成功，本次进度已保留。'}
+            </p>
+            {completionError && <Button onClick={() => void handleComplete()}>重试打卡</Button>}
+          </CardContent>
+        </Card>
       </PageContainer>
     )
   }
@@ -135,14 +180,12 @@ export default function ReviewPage() {
             <BookX className="text-muted-foreground mx-auto h-12 w-12" />
             <div>
               <h2 className="mb-1 text-lg font-semibold">请先选择单词书</h2>
-              <p className="text-muted-foreground text-sm">
-                请先在首页选择要学习的单词书，再开始复习
-              </p>
+              <p className="text-muted-foreground text-sm">选择正在学习的单词书，查看待复习内容</p>
             </div>
             <div className="flex justify-center gap-2">
-              <Link href="/word">
-                <Button>返回首页选书</Button>
-              </Link>
+              <Button asChild>
+                <Link href="/word/books">选择单词书</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -151,7 +194,7 @@ export default function ReviewPage() {
   }
 
   // 复习完成
-  if (learningStatus === 'completed') {
+  if (learningStatus === 'completed' && isCurrentSession) {
     return (
       <PageContainer maxWidth="md">
         <Card>
@@ -226,25 +269,19 @@ export default function ReviewPage() {
   const progressTotal = initialStudyCount || studyQueue.length + completedInSession
 
   return (
-    <PageContainer maxWidth="2xl">
-      <div className="mb-4 flex items-center justify-between">
-        <Link href="/word">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <p className="text-muted-foreground text-sm">
-          {completedInSession} / {progressTotal}
-          {studyQueue.length > 1 && (
-            <span className="text-muted-foreground/70 ml-1">（待完成 {studyQueue.length}）</span>
-          )}
-        </p>
-        <div className="w-9" />
-      </div>
+    <PageContainer maxWidth="3xl">
+      <StudyHeader
+        title="复习巩固"
+        description="回顾到期单词，巩固记忆。"
+        completed={completedInSession}
+        total={progressTotal}
+        backHref="/word"
+      />
       {currentWord && (
         <WordCard
           key={`${currentWord.id}-${sessionKey}-${cardNonce}`}
           word={currentWord}
+          autoPronounce={settings?.is_auto_pronounce ?? false}
           onResult={handleWordResult}
         />
       )}

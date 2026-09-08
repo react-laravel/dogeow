@@ -10,6 +10,7 @@ const { searchWord, createWord, classifyWordEducationLevel } = vi.hoisted(() => 
 }))
 
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/word/search',
   useRouter: () => ({ push: vi.fn() }),
 }))
 
@@ -43,7 +44,7 @@ describe('SearchWordPage', () => {
 
     render(<SearchWordPage />)
 
-    await user.type(screen.getByPlaceholderText('输入要搜索的单词...'), 'hello')
+    await user.type(screen.getByPlaceholderText('输入英文单词'), 'hello')
     await user.click(screen.getByRole('button', { name: /搜索/ }))
 
     await waitFor(() => {
@@ -51,6 +52,6 @@ describe('SearchWordPage', () => {
     })
     expect(screen.getByTestId('word-editor')).toHaveTextContent('editor:hello')
     expect(toast.info).toHaveBeenCalled()
-    expect(screen.getByPlaceholderText('输入要搜索的单词...')).toHaveValue('hello')
+    expect(screen.getByPlaceholderText('输入英文单词')).toHaveValue('hello')
   })
 })

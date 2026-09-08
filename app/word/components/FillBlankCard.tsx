@@ -73,7 +73,7 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
 
   if (!selectedExample) {
     return (
-      <Card className="w-full">
+      <Card className="w-full gap-0 rounded-2xl py-0 shadow-none">
         <CardContent className="p-6 text-center">
           <p className="text-muted-foreground">该单词没有例句</p>
           <Button onClick={() => onNext(false)} className="mt-4">
@@ -85,19 +85,19 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
   }
 
   return (
-    <Card className="w-full">
-      <CardContent className="space-y-6 p-6">
+    <Card className="w-full gap-0 rounded-2xl py-0 shadow-none">
+      <CardContent className="space-y-6 p-5 sm:p-8">
         {/* 提示信息 */}
         <div className="text-center">
           <h3 className="text-muted-foreground mb-2 text-sm">根据例句填写单词</h3>
-          <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+          <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-2 text-sm">
             {word.phonetic_us && <span>/{word.phonetic_us}/</span>}
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => void playBritishPronunciation(word.content)}
-                className="h-7 min-w-7 px-2 text-xs"
+                className="h-10 px-3 text-sm"
                 aria-label="英式发音"
               >
                 英
@@ -106,7 +106,7 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => void playAmericanPronunciation(word.content)}
-                className="h-7 min-w-7 px-2 text-xs"
+                className="h-10 px-3 text-sm"
                 aria-label="美式发音"
               >
                 美
@@ -116,8 +116,8 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
         </div>
 
         {/* 例句（挖空） */}
-        <div className="bg-muted/50 space-y-3 rounded-lg p-4">
-          <p className="text-base leading-relaxed">{maskedSentence}</p>
+        <div className="bg-muted/50 space-y-3 rounded-xl p-4">
+          <p className="text-base leading-loose break-words">{maskedSentence}</p>
           <p className="text-muted-foreground text-sm">{selectedExample.zh}</p>
         </div>
 
@@ -129,15 +129,20 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
             onChange={e => setUserInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="请输入单词"
-            disabled={showResult}
-            className="text-center text-lg"
+            aria-label="单词答案"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            readOnly={showResult}
+            className="h-12 text-center text-lg"
             autoFocus
           />
 
           {/* 结果显示 */}
           {showResult && (
             <div
-              className={`flex items-center justify-center gap-2 rounded-lg p-3 ${
+              role="status"
+              className={`flex flex-wrap items-center justify-center gap-2 rounded-lg p-3 ${
                 isCorrect
                   ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300'
                   : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300'
@@ -175,11 +180,11 @@ export function FillBlankCard({ word, onNext }: FillBlankCardProps) {
         {/* 操作按钮 */}
         <div className="flex justify-center gap-3 pt-2">
           {!showResult ? (
-            <Button onClick={handleSubmit} className="min-w-[120px]">
+            <Button onClick={handleSubmit} className="w-full" size="lg">
               提交答案
             </Button>
           ) : (
-            <Button onClick={handleNext} className="min-w-[120px]">
+            <Button onClick={handleNext} className="w-full" size="lg">
               下一个
             </Button>
           )}

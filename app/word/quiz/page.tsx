@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Brain, CircleHelp, Gauge, RefreshCcw } from 'lucide-react'
+import { ArrowRight, Brain, CircleHelp, Gauge, RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageContainer } from '@/components/layout'
+import { WordPageHeader } from '../components/WordPageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -305,7 +306,7 @@ export default function WordQuizPage() {
   if (loadError && !currentQuestion) {
     return (
       <PageContainer maxWidth="md" className="pb-8">
-        <Card>
+        <Card className="min-w-0 gap-0 rounded-2xl py-0 shadow-none">
           <CardContent className="space-y-4 p-6 text-center">
             <CircleHelp className="text-muted-foreground mx-auto h-12 w-12" />
             <div>
@@ -329,7 +330,7 @@ export default function WordQuizPage() {
   if (!currentQuestion) {
     return (
       <PageContainer maxWidth="md" className="pb-8">
-        <Card>
+        <Card className="min-w-0 gap-0 rounded-2xl py-0 shadow-none">
           <CardContent className="space-y-4 p-6 text-center">
             <CircleHelp className="text-muted-foreground mx-auto h-12 w-12" />
             <div>
@@ -367,23 +368,25 @@ export default function WordQuizPage() {
   }
 
   return (
-    <PageContainer maxWidth="4xl" className="space-y-3 pb-8">
-      <div className="flex items-center justify-between">
-        <Link href="/word">
-          <Button variant="ghost" size="icon" aria-label="返回背单词首页">
-            <ArrowLeft className="h-4 w-4" />
+    <PageContainer maxWidth="4xl" className="space-y-5">
+      <WordPageHeader
+        title="词汇量测验"
+        description="选择最接近的释义，了解词汇掌握情况。"
+        backHref="/word"
+        actions={
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => void loadQuiz()}
+            aria-label="重新开始测验"
+          >
+            <RefreshCcw className="size-4" />
           </Button>
-        </Link>
-        <div className="text-center">
-          <p className="text-sm font-medium">词汇量测验</p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => void loadQuiz()} title="重新开始测验">
-          <RefreshCcw className="h-4 w-4" />
-        </Button>
-      </div>
+        }
+      />
 
-      <div className="grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <Card className="h-fit">
+      <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <Card className="order-last h-fit gap-0 rounded-2xl py-0 shadow-none lg:order-first">
           <CardContent className="space-y-3 p-3">
             <div className="rounded-xl border p-3">
               <div className="flex items-center gap-2 text-sm font-medium">
@@ -412,8 +415,8 @@ export default function WordQuizPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="space-y-3 p-4">
+        <Card className="min-w-0 gap-0 rounded-2xl py-0 shadow-none">
+          <CardContent className="space-y-5 p-5">
             <div className="flex items-center gap-2">
               <div className="bg-primary/10 rounded-full p-2">
                 <Brain className="text-primary h-5 w-5" />
@@ -424,13 +427,13 @@ export default function WordQuizPage() {
               </div>
             </div>
 
-            <div className="py-1 text-center">
-              <div className="text-3xl font-bold tracking-wide sm:text-[2rem]">
+            <div className="py-5 text-center">
+              <div className="text-3xl font-semibold tracking-wide break-words sm:text-[2rem]">
                 {currentQuestion.promptWord}
               </div>
             </div>
 
-            <div className="grid gap-2.5 md:grid-cols-2">
+            <div className="grid gap-2.5">
               {currentQuestion.options.map((option, index) => {
                 const isSelected = selectedOptionId === option.id
 
@@ -439,6 +442,7 @@ export default function WordQuizPage() {
                     key={option.id}
                     type="button"
                     disabled={!!submittedOptionId}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedOptionId(option.id)}
                     className={`rounded-xl border p-3 text-left transition-colors ${getOptionClasses(
                       !!submittedOptionId,
@@ -465,7 +469,12 @@ export default function WordQuizPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-0.5">
-              <Button onClick={handlePrimaryAction} disabled={isSubmittingAnswer} variant="outline">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handlePrimaryAction}
+                disabled={isSubmittingAnswer}
+              >
                 {isSubmittingAnswer ? '计算中...' : primaryButtonLabel}
                 {submittedOptionId && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>

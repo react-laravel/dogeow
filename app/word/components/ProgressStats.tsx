@@ -23,12 +23,12 @@ export function ProgressStats() {
   }
 
   return (
-    <Card className="gap-0 py-0 shadow-none">
+    <Card className="gap-0 rounded-2xl py-0 shadow-none">
       <CardContent className="p-3 sm:p-4">
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {/* 已打卡天数 */}
           <div className="flex min-w-0 items-center gap-2 sm:justify-center">
-            <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <div className="bg-muted hidden size-8 shrink-0 sm:flex items-center justify-center rounded-lg">
               <Calendar className="text-muted-foreground size-4" />
             </div>
             <div className="min-w-0">
@@ -39,7 +39,7 @@ export function ProgressStats() {
 
           {/* 已学单词 */}
           <div className="flex min-w-0 items-center gap-2 border-x px-2 sm:justify-center sm:px-4">
-            <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <div className="bg-muted hidden size-8 shrink-0 sm:flex items-center justify-center rounded-lg">
               <BookOpen className="text-muted-foreground size-4" />
             </div>
             <div className="min-w-0">
@@ -54,7 +54,7 @@ export function ProgressStats() {
 
           {/* 学习进度 */}
           <div className="flex min-w-0 items-center gap-2 sm:justify-center">
-            <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <div className="bg-muted hidden size-8 shrink-0 sm:flex items-center justify-center rounded-lg">
               <TrendingUp className="text-muted-foreground size-4" />
             </div>
             <div className="min-w-0">
