@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { WordCard } from '../components/WordCard'
 import { useDailyWords, useWordSettings, useWordStats, checkIn } from '../hooks/useWord'
@@ -14,7 +14,7 @@ import { CheckCircle2, BookX } from 'lucide-react'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout'
 import { StudyHeader } from '../components/WordPageHeader'
-import { normalizeWordsResponse } from '../types'
+import { getWordStudyPlanKey, normalizeWordsResponse, type Word } from '../types'
 
 export default function LearnPage() {
   const router = useRouter()
@@ -22,10 +22,12 @@ export default function LearnPage() {
   const wantsContinue = searchParams.get('continue') === '1'
   const { data: settings, isLoading: settingsLoading } = useWordSettings()
   const { data: stats, isLoading: statsLoading } = useWordStats()
-  const { data: words, isLoading: wordsLoading, error, mutate } = useDailyWords()
+  const { mutate } = useDailyWords()
   const {
     studyQueue: storedQueue,
     sessionMode,
+    sessionPlanKey,
+    currentWords,
     initialStudyCount,
     setCurrentWords,
     learningStatus,
@@ -36,63 +38,98 @@ export default function LearnPage() {
     getCurrentWord,
     reset,
   } = useWordStore()
-  const isCurrentSession = sessionMode === null || sessionMode === 'learning'
+  const planKey = settings ? getWordStudyPlanKey(settings) : null
+  const isCurrentSession = sessionMode === 'learning' && sessionPlanKey === planKey
   const studyQueue = isCurrentSession ? storedQueue : []
   const [completionError, setCompletionError] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
-  const [sessionKey, setSessionKey] = useState(0)
-  const [isContinuing, setIsContinuing] = useState(false)
   const [hasConfirmedContinue, setHasConfirmedContinue] = useState(false)
   const [cardNonce, setCardNonce] = useState(0)
-  const [hasPreparedSession, setHasPreparedSession] = useState(false)
+  const requestIdRef = useRef(0)
+  const initialPlanRef = useRef<string | null>(null)
+  const [group, setGroup] = useState<{
+    key: string | null
+    phase: 'idle' | 'loading' | 'ready' | 'error'
+    words: Word[]
+    error?: string
+  }>({ key: null, phase: 'idle', words: [] })
 
-  const isLoading = settingsLoading || statsLoading || wordsLoading || !hasPreparedSession
   const hasSelectedBook = !!settings?.current_book_id
   const todayCheckedIn = stats?.today_checked_in ?? false
   const shouldPromptContinue = !hasConfirmedContinue && (wantsContinue || todayCheckedIn)
+  const isContinuing = group.key === planKey && group.phase === 'loading'
+  const isLoading =
+    settingsLoading ||
+    statsLoading ||
+    isContinuing ||
+    (hasSelectedBook && !isCurrentSession && (group.key !== planKey || group.phase === 'idle'))
+  const wordsArray = group.key === planKey ? group.words : []
+  const error = group.key === planKey && group.phase === 'error' ? group.error : undefined
 
-  const beginSession = useCallback(
-    (wordsArray: ReturnType<typeof normalizeWordsResponse>) => {
-      if (wordsArray.length === 0) return
-      setCurrentWords(wordsArray)
-      startStudy('learning')
+  // Only a completed revalidation may supply a new group. Cached SWR data is never a fallback.
+  const loadGroup = useCallback(
+    async (start: boolean) => {
+      if (!planKey) return
+      const requestId = ++requestIdRef.current
+      setGroup({ key: planKey, phase: 'loading', words: [] })
+      try {
+        const response = await mutate()
+        if (requestId !== requestIdRef.current) return
+        if (response === undefined) throw new Error('暂时无法获取新的词组，请重试')
+        const freshWords = normalizeWordsResponse(response)
+        if (start) {
+          reset()
+          if (freshWords.length > 0) {
+            setCurrentWords(freshWords)
+            startStudy('learning', planKey)
+            setCardNonce(value => value + 1)
+          }
+        }
+        setGroup({ key: planKey, phase: 'ready', words: freshWords })
+      } catch (cause) {
+        if (requestId !== requestIdRef.current) return
+        setGroup({
+          key: planKey,
+          phase: 'error',
+          words: [],
+          error: cause instanceof Error ? cause.message : '词组加载失败，请重试',
+        })
+      }
     },
-    [setCurrentWords, startStudy]
+    [planKey, mutate, reset, setCurrentWords, startStudy]
   )
-
-  useEffect(() => {
-    void mutate().finally(() => setHasPreparedSession(true))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     if (
       !hasSelectedBook ||
-      !words ||
-      isCompleting ||
-      completionError ||
-      (learningStatus === 'completed' && isCurrentSession)
+      !planKey ||
+      settingsLoading ||
+      statsLoading ||
+      initialPlanRef.current === planKey
     )
       return
-    // 今日已打卡或从首页点「再学一组」时，不自动开新组，等用户确认
-    if (shouldPromptContinue && studyQueue.length === 0) return
-
-    const wordsArray = normalizeWordsResponse(words)
-    if (wordsArray.length > 0 && studyQueue.length === 0) {
-      beginSession(wordsArray)
-    }
+    initialPlanRef.current = planKey
+    // An unfinished session can resume only if its book and learning quantities still match.
+    if (isCurrentSession && learningStatus !== 'idle') return
+    void loadGroup(!shouldPromptContinue)
   }, [
-    words,
     hasSelectedBook,
-    sessionKey,
-    learningStatus,
-    studyQueue.length,
-    beginSession,
-    shouldPromptContinue,
-    isCompleting,
-    completionError,
+    planKey,
+    settingsLoading,
+    statsLoading,
     isCurrentSession,
+    learningStatus,
+    loadGroup,
+    shouldPromptContinue,
   ])
+
+  useEffect(
+    () => () => {
+      requestIdRef.current += 1
+      initialPlanRef.current = null
+    },
+    []
+  )
 
   const handleComplete = async () => {
     setCompletionError(false)
@@ -120,25 +157,9 @@ export default function LearnPage() {
     }
   }
 
-  const handleContinue = async () => {
-    setIsContinuing(true)
-    // URL 参数和「今日已打卡」会在整个页面生命周期内保持为 true。
-    // 用户确认后必须显式解除拦截，否则重置队列后仍会回到确认页。
+  const handleContinue = () => {
     setHasConfirmedContinue(true)
-    reset()
-    setSessionKey(key => key + 1)
-    try {
-      const nextWords = await mutate(undefined, { revalidate: true })
-      const wordsArray = normalizeWordsResponse(nextWords ?? words)
-      if (wordsArray.length > 0) {
-        beginSession(wordsArray)
-      }
-    } catch (error) {
-      toast.error('加载下一组失败，请重试')
-      console.error('加载下一组单词失败:', error)
-    } finally {
-      setIsContinuing(false)
-    }
+    void loadGroup(true)
   }
 
   // 加载中
@@ -172,11 +193,9 @@ export default function LearnPage() {
       <PageContainer maxWidth="md">
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-destructive mb-4">
-              加载失败: {error instanceof Error ? error.message : '未知错误'}
-            </p>
+            <p className="text-destructive mb-4">加载失败：{error}</p>
             <div className="flex justify-center gap-2">
-              <Button onClick={() => mutate()} variant="outline">
+              <Button onClick={() => void loadGroup(!shouldPromptContinue)} variant="outline">
                 重试
               </Button>
               <Button onClick={() => router.push('/word')} variant="outline">
@@ -223,7 +242,7 @@ export default function LearnPage() {
             <div>
               <h2 className="mb-1 text-lg font-semibold">学习完成！</h2>
               <p className="text-muted-foreground text-sm">
-                今天学习了 {dailyProgress.learned} 个新单词
+                本组学习了 {dailyProgress.learned} 个新词，复习了 {dailyProgress.reviewed} 个单词
               </p>
             </div>
             <div className="flex justify-center gap-2">
@@ -239,8 +258,6 @@ export default function LearnPage() {
       </PageContainer>
     )
   }
-
-  const wordsArray = normalizeWordsResponse(words)
 
   // 今日已打卡 / 主动续学：等待用户点「再学一组」
   if (shouldPromptContinue && studyQueue.length === 0 && wordsArray.length > 0) {
@@ -285,12 +302,11 @@ export default function LearnPage() {
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              <Button
-                onClick={() => void handleContinue()}
-                disabled={isContinuing}
-                variant="default"
-              >
-                再学一组
+              <Button asChild>
+                <Link href="/word/books">选择其他词书</Link>
+              </Button>
+              <Button onClick={() => void loadGroup(true)} variant="outline">
+                刷新词组
               </Button>
               <Link href="/word">
                 <Button variant="outline">返回首页</Button>
@@ -312,21 +328,28 @@ export default function LearnPage() {
   }
 
   const currentWord = getCurrentWord()
-  const completedInSession = dailyProgress.learned
+  const completedInSession = dailyProgress.learned + dailyProgress.reviewed
   const progressTotal = initialStudyCount || studyQueue.length + completedInSession
+  const newCount = currentWords.filter(word => !word.is_review_word).length
+  const reviewCount = currentWords.length - newCount
 
   return (
     <PageContainer maxWidth="3xl">
       <StudyHeader
         title="今日学习"
-        description="先回想词义，再查看释义与例句。"
+        description={`本组新词 ${newCount} 个 · 复习 ${reviewCount} 个`}
         completed={completedInSession}
         total={progressTotal}
       />
+      <p className="text-muted-foreground mb-4 text-xs leading-relaxed">
+        计划新词 {settings?.daily_new_words} 个，最多复习{' '}
+        {(settings?.daily_new_words ?? 0) * (settings?.review_multiplier ?? 0)}{' '}
+        个。复习仅安排到期单词，数量不足时以实际可学内容为准。
+      </p>
       {currentWord && (
         <div key={`card-wrapper-${currentWord.id}-${cardNonce}`} className="animate-card-enter">
           <WordCard
-            key={`${currentWord.id}-${sessionKey}-${cardNonce}`}
+            key={`${currentWord.id}-${cardNonce}`}
             word={currentWord}
             autoPronounce={settings?.is_auto_pronounce ?? false}
             onResult={handleWordResult}

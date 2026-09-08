@@ -14,6 +14,7 @@ interface WordState {
   // 当前学习状态
   learningStatus: LearningStatus
   sessionMode: 'learning' | 'reviewing' | null
+  sessionPlanKey: string | null
   // 当前单词的记忆状态
   currentWordMemoryStatus: WordMemoryStatus
   // 是否显示翻译
@@ -40,7 +41,7 @@ interface WordState {
   updateDailyProgress: (type: 'learned' | 'reviewed') => void
   setSettings: (settings: UserWordSetting) => void
   updateSettings: (settings: Partial<UserWordSetting>) => void
-  startStudy: (mode: 'learning' | 'reviewing') => void
+  startStudy: (mode: 'learning' | 'reviewing', planKey?: string) => void
   /** 处理当前词结果；返回 true 表示本轮队列已清空 */
   resolveCurrentWord: (remembered: boolean) => boolean
   removeCurrentWordFromQueue: () => boolean
@@ -59,6 +60,7 @@ export const useWordStore = create<WordState>()(
       currentIndex: 0,
       learningStatus: 'idle',
       sessionMode: null,
+      sessionPlanKey: null,
       currentWordMemoryStatus: 'unknown',
       showTranslation: false,
       dailyProgress: initialDailyProgress,
@@ -149,11 +151,12 @@ export const useWordStore = create<WordState>()(
         }))
       },
 
-      startStudy: mode => {
+      startStudy: (mode, planKey) => {
         set({
           studyStartTime: new Date(),
           learningStatus: mode,
           sessionMode: mode,
+          sessionPlanKey: planKey ?? null,
           dailyProgress: { ...initialDailyProgress },
           showTranslation: false,
           currentWordMemoryStatus: 'unknown',
@@ -170,10 +173,10 @@ export const useWordStore = create<WordState>()(
         if (studyQueue.length === 0) return true
 
         if (remembered) {
-          if (learningStatus === 'learning') {
-            get().updateDailyProgress('learned')
-          } else if (learningStatus === 'reviewing') {
+          if (learningStatus === 'reviewing' || studyQueue[0].is_review_word) {
             get().updateDailyProgress('reviewed')
+          } else if (learningStatus === 'learning') {
+            get().updateDailyProgress('learned')
           }
 
           const nextQueue = studyQueue.slice(1)
@@ -200,10 +203,10 @@ export const useWordStore = create<WordState>()(
         const { studyQueue, learningStatus } = get()
         if (studyQueue.length === 0) return true
 
-        if (learningStatus === 'learning') {
-          get().updateDailyProgress('learned')
-        } else if (learningStatus === 'reviewing') {
+        if (learningStatus === 'reviewing' || studyQueue[0].is_review_word) {
           get().updateDailyProgress('reviewed')
+        } else if (learningStatus === 'learning') {
+          get().updateDailyProgress('learned')
         }
 
         const nextQueue = studyQueue.slice(1)
@@ -224,6 +227,7 @@ export const useWordStore = create<WordState>()(
           currentIndex: 0,
           learningStatus: 'idle',
           sessionMode: null,
+          sessionPlanKey: null,
           currentWordMemoryStatus: 'unknown',
           showTranslation: false,
           dailyProgress: { ...initialDailyProgress },

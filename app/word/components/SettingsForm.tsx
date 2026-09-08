@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { toast } from 'sonner'
+import { mutate as mutateCache } from 'swr'
 import { useWordSettings, updateWordSettings } from '../hooks/useWord'
 import { useWordStore } from '../stores/wordStore'
 import type { UserWordSetting } from '../types'
@@ -84,6 +85,15 @@ function SettingsEditor({
     setSaveError(false)
     try {
       const result = await updateWordSettings(data)
+      const planChanged =
+        settings.daily_new_words !== result.setting.daily_new_words ||
+        settings.review_multiplier !== result.setting.review_multiplier ||
+        settings.current_book_id !== result.setting.current_book_id
+      if (planChanged) {
+        useWordStore.getState().reset()
+        void mutateCache('/word/daily', undefined, { revalidate: false })
+        void mutateCache('/word/review', undefined, { revalidate: false })
+      }
       setSettings(result.setting)
       onSaved(result.setting)
       reset({

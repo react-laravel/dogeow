@@ -67,6 +67,10 @@ export interface UserWordSetting {
   current_book?: Book
 }
 
+export function getWordStudyPlanKey(setting: UserWordSetting): string {
+  return `${setting.current_book_id ?? 0}:${setting.daily_new_words}:${setting.review_multiplier}`
+}
+
 export interface CheckIn {
   id: number
   user_id: number

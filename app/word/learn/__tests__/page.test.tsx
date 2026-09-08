@@ -1,42 +1,64 @@
+import { StrictMode } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Word } from '../../types'
+import { getWordStudyPlanKey, type UserWordSetting, type Word } from '../../types'
 import { useWordStore } from '../../stores/wordStore'
 import LearnPage from '../page'
 
-const { mutate, useSearchParams, useWordStats, checkIn } = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
-  checkIn: vi.fn(),
   useSearchParams: vi.fn(),
   useWordStats: vi.fn(),
+  useWordSettings: vi.fn(),
+  useDailyWords: vi.fn(),
+  checkIn: vi.fn(),
 }))
-
-const firstGroup: Word[] = [{ id: 1, content: 'first', difficulty: 1, frequency: 1 }]
-const nextGroup: Word[] = [{ id: 2, content: 'next', difficulty: 1, frequency: 1 }]
-
+const setting: UserWordSetting = {
+  id: 1,
+  user_id: 1,
+  current_book_id: 1,
+  daily_new_words: 10,
+  review_multiplier: 2,
+  is_auto_pronounce: false,
+}
+const makeGroup = (prefix: string, count: number, startId = 1): Word[] =>
+  Array.from({ length: count }, (_, index) => ({
+    id: startId + index,
+    content: `${prefix}-${index + 1}`,
+    difficulty: 1,
+    frequency: 1,
+  }))
+const cachedFour = makeGroup('cached', 4)
+const freshTen = makeGroup('fresh', 10, 101)
+const nextGroup = makeGroup('next', 10, 201)
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (cause: Error) => void
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done
+    reject = fail
+  })
+  return { promise, resolve, reject }
+}
+function completedSession() {
+  useWordStore.getState().setCurrentWords(cachedFour)
+  useWordStore.getState().startStudy('learning', getWordStudyPlanKey(setting))
+  useWordStore.setState({
+    learningStatus: 'completed',
+    studyQueue: [],
+    dailyProgress: { learned: 4, reviewed: 0 },
+  })
+}
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams,
+  useSearchParams: mocks.useSearchParams,
 }))
-
-vi.mock('next/link', () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}))
-
 vi.mock('../../hooks/useWord', () => ({
-  useWordSettings: () => ({ data: { current_book_id: 1 }, isLoading: false }),
-  useWordStats,
-  useDailyWords: () => ({
-    data: firstGroup,
-    isLoading: false,
-    error: undefined,
-    mutate,
-  }),
-  checkIn,
+  useWordSettings: mocks.useWordSettings,
+  useWordStats: mocks.useWordStats,
+  useDailyWords: mocks.useDailyWords,
+  checkIn: mocks.checkIn,
 }))
-
 vi.mock('../../components/WordCard', () => ({
   WordCard: ({ word, onResult }: { word: Word; onResult: (remembered: boolean) => void }) => (
     <div>
@@ -46,71 +68,142 @@ vi.mock('../../components/WordCard', () => ({
   ),
 }))
 
-describe('LearnPage continuation', () => {
+describe('LearnPage groups', () => {
   beforeEach(() => {
     useWordStore.getState().reset()
-    checkIn.mockReset()
-    mutate.mockReset()
-    mutate.mockResolvedValue(nextGroup)
-    useSearchParams.mockReturnValue(new URLSearchParams('continue=1'))
-    useWordStats.mockReturnValue({
-      data: { today_checked_in: true },
+    vi.clearAllMocks()
+    mocks.mutate.mockReset().mockResolvedValue(freshTen)
+    mocks.checkIn.mockReset().mockResolvedValue({ message: 'ok' })
+    mocks.useSearchParams.mockReturnValue(new URLSearchParams())
+    mocks.useWordStats.mockReturnValue({ data: { today_checked_in: false }, isLoading: false })
+    mocks.useWordSettings.mockReturnValue({ data: setting, isLoading: false })
+    mocks.useDailyWords.mockReturnValue({
+      data: cachedFour,
       isLoading: false,
+      mutate: mocks.mutate,
     })
   })
-
-  it('starts the next group after confirming from the checked-in prompt', async () => {
+  it('waits for fresh words instead of starting the cached four-word group', async () => {
+    const request = deferred<Word[]>()
+    mocks.mutate.mockReturnValue(request.promise)
     render(<LearnPage />)
-
-    expect(await screen.findByText('今日已打卡')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
-
-    expect(await screen.findByText('正在学习：next')).toBeInTheDocument()
-    expect(screen.queryByText('今日已打卡')).not.toBeInTheDocument()
+    expect(useWordStore.getState().studyQueue).toHaveLength(0)
+    expect(screen.queryByText('正在学习：cached-1')).not.toBeInTheDocument()
+    await act(async () => request.resolve(freshTen))
+    expect(await screen.findByText('正在学习：fresh-1')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '10')
+    expect(useWordStore.getState().sessionPlanKey).toBe('1:10:2')
   })
-
-  it('starts another group from the completed screen without returning to the prompt', async () => {
-    useWordStore.getState().setLearningStatus('completed')
-    render(<LearnPage />)
-
-    expect(await screen.findByText('学习完成！')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
-
-    await waitFor(() => expect(screen.getByText('正在学习：next')).toBeInTheDocument())
-    expect(screen.queryByText('今日已打卡')).not.toBeInTheDocument()
-  })
-  it('keeps the completed queue empty while check-in is pending, and can retry a failure', async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams())
-    useWordStats.mockReturnValue({ data: { today_checked_in: false }, isLoading: false })
-    let reject!: (reason: Error) => void
-    checkIn.mockImplementationOnce(
-      () =>
-        new Promise((_resolve, fail) => {
-          reject = fail
-        })
+  it('starts normally under StrictMode without accepting an abandoned request', async () => {
+    render(
+      <StrictMode>
+        <LearnPage />
+      </StrictMode>
     )
+    expect(await screen.findByText('正在学习：fresh-1')).toBeInTheDocument()
+  })
+  it('confirms another group after check-in, then uses the new response', async () => {
+    mocks.useSearchParams.mockReturnValue(new URLSearchParams('continue=1'))
+    mocks.useWordStats.mockReturnValue({ data: { today_checked_in: true }, isLoading: false })
+    render(<LearnPage />)
+    expect(await screen.findByText('今日已打卡')).toBeInTheDocument()
+    mocks.mutate.mockResolvedValueOnce(nextGroup)
+    fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
+    expect(await screen.findByText('正在学习：next-1')).toBeInTheDocument()
+  })
+  it('completes four words and waits for a different next group', async () => {
+    mocks.mutate.mockResolvedValueOnce(cachedFour)
+    render(<LearnPage />)
+    for (const word of cachedFour) {
+      expect(await screen.findByText(`正在学习：${word.content}`)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: '记住测试单词' }))
+    }
+    expect(await screen.findByText('学习完成！')).toBeInTheDocument()
+    const request = deferred<Word[]>()
+    mocks.mutate.mockReturnValueOnce(request.promise)
+    fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
+    expect(useWordStore.getState().studyQueue).toHaveLength(0)
+    await act(async () => request.resolve(nextGroup))
+    expect(await screen.findByText('正在学习：next-1')).toBeInTheDocument()
+    expect(useWordStore.getState().currentWords.map(word => word.id)).toEqual(
+      nextGroup.map(word => word.id)
+    )
+  })
+  it('shows an exhausted book instead of replaying cached words when the server returns no words', async () => {
+    completedSession()
+    mocks.mutate.mockResolvedValueOnce([])
+    render(<LearnPage />)
+    fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
+    expect(await screen.findByText('当前没有新单词了')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '记住测试单词' })).not.toBeInTheDocument()
+    expect(useWordStore.getState().studyQueue).toHaveLength(0)
+  })
+  it.each(['failure', 'undefined'])(
+    'does not replay a completed group on %s and supports retry',
+    async outcome => {
+      completedSession()
+      if (outcome === 'failure') mocks.mutate.mockRejectedValueOnce(new Error('offline'))
+      else mocks.mutate.mockResolvedValueOnce(undefined)
+      render(<LearnPage />)
+      fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
+      expect(await screen.findByRole('button', { name: '重试' })).toBeInTheDocument()
+      expect(useWordStore.getState().studyQueue).toHaveLength(0)
+      mocks.mutate.mockResolvedValueOnce(nextGroup)
+      fireEvent.click(screen.getByRole('button', { name: '重试' }))
+      expect(await screen.findByText('正在学习：next-1')).toBeInTheDocument()
+    }
+  )
+  it('rebuilds a session when the saved learning quantities change', async () => {
+    useWordStore.getState().setCurrentWords(cachedFour)
+    useWordStore.getState().startStudy('learning', '1:4:1')
+    render(<LearnPage />)
+    expect(await screen.findByText('正在学习：fresh-1')).toBeInTheDocument()
+    expect(useWordStore.getState().initialStudyCount).toBe(10)
+  })
+  it('retains an unfinished session when the book and quantities still match', () => {
+    useWordStore.getState().setCurrentWords(cachedFour)
+    useWordStore.getState().startStudy('learning', getWordStudyPlanKey(setting))
+    render(<LearnPage />)
+    expect(screen.getByText('正在学习：cached-1')).toBeInTheDocument()
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+  it('ignores a response from the old plan if settings change during loading', async () => {
+    const oldRequest = deferred<Word[]>()
+    const newRequest = deferred<Word[]>()
+    mocks.useWordSettings.mockReturnValue({
+      data: { ...setting, daily_new_words: 4 },
+      isLoading: false,
+    })
+    mocks.mutate.mockReturnValueOnce(oldRequest.promise).mockReturnValueOnce(newRequest.promise)
+    const { rerender } = render(<LearnPage />)
+    mocks.useWordSettings.mockReturnValue({ data: setting, isLoading: false })
+    rerender(<LearnPage />)
+    await act(async () => newRequest.resolve(freshTen))
+    await act(async () => oldRequest.resolve(cachedFour))
+    expect(screen.getByText('正在学习：fresh-1')).toBeInTheDocument()
+    expect(useWordStore.getState().initialStudyCount).toBe(10)
+  })
+  it('preserves completion on check-in failure without reinitializing the group', async () => {
+    mocks.mutate.mockResolvedValueOnce(cachedFour.slice(0, 1))
+    const checkIn = deferred<unknown>()
+    mocks.checkIn.mockReturnValueOnce(checkIn.promise)
     render(<LearnPage />)
     fireEvent.click(await screen.findByRole('button', { name: '记住测试单词' }))
     expect(await screen.findByText('正在记录本次学习…')).toBeInTheDocument()
-    expect(useWordStore.getState().studyQueue).toHaveLength(0)
-    await act(async () => {
-      reject(new Error('offline'))
-    })
+    await act(async () => checkIn.reject(new Error('offline')))
     expect(await screen.findByRole('button', { name: '重试打卡' })).toBeInTheDocument()
     expect(useWordStore.getState().studyQueue).toHaveLength(0)
-    checkIn.mockResolvedValue({ message: 'ok' })
     fireEvent.click(screen.getByRole('button', { name: '重试打卡' }))
     expect(await screen.findByText('学习完成！')).toBeInTheDocument()
   })
-  it('starts a learning queue instead of reusing a review session', async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams())
-    useWordStats.mockReturnValue({ data: { today_checked_in: false }, isLoading: false })
-    useWordStore
-      .getState()
-      .setCurrentWords([{ id: 8, content: 'review-only', difficulty: 1, frequency: 1 }])
-    useWordStore.getState().startStudy('reviewing')
+  it('shows separate new-word and review counts in a mixed group', async () => {
+    mocks.mutate.mockResolvedValueOnce(
+      cachedFour.map((word, index) => ({ ...word, is_review_word: index < 2 }))
+    )
     render(<LearnPage />)
-    expect(await screen.findByText('正在学习：first')).toBeInTheDocument()
-    expect(useWordStore.getState().sessionMode).toBe('learning')
+    expect(await screen.findByText('本组新词 2 个 · 复习 2 个')).toBeInTheDocument()
+    for (let index = 0; index < 4; index++)
+      fireEvent.click(screen.getByRole('button', { name: '记住测试单词' }))
+    expect(await screen.findByText('本组学习了 2 个新词，复习了 2 个单词')).toBeInTheDocument()
   })
 })

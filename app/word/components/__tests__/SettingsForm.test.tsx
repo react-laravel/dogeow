@@ -19,6 +19,7 @@ const setting: UserWordSetting = {
 describe('SettingsForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useWordStore.getState().reset()
     mocks.useSettings.mockReturnValue({ data: setting, isLoading: false, mutate: mocks.mutate })
     mocks.update.mockImplementation(async data => ({ setting: { ...setting, ...data } }))
   })
@@ -75,5 +76,29 @@ describe('SettingsForm', () => {
     })
     rerender(<SettingsForm />)
     expect(screen.getByLabelText('每日新词')).toHaveValue(20)
+  })
+  it('invalidates the previous group only after changed learning quantities are saved', async () => {
+    useWordStore
+      .getState()
+      .setCurrentWords([{ id: 1, content: 'old', difficulty: 1, frequency: 1 }])
+    useWordStore.getState().startStudy('learning', '0:10:2')
+    render(<SettingsForm />)
+    fireEvent.click(screen.getByRole('button', { name: '20 个' }))
+    expect(useWordStore.getState().studyQueue).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '保存设置' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存设置' })).toBeDisabled())
+    expect(useWordStore.getState().studyQueue).toHaveLength(0)
+    expect(useWordStore.getState().sessionPlanKey).toBeNull()
+  })
+  it('keeps the active group when only pronunciation is changed', async () => {
+    useWordStore
+      .getState()
+      .setCurrentWords([{ id: 1, content: 'ongoing', difficulty: 1, frequency: 1 }])
+    useWordStore.getState().startStudy('learning', '0:10:2')
+    render(<SettingsForm />)
+    fireEvent.click(screen.getByLabelText('自动发音'))
+    fireEvent.click(screen.getByRole('button', { name: '保存设置' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存设置' })).toBeDisabled())
+    expect(useWordStore.getState().getCurrentWord()?.content).toBe('ongoing')
   })
 })
