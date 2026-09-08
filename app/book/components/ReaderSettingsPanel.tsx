@@ -1,31 +1,21 @@
 'use client'
 
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Minus, Plus, RotateCcw, Monitor } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { ReaderPanel } from './ReaderPanel'
+import { ReaderChoiceGroup } from './ReaderChoiceGroup'
+import { SentencePairBlock } from './SentencePairBlock'
+import { getBookFontFamily } from '@/app/book/utils/theme'
+import { VOLUME_BOOK_DEFAULTS } from '@/app/book/utils/registry'
 import {
   PAIR_DISPLAY_LABELS,
   READER_CONTENT_MODE_LABELS,
   READER_FONT_LABELS,
-  READER_THEME_LABELS,
   type BaseReaderSettings,
   type PairDisplayMode,
   type ReaderContentMode,
   type ReaderFont,
-  type ReaderTheme,
 } from '@/app/book/types/reader'
 
 interface ReaderSettingsPanelProps {
@@ -38,6 +28,66 @@ interface ReaderSettingsPanelProps {
   hasDualFonts?: boolean
 }
 
+function SettingSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  format,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  format: (value: number) => string
+  onChange: (value: number) => void
+}) {
+  const adjust = (amount: number) =>
+    onChange(Number(Math.max(min, Math.min(max, value + amount)).toFixed(1)))
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium">{label}</span>
+        <output className="text-muted-foreground tabular-nums">{format(value)}</output>
+      </div>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11 rounded-xl shadow-none"
+          aria-label={`减小${label}`}
+          disabled={value <= min}
+          onClick={() => adjust(-step)}
+        >
+          <Minus className="size-4" />
+        </Button>
+        <Slider
+          aria-label={label}
+          className="flex-1 py-3"
+          min={min}
+          max={max}
+          step={step}
+          value={[value]}
+          onValueChange={([next]) => onChange(next)}
+        />
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11 rounded-xl shadow-none"
+          aria-label={`增大${label}`}
+          disabled={value >= max}
+          onClick={() => adjust(step)}
+        >
+          <Plus className="size-4" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function ReaderSettingsPanel({
   open,
   onOpenChange,
@@ -47,182 +97,155 @@ export function ReaderSettingsPanel({
   hasContentMode = true,
   hasDualFonts = false,
 }: ReaderSettingsPanelProps) {
+  const fontOptions = (Object.keys(READER_FONT_LABELS) as ReaderFont[]).map(value => ({
+    value,
+    label: READER_FONT_LABELS[value],
+    style: { fontFamily: getBookFontFamily(value) },
+  }))
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        overlayClassName="bg-transparent backdrop-blur-none"
-        style={{ width: 'min(18rem, 86vw)' }}
-        className="flex max-w-none flex-col gap-5 px-5 pt-5 pb-6"
-      >
-        <SheetHeader className="p-0 pr-10">
-          <SheetTitle>阅读设置</SheetTitle>
-          <SheetDescription>字体、排版与显示方式</SheetDescription>
-        </SheetHeader>
-
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
-          {hasDualFonts ? (
-            <>
-              <div className="space-y-2">
-                <Label>原文字体</Label>
-                <Select
-                  value={settings.originalFontFamily}
-                  onValueChange={value =>
-                    onPatchSettings({ originalFontFamily: value as ReaderFont })
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(READER_FONT_LABELS) as ReaderFont[]).map(key => (
-                      <SelectItem key={key} value={key}>
-                        {READER_FONT_LABELS[key]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>译文字体</Label>
-                <Select
-                  value={settings.translationFontFamily}
-                  onValueChange={value =>
-                    onPatchSettings({ translationFontFamily: value as ReaderFont })
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(READER_FONT_LABELS) as ReaderFont[]).map(key => (
-                      <SelectItem key={key} value={key}>
-                        {READER_FONT_LABELS[key]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-2">
-              <Label>字体</Label>
-              <Select
-                value={settings.originalFontFamily}
-                onValueChange={value =>
-                  onPatchSettings({ originalFontFamily: value as ReaderFont })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(READER_FONT_LABELS) as ReaderFont[]).map(key => (
-                    <SelectItem key={key} value={key}>
-                      {READER_FONT_LABELS[key]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>字号</Label>
-              <span className="text-muted-foreground text-xs">{settings.fontSize}px</span>
-            </div>
-            <Slider
-              min={16}
-              max={64}
-              step={2}
-              value={[settings.fontSize]}
-              onValueChange={([fontSize]) => onPatchSettings({ fontSize })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>行距</Label>
-              <span className="text-muted-foreground text-xs">
-                {settings.lineHeight.toFixed(1)}
-              </span>
-            </div>
-            <Slider
-              min={1.4}
-              max={2.6}
-              step={0.1}
-              value={[settings.lineHeight]}
-              onValueChange={([lineHeight]) => onPatchSettings({ lineHeight })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>背景模式</Label>
-            <Select
-              value={settings.theme}
-              onValueChange={value => onPatchSettings({ theme: value as ReaderTheme })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(READER_THEME_LABELS) as ReaderTheme[]).map(key => (
-                  <SelectItem key={key} value={key}>
-                    {READER_THEME_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {hasPairDisplayMode && settings.pairDisplayMode && (
-            <div className="space-y-2">
-              <Label>原文译文区分</Label>
-              <Select
-                value={settings.pairDisplayMode}
-                onValueChange={value =>
-                  onPatchSettings({ pairDisplayMode: value as PairDisplayMode })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(PAIR_DISPLAY_LABELS) as PairDisplayMode[]).map(key => (
-                    <SelectItem key={key} value={key}>
-                      {PAIR_DISPLAY_LABELS[key]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {hasContentMode && settings.contentMode && (
-            <div className="space-y-2">
-              <Label>阅读内容</Label>
-              <Select
-                value={settings.contentMode}
-                onValueChange={value =>
-                  onPatchSettings({ contentMode: value as ReaderContentMode })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(READER_CONTENT_MODE_LABELS) as ReaderContentMode[]).map(key => (
-                    <SelectItem key={key} value={key}>
-                      {READER_CONTENT_MODE_LABELS[key]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+    <ReaderPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      title="阅读设置"
+      description="调成适合自己的阅读方式，修改即时保存"
+      theme={settings.theme}
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground">只调整阅读样式，保留当前进度</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 shrink-0 rounded-xl"
+            onClick={() => onPatchSettings({ ...VOLUME_BOOK_DEFAULTS })}
+          >
+            <RotateCcw className="size-3.5" />
+            恢复默认
+          </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      }
+    >
+      <div className="space-y-6">
+        <section
+          aria-label="阅读效果预览"
+          className="overflow-hidden rounded-2xl border border-border bg-muted/30 p-4"
+        >
+          <p className="mb-2 text-[11px] font-medium tracking-widest text-muted-foreground">
+            效果预览
+          </p>
+          <div
+            className="max-h-32 overflow-y-auto"
+            style={{
+              fontSize: settings.fontSize,
+              lineHeight: settings.lineHeight,
+              fontFamily: getBookFontFamily(settings.originalFontFamily),
+            }}
+          >
+            <SentencePairBlock
+              pair={{
+                o: '静下心来，读一段好文字。',
+                t: hasContentMode || hasPairDisplayMode ? '让阅读，慢慢成为一种日常。' : '',
+              }}
+              pairIndex={0}
+              displayMode={hasPairDisplayMode ? settings.pairDisplayMode : 'muted'}
+              contentMode={hasContentMode ? settings.contentMode : 'original'}
+              theme={settings.theme}
+              originalFontFamily={settings.originalFontFamily}
+              translationFontFamily={settings.translationFontFamily}
+            />
+          </div>
+        </section>
+        <section className="space-y-5" aria-label="字号与行距">
+          <SettingSlider
+            label="字号"
+            value={settings.fontSize}
+            min={16}
+            max={64}
+            step={2}
+            format={value => `${value}px`}
+            onChange={fontSize => onPatchSettings({ fontSize })}
+          />
+          <SettingSlider
+            label="行距"
+            value={settings.lineHeight}
+            min={1.4}
+            max={2.6}
+            step={0.1}
+            format={value => value.toFixed(1)}
+            onChange={lineHeight => onPatchSettings({ lineHeight })}
+          />
+        </section>
+        <ReaderChoiceGroup
+          label="背景模式"
+          value={settings.theme}
+          onChange={theme => onPatchSettings({ theme })}
+          columns={5}
+          options={[
+            { value: 'auto', label: '系统', preview: <Monitor className="size-6" /> },
+            {
+              value: 'light',
+              label: '浅色',
+              preview: <span className="size-6 rounded-full border border-black/15 bg-white" />,
+            },
+            {
+              value: 'dark',
+              label: '深色',
+              preview: <span className="size-6 rounded-full border border-white/20 bg-[#141414]" />,
+            },
+            {
+              value: 'sepia',
+              label: '暖色',
+              preview: <span className="size-6 rounded-full border border-black/15 bg-[#f4ecd8]" />,
+            },
+            {
+              value: 'green',
+              label: '豆绿',
+              preview: <span className="size-6 rounded-full border border-black/15 bg-[#c7edcc]" />,
+            },
+          ]}
+        />
+        <section className="space-y-5 border-t border-border pt-5" aria-label="字体选择">
+          <ReaderChoiceGroup
+            label={hasDualFonts ? '原文字体' : '字体'}
+            value={settings.originalFontFamily}
+            onChange={originalFontFamily => onPatchSettings({ originalFontFamily })}
+            options={fontOptions}
+          />
+          {hasDualFonts && (
+            <ReaderChoiceGroup
+              label="译文字体"
+              value={settings.translationFontFamily}
+              onChange={translationFontFamily => onPatchSettings({ translationFontFamily })}
+              options={fontOptions}
+            />
+          )}
+        </section>
+        {(hasContentMode || hasPairDisplayMode) && (
+          <section className="space-y-5 border-t border-border pt-5" aria-label="阅读内容与对照">
+            {hasContentMode && settings.contentMode && (
+              <ReaderChoiceGroup
+                label="阅读内容"
+                value={settings.contentMode}
+                onChange={contentMode => onPatchSettings({ contentMode })}
+                options={(Object.keys(READER_CONTENT_MODE_LABELS) as ReaderContentMode[]).map(
+                  value => ({ value, label: READER_CONTENT_MODE_LABELS[value] })
+                )}
+              />
+            )}
+            {hasPairDisplayMode && settings.pairDisplayMode && (
+              <ReaderChoiceGroup
+                label="原文译文区分"
+                columns={2}
+                value={settings.pairDisplayMode}
+                onChange={pairDisplayMode => onPatchSettings({ pairDisplayMode })}
+                options={(Object.keys(PAIR_DISPLAY_LABELS) as PairDisplayMode[]).map(value => ({
+                  value,
+                  label: PAIR_DISPLAY_LABELS[value],
+                }))}
+              />
+            )}
+          </section>
+        )}
+      </div>
+    </ReaderPanel>
   )
 }

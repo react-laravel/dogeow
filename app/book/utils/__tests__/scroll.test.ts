@@ -100,3 +100,33 @@ describe('book scroll helpers', () => {
     container.remove()
   })
 })
+
+it('turns the page before the current words disappear behind the reader toolbar', () => {
+  const reader = document.createElement('div')
+  reader.dataset.readerTheme = 'dark'
+  const container = document.createElement('div')
+  container.style.overflowY = 'auto'
+  Object.defineProperties(container, {
+    clientHeight: { value: 500 },
+    scrollHeight: { value: 1600 },
+  })
+  container.getBoundingClientRect = () =>
+    ({ top: 0, bottom: 500, left: 0, right: 300, width: 300, height: 500 }) as DOMRect
+  const toolbar = document.createElement('footer')
+  toolbar.dataset.readerToolbar = ''
+  toolbar.getBoundingClientRect = () =>
+    ({ top: 380, bottom: 500, left: 0, right: 300, width: 300, height: 120 }) as DOMRect
+  const pair = document.createElement('p')
+  pair.dataset.pairIndex = '0'
+  const highlight = document.createElement('mark')
+  highlight.dataset.narrationHighlight = ''
+  highlight.getBoundingClientRect = () =>
+    ({ top: 370, bottom: 394, left: 0, right: 30, width: 30, height: 24 }) as DOMRect
+  pair.append(highlight)
+  container.append(pair)
+  reader.append(container, toolbar)
+  document.body.append(reader)
+  scrollNarrationHighlightIntoView(container, 0)
+  expect(container.scrollTop).toBe(332)
+  reader.remove()
+})

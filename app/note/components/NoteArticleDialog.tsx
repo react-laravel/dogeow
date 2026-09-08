@@ -46,7 +46,7 @@ export function NoteArticleDialog({
             position: 'fixed',
             inset: 0,
             background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)',
-            zIndex: 50,
+            zIndex: 135,
           }}
         />
         <Dialog.Content
@@ -56,12 +56,12 @@ export function NoteArticleDialog({
             left: '50%',
             transform: 'translate(-50%, -50%)',
             width: 'min(880px, 92vw)',
-            maxHeight: '85vh',
+            maxHeight: '85dvh',
             background: themeColors.card,
             border: `1px solid ${themeColors.border}`,
             borderRadius: 16,
             boxShadow: isDark ? '0 16px 50px rgba(0,0,0,0.6)' : '0 10px 40px rgba(0,0,0,0.2)',
-            zIndex: 51,
+            zIndex: 140,
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -76,7 +76,15 @@ export function NoteArticleDialog({
               gap: 8,
             }}
           >
-            <Dialog.Title style={{ fontSize: 18, fontWeight: 600, flex: 1 }}>
+            <Dialog.Title
+              style={{
+                fontSize: 18,
+                fontWeight: 600,
+                flex: 1,
+                minWidth: 0,
+                overflowWrap: 'anywhere',
+              }}
+            >
               {activeNode?.title ?? '文章'}
             </Dialog.Title>
             <Dialog.Description className="sr-only">阅读所选节点关联的文章内容</Dialog.Description>

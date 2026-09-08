@@ -66,10 +66,12 @@ export default function NoteDetail() {
         noteId={id}
         onDelete={handleDelete}
       />
-      <div className="text-muted-foreground mb-4 text-center text-xs">
+      <div className="text-muted-foreground mb-5 text-left text-xs">
         更新于 {formatNoteDate(note.updated_at)}
       </div>
-      <div className="max-w-none">{renderNoteDetailContent(note)}</div>
+      <article className="min-w-0 max-w-none overflow-x-auto rounded-2xl border border-border/70 bg-card p-4 sm:p-6">
+        {renderNoteDetailContent(note)}
+      </article>
     </PageContainer>
   )
 }

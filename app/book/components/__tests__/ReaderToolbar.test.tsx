@@ -1,160 +1,157 @@
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ReaderToolbar } from '../ReaderToolbar'
-import type { ReaderSettings } from '@/app/book/types/reader'
-import type { BookNarrationStatus, BookNarrationMode } from '@/app/book/types/narration'
 
-const defaultSettings: ReaderSettings = {
-  fontSize: 18,
-  lineHeight: 1.8,
-  theme: 'light',
-  pairDisplayMode: 'muted',
-  contentMode: 'both',
-  originalFontFamily: 'yahei',
-  translationFontFamily: 'yahei',
-  chapterId: 1,
-}
+vi.unmock('@/components/ui/slider')
+import type { BookNarrationMode, BookNarrationStatus } from '@/app/book/types/narration'
 
 const chapters = [
   { id: '1', title: '第一回 甄士隐梦幻识通灵' },
   { id: '2', title: '第二回 贾夫人仙逝扬州城' },
 ]
+const props = {
+  chapters,
+  currentChapterId: '1',
+  settings: { theme: 'light' as const },
+  bookmarkCount: 0,
+  collectionCount: 0,
+  onChapterChange: vi.fn(),
+  onOpenBookmarks: vi.fn(),
+  onOpenCollections: vi.fn(),
+  onOpenSettings: vi.fn(),
+  narrationStatus: 'idle' as BookNarrationStatus,
+  narrationMode: 'original' as BookNarrationMode,
+  onNarrationModeChange: vi.fn(),
+  onStartNarration: vi.fn(),
+  onPauseNarration: vi.fn(),
+  onResumeNarration: vi.fn(),
+  onStopNarration: vi.fn(),
+}
 
 describe('ReaderToolbar', () => {
-  const defaultProps = {
-    chapters,
-    currentChapterId: '1',
-    settings: defaultSettings,
-    bookmarkCount: 0,
-    collectionCount: 0,
-    onChapterChange: vi.fn(),
-    onOpenBookmarks: vi.fn(),
-    onOpenCollections: vi.fn(),
-    onOpenSettings: vi.fn(),
-    narrationStatus: 'idle' as BookNarrationStatus,
-    narrationMode: 'original' as BookNarrationMode,
-    onNarrationModeChange: vi.fn(),
-    onStartNarration: vi.fn(),
-    onPauseNarration: vi.fn(),
-    onResumeNarration: vi.fn(),
-    onStopNarration: vi.fn(),
-  }
-
-  it('renders chapter selector', () => {
-    render(<ReaderToolbar {...defaultProps} />)
-    expect(screen.getAllByText('第一回 甄士隐梦幻识通灵').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('第二回 贾夫人仙逝扬州城').length).toBeGreaterThan(0)
+  it('keeps all five labeled tools available on small screens', () => {
+    render(<ReaderToolbar {...props} />)
+    const tools = within(screen.getByRole('navigation', { name: '阅读工具' }))
+    for (const name of ['打开目录', '打开听书控制', '打开书签列表', '打开收藏列表', '打开阅读设置'])
+      expect(tools.getByRole('button', { name })).toBeInTheDocument()
+    expect(screen.queryByText(chapters[1].title)).not.toBeInTheDocument()
   })
-
-  it('shows display and collection buttons', () => {
-    render(<ReaderToolbar {...defaultProps} />)
-    expect(screen.getByRole('button', { name: '打开展示列表' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '打开收藏列表' })).toBeInTheDocument()
+  it('searches the chapter list and navigates to the selected result', () => {
+    const change = vi.fn()
+    render(<ReaderToolbar {...props} onChapterChange={change} />)
+    fireEvent.click(screen.getByRole('button', { name: '打开目录' }))
+    const panel = within(screen.getByRole('dialog', { name: '目录' }))
+    fireEvent.change(panel.getByRole('textbox', { name: '搜索章节' }), {
+      target: { value: '第二回' },
+    })
+    expect(panel.queryByText(chapters[0].title)).not.toBeInTheDocument()
+    fireEvent.click(panel.getByRole('button', { name: chapters[1].title }))
+    expect(change).toHaveBeenCalledWith('2')
   })
-
-  it('shows settings button', () => {
-    render(<ReaderToolbar {...defaultProps} />)
-    expect(screen.getByRole('button', { name: '打开阅读设置' })).toBeInTheDocument()
-  })
-
-  it('calls onChapterChange when chapter is selected', () => {
-    const onChapterChange = vi.fn()
-    render(<ReaderToolbar {...defaultProps} onChapterChange={onChapterChange} />)
-
-    // Select the second chapter
-    const selectTriggers = screen.getAllByRole('combobox')
-    // The first combobox is the chapter selector
-    fireEvent.click(selectTriggers[0])
-    // After clicking, the options should be visible
-    const option = screen.getByText('第二回 贾夫人仙逝扬州城')
-    fireEvent.click(option)
-    expect(onChapterChange).toHaveBeenCalledWith('2')
-  })
-
-  it('renders grouped chapters with volume labels', () => {
+  it('searches across collapsed volumes', () => {
+    const change = vi.fn()
     render(
       <ReaderToolbar
-        {...defaultProps}
-        chapters={[
-          { id: '0-0', title: '第1卷 · 一件小事' },
-          { id: '0-1', title: '第1卷 · 一觉' },
-        ]}
-        chapterGroups={[
-          {
-            label: '第1卷',
-            chapters: [
-              { id: '0-0', title: '一件小事' },
-              { id: '0-1', title: '一觉' },
-            ],
-          },
-        ]}
+        {...props}
+        onChapterChange={change}
         currentChapterId="0-0"
+        chapterGroups={[
+          { label: '第一卷', chapters: [{ id: '0-0', title: '故乡' }] },
+          { label: '第二卷', chapters: [{ id: '1-0', title: '社戏' }] },
+        ]}
       />
     )
-
-    const chapterTrigger = screen.getByRole('button', { name: '选择章节' })
-    expect(chapterTrigger).toHaveTextContent('一件小事')
-    expect(screen.getByText('第1卷')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /全部(展开|收起)/ })).toBeInTheDocument()
-    expect(screen.queryByText('第1卷 · 一件小事')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '打开目录' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '搜索章节' }), {
+      target: { value: '社戏' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '社戏' }))
+    expect(change).toHaveBeenCalledWith('1-0')
   })
-
-  it('shows play button when narration is idle', () => {
-    render(<ReaderToolbar {...defaultProps} narrationStatus="idle" />)
-    expect(screen.getByRole('button', { name: '从当前位置开始听书' })).toBeInTheDocument()
+  it('shows chapter boundaries and uses the navigation callbacks', () => {
+    const next = vi.fn()
+    render(<ReaderToolbar {...props} onNextChapter={next} hasNextChapter hasPrevChapter={false} />)
+    expect(screen.getByRole('button', { name: '上一章' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '下一章' }))
+    expect(next).toHaveBeenCalledOnce()
   })
-
-  it('shows pause button when narration is playing', () => {
-    render(<ReaderToolbar {...defaultProps} narrationStatus="playing" />)
-    expect(screen.getByRole('button', { name: '暂停听书' })).toBeInTheDocument()
+  it('starts narration from the dedicated listening panel', () => {
+    const start = vi.fn()
+    render(<ReaderToolbar {...props} onStartNarration={start} />)
+    fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
+    fireEvent.click(screen.getByRole('button', { name: '从当前位置开始听书' }))
+    expect(start).toHaveBeenCalledOnce()
   })
-
-  it('shows resume button when narration is paused', () => {
-    render(<ReaderToolbar {...defaultProps} narrationStatus="paused" />)
-    expect(screen.getByRole('button', { name: '继续听书' })).toBeInTheDocument()
+  it('allows pausing, resuming and stopping without opening a panel', () => {
+    const pause = vi.fn(),
+      resume = vi.fn(),
+      stop = vi.fn()
+    const { rerender } = render(
+      <ReaderToolbar
+        {...props}
+        narrationStatus="playing"
+        onPauseNarration={pause}
+        onStopNarration={stop}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '暂停听书' }))
+    expect(pause).toHaveBeenCalledOnce()
+    rerender(
+      <ReaderToolbar
+        {...props}
+        narrationStatus="paused"
+        onResumeNarration={resume}
+        onStopNarration={stop}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '继续听书' }))
+    fireEvent.click(screen.getByRole('button', { name: '停止听书' }))
+    expect(resume).toHaveBeenCalledOnce()
+    expect(stop).toHaveBeenCalledOnce()
   })
-
-  it('shows stop button when narration is active', () => {
-    render(<ReaderToolbar {...defaultProps} narrationStatus="playing" />)
-    expect(screen.getByRole('button', { name: '停止听书' })).toBeInTheDocument()
+  it('offers paragraph navigation and speed controls while listening', () => {
+    const seek = vi.fn(),
+      rate = vi.fn()
+    render(
+      <ReaderToolbar
+        {...props}
+        narrationStatus="playing"
+        narrationPairIndex={2}
+        narrationPairCount={10}
+        onNarrationSeek={seek}
+        onNarrationRateChange={rate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
+    expect(screen.getByRole('slider', { name: '朗读段落' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '朗读下一段' }))
+    expect(seek).toHaveBeenCalledWith(3)
+    fireEvent.click(screen.getByRole('radio', { name: '1.5×' }))
+    expect(rate).toHaveBeenCalledWith(1.5)
   })
-
-  it('calls onStartNarration when play is clicked', () => {
-    const onStartNarration = vi.fn()
-    render(<ReaderToolbar {...defaultProps} onStartNarration={onStartNarration} />)
-    const playButton = screen.getByRole('button', { name: '从当前位置开始听书' })
-    fireEvent.click(playButton)
-    expect(onStartNarration).toHaveBeenCalled()
-  })
-
-  it('shows collection count badge', () => {
-    render(<ReaderToolbar {...defaultProps} collectionCount={5} />)
-    expect(screen.getByRole('button', { name: '打开收藏列表' })).toBeInTheDocument()
-    expect(screen.getByText('5')).toBeInTheDocument()
-  })
-
-  it('shows bookmark count badge', () => {
-    render(<ReaderToolbar {...defaultProps} bookmarkCount={3} />)
+  it('hides narration for unsupported book types and keeps mark counts readable', () => {
+    render(<ReaderToolbar {...props} hideNarration bookmarkCount={3} collectionCount={150} />)
+    expect(screen.queryByRole('button', { name: '打开听书控制' })).not.toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
-  })
-
-  it('shows 99+ when collection count exceeds 99', () => {
-    render(<ReaderToolbar {...defaultProps} collectionCount={150} />)
     expect(screen.getByText('99+')).toBeInTheDocument()
   })
-
-  it('does not show badge when counts are 0', () => {
-    const { container } = render(
-      <ReaderToolbar {...defaultProps} bookmarkCount={0} collectionCount={0} />
+  it('opens bookmark, collection and settings panels through their actions', () => {
+    const bookmark = vi.fn(),
+      collection = vi.fn(),
+      settings = vi.fn()
+    render(
+      <ReaderToolbar
+        {...props}
+        onOpenBookmarks={bookmark}
+        onOpenCollections={collection}
+        onOpenSettings={settings}
+      />
     )
-    expect(container.querySelector('.absolute')).toBeFalsy()
-  })
-
-  it('calls onOpenBookmarks when display button is clicked', () => {
-    const onOpenBookmarks = vi.fn()
-    render(<ReaderToolbar {...defaultProps} onOpenBookmarks={onOpenBookmarks} />)
-    fireEvent.click(screen.getByRole('button', { name: '打开展示列表' }))
-    expect(onOpenBookmarks).toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '打开书签列表' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开收藏列表' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开阅读设置' }))
+    expect(bookmark).toHaveBeenCalledOnce()
+    expect(collection).toHaveBeenCalledOnce()
+    expect(settings).toHaveBeenCalledOnce()
   })
 })

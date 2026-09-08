@@ -86,9 +86,11 @@ export default function NoteLinkActionPanel({
 
   return (
     <div
+      role="region"
+      aria-label="链接操作"
       style={{
         position: 'absolute',
-        bottom: isMobile ? 16 : 24,
+        bottom: 76,
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 20,
@@ -99,14 +101,16 @@ export default function NoteLinkActionPanel({
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         minWidth: isMobile ? 'calc(100% - 32px)' : 'auto',
         maxWidth: isMobile ? 'calc(100% - 32px)' : 600,
-        touchAction: 'none',
+        touchAction: 'pan-y',
+        maxHeight: 'calc(100% - 5.5rem)',
+        overflowY: 'auto',
       }}
       onClick={e => e.stopPropagation()}
     >
       {/* 链接信息显示 */}
-      <div className="mb-3 flex items-center gap-2">
-        <div className="flex-1" style={{ color: themeColors.foreground }}>
-          <div className="font-medium">
+      <div className="mb-3 flex min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1" style={{ color: themeColors.foreground }}>
+          <div className="break-words font-medium">
             {sourceNode.title} → {targetNode.title}
           </div>
           {activeLink.type && (

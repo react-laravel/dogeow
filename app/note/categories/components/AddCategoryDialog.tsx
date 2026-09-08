@@ -67,15 +67,19 @@ export default function AddCategoryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
+        <DialogHeader className="pr-8 text-left">
           <DialogTitle>添加分类</DialogTitle>
           <DialogDescription>创建一个新的笔记分类，以便更好地组织您的笔记。</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
+              <label htmlFor="categoryName" className="text-sm font-medium">
+                分类名称
+              </label>
               <Input
                 id="categoryName"
+                className="h-11 rounded-xl"
                 placeholder="输入分类名称"
                 value={categoryName}
                 onChange={e => setCategoryName(e.target.value)}

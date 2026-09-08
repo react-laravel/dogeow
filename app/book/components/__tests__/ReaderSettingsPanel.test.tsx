@@ -28,12 +28,21 @@ describe('ReaderSettingsPanel', () => {
     expect(screen.getByText('阅读设置')).toBeInTheDocument()
   })
 
-  it('keeps enough of the reader visible while adjusting settings', () => {
-    render(<ReaderSettingsPanel {...defaultProps} />)
+  it('changes the theme directly without a dropdown', () => {
+    const patch = vi.fn()
+    render(<ReaderSettingsPanel {...defaultProps} onPatchSettings={patch} />)
+    fireEvent.click(screen.getByRole('radio', { name: '深色' }))
+    expect(patch).toHaveBeenCalledWith({ theme: 'dark' })
+  })
 
-    expect(screen.getByRole('dialog')).toHaveStyle({
-      width: 'min(18rem, 86vw)',
-    })
+  it('adjusts font size with labeled buttons and restores style without changing the chapter', () => {
+    const patch = vi.fn()
+    render(<ReaderSettingsPanel {...defaultProps} onPatchSettings={patch} />)
+    fireEvent.click(screen.getByRole('button', { name: '增大字号' }))
+    expect(patch).toHaveBeenCalledWith({ fontSize: 20 })
+    fireEvent.click(screen.getByRole('button', { name: '恢复默认' }))
+    expect(patch.mock.calls.at(-1)?.[0]).not.toHaveProperty('chapterId')
+    expect(patch.mock.calls.at(-1)?.[0]).toMatchObject({ fontSize: 20, lineHeight: 1.9 })
   })
 
   it('renders all setting labels', () => {

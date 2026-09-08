@@ -172,3 +172,30 @@ export function getBookOverlayCssVars(
     '--book-hover': toolbarTheme.hoverBg,
   }
 }
+
+/** Portal 面板也使用阅读主题，避免正文与工具面板出现两套背景和文字颜色。 */
+export function getReaderUiStyle(theme: BookTheme): CSSProperties {
+  const toolbar = getBookToolbarTheme(theme)
+  if (!toolbar) return {}
+  const background = String(getBookThemeStyle(theme)?.backgroundColor ?? '#fff')
+  const foreground = String(toolbar.panelStyle.color)
+  return {
+    ...getBookOverlayCssVars(toolbar),
+    backgroundColor: background,
+    color: foreground,
+    '--background': background,
+    '--foreground': foreground,
+    '--popover': background,
+    '--popover-foreground': foreground,
+    '--card': background,
+    '--card-foreground': foreground,
+    '--muted': toolbar.hoverBg,
+    '--muted-foreground': toolbar.mutedColor,
+    '--secondary': toolbar.accentBg,
+    '--secondary-foreground': foreground,
+    '--accent': toolbar.accentBg,
+    '--accent-foreground': foreground,
+    '--border': toolbar.borderColor,
+    '--input': toolbar.borderColor,
+  } as CSSProperties
+}

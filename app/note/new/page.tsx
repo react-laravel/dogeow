@@ -8,6 +8,7 @@ import { apiRequest } from '@/lib/api'
 import { logger } from '@/lib/logger'
 import { normalizeNote } from '../utils/api'
 import { PageContainer } from '@/components/layout'
+import { NoteSectionHeader } from '../components/NoteSectionHeader'
 import { NoteEditorToolbar } from '../components/NoteEditorToolbar'
 import { useNoteShortcuts } from '../hooks/useNoteShortcuts'
 
@@ -111,7 +112,8 @@ export default function NewNotePage() {
   })
 
   return (
-    <PageContainer>
+    <PageContainer maxWidth="5xl" className="py-3 sm:py-5">
+      <NoteSectionHeader title="新建笔记" />
       <div className="mx-auto w-full max-w-screen-lg">
         <NoteEditorToolbar
           title={title}

@@ -59,7 +59,7 @@ export function useBookTextSelectionActions<ChapterId>({
         pairIndex: selection.pairIndex ?? context.pairIndex,
         excerpt: selection.text,
       })
-      toast[result.created ? 'success' : 'info'](result.created ? '已添加展示' : '该位置已有展示')
+      toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
     },
     [addPositionBookmark, getContext]
   )

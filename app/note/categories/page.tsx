@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { X, Pencil, Plus } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { X, Pencil, Plus, FolderTree, Check, Trash2 } from 'lucide-react'
+import { NoteSectionHeader } from '../components/NoteSectionHeader'
+import { NoteSearchField } from '../components/NoteSearchField'
 import { Input } from '@/components/ui/input'
 import useSWR, { mutate } from 'swr'
 import { get, put, del } from '@/lib/api'
@@ -29,6 +30,7 @@ export default function NoteCategories() {
   const [editingName, setEditingName] = useState('')
   const [isMobile, setIsMobile] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [query, setQuery] = useState('')
 
   // 检测是否为移动设备
   useEffect(() => {
@@ -112,106 +114,113 @@ export default function NoteCategories() {
     }
   }
 
+  const filteredCategories =
+    categories?.filter(category =>
+      category.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+    ) ?? []
   return (
-    <PageContainer className="pb-24">
-      <div>
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-foreground text-xl font-semibold">分类列表</h2>
-          <div className="flex items-center gap-2">
-            {(categories?.length ?? 0) > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAddDialogOpen(true)}
-                className="gap-1"
-              >
-                <Plus className="h-4 w-4" />
-                添加分类
-              </Button>
-            )}
-            <div className="text-muted-foreground text-sm">共 {categories?.length ?? 0} 个分类</div>
-          </div>
-        </div>
-
-        {error && <p className="text-red-500">加载分类失败</p>}
-        {!categories && !error && <p>加载中...</p>}
-        {categories?.length === 0 && (
-          <EmptyState
-            icon="📝"
-            title="暂无分类"
-            description="请添加您的第一个笔记分类"
-            primaryAction={{
-              label: '添加分类',
-              onClick: () => setAddDialogOpen(true),
-              variant: 'default',
-            }}
-          />
-        )}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {categories?.map(category => (
-            <div key={category.id} className="flex items-center">
-              {editingCategory?.id === category.id ? (
-                <div className="bg-background flex items-center gap-2 rounded-full border px-3 py-1">
-                  <Input
-                    value={editingName}
-                    onChange={e => setEditingName(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    autoFocus={!isMobile} // 移动端不自动focus，避免弹出键盘
-                    className="h-6 border-none bg-transparent p-0 text-sm focus-visible:ring-0"
-                    style={{ width: `${Math.max(editingName.length * 8, 60)}px` }}
-                  />
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 p-0 text-green-600 hover:bg-transparent"
-                      onClick={saveEditing}
-                      disabled={loading || !editingName.trim()}
-                      aria-label="保存"
-                    >
-                      ✓
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 p-0 text-red-600 hover:bg-transparent"
-                      onClick={cancelEditing}
-                      disabled={loading}
-                      aria-label="取消"
-                    >
-                      ✕
-                    </Button>
-                  </div>
+    <PageContainer className="min-w-0 py-3 sm:py-5">
+      <NoteSectionHeader
+        className="sticky top-0 z-20 bg-background pb-1"
+        title="分类列表"
+        description={`共 ${categories?.length ?? 0} 个分类`}
+        action={
+          <Button className="h-11 rounded-xl shadow-none" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="size-4" />
+            添加分类
+          </Button>
+        }
+      >
+        <NoteSearchField value={query} onChange={setQuery} label="搜索分类" />
+      </NoteSectionHeader>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          加载分类失败
+        </p>
+      )}
+      {!categories && !error && (
+        <p role="status" className="py-12 text-center text-sm text-muted-foreground">
+          加载中...
+        </p>
+      )}
+      {categories?.length === 0 && (
+        <EmptyState
+          icon={<FolderTree className="size-10" />}
+          title="暂无分类"
+          description="请添加您的第一个笔记分类"
+        />
+      )}
+      {Boolean(categories?.length) && !filteredCategories.length && (
+        <p className="py-12 text-center text-sm text-muted-foreground">没有找到相关分类</p>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {filteredCategories.map(category => (
+          <div
+            key={category.id}
+            className="min-w-0 rounded-2xl border border-border/70 bg-card p-3"
+          >
+            {editingCategory?.id === category.id ? (
+              <div className="space-y-3">
+                <Input
+                  aria-label="分类名称"
+                  value={editingName}
+                  onChange={event => setEditingName(event.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus={!isMobile}
+                  className="h-11 min-w-0 rounded-xl"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    className="h-10 rounded-xl"
+                    onClick={cancelEditing}
+                    disabled={loading}
+                  >
+                    <X className="size-4" />
+                    取消
+                  </Button>
+                  <Button
+                    className="h-10 rounded-xl shadow-none"
+                    onClick={saveEditing}
+                    disabled={loading || !editingName.trim()}
+                  >
+                    <Check className="size-4" />
+                    保存
+                  </Button>
                 </div>
-              ) : (
-                <Badge className="flex h-8 items-center bg-blue-100 px-3 text-blue-800 hover:bg-blue-200">
+              </div>
+            ) : (
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <FolderTree className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1 break-words px-1 text-sm font-medium">
                   {category.name}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-1 h-5 w-5 p-0 hover:bg-transparent"
-                    onClick={() => startEditing(category)}
-                    disabled={loading}
-                    aria-label={`编辑分类 ${category.name}`}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-1 h-5 w-5 p-0 hover:bg-transparent"
-                    onClick={() => openDeleteDialog(category.id)}
-                    disabled={loading}
-                    aria-label={`删除分类 ${category.name}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 shrink-0 rounded-xl"
+                  aria-label={`编辑分类 ${category.name}`}
+                  onClick={() => startEditing(category)}
+                  disabled={loading}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
+                  aria-label={`删除分类 ${category.name}`}
+                  onClick={() => openDeleteDialog(category.id)}
+                  disabled={loading}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* 自定义删除确认弹窗 */}
@@ -228,7 +237,7 @@ export default function NoteCategories() {
         onCategoryAdded={() => mutate('/notes/categories')}
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        hideFab={(categories?.length ?? 0) === 0}
+        hideFab
       />
     </PageContainer>
   )

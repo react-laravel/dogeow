@@ -1,9 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Bot, Bookmark, Play, Star, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/helpers'
+import type { BookTheme } from '@/app/book/types/reader'
+import { getReaderUiStyle } from '@/app/book/utils/theme'
 
 export interface TextSelectionState {
   text: string
@@ -19,6 +21,8 @@ interface TextSelectionToolbarProps {
   onAskAi: (selection: TextSelectionState) => void
   onPlaySelection?: (selection: TextSelectionState) => void
   showNarration?: boolean
+  showAi?: boolean
+  theme?: BookTheme
 }
 
 function getPairIndexFromNode(node: Node | null): number | null {
@@ -50,8 +54,22 @@ export function TextSelectionToolbar({
   onAskAi,
   onPlaySelection,
   showNarration = false,
+  showAi = true,
+  theme = 'auto',
 }: TextSelectionToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null)
   const [selection, setSelection] = useState<TextSelectionState | null>(null)
+
+  useLayoutEffect(() => {
+    const toolbar = toolbarRef.current
+    if (!toolbar || !selection) return
+    const halfWidth = toolbar.getBoundingClientRect().width / 2
+    const left = Math.max(
+      12 + halfWidth,
+      Math.min(window.innerWidth - 12 - halfWidth, selection.left)
+    )
+    toolbar.style.left = `${left}px`
+  }, [selection])
 
   const hide = useCallback(() => setSelection(null), [])
 
@@ -99,9 +117,13 @@ export function TextSelectionToolbar({
     const container = containerRef.current
     if (!container) return
 
+    let frame: number | undefined
+    let timer: number | undefined
     const updateAfterSelectionSettles = () => {
-      requestAnimationFrame(updateSelection)
-      window.setTimeout(updateSelection, 80)
+      if (frame != null) cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+      frame = requestAnimationFrame(updateSelection)
+      timer = window.setTimeout(updateSelection, 80)
     }
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -116,6 +138,8 @@ export function TextSelectionToolbar({
     container.addEventListener('scroll', hide, { passive: true })
 
     return () => {
+      if (frame != null) cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
       document.removeEventListener('mouseup', updateAfterSelectionSettles)
       document.removeEventListener('pointerup', updateAfterSelectionSettles)
       document.removeEventListener('touchend', updateAfterSelectionSettles)
@@ -129,15 +153,16 @@ export function TextSelectionToolbar({
 
   return (
     <div
-      className="pointer-events-none fixed z-30 -translate-x-1/2"
-      style={{ top: selection.top, left: selection.left }}
+      ref={toolbarRef}
+      className="pointer-events-none fixed z-40 max-w-[calc(100vw-1.5rem)] -translate-x-1/2"
+      style={{ ...getReaderUiStyle(theme), top: selection.top, left: selection.left }}
       role="toolbar"
       aria-label="选中文本操作"
     >
-      <div className="bg-background/95 pointer-events-auto flex items-center gap-1 rounded-full border px-1 py-1 shadow-lg backdrop-blur-sm">
+      <div className="bg-background text-foreground pointer-events-auto flex items-center gap-0.5 rounded-2xl border border-border p-1 shadow-lg">
         {showNarration && onPlaySelection ? (
           <ToolbarButton
-            label="播放"
+            label="朗读"
             icon={Play}
             onClick={() => {
               onPlaySelection(selection)
@@ -147,7 +172,7 @@ export function TextSelectionToolbar({
           />
         ) : null}
         <ToolbarButton
-          label="展示"
+          label="书签"
           icon={Bookmark}
           onClick={() => {
             onAddBookmark(selection)
@@ -164,15 +189,17 @@ export function TextSelectionToolbar({
             window.getSelection()?.removeAllRanges()
           }}
         />
-        <ToolbarButton
-          label="问 AI"
-          icon={Bot}
-          onClick={() => {
-            onAskAi(selection)
-            hide()
-            window.getSelection()?.removeAllRanges()
-          }}
-        />
+        {showAi && (
+          <ToolbarButton
+            label="问 AI"
+            icon={Bot}
+            onClick={() => {
+              onAskAi(selection)
+              hide()
+              window.getSelection()?.removeAllRanges()
+            }}
+          />
+        )}
       </div>
     </div>
   )
@@ -192,7 +219,7 @@ function ToolbarButton({
       type="button"
       variant="ghost"
       size="sm"
-      className={cn('h-8 rounded-full px-2.5 text-xs')}
+      className={cn('h-10 rounded-xl px-2.5 text-xs')}
       onPointerDown={event => {
         if (event.pointerType === 'mouse') event.preventDefault()
         event.stopPropagation()

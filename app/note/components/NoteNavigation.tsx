@@ -85,7 +85,18 @@ export default function NoteNavigation() {
 
   return (
     <>
-      <BottomNav items={items} ariaLabel="笔记模块导航" />
+      <BottomNav
+        items={items}
+        ariaLabel="笔记模块导航"
+        isActive={(item, path) =>
+          item.href === '/note'
+            ? (path === '/note' || path.startsWith('/note/')) &&
+              !['/note/categories', '/note/tags'].some(
+                prefix => path === prefix || path.startsWith(`${prefix}/`)
+              )
+            : path === item.href || path.startsWith(`${item.href}/`)
+        }
+      />
       <SaveOptionsDialog
         open={showConfirm}
         onOpenChange={setShowConfirm}

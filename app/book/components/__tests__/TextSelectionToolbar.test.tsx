@@ -61,9 +61,9 @@ describe('TextSelectionToolbar', () => {
     await waitFor(() => {
       expect(screen.getByRole('toolbar', { name: '选中文本操作' })).toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: /展示/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /书签/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /收藏/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /问 AI/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /播放/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /朗读/ })).toBeInTheDocument()
   })
 })

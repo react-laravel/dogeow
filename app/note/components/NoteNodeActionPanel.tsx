@@ -126,9 +126,11 @@ export default function NoteNodeActionPanel({
 
   return (
     <div
+      role="region"
+      aria-label="节点操作"
       style={{
         position: 'absolute',
-        bottom: isMobile ? 16 : 24,
+        bottom: 76,
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 20,
@@ -139,12 +141,14 @@ export default function NoteNodeActionPanel({
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         minWidth: isMobile ? 'calc(100% - 32px)' : 'auto',
         maxWidth: isMobile ? 'calc(100% - 32px)' : 600,
-        touchAction: 'none', // 防止触摸滚动
+        touchAction: 'pan-y',
+        maxHeight: 'calc(100% - 5.5rem)',
+        overflowY: 'auto',
       }}
       onClick={e => e.stopPropagation()} // 防止点击事件冒泡
     >
       {/* 节点名称显示/编辑 */}
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex min-w-0 items-center gap-2">
         {isEditingName ? (
           <div className="flex flex-1 items-center gap-2">
             <Input
@@ -153,7 +157,8 @@ export default function NoteNodeActionPanel({
               onChange={e => setEditingName(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSaving}
-              className="flex-1"
+              aria-label="节点名称"
+              className="min-w-0 flex-1"
               style={{
                 background: themeColors.background,
                 color: themeColors.foreground,
@@ -162,6 +167,7 @@ export default function NoteNodeActionPanel({
             />
             <Button
               size="sm"
+              aria-label="保存节点名称"
               onClick={handleSaveName}
               disabled={isSaving || !editingName.trim()}
               style={{
@@ -174,6 +180,7 @@ export default function NoteNodeActionPanel({
             <Button
               size="sm"
               variant="outline"
+              aria-label="取消编辑名称"
               onClick={handleCancelEditName}
               disabled={isSaving}
               style={{
@@ -186,10 +193,18 @@ export default function NoteNodeActionPanel({
           </div>
         ) : (
           <div
-            className="flex-1 cursor-pointer truncate font-medium"
+            className="min-w-0 flex-1 cursor-pointer break-words font-medium line-clamp-2"
             style={{ color: themeColors.foreground }}
             title={isAdmin ? '点击编辑名称' : activeNode.title}
+            role={isAdmin ? 'button' : undefined}
+            tabIndex={isAdmin ? 0 : undefined}
             onClick={isAdmin ? handleStartEditName : undefined}
+            onKeyDown={event => {
+              if (isAdmin && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault()
+                handleStartEditName()
+              }
+            }}
           >
             {activeNode.title}
           </div>
@@ -208,81 +223,59 @@ export default function NoteNodeActionPanel({
         </Button>
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {activeNode.slug && onViewArticle && (
           <Button
-            onClick={onViewArticle}
-            size="sm"
             variant="outline"
+            className="h-10 rounded-xl px-2 text-xs shadow-none has-[>svg]:px-2 sm:text-sm"
             title="查看文章"
-            style={{
-              borderColor: themeColors.border,
-              padding: '4px 8px',
-              minWidth: 'auto',
-            }}
+            onClick={onViewArticle}
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
+            查看文章
           </Button>
         )}
         {isAdmin && onEditNode && (
           <Button
-            onClick={onEditNode}
-            size="sm"
             variant="outline"
+            className="h-10 rounded-xl px-2 text-xs shadow-none has-[>svg]:px-2 sm:text-sm"
             title="编辑节点"
-            style={{
-              borderColor: themeColors.border,
-              padding: '4px 8px',
-              minWidth: 'auto',
-            }}
+            onClick={onEditNode}
           >
-            <Edit2 className="h-4 w-4" />
+            <Edit2 className="size-4" />
+            编辑节点
           </Button>
         )}
         {isAdmin && (
           <Button
-            onClick={onCreateChildNode}
-            size="sm"
+            className="h-10 rounded-xl px-2 text-xs shadow-none has-[>svg]:px-2 sm:text-sm"
             title="创建子节点"
-            style={{
-              background: '#10b981',
-              color: '#ffffff',
-              padding: '4px 8px',
-              minWidth: 'auto',
-            }}
+            onClick={onCreateChildNode}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
+            创建子节点
           </Button>
         )}
         {isAdmin && (
           <Button
-            onClick={onCreateLink}
-            size="sm"
             variant="outline"
+            className="h-10 rounded-xl px-2 text-xs shadow-none has-[>svg]:px-2 sm:text-sm"
             title="链接节点"
-            style={{
-              borderColor: themeColors.border,
-              padding: '4px 8px',
-              minWidth: 'auto',
-            }}
+            onClick={onCreateLink}
           >
-            <LinkIcon className="h-4 w-4" />
+            <LinkIcon className="size-4" />
+            链接节点
           </Button>
         )}
         {isAdmin && onDeleteNode && (
           <Button
-            onClick={onDeleteNode}
-            size="sm"
-            variant="outline"
+            variant="ghost"
+            className="h-10 rounded-xl px-2 text-xs text-destructive has-[>svg]:px-2 sm:text-sm"
             title="删除节点"
-            style={{
-              borderColor: themeColors.border,
-              padding: '4px 8px',
-              minWidth: 'auto',
-            }}
+            onClick={onDeleteNode}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
+            删除节点
           </Button>
         )}
       </div>

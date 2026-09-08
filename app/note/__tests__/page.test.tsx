@@ -1,7 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { SWRConfig } from 'swr'
+import { useEffect } from 'react'
 import NotePage from '../page'
+
+const { newNode, createLink } = vi.hoisted(() => ({ newNode: vi.fn(), createLink: vi.fn() }))
+vi.mock('@/lib/auth', () => ({ isAdminSync: () => true }))
+vi.mock('../components/GraphView', () => ({
+  default: function GraphMock({
+    query,
+    onNewNodeRef,
+    onCreateLinkRef,
+  }: {
+    query: string
+    onNewNodeRef: { current: (() => void) | null }
+    onCreateLinkRef: { current: (() => void) | null }
+  }) {
+    useEffect(() => {
+      onNewNodeRef.current = newNode
+      onCreateLinkRef.current = createLink
+    }, [onNewNodeRef, onCreateLinkRef])
+    return <div data-testid="graph-view">{query}</div>
+  },
+}))
 
 // Mock dependencies
 vi.mock('next/navigation', () => ({
@@ -65,6 +86,7 @@ vi.mock('date-fns/locale', () => ({
 describe('NotePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
   })
 
   it('should render loading state initially', async () => {
@@ -188,7 +210,7 @@ describe('NotePage', () => {
     )
 
     await waitFor(() => {
-      const link = screen.getByTestId('link')
+      const link = screen.getByRole('link', { name: /Test Note/ })
       expect(link).toHaveAttribute('href', '/note/1')
     })
   })
@@ -315,5 +337,61 @@ describe('NotePage', () => {
     await waitFor(() => {
       expect(screen.getByText('暂无笔记')).toBeInTheDocument()
     })
+  })
+  it('keeps one working search and both creation actions in graph view', async () => {
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue([])
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
+    fireEvent.click(screen.getByRole('tab', { name: /图谱/ }))
+    await screen.findByRole('button', { name: '新建节点' })
+    expect(screen.getAllByRole('searchbox')).toHaveLength(1)
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索图谱节点' }), {
+      target: { value: '旅行' },
+    })
+    expect(screen.getByTestId('graph-view')).toHaveTextContent('旅行')
+    fireEvent.click(screen.getByRole('button', { name: '新建节点' }))
+    fireEvent.click(screen.getByRole('button', { name: '创建链接' }))
+    expect(newNode).toHaveBeenCalledOnce()
+    expect(createLink).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: '清空搜索图谱节点' }))
+    expect(screen.getByTestId('graph-view')).toBeEmptyDOMElement()
+  })
+
+  it('searches notes and keeps the new-note action accessible', async () => {
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue([
+      {
+        id: 1,
+        title: '旅行计划',
+        content: '目的地',
+        content_markdown: '目的地',
+        updated_at: '2024-01-01',
+        is_draft: false,
+      },
+      {
+        id: 2,
+        title: '项目记录',
+        content: '进度',
+        content_markdown: '进度',
+        updated_at: '2024-01-02',
+        is_draft: false,
+      },
+    ])
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
+    await screen.findByText('旅行计划')
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索笔记' }), {
+      target: { value: '项目' },
+    })
+    expect(screen.queryByText('旅行计划')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '新建笔记' })).toHaveAttribute('href', '/note/new')
+    expect(screen.getByText('项目记录')).toBeInTheDocument()
   })
 })

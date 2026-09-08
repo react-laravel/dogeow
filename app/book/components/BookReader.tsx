@@ -49,11 +49,10 @@ export function BookReader<
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false)
-  const [collectionsPanelOpen, setCollectionsPanelOpen] = useState(false)
-  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
+  const [panel, setPanel] = useState<'bookmarks' | 'collections' | 'settings' | null>(null)
   const [jumpRequest, setJumpRequest] = useState(0)
   const [narrationMode, setNarrationMode] = useState<BookNarrationMode>('original')
+  const [narrationRate, setNarrationRate] = useState(1)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [aiSeedPrompt, setAiSeedPrompt] = useState<string | null>(null)
 
@@ -94,6 +93,7 @@ export function BookReader<
   const narration = useBookNarration({
     chapter: narrationChapter ?? null,
     narrationMode,
+    rate: narrationRate,
     contentRef,
   })
 
@@ -208,7 +208,7 @@ export function BookReader<
       scrollTop: context.scrollTop,
       pairIndex: context.pairIndex,
     })
-    toast[result.created ? 'success' : 'info'](result.created ? '已添加展示' : '该位置已有展示')
+    toast[result.created ? 'success' : 'info'](result.created ? '已添加书签' : '该位置已有书签')
   }, [addPositionBookmark, getChapterContext])
 
   const handleJumpToMark = useCallback(
@@ -217,6 +217,7 @@ export function BookReader<
         chapters.find(c => String(c.id) === String(mark.chapterId))?.id ??
         (mark.chapterId as ChapterId)
 
+      narration.stop()
       pendingJumpRef.current = {
         chapterId: resolvedChapterId,
         scrollTop: mark.scrollTop,
@@ -230,7 +231,7 @@ export function BookReader<
 
       setJumpRequest(value => value + 1)
     },
-    [chapters, currentChapterId, onChapterIdChange]
+    [chapters, currentChapterId, onChapterIdChange, narration]
   )
 
   const positionBookmarks = marks.filter(mark => mark.kind === 'position')
@@ -269,13 +270,13 @@ export function BookReader<
             })),
           }))}
           currentChapterId={String(currentChapterId)}
-          settings={{ theme: settings.theme }}
+          settings={{ theme: resolvedTheme }}
           bookmarkCount={positionBookmarks.length}
           collectionCount={collections.length}
           onChapterChange={handleChapterChange}
-          onOpenBookmarks={() => setBookmarksPanelOpen(true)}
-          onOpenCollections={() => setCollectionsPanelOpen(true)}
-          onOpenSettings={() => setSettingsPanelOpen(true)}
+          onOpenBookmarks={() => setPanel('bookmarks')}
+          onOpenCollections={() => setPanel('collections')}
+          onOpenSettings={() => setPanel('settings')}
           narrationStatus={narration.status}
           narrationMode={narrationMode}
           onNarrationModeChange={setNarrationMode}
@@ -283,10 +284,41 @@ export function BookReader<
           onPauseNarration={narration.pause}
           onResumeNarration={narration.resume}
           onStopNarration={narration.stop}
+          narrationPairIndex={narration.activePairIndex}
+          narrationPairCount={narrationChapter?.pairs.length ?? 0}
+          narrationPreview={narration.activeText}
+          narrationRate={narrationRate}
+          onNarrationRateChange={setNarrationRate}
+          onNarrationSeek={index => {
+            narration.start(index)
+          }}
+          narrationUnavailableReason={
+            !narration.supported
+              ? '当前浏览器不支持语音朗读'
+              : loading || !narrationChapter
+                ? '章节正在加载，请稍候'
+                : !narrationChapter.pairs.length
+                  ? '当前章节没有可朗读的内容'
+                  : undefined
+          }
           hideNarration={!hasNarration}
           narrationOriginalOnly={narrationOriginalOnly}
-          onPrevChapter={onPrevChapter}
-          onNextChapter={onNextChapter}
+          onPrevChapter={
+            onPrevChapter
+              ? () => {
+                  narration.stop()
+                  onPrevChapter()
+                }
+              : undefined
+          }
+          onNextChapter={
+            onNextChapter
+              ? () => {
+                  narration.stop()
+                  onNextChapter()
+                }
+              : undefined
+          }
           hasPrevChapter={hasPrevChapter}
           hasNextChapter={hasNextChapter}
           chapterSelectPlaceholder={chapterSelectPlaceholder}
@@ -294,8 +326,8 @@ export function BookReader<
       )}
 
       <ReaderSettingsPanel
-        open={settingsPanelOpen}
-        onOpenChange={setSettingsPanelOpen}
+        open={panel === 'settings'}
+        onOpenChange={open => setPanel(open ? 'settings' : null)}
         settings={settings}
         onPatchSettings={patch => patchSettings(patch as Partial<Settings>)}
         hasPairDisplayMode={hasPairDisplayMode}
@@ -305,8 +337,9 @@ export function BookReader<
 
       <BookMarksPanel
         kind="position"
-        open={bookmarksPanelOpen}
-        onOpenChange={setBookmarksPanelOpen}
+        open={panel === 'bookmarks'}
+        onOpenChange={open => setPanel(open ? 'bookmarks' : null)}
+        theme={resolvedTheme}
         marks={marks}
         onJump={handleJumpToMark}
         onRemove={removeMark}
@@ -315,14 +348,18 @@ export function BookReader<
 
       <BookMarksPanel
         kind="collection"
-        open={collectionsPanelOpen}
-        onOpenChange={setCollectionsPanelOpen}
+        open={panel === 'collections'}
+        onOpenChange={open => setPanel(open ? 'collections' : null)}
+        theme={resolvedTheme}
         marks={marks}
         onJump={handleJumpToMark}
         onRemove={removeMark}
       />
 
-      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto pb-20">
+      <div
+        ref={contentRef}
+        className="min-h-0 flex-1 overflow-y-auto pb-[calc(9rem+env(safe-area-inset-bottom,0px))]"
+      >
         <article
           className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8"
           style={{
@@ -349,6 +386,8 @@ export function BookReader<
             onAskAi={handleAskAi}
             onPlaySelection={hasNarration ? handlePlaySelection : undefined}
             showNarration={hasNarration}
+            showAi={canAskAi}
+            theme={resolvedTheme}
           />
         ) : null}
       </div>
@@ -356,6 +395,7 @@ export function BookReader<
       {canAskAi ? (
         <BookAiChatPanel
           open={aiPanelOpen}
+          theme={resolvedTheme}
           seedPrompt={aiSeedPrompt}
           onClose={() => setAiPanelOpen(false)}
           onExpand={pendingPrompt => {

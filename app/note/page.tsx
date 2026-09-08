@@ -6,10 +6,14 @@ import { usePathname } from 'next/navigation'
 import useSWR from 'swr'
 import { get } from '@/lib/api'
 import { logger } from '@/lib/logger'
-import { List, Network, Search, X } from 'lucide-react'
+import { List, Network, Plus } from 'lucide-react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { NoteSectionHeader } from './components/NoteSectionHeader'
+import { NoteSearchField } from './components/NoteSearchField'
+import { getNotePreviewText } from './utils/noteUtils'
 import { toast } from 'sonner'
 import { PageContainer } from '@/components/layout'
-import NoteSpeedDial from './components/NoteSpeedDial'
 import GraphView from './components/GraphView'
 import { normalizeNotes } from './utils/api'
 import { getWikiGraph } from '@/lib/api/wiki'
@@ -51,35 +55,67 @@ function ViewModeSwitch({
 }) {
   return (
     <div
-      className="border-border bg-card flex items-center gap-2 rounded-lg border p-1"
+      className="border-border bg-muted/40 grid min-w-0 grid-cols-2 gap-1 rounded-xl border p-1"
       role="tablist"
       aria-label="视图切换"
+      onKeyDown={event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+        event.preventDefault()
+        const next =
+          event.key === 'Home'
+            ? 'list'
+            : event.key === 'End'
+              ? 'graph'
+              : viewMode === 'list'
+                ? 'graph'
+                : 'list'
+        onChangeMode(next)
+        event.currentTarget.querySelector<HTMLButtonElement>(`[data-view="${next}"]`)?.focus()
+      }}
     >
       <button
+        type="button"
         role="tab"
+        data-view="list"
+        aria-controls="note-list-panel"
+        tabIndex={viewMode === 'list' ? 0 : -1}
         aria-selected={viewMode === 'list'}
         onClick={() => onChangeMode('list')}
-        className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm whitespace-nowrap transition-colors ${
+        className={`flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm whitespace-nowrap transition-colors ${
           viewMode === 'list'
             ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:text-foreground'
         }`}
       >
-        <List className="h-4 w-4 flex-shrink-0" />
-        <span>列表({listCount})</span>
+        <List className="hidden size-4 shrink-0 min-[380px]:block" />
+        <span>
+          列表{' '}
+          <span className="text-xs tabular-nums opacity-75">
+            {listCount > 999 ? '999+' : listCount}
+          </span>
+        </span>
       </button>
       <button
+        type="button"
         role="tab"
+        data-view="graph"
+        aria-controls="note-graph-panel"
+        tabIndex={viewMode === 'graph' ? 0 : -1}
         aria-selected={viewMode === 'graph'}
         onClick={() => onChangeMode('graph')}
-        className={`flex items-center gap-2 rounded px-3 py-1.5 text-sm whitespace-nowrap transition-colors ${
+        className={`flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm whitespace-nowrap transition-colors ${
           viewMode === 'graph'
             ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:text-foreground'
         }`}
       >
-        <Network className="h-4 w-4 flex-shrink-0" />
-        <span>图谱({graphCount})</span>
+        <Network className="hidden size-4 shrink-0 min-[380px]:block" />
+        <span>
+          图谱{' '}
+          <span className="text-xs tabular-nums opacity-75">
+            {graphCount > 999 ? '999+' : graphCount}
+          </span>
+        </span>
       </button>
     </div>
   )
@@ -89,10 +125,9 @@ export default function NotePage() {
   const pathname = usePathname()
   const [viewMode, setViewMode] = useState<ViewMode>(() => readStoredViewMode())
   const [graphQuery, setGraphQuery] = useState<string>('')
-  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false)
+  const [listQuery, setListQuery] = useState('')
   const graphNewNodeRef = useRef<(() => void) | null>(null)
   const graphCreateLinkRef = useRef<(() => void) | null>(null)
-  const searchInputRef = useRef<HTMLInputElement | null>(null)
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode)
@@ -147,123 +182,107 @@ export default function NotePage() {
 
   const noteCount = sortedNotes.length
 
-  if (viewMode === 'graph') {
-    return (
-      <PageContainer>
-        <header className="mb-6 flex min-w-0 items-center gap-4 overflow-hidden">
+  const visibleNotes = sortedNotes.filter(note =>
+    `${note.title} ${getNotePreviewText(note)}`
+      .toLocaleLowerCase()
+      .includes(listQuery.trim().toLocaleLowerCase())
+  )
+  const graph = viewMode === 'graph'
+
+  return (
+    <PageContainer
+      className={
+        graph ? 'flex h-full min-h-0 min-w-0 flex-col py-3 sm:py-5' : 'min-w-0 py-3 sm:py-5'
+      }
+    >
+      <NoteSectionHeader
+        className="sticky top-0 z-20 bg-background pb-1"
+        title="我的笔记"
+        action={
           <ViewModeSwitch
             viewMode={viewMode}
             onChangeMode={handleViewModeChange}
             listCount={noteCount}
             graphCount={graphNodeCount}
           />
-
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            {!isSearchExpanded && (
-              <NotePageGraphToolbar
-                onNewNode={() => {
-                  graphNewNodeRef.current?.()
-                }}
-                onCreateLink={() => {
-                  graphCreateLinkRef.current?.()
-                }}
-              />
-            )}
-
-            <div className="flex max-w-full min-w-0 flex-1 items-center justify-end">
-              {isSearchExpanded ? (
-                <div className="flex w-full max-w-full min-w-0 items-center gap-2">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={graphQuery}
-                    onChange={e => setGraphQuery(e.target.value)}
-                    placeholder="搜索"
-                    aria-label="搜索图谱节点"
-                    className="border-border bg-card text-foreground focus:ring-primary max-w-full min-w-0 flex-1 rounded-lg border px-3 py-2 transition-all focus:ring-2 focus:outline-none"
-                    autoFocus
-                  />
-                  {graphQuery && (
-                    <button
-                      onClick={() => {
-                        setGraphQuery('')
-                        searchInputRef.current?.focus()
-                      }}
-                      className="border-border bg-card text-foreground hover:bg-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors"
-                      title="清空"
-                      aria-label="清空搜索内容"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setIsSearchExpanded(false)
-                      setGraphQuery('')
-                    }}
-                    className="border-border bg-card text-foreground hover:bg-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors"
-                    title="关闭搜索"
-                    aria-label="关闭搜索"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setIsSearchExpanded(true)
-                    setTimeout(() => searchInputRef.current?.focus(), 100)
-                  }}
-                  className="border-border bg-card text-foreground hover:bg-muted flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border transition-colors"
-                  title="搜索"
-                  aria-label="搜索图谱"
-                >
-                  <Search className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </header>
-
-        <main>
+        }
+      >
+        <div
+          className={
+            graph
+              ? 'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center'
+              : 'flex min-w-0 items-center gap-3'
+          }
+        >
+          <NoteSearchField
+            value={graph ? graphQuery : listQuery}
+            onChange={graph ? setGraphQuery : setListQuery}
+            label={graph ? '搜索图谱节点' : '搜索笔记'}
+            placeholder={graph ? '搜索节点、标签或摘要' : '搜索笔记标题或摘要'}
+          />
+          {graph ? (
+            <NotePageGraphToolbar
+              onNewNode={() => graphNewNodeRef.current?.()}
+              onCreateLink={() => graphCreateLinkRef.current?.()}
+            />
+          ) : (
+            <Button asChild className="h-11 rounded-xl shadow-none sm:w-auto">
+              <Link href="/note/new">
+                <Plus className="size-4" />
+                新建笔记
+              </Link>
+            </Button>
+          )}
+        </div>
+      </NoteSectionHeader>
+      {graph ? (
+        <section
+          id="note-graph-panel"
+          role="tabpanel"
+          aria-label="图谱视图"
+          className="min-h-0 flex-1"
+        >
           <GraphView
             query={graphQuery}
             onNewNodeRef={graphNewNodeRef}
             onCreateLinkRef={graphCreateLinkRef}
           />
-        </main>
-      </PageContainer>
-    )
-  }
-
-  return (
-    <PageContainer>
-      <header className="mb-6 flex min-w-0 items-center gap-4 overflow-hidden">
-        <ViewModeSwitch
-          viewMode={viewMode}
-          onChangeMode={handleViewModeChange}
-          listCount={noteCount}
-          graphCount={graphNodeCount}
-        />
-      </header>
-
-      <main>
-        {loading ? (
-          <NoteLoadingSkeleton />
-        ) : noteCount === 0 ? (
-          <NoteEmptyState />
-        ) : (
-          <div className="space-y-4" role="list" aria-label="笔记列表">
-            {sortedNotes.map(note => (
-              <div key={note.id} role="listitem">
-                <NoteCard note={note} />
-              </div>
-            ))}
+        </section>
+      ) : (
+        <section id="note-list-panel" role="tabpanel" aria-label="列表视图">
+          <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {listQuery ? `找到 ${visibleNotes.length} 篇笔记` : `共 ${noteCount} 篇笔记`}
+            </span>
+            <span>最近更新</span>
           </div>
-        )}
-      </main>
-
-      <NoteSpeedDial />
+          {loading ? (
+            <NoteLoadingSkeleton />
+          ) : noteCount === 0 ? (
+            <NoteEmptyState />
+          ) : visibleNotes.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
+              <p className="text-sm font-medium">没有找到相关笔记</p>
+              <p className="mt-2 text-xs text-muted-foreground">试试其他关键词，或查看全部笔记。</p>
+              <Button variant="ghost" className="mt-3" onClick={() => setListQuery('')}>
+                清空搜索
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+              role="list"
+              aria-label="笔记列表"
+            >
+              {visibleNotes.map(note => (
+                <div key={note.id} role="listitem" className="min-w-0">
+                  <NoteCard note={note} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </PageContainer>
   )
 }

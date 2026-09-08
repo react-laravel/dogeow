@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
 import { forceCollide } from 'd3-force-3d'
 import { deleteNode, type WikiNode } from '@/lib/api/wiki'
 import { isAdminSync } from '@/lib/auth'
@@ -15,7 +14,6 @@ import {
   createNodeCanvasRenderer,
   createLinkColorGetter,
   createLinkWidthGetter,
-  GRAPH_DEFAULT_READABLE_SCALE,
   isGraphLabelHiddenAtScale,
 } from '../utils/nodeRenderer'
 import { useGraphData } from '../hooks/useGraphData'
@@ -25,7 +23,7 @@ import { useGraphFilter } from '../hooks/useGraphFilter'
 import { useGraphPalette } from '../hooks/useGraphPalette'
 import { useGraphZoom } from '../hooks/useGraphZoom'
 import { useZoomFilter } from '../hooks/useZoomFilter'
-import NoteGraphToolbar from './NoteGraphToolbar'
+import { useGraphSize } from '../hooks/useGraphSize'
 import { GraphZoomControls } from './GraphZoomControls'
 import { NoteArticleDialog } from './NoteArticleDialog'
 import { NoteGraphEmptyState } from './NoteGraphEmptyState'
@@ -49,9 +47,14 @@ interface GraphViewProps {
 }
 
 export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }: GraphViewProps) {
-  const router = useRouter()
+  const {
+    containerRef: canvasContainerRef,
+    width: canvasWidth,
+    height: canvasHeight,
+  } = useGraphSize()
   const isDraggingRef = useRef<boolean>(false)
   const hasFittedRef = useRef(false)
+  const zoomFrameRef = useRef<number | null>(null)
   const [hoverNode, setHoverNode] = useState<NodeData | null>(null)
   const [activeNode, setActiveNode] = useState<NodeData | null>(null)
   const [activeLink, setActiveLink] = useState<LinkData | null>(null)
@@ -67,6 +70,20 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
   >(null)
   const [isSelectingFromGraph, setIsSelectingFromGraph] = useState<boolean>(false)
   const [currentZoom, setCurrentZoom] = useState(1)
+  const updateZoomDisplay = useCallback((zoom: number) => {
+    if (zoomFrameRef.current != null) cancelAnimationFrame(zoomFrameRef.current)
+    // 图谱库调整画布尺寸时可能在自身 render 中回调，界面状态留到下一帧更新。
+    zoomFrameRef.current = requestAnimationFrame(() => {
+      zoomFrameRef.current = null
+      setCurrentZoom(zoom)
+    })
+  }, [])
+  useEffect(
+    () => () => {
+      if (zoomFrameRef.current != null) cancelAnimationFrame(zoomFrameRef.current)
+    },
+    []
+  )
 
   // 使用自定义 hooks
   const { nodes, setNodes, links, setLinks, loading, fgRef, loadGraphData, resumeGraphAnimation } =
@@ -89,37 +106,19 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
     activeNode
   )
   const graphPalette = useGraphPalette(isDark, themeColors)
-  const { restoreView, handleZoom, getZoom, lastZoomRef } = useGraphZoom()
+  const { restoreView, handleZoom, lastZoomRef } = useGraphZoom()
 
   // 使用缩放过滤器
   useZoomFilter(fgRef)
 
   const fitGraphToView = useCallback(
-    (options?: { bumpReadable?: boolean; durationMs?: number }) => {
+    (durationMs = 400) => {
       const graph = fgRef.current
       if (!graph || typeof graph.zoomToFit !== 'function') return
-
-      const durationMs = options?.durationMs ?? 400
-      // Smaller padding = closer fit so more labels land above the LOD threshold.
+      // 适应画布以完整结构为准；强制提升缩放会再次把节点裁到屏幕外。
       graph.zoomToFit(durationMs, 28)
-
-      if (options?.bumpReadable === false) return
-
-      window.setTimeout(() => {
-        const current = getZoom()
-        if (
-          current > 0 &&
-          current < GRAPH_DEFAULT_READABLE_SCALE &&
-          typeof graph.zoom === 'function'
-        ) {
-          graph.zoom(GRAPH_DEFAULT_READABLE_SCALE, 280)
-          setCurrentZoom(GRAPH_DEFAULT_READABLE_SCALE)
-        } else if (current > 0) {
-          setCurrentZoom(current)
-        }
-      }, durationMs + 40)
     },
-    [fgRef, getZoom]
+    [fgRef]
   )
 
   const handleZoomIn = useCallback(() => {
@@ -138,7 +137,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
 
   const handleFitClick = useCallback(() => {
     hasFittedRef.current = true
-    fitGraphToView({ bumpReadable: true, durationMs: 350 })
+    fitGraphToView(350)
   }, [fitGraphToView])
 
   // 初始化加载数据
@@ -345,12 +344,6 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
     loadArticle(activeNode.slug)
   }, [activeNode, loadArticle, resetArticle])
 
-  // 处理编辑文章
-  const handleEditArticle = useCallback(() => {
-    if (!activeNode?.id) return
-    router.push(`/note/edit/${activeNode.id}`)
-  }, [activeNode, router])
-
   // 处理取消选中
   const handleClearSelection = useCallback(() => {
     setActiveNode(null)
@@ -385,31 +378,16 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
 
   return (
     <div
+      className="relative flex h-full min-h-[16rem] min-w-0 flex-col overflow-hidden rounded-2xl border"
       style={{
         position: 'relative',
-        height: 'calc(100vh - 200px)',
+        borderColor: themeColors.border,
         background: themeColors.background,
         color: themeColors.foreground,
       }}
     >
       {loading && <NoteGraphLoadingState themeColors={themeColors} isDark={isDark} />}
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <NoteGraphToolbar
-          query={query}
-          onQueryChange={() => {}}
-          isAdmin={isAdmin}
-          activeNode={activeNode}
-          nodes={nodes}
-          themeColors={themeColors}
-          onNewNode={handleNewNode}
-          onEditNode={handleEditNode}
-          onDeleteNode={handleDeleteNode}
-          onCreateLink={handleCreateLink}
-          onViewArticle={handleViewArticle}
-          onEditArticle={handleEditArticle}
-          onClearSelection={handleClearSelection}
-        />
-
+      <div ref={canvasContainerRef} className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         {!loading && nodes.length === 0 && (
           <NoteGraphEmptyState isAdmin={isAdmin} themeColors={themeColors} />
         )}
@@ -417,6 +395,8 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
         <ForceGraph2D
           ref={fgRef as React.RefObject<any>}
           graphData={filtered}
+          width={canvasWidth}
+          height={canvasHeight}
           nodeId="id"
           nodeLabel={node => (node as NodeData).title}
           linkDirectionalArrowLength={4}
@@ -433,11 +413,18 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           nodeCanvasObject={(node, ctx, globalScale) =>
             nodeCanvasObject(node as NodeData, ctx, globalScale)
           }
-          nodePointerAreaPaint={(node, color, ctx) => {
+          nodePointerAreaPaint={(node, color, ctx, globalScale) => {
             // 绘制透明的点击区域，保持点击功能但不可见
             ctx.fillStyle = color
             ctx.beginPath()
-            ctx.arc(node.x ?? 0, node.y ?? 0, 8, 0, 2 * Math.PI, false)
+            ctx.arc(
+              node.x ?? 0,
+              node.y ?? 0,
+              10 / Math.max(globalScale, 0.1),
+              0,
+              2 * Math.PI,
+              false
+            )
             ctx.fill()
           }}
           cooldownTime={showNeighborsOnly ? 2500 : 4000}
@@ -447,13 +434,13 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           nodeRelSize={8}
           onZoom={transform => {
             handleZoom(fgRef, transform)
-            setCurrentZoom(transform.k)
+            updateZoomDisplay(transform.k)
           }}
           onEngineStop={() => {
             if (!fgRef.current) return
             try {
               if (!hasFittedRef.current) {
-                fitGraphToView({ bumpReadable: true, durationMs: 400 })
+                fitGraphToView(400)
                 hasFittedRef.current = true
               }
               if (typeof fgRef.current.pauseAnimation === 'function') {
@@ -465,16 +452,27 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
           }}
         />
 
-        {!loading && nodes.length > 0 && (
-          <GraphZoomControls
-            themeColors={themeColors}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onFit={handleFitClick}
-            labelsHidden={isGraphLabelHiddenAtScale(currentZoom)}
-          />
+        {!loading && nodes.length > 0 && filtered.nodes.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
+            <p className="text-sm font-medium">没有找到匹配节点</p>
+            <p className="text-xs text-muted-foreground">试试其他关键词，或清空上方搜索。</p>
+          </div>
+        )}
+        {isSelectingFromGraph && (
+          <div className="pointer-events-none absolute inset-x-3 top-3 rounded-xl border border-primary/20 bg-background/95 px-3 py-2 text-center text-sm text-primary">
+            点击图谱中的节点，选择链接目标
+          </div>
         )}
       </div>
+      <GraphZoomControls
+        themeColors={themeColors}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onFit={handleFitClick}
+        labelsHidden={isGraphLabelHiddenAtScale(currentZoom)}
+        nodeCount={filtered.nodes.length}
+        linkCount={filtered.links.length}
+      />
 
       <NoteArticleDialog
         open={dialogOpen}
@@ -538,7 +536,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
       />
 
       {/* 节点操作面板 */}
-      {activeNode && (
+      {activeNode && !isSelectingFromGraph && (
         <NoteNodeActionPanel
           activeNode={activeNode}
           themeColors={themeColors}
@@ -554,7 +552,7 @@ export default function GraphView({ query = '', onNewNodeRef, onCreateLinkRef }:
       )}
 
       {/* 链接操作面板 */}
-      {activeLink && (
+      {activeLink && !isSelectingFromGraph && (
         <NoteLinkActionPanel
           activeLink={activeLink}
           nodes={nodes}

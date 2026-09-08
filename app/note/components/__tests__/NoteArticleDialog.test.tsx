@@ -151,8 +151,8 @@ describe('NoteArticleDialog', () => {
   it('should render with correct z-index layering', () => {
     render(<NoteArticleDialog {...defaultProps} />)
 
-    const overlay = document.body.querySelector('[style*="z-index: 50"]')
-    const content = document.body.querySelector('[style*="z-index: 51"]')
+    const overlay = document.body.querySelector('[style*="z-index: 135"]')
+    const content = document.body.querySelector('[style*="z-index: 140"]')
     expect(overlay).toBeTruthy()
     expect(content).toBeTruthy()
   })

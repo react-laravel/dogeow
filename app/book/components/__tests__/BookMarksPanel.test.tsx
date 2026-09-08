@@ -44,7 +44,7 @@ describe('BookMarksPanel', () => {
         onRemove={vi.fn()}
       />
     )
-    expect(screen.getByText('展示')).toBeInTheDocument()
+    expect(screen.getByText('书签')).toBeInTheDocument()
     expect(screen.queryByText('收藏')).not.toBeInTheDocument()
   })
 
@@ -60,7 +60,7 @@ describe('BookMarksPanel', () => {
       />
     )
     expect(screen.getByText('收藏')).toBeInTheDocument()
-    expect(screen.queryByText('展示')).not.toBeInTheDocument()
+    expect(screen.queryByText('书签')).not.toBeInTheDocument()
   })
 
   it('does not render dialog content when closed', () => {
@@ -74,7 +74,7 @@ describe('BookMarksPanel', () => {
         onRemove={vi.fn()}
       />
     )
-    expect(screen.queryByText('展示')).not.toBeInTheDocument()
+    expect(screen.queryByText('书签')).not.toBeInTheDocument()
   })
 
   it('renders position bookmarks only in position panel', () => {
@@ -148,4 +148,27 @@ describe('BookMarksPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: '记录当前位置' }))
     expect(onAddCurrent).toHaveBeenCalled()
   })
+})
+
+it('filters collections by excerpt and keeps removal separate from navigation', () => {
+  const onJump = vi.fn(),
+    onRemove = vi.fn()
+  render(
+    <BookMarksPanel
+      kind="collection"
+      open
+      onOpenChange={vi.fn()}
+      marks={[
+        createCollectionMark({ id: 'one', excerpt: '窗前的一段文字' }),
+        createCollectionMark({ id: 'two', chapterTitle: '第二回', excerpt: '雨后的院子' }),
+      ]}
+      onJump={onJump}
+      onRemove={onRemove}
+    />
+  )
+  fireEvent.change(screen.getByRole('textbox', { name: '搜索收藏' }), { target: { value: '雨后' } })
+  expect(screen.queryByText('窗前的一段文字')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '删除收藏：第二回' }))
+  expect(onRemove).toHaveBeenCalledWith('two')
+  expect(onJump).not.toHaveBeenCalled()
 })

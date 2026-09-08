@@ -6,9 +6,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 const SKELETON_ITEMS_COUNT = 3
 
 const LoadingSkeleton = memo(() => (
-  <div className="animate-pulse space-y-4" role="status" aria-label="加载中">
+  <div
+    className="grid animate-pulse gap-3 md:grid-cols-2 xl:grid-cols-3"
+    role="status"
+    aria-label="加载中"
+  >
     {Array.from({ length: SKELETON_ITEMS_COUNT }, (_, i) => (
-      <Card key={i} className="overflow-hidden">
+      <Card key={i} className="min-h-36 overflow-hidden rounded-2xl border-border/70 shadow-none">
         <CardHeader className="space-y-2 pb-2">
           <div className="bg-muted h-5 w-1/3 max-w-[12rem] rounded" />
           <div className="bg-muted h-4 w-1/4 max-w-[8rem] rounded" />

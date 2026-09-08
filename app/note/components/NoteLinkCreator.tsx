@@ -159,8 +159,8 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
     return (
       <Dialog.Root open={open} onOpenChange={onOpenChange}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px]" />
-          <Dialog.Content className="border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[min(90dvh,42rem)] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl">
+          <Dialog.Overlay className="fixed inset-0 z-[135] bg-black/55 backdrop-blur-[2px]" />
+          <Dialog.Content className="border-border bg-background text-foreground fixed top-1/2 left-1/2 z-[140] flex max-h-[min(90dvh,42rem)] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl">
             <div className="border-border flex items-center justify-between border-b p-4">
               <Dialog.Title className="text-lg font-semibold">创建链接</Dialog.Title>
               <Dialog.Description className="sr-only">
@@ -183,8 +183,10 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
               <div>
                 <label className="mb-2 block text-sm font-medium">源节点 *</label>
                 {sourceNodeId ? (
-                  <div className="border-border bg-muted text-muted-foreground flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm">
-                    {selectedSourceOption?.label || '已选择源节点'}
+                  <div className="border-border bg-muted text-muted-foreground flex min-h-11 w-full min-w-0 items-center rounded-md border px-3 py-2 text-sm">
+                    <span className="break-words">
+                      {selectedSourceOption?.label || '已选择源节点'}
+                    </span>
                   </div>
                 ) : (
                   <Combobox
@@ -201,8 +203,8 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
               {/* 目标节点选择 */}
               <div>
                 <label className="mb-2 block text-sm font-medium">目标节点 *</label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                  <div className="min-w-0 flex-1">
                     <Combobox
                       options={targetOptions}
                       value={targetId ? String(targetId) : ''}
@@ -224,7 +226,7 @@ const NoteLinkCreator = forwardRef<NoteLinkCreatorRef, LinkCreatorProps>(
                     variant={isSelectingFromGraph ? 'default' : 'outline'}
                     size="sm"
                     onClick={handleStartSelectFromGraph}
-                    className="shrink-0"
+                    className="h-10 shrink-0 rounded-xl"
                     title="从图谱中选择节点"
                   >
                     <MousePointerClick className="h-4 w-4" />

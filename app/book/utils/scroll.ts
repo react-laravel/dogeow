@@ -131,6 +131,15 @@ export function scrollElementIntoContainer(
  * Keep the narrated pair's start in the reading zone.
  * Avoids centering tall paragraphs (which would push the highlight above the viewport).
  */
+function getVisibleReadingBottom(container: HTMLElement, bounds: DOMRect): number {
+  const toolbar = container.closest('[data-reader-theme]')?.querySelector('[data-reader-toolbar]')
+  if (!(toolbar instanceof HTMLElement)) return bounds.bottom
+  const rect = toolbar.getBoundingClientRect()
+  if (rect.width <= 0 || rect.right <= bounds.left || rect.left >= bounds.right)
+    return bounds.bottom
+  return Math.max(bounds.top, Math.min(bounds.bottom, rect.top))
+}
+
 export function scrollNarrationPairIntoView(
   container: HTMLElement | null,
   pairIndex: number
@@ -143,13 +152,13 @@ export function scrollNarrationPairIntoView(
   const scrollContainer = findScrollingAncestor(container) ?? container
   const containerRect = scrollContainer.getBoundingClientRect()
   const targetRect = target.getBoundingClientRect()
-  const toolbarPadding = 112
+  const visibleBottom = getVisibleReadingBottom(container, containerRect)
   const topPadding = 12
   const anchorY = containerRect.top + scrollContainer.clientHeight * READING_ANCHOR_RATIO
 
   const startVisible =
     targetRect.top >= containerRect.top + topPadding &&
-    targetRect.top <= Math.min(anchorY + 48, containerRect.bottom - toolbarPadding)
+    targetRect.top <= Math.min(anchorY + 48, visibleBottom - 20)
 
   if (startVisible) return
 
@@ -182,9 +191,10 @@ export function scrollNarrationHighlightIntoView(
     return
   }
 
-  if (highlightRect.bottom <= containerRect.bottom - bottomPadding) return
+  const visibleBottom = getVisibleReadingBottom(container, containerRect)
+  if (highlightRect.bottom <= visibleBottom - bottomPadding) return
 
-  const pageHeight = Math.max(scrollContainer.clientHeight - pageOverlap, 1)
+  const pageHeight = Math.max(visibleBottom - containerRect.top - pageOverlap, 1)
   const maxScrollTop = Math.max(scrollContainer.scrollHeight - scrollContainer.clientHeight, 0)
   scrollContainer.scrollTop = Math.min(scrollContainer.scrollTop + pageHeight, maxScrollTop)
 }

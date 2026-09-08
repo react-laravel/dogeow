@@ -243,12 +243,12 @@ export default function NoteNodeEditor({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px]" />
+        <Dialog.Overlay className="fixed inset-0 z-[135] bg-black/55 backdrop-blur-[2px]" />
         <Dialog.Content
           className={
             isSimpleCreateChild
-              ? 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border shadow-2xl'
-              : 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[min(90dvh,48rem)] w-[calc(100%-1rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl'
+              ? 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-[140] w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border shadow-2xl'
+              : 'border-border bg-background text-foreground fixed top-1/2 left-1/2 z-[140] flex max-h-[min(90dvh,48rem)] w-[calc(100%-1rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl'
           }
         >
           <div className="border-border flex items-center justify-between border-b p-4">

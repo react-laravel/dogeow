@@ -20,6 +20,7 @@ import { NoteEditorToolbar } from '../../components/NoteEditorToolbar'
 import { NoteLoadingState } from '../../components/NoteLoadingState'
 import { NoteErrorState } from '../../components/NoteErrorState'
 import { PageContainer } from '@/components/layout'
+import { NoteSectionHeader } from '../../components/NoteSectionHeader'
 import {
   addInFlightNoteMutation,
   hasInFlightNoteMutation as getHasInFlightNoteMutation,
@@ -260,7 +261,8 @@ export default function EditNotePage() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer maxWidth="5xl" className="py-3 sm:py-5">
+      <NoteSectionHeader title="编辑笔记" />
       <div className="flex justify-center">
         <div className="w-full max-w-screen-lg">
           <NoteEditorToolbar

@@ -49,7 +49,7 @@ export function useGraphFilter(
 
     // 搜索过滤：显示匹配节点及其直接邻居，使连接完整可见
     if (!query.trim()) return { nodes, links }
-    const q = query.toLowerCase()
+    const q = query.trim().toLowerCase()
     const matchedIds = new Set<string>()
 
     // 找出所有匹配的节点
