@@ -6,6 +6,7 @@
 import { useRef, useCallback, useState } from 'react'
 import type { AudioPlaybackMode } from '@/stores/musicStore'
 import type { AudioVisualizerSourceNode } from './types'
+import { hasPlaybackAudioSession, prepareMusicAudioSession } from '../audio/audioSession'
 
 interface UseAudioVisualizerOptions {
   volume: number
@@ -22,6 +23,7 @@ interface UseAudioVisualizerReturn {
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
   teardownAudioContext: () => boolean
   routesPlaybackThroughWebAudio: () => boolean
+  requiresBackgroundHandoff: () => boolean
 }
 
 function isIOSLikeBrowser(): boolean {
@@ -94,6 +96,7 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
           return
         }
 
+        prepareMusicAudioSession()
         const audioContext = new AudioContextClass()
         const analyser = audioContext.createAnalyser()
         const gainNode = audioContext.createGain()
@@ -160,6 +163,12 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   }, [])
 
   const routesPlaybackThroughWebAudio = useCallback(() => routesPlaybackRef.current, [])
+  // 桌面和已声明 playback 的浏览器保持同一音频链路；切换元素会引入重新缓冲和定位。
+  // iOS 的自动模式仍保留原生播放，真机验证通过前不扩大默认启用范围。
+  const requiresBackgroundHandoff = useCallback(
+    () => routesPlaybackRef.current && isIOSLikeBrowser() && !hasPlaybackAudioSession(),
+    []
+  )
 
   return {
     audioContextRef,
@@ -170,5 +179,6 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     initAudioContext,
     teardownAudioContext,
     routesPlaybackThroughWebAudio,
+    requiresBackgroundHandoff,
   }
 }

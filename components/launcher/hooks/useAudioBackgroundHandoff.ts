@@ -1,5 +1,6 @@
 /**
- * 可视化优先 + MediaElement 路由时，用第二个隐藏 <audio> 做重叠接管。
+ * 仅在不支持音乐播放会话的旧版 iOS 强制开启可视化时，保留原生音频接管。
+ * 支持 playback 会话的浏览器锁屏时保持原音频链路，不触发加载、定位或切换。
  *
  * createMediaElementSource 会永久占用元素，不能把同一个元素临时切回原生播放。
  * 锁屏时先让 handoff <audio> 从同一进度开始播放，再拆 Web Audio 和 remount 主
@@ -26,7 +27,7 @@ interface UseAudioBackgroundHandoffOptions {
   teardownAudioContext: () => boolean
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
   audioContextRef: React.MutableRefObject<AudioContext | null>
-  routesPlaybackThroughWebAudio: () => boolean
+  requiresBackgroundHandoff: () => boolean
 }
 
 export function useAudioBackgroundHandoff({
@@ -41,7 +42,7 @@ export function useAudioBackgroundHandoff({
   teardownAudioContext,
   initAudioContext,
   audioContextRef,
-  routesPlaybackThroughWebAudio,
+  requiresBackgroundHandoff,
 }: UseAudioBackgroundHandoffOptions): void {
   const nativeHandoffActiveRef = useRef(false)
   const isTransitioningRef = useRef(false)
@@ -80,7 +81,7 @@ export function useAudioBackgroundHandoff({
     const sourceAudio = audioRef.current
     const handoffAudio = handoffAudioRef.current
 
-    if (!routesPlaybackThroughWebAudio() || !sourceAudio?.src || !handoffAudio) {
+    if (!requiresBackgroundHandoff() || !sourceAudio?.src || !handoffAudio) {
       return
     }
 
@@ -112,7 +113,7 @@ export function useAudioBackgroundHandoff({
     clearAudioElement,
     handoffAudioRef,
     isPlaying,
-    routesPlaybackThroughWebAudio,
+    requiresBackgroundHandoff,
     setAudioMountKey,
     setNativeHandoffActive,
     startFromSnapshot,
@@ -187,21 +188,20 @@ export function useAudioBackgroundHandoff({
     }
 
     const handleVisibilityChange = () => {
-      if (!routesPlaybackThroughWebAudio()) {
+      // 接管成功后原 Web Audio 已拆除，恢复不能再依赖它是否仍在路由音频。
+      if (!document.hidden && nativeHandoffActiveRef.current) {
+        void restoreVisualizerAudio()
         return
       }
 
-      if (document.hidden) {
+      if (document.hidden && requiresBackgroundHandoff()) {
         void handoffToNativeAudio()
-        return
       }
-
-      void restoreVisualizerAudio()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [handoffToNativeAudio, restoreVisualizerAudio, routesPlaybackThroughWebAudio])
+  }, [handoffToNativeAudio, restoreVisualizerAudio, requiresBackgroundHandoff])
 }

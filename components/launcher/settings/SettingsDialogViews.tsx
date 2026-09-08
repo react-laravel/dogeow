@@ -29,12 +29,12 @@ const AUDIO_PLAYBACK_MODE_OPTIONS: Array<{
   {
     value: 'auto',
     label: '自动',
-    description: '优先兼顾可视化和锁屏/后台播放稳定性。',
+    description: 'iPhone 和 iPad 优先使用原生播放，其他设备启用可视化。',
   },
   {
     value: 'visualizer',
     label: '可视化优先',
-    description: '尽量保留频谱效果，部分移动端锁屏时可能不够稳定。',
+    description: '开启频谱效果。锁屏播放表现取决于系统和浏览器版本。',
   },
   {
     value: 'native',
@@ -180,8 +180,7 @@ export function PlaybackView({ audioPlaybackMode, setAudioPlaybackMode }: Playba
       </div>
 
       <p className="text-muted-foreground px-2 text-xs leading-5">
-        支持 captureStream 的浏览器通常可以同时保留可视化和锁屏播放；iOS Safari
-        一类环境目前很难稳定兼顾，所以这里保留自动和兼容模式可切换。
+        若开启可视化后锁屏播放不稳定，可切换到兼容优先。不同系统版本的表现可能不同。
       </p>
     </div>
   )

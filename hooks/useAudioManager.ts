@@ -66,7 +66,7 @@ export const useAudioManager = () => {
     teardownAudioContext: visualizer.teardownAudioContext,
     initAudioContext,
     audioContextRef: visualizer.audioContextRef,
-    routesPlaybackThroughWebAudio: visualizer.routesPlaybackThroughWebAudio,
+    requiresBackgroundHandoff: visualizer.requiresBackgroundHandoff,
   })
 
   // Audio playback hook with Value Objects
@@ -100,7 +100,7 @@ export const useAudioManager = () => {
     suppressPrimaryAudio: nativeHandoffActive,
     handoffAudioRef,
     nativeHandoffActive,
-    shouldDeferBackgroundResume: visualizer.routesPlaybackThroughWebAudio,
+    shouldDeferBackgroundResume: visualizer.requiresBackgroundHandoff,
     refs: {
       audioRef,
       audioContextRef: visualizer.audioContextRef,

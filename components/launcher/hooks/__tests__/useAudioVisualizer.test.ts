@@ -11,6 +11,7 @@ const originalMaxTouchPoints = window.navigator.maxTouchPoints
 
 describe('useAudioVisualizer', () => {
   afterEach(() => {
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
     Object.defineProperty(window, 'AudioContext', {
       configurable: true,
@@ -96,6 +97,7 @@ describe('useAudioVisualizer', () => {
     expect(gainConnect).toHaveBeenCalledWith(destinationNode)
     expect(gainNode.gain.value).toBe(1)
     expect(result.current.analyserNode).toBe(analyserNode)
+    expect(result.current.requiresBackgroundHandoff()).toBe(false)
   })
 
   it('skips Web Audio in auto mode on iOS even when captureStream exists', () => {
@@ -211,5 +213,52 @@ describe('useAudioVisualizer', () => {
     expect(analyserConnect).toHaveBeenCalledWith(gainNode)
     expect(gainConnect).toHaveBeenCalledWith(destinationNode)
     expect(result.current.analyserNode).toBe(analyserNode)
+    expect(result.current.requiresBackgroundHandoff()).toBe(true)
+  })
+
+  it('keeps the same iPhone audio graph when a playback session is available', () => {
+    const audioSession = { type: 'auto' }
+    vi.stubGlobal('navigator', { userAgent: 'iPhone', platform: 'iPhone', audioSession })
+    const analyser = { connect: vi.fn(), disconnect: vi.fn() }
+    const gain = { connect: vi.fn(), gain: { value: 1 } }
+    const source = { connect: vi.fn() }
+    const createSource = vi.fn(() => source)
+    const close = vi.fn()
+    const resume = vi.fn(() => Promise.resolve())
+    class Context {
+      state = 'running'
+      destination = {}
+      createAnalyser = () => analyser
+      createGain = () => gain
+      createMediaElementSource = createSource
+      close = close
+      resume = resume
+      constructor() {
+        expect(audioSession.type).toBe('playback')
+      }
+    }
+    vi.stubGlobal('AudioContext', Context)
+    const audio = document.createElement('audio')
+    audio.src = 'https://example.com/first.mp3'
+    audio.pause = vi.fn()
+    audio.load = vi.fn()
+    const { result } = renderHook(() =>
+      useAudioVisualizer({ volume: 0.7, isMuted: false, playbackMode: 'visualizer' })
+    )
+    act(() => result.current.initAudioContext(audio))
+    const context = result.current.audioContextRef.current
+    expect(result.current.routesPlaybackThroughWebAudio()).toBe(true)
+    expect(result.current.requiresBackgroundHandoff()).toBe(false)
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      audio.src = 'https://example.com/second.mp3'
+      result.current.initAudioContext(audio)
+    })
+    expect(result.current.audioContextRef.current).toBe(context)
+    expect(createSource).toHaveBeenCalledTimes(1)
+    expect(audio.pause).not.toHaveBeenCalled()
+    expect(audio.load).not.toHaveBeenCalled()
+    expect(close).not.toHaveBeenCalled()
+    expect(resume).not.toHaveBeenCalled()
   })
 })
