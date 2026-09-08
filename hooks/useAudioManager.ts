@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useMusicStore, MusicTrack } from '@/stores/musicStore'
 import { useAudioPlayback } from '@/components/launcher/hooks/useAudioPlayback'
-import { useAudioBackgroundHandoff } from '@/components/launcher/hooks/useAudioBackgroundHandoff'
 import { useAudioVisualizer } from '@/components/launcher/hooks/useAudioVisualizer'
 import { buildAudioUrl as buildAudioUrlHelper } from '@/components/launcher/audio/utils'
 import { apiRequest } from '@/lib/api'
@@ -30,12 +29,9 @@ export const useAudioManager = () => {
   const [isTrackChanging, setIsTrackChanging] = useState(false)
   const [readyToPlay, setReadyToPlay] = useState(false)
   const [isLoadingTracks, setIsLoadingTracks] = useState(false)
-  const [audioMountKey, setAudioMountKey] = useState(0)
-  const [nativeHandoffActive, setNativeHandoffActive] = useState(false)
 
   // Audio refs
   const audioRef = useRef<HTMLAudioElement>(null)
-  const handoffAudioRef = useRef<HTMLAudioElement>(null)
 
   // API URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
@@ -53,21 +49,6 @@ export const useAudioManager = () => {
   const visualizer = useAudioVisualizer({ volume, isMuted, playbackMode: audioPlaybackMode })
 
   const initAudioContext = visualizer.initAudioContext
-
-  useAudioBackgroundHandoff({
-    audioRef,
-    handoffAudioRef,
-    setAudioMountKey,
-    playbackMode: audioPlaybackMode,
-    isPlaying,
-    setIsPlaying,
-    setCurrentTime,
-    setNativeHandoffActive,
-    teardownAudioContext: visualizer.teardownAudioContext,
-    initAudioContext,
-    audioContextRef: visualizer.audioContextRef,
-    requiresBackgroundHandoff: visualizer.requiresBackgroundHandoff,
-  })
 
   // Audio playback hook with Value Objects
   const playback = useAudioPlayback({
@@ -97,10 +78,6 @@ export const useAudioManager = () => {
     },
     currentTrack,
     availableTracks,
-    suppressPrimaryAudio: nativeHandoffActive,
-    handoffAudioRef,
-    nativeHandoffActive,
-    shouldDeferBackgroundResume: visualizer.requiresBackgroundHandoff,
     refs: {
       audioRef,
       audioContextRef: visualizer.audioContextRef,
@@ -228,8 +205,6 @@ export const useAudioManager = () => {
     fetchAvailableTracks,
     setCurrentTrack,
     markUserInteracted,
-    audioMountKey,
-    handoffAudioRef,
     // Audio controller
     ...playback,
     analyserNode: visualizer.analyserNode,

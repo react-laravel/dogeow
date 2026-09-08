@@ -5,11 +5,11 @@ import type { AudioControllerOptions } from '../types'
 
 type PlayPauseEffectOptions = Pick<
   AudioControllerOptions,
-  'playback' | 'settings' | 'refs' | 'nativeHandoffActive' | 'initAudioContext'
+  'playback' | 'settings' | 'refs' | 'currentTrack' | 'initAudioContext'
 > & {
-  getActiveAudio: () => HTMLAudioElement | null
   reportPlayError: (error: unknown) => void
   isPlayingRef: React.MutableRefObject<boolean>
+  sourceRevisionRef: React.MutableRefObject<number>
   playbackResumeNonce: number
 }
 
@@ -17,11 +17,11 @@ export function usePlayPauseEffect({
   playback,
   settings,
   refs,
-  nativeHandoffActive = false,
+  currentTrack,
   initAudioContext,
-  getActiveAudio,
   reportPlayError,
   isPlayingRef,
+  sourceRevisionRef,
   playbackResumeNonce,
 }: PlayPauseEffectOptions) {
   const { isPlaying, readyToPlay, userInteracted } = playback
@@ -29,81 +29,57 @@ export function usePlayPauseEffect({
   const { audioRef, audioContextRef } = refs
 
   useEffect(() => {
-    const activeAudio = getActiveAudio()
-    if (!activeAudio) return
+    const audio = audioRef.current
+    if (!audio) return
+    let cancelled = false
+    const revision = sourceRevisionRef.current
+    const isCurrentRequest = () =>
+      !cancelled &&
+      isPlayingRef.current &&
+      sourceRevisionRef.current === revision &&
+      audioRef.current === audio
 
     const playAudio = async () => {
-      if (!isPlayingRef.current) {
-        return
-      }
-
-      const playbackTarget = getActiveAudio()
-      if (!playbackTarget) {
-        return
-      }
-
-      const primaryAudio = audioRef.current
-      const shouldInitVisualizer =
-        !nativeHandoffActive &&
-        !audioContextRef.current &&
-        primaryAudio &&
-        primaryAudio.src &&
-        playbackTarget === primaryAudio
-
-      if (shouldInitVisualizer) {
+      if (!isCurrentRequest()) return
+      if (!audioContextRef.current && audio.src) initAudioContext(audio)
+      const context = audioContextRef.current
+      if (shouldResumeAudioContext(context)) {
         try {
-          initAudioContext(primaryAudio)
-          await new Promise(resolve => setTimeout(resolve, 50))
-
-          const ctx = audioContextRef.current as AudioContext | null
-          if (shouldResumeAudioContext(ctx)) {
-            await ctx.resume()
-          }
+          await context.resume()
         } catch (err) {
-          console.error('Failed to initialize AudioContext:', err)
+          console.warn('AudioContext resume failed:', err)
         }
       }
-
-      if (audioContextRef.current && !nativeHandoffActive) {
-        if (shouldResumeAudioContext(audioContextRef.current)) {
-          try {
-            await audioContextRef.current.resume()
-          } catch (err) {
-            console.warn('AudioContext resume failed:', err)
-          }
-        }
-      }
-
-      playbackTarget.volume = isMuted ? 0 : volume
-      playbackTarget.muted = isMuted
-
+      // 等待浏览器恢复期间，用户可能已暂停或切歌；旧请求不能重新开始播放。
+      if (!isCurrentRequest()) return
+      audio.volume = isMuted ? 0 : volume
+      audio.muted = isMuted
       try {
-        await safePlay(playbackTarget)
+        await safePlay(audio, isCurrentRequest)
       } catch (err) {
-        reportPlayError(err)
+        if (isCurrentRequest()) reportPlayError(err)
       }
     }
 
-    const canAutoPlay = readyToPlay || nativeHandoffActive
+    if (isPlaying && readyToPlay && userInteracted) void playAudio()
+    else if (!isPlaying) audio.pause()
 
-    if (isPlaying && canAutoPlay && userInteracted) {
-      void playAudio()
-    } else if (!isPlaying) {
-      activeAudio.pause()
+    return () => {
+      cancelled = true
     }
   }, [
     isPlaying,
     userInteracted,
     readyToPlay,
+    currentTrack,
     isMuted,
     volume,
     initAudioContext,
     reportPlayError,
     audioContextRef,
     audioRef,
-    getActiveAudio,
-    nativeHandoffActive,
     playbackResumeNonce,
     isPlayingRef,
+    sourceRevisionRef,
   ])
 }

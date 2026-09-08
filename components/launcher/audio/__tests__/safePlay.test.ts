@@ -39,6 +39,28 @@ describe('safePlay', () => {
 
     await expect(safePlay(audio)).rejects.toThrow('not allowed')
   })
+
+  it('does not retry an aborted request after the selected source changes', async () => {
+    const audio = document.createElement('audio')
+    audio.src = '/first.mp3'
+    audio.play = vi.fn(async () => {
+      audio.src = '/second.mp3'
+      throw new DOMException('Source changed', 'AbortError')
+    })
+    await safePlay(audio)
+    expect(audio.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not retry after the user cancels a pending play request', async () => {
+    let current = true
+    const audio = document.createElement('audio')
+    audio.play = vi.fn(async () => {
+      current = false
+      throw new DOMException('Paused', 'AbortError')
+    })
+    await safePlay(audio, () => current)
+    expect(audio.play).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('isAbortPlayError', () => {

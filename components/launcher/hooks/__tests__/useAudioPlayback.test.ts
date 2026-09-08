@@ -16,7 +16,7 @@ describe('useAudioPlayback', () => {
     vi.clearAllMocks()
   })
 
-  it('lets the currentTrack effect load the next source exactly once', () => {
+  it('loads and starts the next source before rendering its title, without loading it twice', () => {
     const audio = document.createElement('audio')
     audio.pause = vi.fn()
     audio.load = vi.fn()
@@ -76,7 +76,9 @@ describe('useAudioPlayback', () => {
     expect(setCurrentTrack).toHaveBeenCalledWith('/music/second.mp3')
     expect(setAudioError).toHaveBeenLastCalledWith(null)
     expect(setIsPlaying).toHaveBeenLastCalledWith(true)
-    expect(audio.load).not.toHaveBeenCalled()
+    expect(audio.src).toBe('https://example.com/music/second.mp3')
+    expect(audio.load).toHaveBeenCalledTimes(1)
+    expect(audio.play).toHaveBeenCalled()
 
     rerender({ currentTrack: '/music/second.mp3' })
 

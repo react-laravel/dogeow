@@ -97,7 +97,6 @@ describe('useAudioVisualizer', () => {
     expect(gainConnect).toHaveBeenCalledWith(destinationNode)
     expect(gainNode.gain.value).toBe(1)
     expect(result.current.analyserNode).toBe(analyserNode)
-    expect(result.current.requiresBackgroundHandoff()).toBe(false)
   })
 
   it('skips Web Audio in auto mode on iOS even when captureStream exists', () => {
@@ -213,7 +212,6 @@ describe('useAudioVisualizer', () => {
     expect(analyserConnect).toHaveBeenCalledWith(gainNode)
     expect(gainConnect).toHaveBeenCalledWith(destinationNode)
     expect(result.current.analyserNode).toBe(analyserNode)
-    expect(result.current.requiresBackgroundHandoff()).toBe(true)
   })
 
   it('keeps the same iPhone audio graph when a playback session is available', () => {
@@ -247,8 +245,6 @@ describe('useAudioVisualizer', () => {
     )
     act(() => result.current.initAudioContext(audio))
     const context = result.current.audioContextRef.current
-    expect(result.current.routesPlaybackThroughWebAudio()).toBe(true)
-    expect(result.current.requiresBackgroundHandoff()).toBe(false)
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'))
       audio.src = 'https://example.com/second.mp3'

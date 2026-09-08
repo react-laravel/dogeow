@@ -73,10 +73,6 @@ export interface AudioControllerOptions {
   // Music store data
   currentTrack: string
   availableTracks: MusicTrack[]
-  suppressPrimaryAudio?: boolean
-  handoffAudioRef?: React.RefObject<HTMLAudioElement | null>
-  nativeHandoffActive?: boolean
-  shouldDeferBackgroundResume?: () => boolean
   // Refs
   refs: AudioRefs
   // Utilities
@@ -96,7 +92,7 @@ export interface AudioControllerResult {
   handleLoadedMetadata: () => void
   handleTimeUpdate: () => void
   handleAudioError: (e: React.SyntheticEvent<HTMLAudioElement, Event>) => void
-  setupMediaSource: () => void
+  setupMediaSource: (track?: string) => boolean
   toggleMute: () => void
   resetCurrentTime: () => void
 }

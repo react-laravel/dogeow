@@ -62,8 +62,6 @@ interface LauncherContentProps {
   setPlayMode: (mode: PlayMode) => void
   onOpenFullscreen: () => void
   audioRef: React.RefObject<HTMLAudioElement | null>
-  handoffAudioRef: React.RefObject<HTMLAudioElement | null>
-  audioMountKey: number
   handleLoadedMetadata: () => void
   handleTimeUpdate: () => void
   handleAudioError: (e: React.SyntheticEvent<HTMLAudioElement, Event>) => void
@@ -111,8 +109,6 @@ export function LauncherContent({
   setPlayMode,
   onOpenFullscreen,
   audioRef,
-  handoffAudioRef,
-  audioMountKey,
   handleLoadedMetadata,
   handleTimeUpdate,
   handleAudioError,
@@ -256,7 +252,6 @@ export function LauncherContent({
       {renderContent()}
 
       <audio
-        key={audioMountKey}
         ref={audioRef}
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
@@ -264,16 +259,6 @@ export function LauncherContent({
         onEnded={switchToNextTrack}
         onCanPlay={() => setReadyToPlay(true)}
         loop={false}
-        hidden
-        preload="none"
-        crossOrigin="anonymous"
-        playsInline={true}
-        webkit-playsinline="true"
-        controls={false}
-      />
-      <audio
-        ref={handoffAudioRef}
-        onEnded={switchToNextTrack}
         hidden
         preload="none"
         crossOrigin="anonymous"

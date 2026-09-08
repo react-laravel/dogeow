@@ -1,11 +1,10 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 import { shouldUpdatePlayingStateOnPause } from '../../audio/playbackStateUtils'
 import type { AudioControllerOptions } from '../types'
 
-type PlaybackEventListenersOptions = Pick<
-  AudioControllerOptions,
-  'refs' | 'callbacks' | 'handoffAudioRef' | 'nativeHandoffActive'
-> & {
+type PlaybackEventListenersOptions = Pick<AudioControllerOptions, 'refs' | 'callbacks'> & {
+  sourceRevisionRef: React.MutableRefObject<number>
+  isChangingSourceRef: React.MutableRefObject<boolean>
   clearBackgroundTransition: () => void
   isDuringBackgroundTransition: () => boolean
 }
@@ -13,75 +12,76 @@ type PlaybackEventListenersOptions = Pick<
 export function usePlaybackEventListeners({
   refs,
   callbacks,
-  handoffAudioRef,
-  nativeHandoffActive = false,
+  sourceRevisionRef,
+  isChangingSourceRef,
   clearBackgroundTransition,
   isDuringBackgroundTransition,
 }: PlaybackEventListenersOptions) {
   const { audioRef } = refs
-  const { setIsPlaying, setCurrentTime } = callbacks
-
-  const bindPlaybackStateListeners = useCallback(
-    (audio: HTMLAudioElement) => {
-      const handlePlay = () => {
-        clearBackgroundTransition()
-        setIsPlaying(true)
-      }
-      const handlePause = () => {
-        setTimeout(() => {
-          const isDocumentHidden = typeof document !== 'undefined' && document.hidden
-          if (
-            shouldUpdatePlayingStateOnPause({
-              isEnded: audio.ended,
-              isDocumentHidden,
-              isDuringBackgroundTransition: isDuringBackgroundTransition(),
-            })
-          ) {
-            setIsPlaying(false)
-          }
-        }, 100)
-      }
-
-      audio.addEventListener('play', handlePlay)
-      audio.addEventListener('pause', handlePause)
-
-      return () => {
-        audio.removeEventListener('play', handlePlay)
-        audio.removeEventListener('pause', handlePause)
-      }
-    },
-    [clearBackgroundTransition, isDuringBackgroundTransition, setIsPlaying]
-  )
+  const { setIsPlaying, setIsTrackChanging } = callbacks
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
-
-    return bindPlaybackStateListeners(audio)
-  }, [audioRef, bindPlaybackStateListeners])
-
-  useEffect(() => {
-    if (!nativeHandoffActive) return
-
-    const handoffAudio = handoffAudioRef?.current
-    if (!handoffAudio) return
-
-    return bindPlaybackStateListeners(handoffAudio)
-  }, [bindPlaybackStateListeners, handoffAudioRef, nativeHandoffActive])
-
-  useEffect(() => {
-    if (!nativeHandoffActive) return
-
-    const handoffAudio = handoffAudioRef?.current
-    if (!handoffAudio) return
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(handoffAudio.currentTime)
+    let pauseTimeout: ReturnType<typeof setTimeout> | undefined
+    const clearPendingPause = () => {
+      clearTimeout(pauseTimeout)
+      pauseTimeout = undefined
+    }
+    const handlePlay = () => {
+      clearPendingPause()
+      clearBackgroundTransition()
+      setIsPlaying(true)
+    }
+    const handlePlaying = () => {
+      handlePlay()
+      isChangingSourceRef.current = false
+      setIsTrackChanging(false)
+    }
+    const handlePause = () => {
+      clearPendingPause()
+      // load() 和上一首结束也会派发 pause，不能把它们当成用户暂停新曲。
+      if (!audio.paused || audio.ended || isChangingSourceRef.current) return
+      const revision = sourceRevisionRef.current
+      pauseTimeout = setTimeout(() => {
+        if (revision !== sourceRevisionRef.current || isChangingSourceRef.current || !audio.paused)
+          return
+        if (
+          shouldUpdatePlayingStateOnPause({
+            isEnded: audio.ended,
+            isDocumentHidden: document.hidden,
+            isDuringBackgroundTransition: isDuringBackgroundTransition(),
+          })
+        )
+          setIsPlaying(false)
+      }, 100)
+    }
+    const handleError = () => {
+      clearPendingPause()
+      isChangingSourceRef.current = false
+      setIsTrackChanging(false)
     }
 
-    handoffAudio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('playing', handlePlaying)
+    audio.addEventListener('pause', handlePause)
+    audio.addEventListener('emptied', clearPendingPause)
+    audio.addEventListener('error', handleError)
     return () => {
-      handoffAudio.removeEventListener('timeupdate', handleTimeUpdate)
+      clearPendingPause()
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('playing', handlePlaying)
+      audio.removeEventListener('pause', handlePause)
+      audio.removeEventListener('emptied', clearPendingPause)
+      audio.removeEventListener('error', handleError)
     }
-  }, [handoffAudioRef, nativeHandoffActive, setCurrentTime])
+  }, [
+    audioRef,
+    sourceRevisionRef,
+    isChangingSourceRef,
+    clearBackgroundTransition,
+    isDuringBackgroundTransition,
+    setIsPlaying,
+    setIsTrackChanging,
+  ])
 }

@@ -1,7 +1,6 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import type { AudioControllerOptions, AudioControllerResult } from '../types'
 import { useBackgroundTransition } from './useBackgroundTransition'
-import { useActiveAudio } from './useActiveAudio'
 import { useMediaSourceSetup } from './useMediaSourceSetup'
 import { usePlaybackControls } from './usePlaybackControls'
 import { usePlayPauseEffect } from './usePlayPauseEffect'
@@ -16,10 +15,6 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     callbacks,
     currentTrack,
     availableTracks,
-    suppressPrimaryAudio = false,
-    handoffAudioRef,
-    nativeHandoffActive = false,
-    shouldDeferBackgroundResume,
     refs,
     buildAudioUrl,
     initAudioContext,
@@ -37,20 +32,14 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
   const { markBackgroundTransition, clearBackgroundTransition, isDuringBackgroundTransition } =
     useBackgroundTransition()
 
-  const { getActiveAudio } = useActiveAudio({
-    refs,
-    handoffAudioRef,
-    nativeHandoffActive,
-  })
+  const getActiveAudio = useCallback(() => audioRef.current, [audioRef])
 
-  const { setupMediaSource } = useMediaSourceSetup({
-    playback,
+  const { setupMediaSource, sourceRevisionRef, isChangingSourceRef } = useMediaSourceSetup({
     settings,
     callbacks,
     currentTrack,
     refs,
     buildAudioUrl,
-    suppressPrimaryAudio,
   })
 
   const {
@@ -70,39 +59,39 @@ export function useAudioPlayback(options: AudioControllerOptions): AudioControll
     currentTrack,
     availableTracks,
     refs,
-    handoffAudioRef,
-    nativeHandoffActive,
     initAudioContext,
     getActiveAudio,
     setupMediaSource,
+    sourceRevisionRef,
+    isPlayingRef,
   })
 
   usePlayPauseEffect({
     playback,
+    currentTrack,
+    sourceRevisionRef,
     settings,
     refs,
-    nativeHandoffActive,
     initAudioContext,
-    getActiveAudio,
     reportPlayError,
     isPlayingRef,
     playbackResumeNonce,
   })
 
-  useVolumeSync({ settings, refs, handoffAudioRef })
+  useVolumeSync({ settings, refs })
 
   usePlaybackEventListeners({
     refs,
+    sourceRevisionRef,
+    isChangingSourceRef,
     callbacks,
-    handoffAudioRef,
-    nativeHandoffActive,
     clearBackgroundTransition,
     isDuringBackgroundTransition,
   })
 
   useVisibilityLifecycle({
     playback,
-    shouldDeferBackgroundResume,
+    refs,
     getActiveAudio,
     markBackgroundTransition,
     setPlaybackResumeNonce,

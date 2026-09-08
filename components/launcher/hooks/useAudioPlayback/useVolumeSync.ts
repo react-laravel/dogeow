@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import type { AudioControllerOptions } from '../types'
 
-type VolumeSyncOptions = Pick<AudioControllerOptions, 'settings' | 'refs' | 'handoffAudioRef'>
+type VolumeSyncOptions = Pick<AudioControllerOptions, 'settings' | 'refs'>
 
-export function useVolumeSync({ settings, refs, handoffAudioRef }: VolumeSyncOptions) {
+export function useVolumeSync({ settings, refs }: VolumeSyncOptions) {
   const { volume, isMuted } = settings
   const { audioRef, gainNodeRef } = refs
 
@@ -15,13 +15,8 @@ export function useVolumeSync({ settings, refs, handoffAudioRef }: VolumeSyncOpt
       audioRef.current.muted = isMuted
     }
 
-    if (handoffAudioRef?.current) {
-      handoffAudioRef.current.volume = targetVolume
-      handoffAudioRef.current.muted = isMuted
-    }
-
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = isMuted ? 0 : 1
     }
-  }, [volume, isMuted, audioRef, handoffAudioRef, gainNodeRef])
+  }, [volume, isMuted, audioRef, gainNodeRef])
 }

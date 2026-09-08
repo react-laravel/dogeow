@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useMusicStore } from '@/stores/musicStore'
-import { toast } from 'sonner'
 import { isAbortPlayError, safePlay } from '../../audio/safePlay'
+import { shouldResumeAudioContext } from './helpers'
 import type { AudioControllerOptions } from '../types'
 
 type PlaybackControlsOptions = Pick<
@@ -12,12 +12,12 @@ type PlaybackControlsOptions = Pick<
   | 'currentTrack'
   | 'availableTracks'
   | 'refs'
-  | 'handoffAudioRef'
-  | 'nativeHandoffActive'
   | 'initAudioContext'
 > & {
   getActiveAudio: () => HTMLAudioElement | null
-  setupMediaSource: () => void
+  setupMediaSource: (track?: string) => boolean
+  sourceRevisionRef: React.MutableRefObject<number>
+  isPlayingRef: React.MutableRefObject<boolean>
 }
 
 export function usePlaybackControls({
@@ -27,11 +27,11 @@ export function usePlaybackControls({
   currentTrack,
   availableTracks,
   refs,
-  handoffAudioRef,
-  nativeHandoffActive = false,
   initAudioContext,
   getActiveAudio,
   setupMediaSource,
+  sourceRevisionRef,
+  isPlayingRef,
 }: PlaybackControlsOptions) {
   const { isPlaying, playMode } = playback
   const { volume, isMuted } = settings
@@ -41,113 +41,96 @@ export function usePlaybackControls({
 
   const reportPlayError = useCallback(
     (error: unknown) => {
-      if (isAbortPlayError(error)) {
-        return
-      }
-
+      if (isAbortPlayError(error)) return
       const message = error instanceof Error ? error.message : String(error)
       setAudioError(`Playback failed: ${message}`)
+      isPlayingRef.current = false
+      setIsPlaying(false)
     },
-    [setAudioError]
+    [setAudioError, setIsPlaying, isPlayingRef]
+  )
+
+  const startPlayback = useCallback(
+    (audio: HTMLAudioElement) => {
+      isPlayingRef.current = true
+      setIsPlaying(true)
+      if (!audioContextRef.current) initAudioContext(audio)
+      const context = audioContextRef.current
+      if (shouldResumeAudioContext(context)) void context.resume().catch(() => {})
+      const revision = sourceRevisionRef.current
+      const isCurrentRequest = () => isPlayingRef.current && sourceRevisionRef.current === revision
+      // 在点击或 ended 事件内立即向同一元素发出播放请求，不等 React 的下一次 effect。
+      void safePlay(audio, isCurrentRequest).catch(error => {
+        if (isCurrentRequest()) reportPlayError(error)
+      })
+    },
+    [
+      setIsPlaying,
+      isPlayingRef,
+      audioContextRef,
+      initAudioContext,
+      sourceRevisionRef,
+      reportPlayError,
+    ]
   )
 
   const togglePlay = useCallback(() => {
-    const activeAudio = getActiveAudio()
-    if (!activeAudio || !currentTrack) return
-
-    const hasReadySource = Boolean(activeAudio.src || currentTrack)
-    if ((!availableTracks || availableTracks.length === 0) && !hasReadySource) {
-      setAudioError('Playlist is empty, no music to play')
-      toast.error('Playlist is empty', { description: 'Please add music files to the playlist' })
-      return
-    }
-
-    if (!nativeHandoffActive && audioRef.current && !audioRef.current.src) {
-      setupMediaSource()
-    }
-
+    const audio = getActiveAudio()
+    if (!audio || !currentTrack) return
     if (isPlaying) {
-      activeAudio.pause()
+      isPlayingRef.current = false
+      audio.pause()
       setIsPlaying(false)
       return
     }
-
-    if (
-      !nativeHandoffActive &&
-      !audioContextRef.current &&
-      audioRef.current?.src &&
-      activeAudio === audioRef.current
-    ) {
-      initAudioContext(audioRef.current)
-    }
-
-    void safePlay(activeAudio).catch(reportPlayError)
-    setIsPlaying(true)
+    if (!setupMediaSource()) return
+    startPlayback(audio)
   }, [
     currentTrack,
     isPlaying,
     setupMediaSource,
     setIsPlaying,
-    setAudioError,
-    reportPlayError,
-    availableTracks,
-    initAudioContext,
-    audioContextRef,
-    audioRef,
+    isPlayingRef,
     getActiveAudio,
-    nativeHandoffActive,
+    startPlayback,
   ])
 
   const switchTrack = useCallback(
     (direction: 'next' | 'prev') => {
-      if (!currentTrack || !availableTracks.length) {
-        if (availableTracks.length === 0) {
-          setAudioError('Playlist is empty, no music to play')
-        }
-        return
-      }
-
-      getActiveAudio()?.pause()
-      handoffAudioRef?.current?.pause()
-
+      const audio = getActiveAudio()
+      if (!audio || !currentTrack || !availableTracks.length) return
       const currentIndex = availableTracks.findIndex(track => track.path === currentTrack)
-      let nextIndex = -1
-
-      if (playMode === 'shuffle') {
-        if (direction === 'next') {
-          let randomIndex
-          do {
-            randomIndex = Math.floor(Math.random() * availableTracks.length)
-          } while (randomIndex === currentIndex && availableTracks.length > 1)
-          nextIndex = randomIndex
-        } else {
-          let randomIndex
-          do {
-            randomIndex = Math.floor(Math.random() * availableTracks.length)
-          } while (randomIndex === currentIndex && availableTracks.length > 1)
-          nextIndex = randomIndex
-        }
+      let nextIndex: number
+      if (playMode === 'shuffle' && availableTracks.length > 1) {
+        const otherTracks = availableTracks
+          .map((_, index) => index)
+          .filter(index => index !== currentIndex)
+        nextIndex = otherTracks[Math.floor(Math.random() * otherTracks.length)]
       } else {
-        if (direction === 'next') {
-          nextIndex = (currentIndex + 1) % availableTracks.length
-        } else {
-          nextIndex = (currentIndex - 1 + availableTracks.length) % availableTracks.length
-        }
+        nextIndex =
+          (currentIndex + (direction === 'next' ? 1 : availableTracks.length - 1)) %
+          availableTracks.length
       }
-
-      setCurrentTrack(availableTracks[nextIndex].path)
+      const nextTrack = availableTracks[nextIndex].path
+      if (!setupMediaSource(nextTrack)) return
+      if (nextTrack === currentTrack) {
+        audio.currentTime = 0
+        setCurrentTime(0)
+      }
+      setCurrentTrack(nextTrack)
       setAudioError(null)
-      setIsPlaying(true)
+      startPlayback(audio)
     },
     [
       currentTrack,
       availableTracks,
       playMode,
       setCurrentTrack,
+      setCurrentTime,
       setAudioError,
-      setIsPlaying,
       getActiveAudio,
-      handoffAudioRef,
+      setupMediaSource,
+      startPlayback,
     ]
   )
 
@@ -187,13 +170,9 @@ export function usePlaybackControls({
   const handleLoadedMetadata = useCallback(() => {
     if (!audioRef.current) return
 
-    setDuration(audioRef.current.duration)
+    if (Number.isFinite(audioRef.current.duration)) setDuration(audioRef.current.duration)
     setAudioError(null)
-
-    if (isPlaying && audioRef.current.paused) {
-      void safePlay(audioRef.current).catch(reportPlayError)
-    }
-  }, [isPlaying, setDuration, setAudioError, reportPlayError, audioRef])
+  }, [setDuration, setAudioError, audioRef])
 
   const handleAudioError = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
@@ -202,9 +181,10 @@ export function usePlaybackControls({
       const errorMessage = audio.error?.message ?? 'Unknown error'
 
       setAudioError(`Playback error (${errorCode}): ${errorMessage}`)
+      isPlayingRef.current = false
       setIsPlaying(false)
     },
-    [setAudioError, setIsPlaying]
+    [setAudioError, setIsPlaying, isPlayingRef]
   )
 
   const handleTimeUpdate = useCallback(() => {

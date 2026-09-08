@@ -6,7 +6,7 @@
 import { useRef, useCallback, useState } from 'react'
 import type { AudioPlaybackMode } from '@/stores/musicStore'
 import type { AudioVisualizerSourceNode } from './types'
-import { hasPlaybackAudioSession, prepareMusicAudioSession } from '../audio/audioSession'
+import { prepareMusicAudioSession } from '../audio/audioSession'
 
 interface UseAudioVisualizerOptions {
   volume: number
@@ -21,9 +21,6 @@ interface UseAudioVisualizerReturn {
   gainNodeRef: React.MutableRefObject<GainNode | null>
   analyserNode: AnalyserNode | null
   initAudioContext: (audioElement: HTMLAudioElement | null) => void
-  teardownAudioContext: () => boolean
-  routesPlaybackThroughWebAudio: () => boolean
-  requiresBackgroundHandoff: () => boolean
 }
 
 function isIOSLikeBrowser(): boolean {
@@ -61,7 +58,6 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
   const gainNodeRef = useRef<GainNode | null>(null)
   // MediaElementAudioSource 会跟随同一 <audio> 元素的 src 变化，
   // 因此切歌时不需要重建或重绑音频轨道。
-  const routesPlaybackRef = useRef(false)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
 
   const shouldUseWebAudio = useCallback(() => {
@@ -108,7 +104,6 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
         source.connect(analyser)
         analyser.connect(gainNode)
         gainNode.connect(audioContext.destination)
-        routesPlaybackRef.current = true
 
         gainNode.gain.value = isMuted ? 0 : 1
 
@@ -130,46 +125,6 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     [isMuted, playbackMode, shouldUseWebAudio]
   )
 
-  const teardownAudioContext = useCallback((): boolean => {
-    const wasRoutingPlayback = routesPlaybackRef.current
-    const audioContext = audioContextRef.current
-
-    if (!audioContext) {
-      return wasRoutingPlayback
-    }
-
-    try {
-      sourceRef.current?.disconnect()
-      analyserRef.current?.disconnect()
-      gainNodeRef.current?.disconnect()
-    } catch {
-      // ignore disconnect errors during teardown
-    }
-
-    if (audioContext.state !== 'closed') {
-      void audioContext.close().catch(err => {
-        console.warn('AudioContext close 失败:', err)
-      })
-    }
-
-    audioContextRef.current = null
-    analyserRef.current = null
-    sourceRef.current = null
-    gainNodeRef.current = null
-    routesPlaybackRef.current = false
-    setAnalyserNode(null)
-
-    return wasRoutingPlayback
-  }, [])
-
-  const routesPlaybackThroughWebAudio = useCallback(() => routesPlaybackRef.current, [])
-  // 桌面和已声明 playback 的浏览器保持同一音频链路；切换元素会引入重新缓冲和定位。
-  // iOS 的自动模式仍保留原生播放，真机验证通过前不扩大默认启用范围。
-  const requiresBackgroundHandoff = useCallback(
-    () => routesPlaybackRef.current && isIOSLikeBrowser() && !hasPlaybackAudioSession(),
-    []
-  )
-
   return {
     audioContextRef,
     analyserRef,
@@ -177,8 +132,5 @@ export function useAudioVisualizer(options: UseAudioVisualizerOptions): UseAudio
     gainNodeRef,
     analyserNode,
     initAudioContext,
-    teardownAudioContext,
-    routesPlaybackThroughWebAudio,
-    requiresBackgroundHandoff,
   }
 }

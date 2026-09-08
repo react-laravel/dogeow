@@ -106,8 +106,6 @@ export function AppLauncher({
     handleAudioError,
     getCurrentTrackName,
     formatTime,
-    audioMountKey,
-    handoffAudioRef,
   } = audioManager
 
   const {
@@ -255,8 +253,6 @@ export function AppLauncher({
         setPlayMode={setPlayMode}
         onOpenFullscreen={() => setIsFullscreenViz(true)}
         audioRef={audioRef}
-        handoffAudioRef={handoffAudioRef}
-        audioMountKey={audioMountKey}
         handleLoadedMetadata={handleLoadedMetadata}
         handleTimeUpdate={handleTimeUpdate}
         handleAudioError={handleAudioError}

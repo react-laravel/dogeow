@@ -1,10 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { AudioControllerOptions } from '../types'
 
-type VisibilityLifecycleOptions = Pick<
-  AudioControllerOptions,
-  'playback' | 'shouldDeferBackgroundResume'
-> & {
+type VisibilityLifecycleOptions = Pick<AudioControllerOptions, 'playback' | 'refs'> & {
   getActiveAudio: () => HTMLAudioElement | null
   markBackgroundTransition: () => void
   setPlaybackResumeNonce: React.Dispatch<React.SetStateAction<number>>
@@ -12,12 +9,13 @@ type VisibilityLifecycleOptions = Pick<
 
 export function useVisibilityLifecycle({
   playback,
-  shouldDeferBackgroundResume,
+  refs,
   getActiveAudio,
   markBackgroundTransition,
   setPlaybackResumeNonce,
 }: VisibilityLifecycleOptions) {
   const { isPlaying } = playback
+  const { audioContextRef } = refs
   const wasPlayingBeforeHiddenRef = useRef(false)
 
   useEffect(() => {
@@ -31,11 +29,12 @@ export function useVisibilityLifecycle({
         return
       }
 
-      if (shouldDeferBackgroundResume?.()) {
-        return
-      }
-
-      if (wasPlayingBeforeHiddenRef.current && isPlaying && activeAudio.paused) {
+      if (
+        wasPlayingBeforeHiddenRef.current &&
+        isPlaying &&
+        (activeAudio.paused ||
+          (audioContextRef.current && audioContextRef.current.state !== 'running'))
+      ) {
         wasPlayingBeforeHiddenRef.current = false
         setPlaybackResumeNonce(nonce => nonce + 1)
       }
@@ -57,11 +56,5 @@ export function useVisibilityLifecycle({
       window.removeEventListener('blur', handleWindowBlur)
       window.removeEventListener('pagehide', handlePageHide)
     }
-  }, [
-    getActiveAudio,
-    isPlaying,
-    markBackgroundTransition,
-    shouldDeferBackgroundResume,
-    setPlaybackResumeNonce,
-  ])
+  }, [getActiveAudio, isPlaying, markBackgroundTransition, audioContextRef, setPlaybackResumeNonce])
 }
