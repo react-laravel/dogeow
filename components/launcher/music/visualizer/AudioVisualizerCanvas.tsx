@@ -6,7 +6,7 @@ import type { AudioVisualizerProps, VisualizerType } from './types'
 import { drawBarSingle, drawBars, drawBars6 } from './drawBars'
 import { drawWave, drawWaveformHistory } from './drawWave'
 import { drawSpectrum } from './drawSpectrum'
-import { drawParticles, drawSilk } from './drawAmbient'
+import { drawParticles, drawSilk, type RainDrop } from './drawAmbient'
 
 const MAX_HISTORY_LENGTH = 200
 
@@ -31,18 +31,7 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
   const particlesRef = useRef<
     Array<{ x: number; y: number; z: number; prevX: number; prevY: number }>
   >([])
-  const silkPointsRef = useRef<
-    Array<{
-      x: number
-      y: number
-      len: number
-      speed: number
-      alpha: number
-      hue: number
-      vx?: number
-      seed?: number
-    }>
-  >([])
+  const silkPointsRef = useRef<RainDrop[]>([])
   const spectrumSmoothedRef = useRef<Float32Array | null>(null)
 
   useEffect(() => {
@@ -52,7 +41,8 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
   }, [analyserNode])
 
   useEffect(() => {
-    const draw = () => {
+    let previousFrameTime: number | null = null
+    const draw = (now = performance.now()) => {
       if (!canvasRef.current || !analyserNode || !dataArrayRef.current) return
 
       const canvas = canvasRef.current
@@ -74,6 +64,8 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
       const width = displayWidth
       const height = displayHeight
       const dataArray = dataArrayRef.current
+      const deltaSeconds = previousFrameTime === null ? 0 : (now - previousFrameTime) / 1000
+      previousFrameTime = now
 
       analyserNode.getByteFrequencyData(dataArray as Uint8Array<ArrayBuffer>)
 
@@ -110,7 +102,7 @@ export const AudioVisualizerCanvas: React.FC<AudioVisualizerProps> = ({
           drawParticles(ctx, dataArray, width, height, particlesRef)
           break
         case 'silk':
-          drawSilk(ctx, dataArray, width, height, silkPointsRef, canvasRef.current)
+          drawSilk(ctx, dataArray, width, height, silkPointsRef, canvasRef.current, deltaSeconds)
           break
         default:
           drawWave(ctx, dataArray, width, height)

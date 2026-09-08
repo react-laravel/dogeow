@@ -12,16 +12,17 @@ type ParticleStar = {
   prevY: number
 }
 
-type SilkDrop = {
+export type RainDrop = {
   x: number
   y: number
   len: number
   speed: number
   alpha: number
   hue: number
-  vx?: number
-  seed?: number
 }
+
+const RAIN_GRAVITY = 900 // px/s²，画布向下为正方向
+const RAIN_TERMINAL_SPEED = 1000 // px/s
 
 export function drawParticles(
   ctx: CanvasRenderingContext2D,
@@ -94,61 +95,56 @@ export function drawSilk(
   dataArray: Uint8Array,
   width: number,
   height: number,
-  silkPointsRef: RefLike<SilkDrop[]>,
-  canvasEl?: HTMLCanvasElement | null
+  silkPointsRef: RefLike<RainDrop[]>,
+  canvasEl?: HTMLCanvasElement | null,
+  deltaSeconds = 1 / 60
 ) {
   const bg = getBackgroundInfo(canvasEl)
   ctx.fillStyle = `rgba(${bg.r}, ${bg.g}, ${bg.b}, 0.98)`
   ctx.fillRect(0, 0, width, height)
 
   const drops = silkPointsRef.current
-  const avg = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length / 255
-  const bass = dataArray.slice(0, 4).reduce((sum, val) => sum + val, 0) / 4 / 255
+  const avg = dataArray.length
+    ? dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length / 255
+    : 0
+  // 恢复页面或卡顿后不补算整段离屏时间，避免雨滴突然跳到底部。
+  const dt = Math.max(0, Math.min(deltaSeconds, 0.05))
   const baseHue = 210
   const baseSpawn = Math.floor(1 + avg * 3)
-  const spawnCount = Math.random() < 0.3 + avg * 0.7 ? Math.max(0, Math.floor(baseSpawn / 2)) : 0
+  const expectedSpawns = Math.floor(baseSpawn / 2) * (0.3 + avg * 0.7) * 60 * dt
+  const spawnCount = Math.floor(expectedSpawns) + (Math.random() < expectedSpawns % 1 ? 1 : 0)
 
   for (let i = 0; i < spawnCount && drops.length < 100; i++) {
     drops.push({
-      x: (Math.random() - 0.05) * width,
+      x: Math.random() * width,
       y: -Math.random() * 20,
       len: 5,
-      speed: 4 + Math.random() * 6 + avg * 8,
+      speed: 240 + Math.random() * 240 + avg * 120,
       alpha: 0.4 + Math.random() * 0.3 + avg * 0.3,
       hue: baseHue + Math.random() * 20 - 10,
-      vx: (Math.random() - 0.5) * 0.3,
-      seed: Math.random() * 1000,
     })
   }
 
-  const t = performance.now() / 1000
-  const windMain = avg * 4 + bass * 2
-
   for (let i = drops.length - 1; i >= 0; i--) {
     const drop = drops[i]
-    const localGust = Math.sin((drop.seed ?? 0) + t * 0.18 + drop.y * 0.003) * (avg * 0.6)
-    const localWind = windMain * 0.6 + localGust
-    const vxPrev = drop.vx ?? 0
-    drop.vx = vxPrev + (localWind - vxPrev) * 0.03 + (Math.random() - 0.5) * 0.01
-    drop.vx *= 0.995
-
-    if (Math.random() < 0.005 * (avg + 0.2)) {
-      drop.vx += (Math.random() < 0.5 ? -1 : 1) * (0.2 + Math.random() * 0.4)
-    }
-
-    drop.y += drop.speed
-    drop.x += drop.vx
+    // 每滴雨的 x 保持不变；音乐只影响新雨滴，不在下落途中施加随机推力。
+    const accelerationTime = Math.min(dt, (RAIN_TERMINAL_SPEED - drop.speed) / RAIN_GRAVITY)
+    drop.y +=
+      drop.speed * accelerationTime +
+      (RAIN_GRAVITY * accelerationTime ** 2) / 2 +
+      RAIN_TERMINAL_SPEED * (dt - accelerationTime)
+    drop.speed = Math.min(RAIN_TERMINAL_SPEED, drop.speed + RAIN_GRAVITY * dt)
+    drop.len = Math.max(6, drop.speed * 0.016)
 
     if (drop.y > height + drop.len || drop.x > width + 40 || drop.x < -40) {
       drops.splice(i, 1)
       continue
     }
 
-    const dx = (drop.vx ?? 0) * (drop.len / drop.speed)
     ctx.beginPath()
     ctx.setLineDash([])
     ctx.moveTo(drop.x, drop.y)
-    ctx.lineTo(drop.x - dx, drop.y - drop.len)
+    ctx.lineTo(drop.x, drop.y - drop.len)
     ctx.strokeStyle = bg.isLight
       ? `hsla(${drop.hue}, 30%, 25%, ${Math.min(0.9, drop.alpha + 0.1)})`
       : `hsla(${drop.hue}, 55%, 80%, ${drop.alpha})`
