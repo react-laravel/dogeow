@@ -98,9 +98,7 @@ it('uses real SWR hooks to apply saved quantities and advance after all words ar
   expect(await screen.findByText('本组新词 10 个 · 复习 0 个')).toBeInTheDocument()
 
   for (let index = 1; index <= 10; index++) {
-    expect(
-      await screen.findByRole('heading', { name: `word-${index}`, exact: true })
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: `word-${index}` })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '查看释义' }))
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: '记住了' }))
@@ -109,7 +107,7 @@ it('uses real SWR hooks to apply saved quantities and advance after all words ar
   expect(await screen.findByText('学习完成！')).toBeInTheDocument()
   expect(learned.size).toBe(10)
   fireEvent.click(screen.getByRole('button', { name: '再学一组' }))
-  expect(await screen.findByRole('heading', { name: 'word-11', exact: true })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'word-11' })).toBeInTheDocument()
   expect(useWordStore.getState().initialStudyCount).toBe(10)
   expect(useWordStore.getState().currentWords.every(word => !learned.has(word.id))).toBe(true)
 })
