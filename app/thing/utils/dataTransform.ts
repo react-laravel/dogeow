@@ -1,10 +1,18 @@
-import { ItemImage, UploadedImage, Tag } from '@/app/thing/types'
+import { UploadedImage, Tag } from '@/app/thing/types'
+
+export interface ImageUploadSource {
+  id: number
+  path?: string | null
+  thumbnail_path?: string | null
+  url?: string | null
+  thumbnail_url?: string | null
+}
 
 /**
  * 将现有图片转换为上传图片格式
  */
-export function convertImagesToUploadedFormat(images: ItemImage[]): UploadedImage[] {
-  return images.map((img: ItemImage) => ({
+export function convertImagesToUploadedFormat(images: ImageUploadSource[]): UploadedImage[] {
+  return images.map(img => ({
     path: img.path ?? '',
     thumbnail_path: img.thumbnail_path ?? '',
     url: img.url ?? '',
@@ -16,7 +24,11 @@ export function convertImagesToUploadedFormat(images: ItemImage[]): UploadedImag
 /**
  * 构建位置路径字符串
  */
-export function buildLocationPath(areaName?: string, roomName?: string, spotName?: string): string {
+export function buildLocationPath(
+  areaName?: string | null,
+  roomName?: string | null,
+  spotName?: string | null
+): string {
   const parts = [areaName, roomName, spotName].filter(Boolean)
   return parts.join(' / ')
 }
@@ -70,7 +82,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 /**
  * 检查数据是否有变化
  */
-export function hasDataChanged<T>(current: T, initial: T): boolean {
+export function hasDataChanged(current: unknown, initial: unknown): boolean {
   return !deepEqual(current, initial)
 }
 

@@ -10,16 +10,14 @@ vi.mock('@/lib/i18n', () => ({
     lang => (key: string, fallback?: string) => `${lang}:${key}${fallback ? `:${fallback}` : ''}`
   ),
   normalizeLanguageCode: vi.fn(lang => {
-    const supportedLangs = ['zh-CN', 'zh-TW', 'en', 'ja']
+    const supportedLangs = ['zh-CN', 'en']
     return supportedLangs.includes(lang) ? lang : 'zh-CN'
   }),
   getAvailableLanguages: vi.fn(() => [
     { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文', isDefault: true },
-    { code: 'zh-TW', name: 'Chinese (Traditional)', nativeName: '繁體中文', isDefault: false },
     { code: 'en', name: 'English', nativeName: 'English', isDefault: false },
-    { code: 'ja', name: 'Japanese', nativeName: '日本語', isDefault: false },
   ]),
-  isSupportedLanguage: vi.fn((lang: string) => ['zh-CN', 'zh-TW', 'en', 'ja'].includes(lang)),
+  isSupportedLanguage: vi.fn((lang: string) => ['zh-CN', 'en'].includes(lang)),
 }))
 
 // Import mocked functions for testing
@@ -49,14 +47,7 @@ describe('languageStore', () => {
         currentLanguage: 'zh-CN',
         availableLanguages: [
           { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文', isDefault: true },
-          {
-            code: 'zh-TW',
-            name: 'Chinese (Traditional)',
-            nativeName: '繁體中文',
-            isDefault: false,
-          },
           { code: 'en', name: 'English', nativeName: 'English', isDefault: false },
-          { code: 'ja', name: 'Japanese', nativeName: '日本語', isDefault: false },
         ],
       })
     })
@@ -66,7 +57,7 @@ describe('languageStore', () => {
     const { result } = renderHook(() => useLanguageStore())
 
     expect(result.current.currentLanguage).toBe('zh-CN')
-    expect(result.current.availableLanguages).toHaveLength(4)
+    expect(result.current.availableLanguages).toHaveLength(2)
   })
 
   it('should set language correctly', () => {
@@ -107,7 +98,7 @@ describe('languageStore', () => {
   })
 
   it('should use stored language when initializing if preference is saved', async () => {
-    localStorage.setItem('dogeow-language-preference', 'ja')
+    localStorage.setItem('dogeow-language-preference', 'en')
 
     const { result } = renderHook(() => useLanguageStore())
 
@@ -115,9 +106,9 @@ describe('languageStore', () => {
       await result.current.initializeLanguage()
     })
 
-    expect(result.current.currentLanguage).toBe('ja')
+    expect(result.current.currentLanguage).toBe('en')
     expect(mockDetectBrowserLanguage).not.toHaveBeenCalled()
-    expect(mockCreateTranslationFunction).toHaveBeenCalledWith('ja')
+    expect(mockCreateTranslationFunction).toHaveBeenCalledWith('en')
   })
 
   it('should detect browser language when persisted current language is stale english default', async () => {
@@ -162,17 +153,17 @@ describe('languageStore', () => {
     const { result } = renderHook(() => useLanguageStore())
 
     act(() => {
-      result.current.setLanguage('ja')
+      result.current.setLanguage('en')
     })
 
-    expect(result.current.t('nav.game')).toBe('ja:nav.game')
-    expect(result.current.t('nav.game', 'Games')).toBe('ja:nav.game:Games')
+    expect(result.current.t('nav.game')).toBe('en:nav.game')
+    expect(result.current.t('nav.game', 'Games')).toBe('en:nav.game:Games')
   })
 
   it('should handle various browser language detection scenarios', async () => {
     const testCases = [
       { browserLang: 'zh-TW', expected: 'zh-TW' },
-      { browserLang: 'ja', expected: 'ja' },
+      { browserLang: 'en', expected: 'en' },
       { browserLang: 'fr', expected: 'zh-CN' }, // Unsupported language should fallback
     ]
 

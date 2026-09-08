@@ -92,7 +92,7 @@ describe('LanguageDetectionService', () => {
 
     it('should ignore stored preference when requested', async () => {
       const mockLocalStorage = {
-        getItem: vi.fn().mockReturnValue('ja'),
+        getItem: vi.fn().mockReturnValue('en'),
         setItem: vi.fn(),
         removeItem: vi.fn(),
         clear: vi.fn(),
@@ -142,8 +142,8 @@ describe('LanguageDetectionService', () => {
       })
 
       const result = (service as any).detectBrowserLanguage()
-      expect(result.language).toBe('zh-TW')
-      expect(result.confidence).toBeGreaterThan(0.8)
+      expect(result.language).toBe('zh-CN')
+      expect(result.confidence).toBeGreaterThanOrEqual(0.8)
     })
   })
 
@@ -173,14 +173,14 @@ describe('LanguageDetectionService', () => {
 
   describe('user agent detection', () => {
     it('should detect language from user agent', () => {
-      // Mock user agent with Japanese
+      // Mock user agent with English
       Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, userAgent: 'Mozilla/5.0 (ja) AppleWebKit/537.36' },
+        value: { ...mockNavigator, userAgent: 'Mozilla/5.0 (en) AppleWebKit/537.36' },
         writable: true,
       })
 
       const result = (service as any).detectByUserAgent()
-      expect(result.language).toBe('ja')
+      expect(result.language).toBe('en')
       expect(result.confidence).toBe(0.6)
       expect(result.method).toBe('user_agent')
     })
@@ -188,12 +188,12 @@ describe('LanguageDetectionService', () => {
     it('should handle navigator properties', () => {
       // Mock navigator with userLanguage
       Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, userLanguage: 'ja' },
+        value: { ...mockNavigator, userLanguage: 'en' },
         writable: true,
       })
 
       const result = (service as any).detectByUserAgent()
-      expect(result.language).toBe('ja')
+      expect(result.language).toBe('en')
     })
   })
 
@@ -201,7 +201,7 @@ describe('LanguageDetectionService', () => {
     it('should return stored preference if available', () => {
       // Mock localStorage with stored preference
       const mockLocalStorage = {
-        getItem: vi.fn().mockReturnValue('ja'),
+        getItem: vi.fn().mockReturnValue('en'),
         setItem: vi.fn(),
         removeItem: vi.fn(),
         clear: vi.fn(),
@@ -213,7 +213,7 @@ describe('LanguageDetectionService', () => {
       })
 
       const result = (service as any).getStoredPreference()
-      expect(result).toBe('ja')
+      expect(result).toBe('en')
     })
 
     it('should return null if no stored preference', () => {
@@ -238,9 +238,9 @@ describe('LanguageDetectionService', () => {
   describe('utility methods', () => {
     it('should check if language is supported', () => {
       expect((service as any).isSupportedLanguage('zh-CN')).toBe(true)
-      expect((service as any).isSupportedLanguage('zh-TW')).toBe(true)
+      expect((service as any).isSupportedLanguage('zh-TW')).toBe(false)
       expect((service as any).isSupportedLanguage('en')).toBe(true)
-      expect((service as any).isSupportedLanguage('ja')).toBe(true)
+      expect((service as any).isSupportedLanguage('ja')).toBe(false)
       expect((service as any).isSupportedLanguage('fr')).toBe(false)
     })
 

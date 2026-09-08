@@ -22,10 +22,13 @@ import {
 
 describe('ApiRequestError', () => {
   it('should create error with status and data', () => {
-    const error = new ApiRequestError('Not found', 404, { errors: { field: ['error'] } })
+    const error = new ApiRequestError('Not found', 404, {
+      message: 'Validation failed',
+      errors: { field: ['error'] },
+    })
     expect(error.message).toBe('Not found')
     expect(error.status).toBe(404)
-    expect(error.data).toEqual({ errors: { field: ['error'] } })
+    expect(error.data).toEqual({ message: 'Validation failed', errors: { field: ['error'] } })
     expect(error.name).toBe('ApiRequestError')
   })
 
@@ -84,6 +87,7 @@ describe('handleApiError', () => {
   it('should handle ApiRequestError with 422 status', () => {
     mockToast.error.mockClear()
     const error = new ApiRequestError('Validation failed', 422, {
+      message: 'Validation failed',
       errors: { email: ['Invalid email'] },
     })
     handleApiError(error)

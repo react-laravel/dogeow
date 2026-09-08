@@ -26,26 +26,13 @@ vi.mock('../translations', () => ({
       'nav.home': 'Home',
       'nav.about': 'About',
       'common.save': 'Save',
+      'english.only': 'English only',
       // Missing 'common.cancel' to test fallback
-    },
-    ja: {
-      // Missing nav.home to test fallback
-      'nav.about': 'について',
-      'common.save': '保存',
-      'common.cancel': 'キャンセル',
-    },
-    'zh-TW': {
-      'nav.home': '首頁',
-      'nav.about': '關於',
-      'common.save': '儲存',
-      'common.cancel': '取消',
     },
   },
   SUPPORTED_LANGUAGES: [
     { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文' },
-    { code: 'zh-TW', name: 'Chinese (Traditional)', nativeName: '繁體中文' },
     { code: 'en', name: 'English', nativeName: 'English' },
-    { code: 'ja', name: 'Japanese', nativeName: '日本語' },
   ],
 }))
 
@@ -110,13 +97,13 @@ describe('i18n utils', () => {
     it('should fallback to navigator.language if languages is not available', () => {
       Object.defineProperty(global, 'navigator', {
         value: {
-          language: 'ja',
+          language: 'en',
         },
         writable: true,
       })
 
       const result = detectBrowserLanguage()
-      expect(result).toBe('ja')
+      expect(result).toBe('en')
     })
 
     it('should return default language if no match found', () => {
@@ -150,8 +137,8 @@ describe('i18n utils', () => {
     it('should return true for supported languages', () => {
       expect(isSupportedLanguage('zh-CN')).toBe(true)
       expect(isSupportedLanguage('en')).toBe(true)
-      expect(isSupportedLanguage('ja')).toBe(true)
-      expect(isSupportedLanguage('zh-TW')).toBe(true)
+      expect(isSupportedLanguage('ja')).toBe(false)
+      expect(isSupportedLanguage('zh-TW')).toBe(false)
     })
 
     it('should return false for unsupported languages', () => {
@@ -166,7 +153,6 @@ describe('i18n utils', () => {
     it('should return translation for existing key in current language', () => {
       expect(getTranslation('nav.home', 'en')).toBe('Home')
       expect(getTranslation('nav.home', 'zh-CN')).toBe('首页')
-      expect(getTranslation('nav.home', 'ja')).toBe('首页') // Falls back to zh-CN
     })
 
     it('should fallback to zh-CN when key missing in current language', () => {
@@ -180,7 +166,7 @@ describe('i18n utils', () => {
       setNodeEnv('development')
 
       // Mock a scenario where key exists in en but not in zh-CN or current language
-      expect(getTranslation('nav.about', 'ja')).toBe('について') // Exists in ja
+      expect(getTranslation('english.only', 'zh-CN')).toBe('English only')
     })
 
     it('should use provided fallback when key not found anywhere', () => {
@@ -254,9 +240,9 @@ describe('i18n utils', () => {
   describe('getLanguageNativeName', () => {
     it('should return native name for supported languages', () => {
       expect(getLanguageNativeName('zh-CN')).toBe('简体中文')
-      expect(getLanguageNativeName('zh-TW')).toBe('繁體中文')
+      expect(getLanguageNativeName('zh-TW')).toBe('zh-TW')
       expect(getLanguageNativeName('en')).toBe('English')
-      expect(getLanguageNativeName('ja')).toBe('日本語')
+      expect(getLanguageNativeName('ja')).toBe('ja')
     })
 
     it('should return language code for unsupported languages', () => {
@@ -268,9 +254,9 @@ describe('i18n utils', () => {
   describe('getLanguageEnglishName', () => {
     it('should return English name for supported languages', () => {
       expect(getLanguageEnglishName('zh-CN')).toBe('Chinese (Simplified)')
-      expect(getLanguageEnglishName('zh-TW')).toBe('Chinese (Traditional)')
+      expect(getLanguageEnglishName('zh-TW')).toBe('zh-TW')
       expect(getLanguageEnglishName('en')).toBe('English')
-      expect(getLanguageEnglishName('ja')).toBe('Japanese')
+      expect(getLanguageEnglishName('ja')).toBe('ja')
     })
 
     it('should return language code for unsupported languages', () => {
@@ -283,7 +269,7 @@ describe('i18n utils', () => {
     it('should return valid language codes as-is', () => {
       expect(normalizeLanguageCode('zh-CN')).toBe('zh-CN')
       expect(normalizeLanguageCode('en')).toBe('en')
-      expect(normalizeLanguageCode('ja')).toBe('ja')
+      expect(normalizeLanguageCode('ja')).toBe('zh-CN')
     })
 
     it('should match by language prefix', () => {
@@ -305,7 +291,7 @@ describe('i18n utils', () => {
     it('should return all supported languages with metadata', () => {
       const languages = getAvailableLanguages()
 
-      expect(languages).toHaveLength(4)
+      expect(languages).toHaveLength(2)
       expect(languages[0]).toEqual({
         code: 'zh-CN',
         name: 'Chinese (Simplified)',
@@ -313,21 +299,9 @@ describe('i18n utils', () => {
         isDefault: true,
       })
       expect(languages[1]).toEqual({
-        code: 'zh-TW',
-        name: 'Chinese (Traditional)',
-        nativeName: '繁體中文',
-        isDefault: false,
-      })
-      expect(languages[2]).toEqual({
         code: 'en',
         name: 'English',
         nativeName: 'English',
-        isDefault: false,
-      })
-      expect(languages[3]).toEqual({
-        code: 'ja',
-        name: 'Japanese',
-        nativeName: '日本語',
         isDefault: false,
       })
     })
@@ -356,10 +330,7 @@ describe('i18n utils', () => {
         key: 'common.cancel',
         language: 'en',
       })
-      expect(result.missingTranslations).toContainEqual({
-        key: 'nav.home',
-        language: 'ja',
-      })
+      expect(result.missingTranslations).toHaveLength(1)
 
       groupSpy.mockRestore()
       groupEndSpy.mockRestore()

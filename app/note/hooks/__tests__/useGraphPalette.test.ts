@@ -127,7 +127,7 @@ describe('useGraphPalette', () => {
 
     // Empty strings should trigger fallback
     expect(result.current.background).not.toBe('')
-    expect(result.current.foreground).not.toBe('')
+    expect(result.current.nodeDefault).not.toBe('')
     expect(result.current.nodeActive).not.toBe('')
   })
 

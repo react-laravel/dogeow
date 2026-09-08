@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildCategoryTree } from '../buildCategoryTree'
-import type { Category, CategoryWithChildren } from '../../types'
+import type { Category } from '../../../types'
+import type { CategoryWithChildren } from '../buildCategoryTree'
 
 // ─── Factory helpers ───────────────────────────────────────────────────────────
 
@@ -8,7 +9,7 @@ const createCategory = (overrides: Partial<Category> = {}): Category => ({
   id: 0,
   name: '',
   parent_id: null,
-  sort_order: 0,
+  items_count: 0,
   ...overrides,
 })
 
@@ -129,15 +130,15 @@ describe('buildCategoryTree', () => {
 
   it('preserves all category properties in parent nodes', () => {
     const categories = [
-      createCategory({ id: 1, name: '电子产品', parent_id: null, sort_order: 1 }),
-      createCategory({ id: 2, name: '手机', parent_id: 1, sort_order: 2 }),
+      createCategory({ id: 1, name: '电子产品', parent_id: null, items_count: 1 }),
+      createCategory({ id: 2, name: '手机', parent_id: 1, items_count: 2 }),
     ]
 
     const result = buildCategoryTree(categories)
 
     expect(result[0].id).toBe(1)
     expect(result[0].name).toBe('电子产品')
-    expect(result[0].sort_order).toBe(1)
-    expect(result[0].children![0].sort_order).toBe(2)
+    expect(result[0].items_count).toBe(1)
+    expect(result[0].children![0].items_count).toBe(2)
   })
 })

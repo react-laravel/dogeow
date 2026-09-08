@@ -8,21 +8,15 @@ import {
   useRenameFile,
 } from '../useFileOperations'
 
-// Mock swr
-vi.mock('swr', () => ({
-  useSWRConfig: () => ({ mutate: vi.fn() }),
-  useSWRMutation: ({ fn }: { fn: (url: string, arg: unknown) => Promise<unknown> }) => {
-    const { trigger, isMutating } = (() => {
-      let pending = false
-      return {
-        trigger: vi.fn(async (arg: unknown) => fn('/cloud/folders', { arg })),
-        get isMutating() {
-          return pending
-        },
-      }
-    })()
-    return { trigger, isMutating }
-  },
+vi.mock('swr', () => ({ useSWRConfig: () => ({ mutate: vi.fn() }) }))
+vi.mock('swr/mutation', () => ({
+  default: (
+    url: string,
+    fetcher: (url: string, options: { arg: unknown }) => Promise<unknown>
+  ) => ({
+    trigger: (arg: unknown) => fetcher(url, { arg }),
+    isMutating: false,
+  }),
 }))
 
 // Mock sonner
@@ -43,14 +37,14 @@ const mockUseFileStore = {
   setSearchQuery: vi.fn(),
   handleSort: vi.fn(),
 }
-vi.mock('../store/useFileStore', () => ({
-  default: () => mockUseFileStore,
+vi.mock('../../store/useFileStore', () => ({
+  default: Object.assign(() => mockUseFileStore, { getState: () => mockUseFileStore }),
 }))
 
 // Mock lib/api
-const mockMutate = vi.fn()
 vi.mock('@/lib/api', () => ({
   post: vi.fn(),
+  patch: vi.fn(),
   del: vi.fn(),
   uploadFile: vi.fn(),
   handleApiError: vi.fn(),
@@ -165,7 +159,7 @@ describe('useFileOperations', () => {
       const { result } = renderHook(() => useFileUpload())
 
       const mockEvent = {
-        target: { files: [] as FileList, value: '' },
+        target: { files: [] as unknown as FileList, value: '' },
       } as unknown as React.ChangeEvent<HTMLInputElement>
 
       await act(async () => {
@@ -191,6 +185,39 @@ describe('useFileOperations', () => {
       })
 
       expect(result.current.isDeleting).toBe(false)
+    })
+
+    it('keeps failed files selected for retry after a partial deletion', async () => {
+      const { del } = await import('@/lib/api')
+      vi.mocked(del).mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('failed'))
+      mockUseFileStore.selectedFiles = [1, 2]
+      const { result } = renderHook(() => useDeleteFiles())
+      await act(async () => {
+        await result.current.deleteSelectedFiles()
+      })
+      expect(mockUseFileStore.setSelectedFiles).toHaveBeenCalledWith([2])
+    })
+
+    it('does not overwrite a new selection made while deletion is pending', async () => {
+      const { del } = await import('@/lib/api')
+      let finish: (() => void) | undefined
+      vi.mocked(del).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          finish = resolve
+        })
+      )
+      mockUseFileStore.selectedFiles = [1]
+      const { result } = renderHook(() => useDeleteFiles())
+      let pending: Promise<void> | undefined
+      act(() => {
+        pending = result.current.deleteSelectedFiles()
+      })
+      mockUseFileStore.selectedFiles = [3]
+      await act(async () => {
+        finish?.()
+        await pending
+      })
+      expect(mockUseFileStore.setSelectedFiles).toHaveBeenCalledWith([3])
     })
 
     it('should delete single file', async () => {
@@ -228,8 +255,8 @@ describe('useFileOperations', () => {
     })
 
     it('should rename file', async () => {
-      const { post } = await import('@/lib/api')
-      ;(post as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({})
+      const { patch } = await import('@/lib/api')
+      ;(patch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({})
 
       const { result } = renderHook(() => useRenameFile())
 
@@ -238,7 +265,7 @@ describe('useFileOperations', () => {
       })
 
       expect(success).toBe(true)
-      expect(post).toHaveBeenCalledWith('/cloud/files/1/rename', { name: 'new-name.txt' })
+      expect(patch).toHaveBeenCalledWith('/cloud/files/1', { name: 'new-name.txt' })
     })
   })
 

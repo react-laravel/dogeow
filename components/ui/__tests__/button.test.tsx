@@ -279,3 +279,29 @@ describe('Button', () => {
     })
   })
 })
+
+describe('disabled link buttons', () => {
+  it('blocks a slotted anchor including its own click handler', () => {
+    const onClick = vi.fn()
+    const onKeyDown = vi.fn()
+    render(
+      <Button asChild disabled>
+        <a href="/blocked" onClick={onClick} onKeyDown={onKeyDown}>
+          链接
+        </a>
+      </Button>
+    )
+    const link = screen.getByRole('link', { name: '链接' })
+    expect(link).toHaveAttribute('aria-disabled', 'true')
+    expect(link).toHaveAttribute('tabindex', '-1')
+    expect(fireEvent.click(link)).toBe(false)
+    fireEvent.keyDown(link, { key: 'Enter' })
+    expect(onClick).not.toHaveBeenCalled()
+    expect(onKeyDown).not.toHaveBeenCalled()
+  })
+
+  it('exposes a loading button as busy', () => {
+    render(<Button loading>保存</Button>)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true')
+  })
+})

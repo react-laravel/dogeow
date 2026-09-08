@@ -13,7 +13,7 @@ import {
   Twitter,
   Youtube,
 } from 'lucide-react'
-import { Command, createSuggestionItems, renderItems } from 'novel'
+import { Command, createSuggestionItems, renderItems } from './runtime/suggestions'
 import { uploadFn } from './image-upload'
 
 export const suggestionItems = createSuggestionItems([
@@ -191,7 +191,12 @@ export const suggestionItems = createSuggestionItems([
 
 export const slashCommand = Command.configure({
   suggestion: {
-    items: () => suggestionItems,
+    items: ({ query }) =>
+      suggestionItems.filter(item =>
+        [item.title, ...(item.searchTerms ?? [])].some(term =>
+          term.toLowerCase().includes(query.toLowerCase())
+        )
+      ),
     render: renderItems,
   },
 })

@@ -142,9 +142,9 @@ describe('log-control (singleton)', () => {
     })
 
     it('should save options to localStorage when window is available', () => {
-      global.window = {
+      vi.stubGlobal('window', {
         localStorage: mockLocalStorage,
-      } as unknown as Window & { localStorage: Storage }
+      } as unknown as Window & { localStorage: Storage })
 
       logControl.updateOptions({ verbose: false })
 

@@ -86,7 +86,7 @@ function detectLanguageByGeolocation(): SupportedLanguage | null {
       const parsed = JSON.parse(geoData)
       const now = Date.now()
       // 24小时内有效
-      if (now - parsed.timestamp < 24 * 60 * 60 * 1000) {
+      if (now - parsed.timestamp < 24 * 60 * 60 * 1000 && isSupportedLanguage(parsed.language)) {
         return parsed.language
       }
     }

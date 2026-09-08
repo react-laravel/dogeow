@@ -39,7 +39,7 @@ let mockNodes: any[] = []
 let mockLinks: any[] = []
 let mockLoading = true
 
-const mockUseGraphData = vi.fn(() => ({
+const mockUseGraphData = vi.fn((..._args: unknown[]) => ({
   nodes: mockNodes,
   setNodes: vi.fn(),
   links: mockLinks,
@@ -50,7 +50,7 @@ const mockUseGraphData = vi.fn(() => ({
   resumeGraphAnimation: vi.fn(),
 }))
 
-const mockUseArticleLoader = vi.fn(() => ({
+const mockUseArticleLoader = vi.fn((..._args: unknown[]) => ({
   articleHtml: '',
   articleRaw: '',
   articleJson: null,
@@ -60,7 +60,7 @@ const mockUseArticleLoader = vi.fn(() => ({
   resetArticle: vi.fn(),
 }))
 
-const mockUseThemeColors = vi.fn(() => ({
+const mockUseThemeColors = vi.fn((..._args: unknown[]) => ({
   isDark: false,
   themeColors: {
     background: '#ffffff',
@@ -75,12 +75,12 @@ const mockUseThemeColors = vi.fn(() => ({
   },
 }))
 
-const mockUseGraphFilter = vi.fn(() => ({
+const mockUseGraphFilter = vi.fn((..._args: unknown[]) => ({
   filtered: { nodes: mockNodes, links: mockLinks },
   neighborIds: new Set<string>(),
 }))
 
-const mockUseGraphPalette = vi.fn(() => ({
+const mockUseGraphPalette = vi.fn((..._args: unknown[]) => ({
   background: '#ffffff',
   nodeDefault: '#111827',
   nodeActive: '#2563eb',

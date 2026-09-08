@@ -44,27 +44,27 @@ describe('default theme', () => {
 
   it('should have CSS variables', () => {
     expect(defaultTheme.styles.cssVariables).toBeDefined()
-    expect(defaultTheme.styles.cssVariables['--app-header-height']).toBe('50px')
+    expect(defaultTheme.styles.cssVariables?.['--app-header-height']).toBe('50px')
   })
 
   it('should have component variants', () => {
     expect(defaultTheme.styles.componentVariants).toBeDefined()
-    expect(defaultTheme.styles.componentVariants.card).toBe('default')
-    expect(defaultTheme.styles.componentVariants.button).toBe('default')
-    expect(defaultTheme.styles.componentVariants.input).toBe('default')
-    expect(defaultTheme.styles.componentVariants.tile).toBe('default')
+    expect(defaultTheme.styles.componentVariants?.card).toBe('default')
+    expect(defaultTheme.styles.componentVariants?.button).toBe('default')
+    expect(defaultTheme.styles.componentVariants?.input).toBe('default')
+    expect(defaultTheme.styles.componentVariants?.tile).toBe('default')
   })
 
   it('should have component mappings', () => {
     expect(defaultTheme.components).toBeDefined()
-    expect(defaultTheme.components.TileCard).toBe('components/app/TileCard')
-    expect(defaultTheme.components.AppLauncher).toBe('components/launcher')
+    expect(defaultTheme.components?.TileCard).toBe('components/app/TileCard')
+    expect(defaultTheme.components?.AppLauncher).toBe('components/launcher')
   })
 
   it('should have metadata with tags', () => {
     expect(defaultTheme.metadata).toBeDefined()
-    expect(defaultTheme.metadata.tags).toContain('default')
-    expect(defaultTheme.metadata.tags).toContain('classic')
+    expect(defaultTheme.metadata?.tags).toContain('default')
+    expect(defaultTheme.metadata?.tags).toContain('classic')
   })
 
   it('should conform to UITheme interface', () => {

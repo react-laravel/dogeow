@@ -28,10 +28,10 @@ describe('sidebar theme', () => {
 
   it('should have sidebar configuration', () => {
     expect(sidebarTheme.layout.sidebar).toBeDefined()
-    expect(sidebarTheme.layout.sidebar.position).toBe('left')
-    expect(sidebarTheme.layout.sidebar.width).toBe('240px')
-    expect(sidebarTheme.layout.sidebar.collapsible).toBe(true)
-    expect(sidebarTheme.layout.sidebar.defaultCollapsed).toBe(false)
+    expect(sidebarTheme.layout.sidebar?.position).toBe('left')
+    expect(sidebarTheme.layout.sidebar?.width).toBe('240px')
+    expect(sidebarTheme.layout.sidebar?.collapsible).toBe(true)
+    expect(sidebarTheme.layout.sidebar?.defaultCollapsed).toBe(false)
   })
 
   it('should have sidebar component path', () => {
@@ -51,28 +51,28 @@ describe('sidebar theme', () => {
 
   it('should have CSS variables including sidebar width', () => {
     expect(sidebarTheme.styles.cssVariables).toBeDefined()
-    expect(sidebarTheme.styles.cssVariables['--app-header-height']).toBe('60px')
-    expect(sidebarTheme.styles.cssVariables['--sidebar-width']).toBe('240px')
+    expect(sidebarTheme.styles.cssVariables?.['--app-header-height']).toBe('60px')
+    expect(sidebarTheme.styles.cssVariables?.['--sidebar-width']).toBe('240px')
   })
 
   it('should have sidebar-style component variants', () => {
     expect(sidebarTheme.styles.componentVariants).toBeDefined()
-    expect(sidebarTheme.styles.componentVariants.card).toBe('bordered')
-    expect(sidebarTheme.styles.componentVariants.button).toBe('minimal')
-    expect(sidebarTheme.styles.componentVariants.input).toBe('outlined')
-    expect(sidebarTheme.styles.componentVariants.tile).toBe('compact')
+    expect(sidebarTheme.styles.componentVariants?.card).toBe('bordered')
+    expect(sidebarTheme.styles.componentVariants?.button).toBe('minimal')
+    expect(sidebarTheme.styles.componentVariants?.input).toBe('outlined')
+    expect(sidebarTheme.styles.componentVariants?.tile).toBe('compact')
   })
 
   it('should have component mappings', () => {
     expect(sidebarTheme.components).toBeDefined()
-    expect(sidebarTheme.components.TileCard).toBe('themes/sidebar/TileCard')
+    expect(sidebarTheme.components?.TileCard).toBe('themes/sidebar/TileCard')
   })
 
   it('should have metadata with tags', () => {
     expect(sidebarTheme.metadata).toBeDefined()
-    expect(sidebarTheme.metadata.tags).toContain('sidebar')
-    expect(sidebarTheme.metadata.tags).toContain('admin')
-    expect(sidebarTheme.metadata.tags).toContain('classic')
+    expect(sidebarTheme.metadata?.tags).toContain('sidebar')
+    expect(sidebarTheme.metadata?.tags).toContain('admin')
+    expect(sidebarTheme.metadata?.tags).toContain('classic')
   })
 
   it('should be different from default theme', () => {

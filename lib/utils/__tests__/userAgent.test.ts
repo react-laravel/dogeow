@@ -121,7 +121,7 @@ describe('userAgent', () => {
 
     afterEach(() => {
       global.navigator = originalNavigator
-      global.window = originalWindow
+      vi.stubGlobal('window', originalWindow)
     })
 
     it('should return true for Android user agent', () => {
@@ -130,7 +130,9 @@ describe('userAgent', () => {
           'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
         maxTouchPoints: 1,
       } as Navigator & { maxTouchPoints: number }
-      global.window = { ontouchstart: null } as Window & { ontouchstart: (() => void) | null }
+      vi.stubGlobal('window', { ontouchstart: null } as Window & {
+        ontouchstart: (() => void) | null
+      })
 
       expect(isMobileDevice()).toBe(true)
     })
@@ -141,7 +143,9 @@ describe('userAgent', () => {
           'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
         maxTouchPoints: 5,
       } as Navigator & { maxTouchPoints: number }
-      global.window = { ontouchstart: null } as Window & { ontouchstart: (() => void) | null }
+      vi.stubGlobal('window', { ontouchstart: null } as Window & {
+        ontouchstart: (() => void) | null
+      })
 
       expect(isMobileDevice()).toBe(true)
     })
@@ -151,7 +155,7 @@ describe('userAgent', () => {
         userAgent: 'SomeBot/1.0',
         maxTouchPoints: 0,
       } as unknown as Navigator
-      global.window = { ontouchstart: () => {} } as unknown as Window
+      vi.stubGlobal('window', { ontouchstart: () => {} } as unknown as Window)
 
       expect(isMobileDevice()).toBe(true)
     })
@@ -161,15 +165,17 @@ describe('userAgent', () => {
         userAgent: 'SomeBot/1.0',
         maxTouchPoints: 2,
       } as Navigator & { maxTouchPoints: number }
-      global.window = { ontouchstart: null } as Window & { ontouchstart: (() => void) | null }
+      vi.stubGlobal('window', { ontouchstart: null } as Window & {
+        ontouchstart: (() => void) | null
+      })
 
       expect(isMobileDevice()).toBe(true)
     })
 
     it('should return false for desktop user agent without touch', () => {
       const desktopWindow = {} as Window
-      delete (desktopWindow as Record<string, unknown>).ontouchstart
-      global.window = desktopWindow
+      Reflect.deleteProperty(desktopWindow, 'ontouchstart')
+      vi.stubGlobal('window', desktopWindow)
       global.navigator = {
         userAgent:
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',

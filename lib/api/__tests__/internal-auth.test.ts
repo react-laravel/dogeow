@@ -3,7 +3,7 @@ import { authenticatedInternalFetch } from '../internal-auth'
 
 // Use vi.hoisted to create mock functions before module loading
 const { mockGetState } = vi.hoisted(() => {
-  const state = { token: 'internal-auth-token', user: null }
+  const state: { token: string | null; user: null } = { token: 'internal-auth-token', user: null }
   return {
     mockGetState: vi.fn(() => ({ ...state })),
     setState: (newState: Partial<typeof state>) => {

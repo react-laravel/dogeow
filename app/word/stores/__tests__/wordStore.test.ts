@@ -226,18 +226,30 @@ describe('wordStore', () => {
 
   describe('settings', () => {
     it('should set settings', () => {
-      const settings = { autoPlayPronunciation: true, showPhonetic: true }
+      const settings = {
+        id: 1,
+        user_id: 1,
+        daily_new_words: 20,
+        review_multiplier: 2,
+        is_auto_pronounce: true,
+      }
       useWordStore.getState().setSettings(settings)
 
       expect(useWordStore.getState().settings).toEqual(settings)
     })
 
     it('should update settings partially', () => {
-      useWordStore.getState().setSettings({ autoPlayPronunciation: true, showPhonetic: true })
-      useWordStore.getState().updateSettings({ autoPlayPronunciation: false })
+      useWordStore.getState().setSettings({
+        id: 1,
+        user_id: 1,
+        daily_new_words: 20,
+        review_multiplier: 2,
+        is_auto_pronounce: true,
+      })
+      useWordStore.getState().updateSettings({ is_auto_pronounce: false })
 
-      expect(useWordStore.getState().settings?.autoPlayPronunciation).toBe(false)
-      expect(useWordStore.getState().settings?.showPhonetic).toBe(true)
+      expect(useWordStore.getState().settings?.is_auto_pronounce).toBe(false)
+      expect(useWordStore.getState().settings?.daily_new_words).toBe(20)
     })
   })
 

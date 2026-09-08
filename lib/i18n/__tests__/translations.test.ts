@@ -20,12 +20,12 @@ describe('translations', () => {
       expect(translations['en']['nav.thing']).toBe('Things')
     })
 
-    it('should have ja translations', () => {
-      expect(translations['ja']).toBeDefined()
+    it('should omit unsupported ja translations', () => {
+      expect(translations['ja']).toBeUndefined()
     })
 
-    it('should have zh-TW translations', () => {
-      expect(translations['zh-TW']).toBeDefined()
+    it('should omit unsupported zh-TW translations', () => {
+      expect(translations['zh-TW']).toBeUndefined()
     })
 
     it('should have common keys in English translations', () => {
@@ -61,8 +61,8 @@ describe('translations', () => {
   })
 
   describe('SUPPORTED_LANGUAGES', () => {
-    it('should have 4 supported languages', () => {
-      expect(SUPPORTED_LANGUAGES).toHaveLength(4)
+    it('should have 2 supported languages', () => {
+      expect(SUPPORTED_LANGUAGES).toHaveLength(2)
     })
 
     it('should include zh-CN', () => {
@@ -72,11 +72,8 @@ describe('translations', () => {
       expect(zhCN?.nativeName).toBe('简体中文')
     })
 
-    it('should include zh-TW', () => {
-      const zhTW = SUPPORTED_LANGUAGES.find(l => l.code === 'zh-TW')
-      expect(zhTW).toBeDefined()
-      expect(zhTW?.name).toBe('Chinese (Traditional)')
-      expect(zhTW?.nativeName).toBe('繁體中文')
+    it('does not publish unsupported zh-TW', () => {
+      expect(SUPPORTED_LANGUAGES.map(language => String(language.code))).not.toContain('zh-TW')
     })
 
     it('should include en', () => {
@@ -86,11 +83,8 @@ describe('translations', () => {
       expect(en?.nativeName).toBe('English')
     })
 
-    it('should include ja', () => {
-      const ja = SUPPORTED_LANGUAGES.find(l => l.code === 'ja')
-      expect(ja).toBeDefined()
-      expect(ja?.name).toBe('Japanese')
-      expect(ja?.nativeName).toBe('日本語')
+    it('does not publish unsupported ja', () => {
+      expect(SUPPORTED_LANGUAGES.map(language => String(language.code))).not.toContain('ja')
     })
 
     it('should have code, name, and nativeName for each language', () => {

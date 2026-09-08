@@ -1,9 +1,10 @@
+import { DEFAULT_CODEX_MODEL } from '@/lib/utils/codex-models'
 import {
   getStoredCodexModel,
   getStoredCodexReasoningEffort,
 } from '@/app/ai/features/chat/hooks/modelStorage'
 
-export const WORD_AI_DEFAULT_MODEL = 'gpt-5.3-codex-spark'
+export const WORD_AI_DEFAULT_MODEL = DEFAULT_CODEX_MODEL
 
 export function getWordAIRequestConfig() {
   return {

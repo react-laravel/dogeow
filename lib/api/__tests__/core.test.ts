@@ -74,3 +74,60 @@ describe('core apiRequest csrf retry integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 })
+
+describe('request timer cleanup', () => {
+  it('clears the timer after success and does not abort a completed request', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: [], success: true }))
+      vi.stubGlobal('fetch', fetchMock)
+      await apiRequest('notes', 'GET', undefined, { handleError: false })
+      expect(vi.getTimerCount()).toBe(0)
+      await vi.advanceTimersByTimeAsync(60000)
+      expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(false)
+    } finally {
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('clears the timer when fetch fails', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+      await expect(apiRequest('notes', 'GET', undefined, { handleError: false })).rejects.toThrow(
+        '网络连接失败'
+      )
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('aborts a stalled request at the deadline', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          (_url: unknown, init: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init.signal?.addEventListener('abort', () =>
+                reject(new DOMException('aborted', 'AbortError'))
+              )
+            })
+        )
+      )
+      const assertion = expect(
+        apiRequest('notes', 'GET', undefined, { handleError: false })
+      ).rejects.toThrow('请求超时')
+      await vi.advanceTimersByTimeAsync(30000)
+      await assertion
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+    }
+  })
+})

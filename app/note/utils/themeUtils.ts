@@ -52,7 +52,7 @@ export const withAlpha = (color: string, alpha: number, fallback: string): strin
 export const nodeDataToWikiNode = (node: {
   id: string | number
   title: string
-  slug: string
+  slug?: string
   tags?: string[]
   summary?: string
 }): {

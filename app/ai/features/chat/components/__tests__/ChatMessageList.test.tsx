@@ -35,7 +35,7 @@ const createMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 
 describe('ChatMessageList', () => {
   it('renders empty state when no messages and not loading', () => {
-    render(<ChatMessageList messages={[]} isLoading={false} />)
+    render(<ChatMessageList messagesEndRef={{ current: null }} messages={[]} isLoading={false} />)
     expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
   })
 
@@ -44,7 +44,9 @@ describe('ChatMessageList', () => {
       createMessage({ role: 'user', content: 'Hello' }),
       createMessage({ role: 'assistant', content: 'Hi there' }),
     ]
-    render(<ChatMessageList messages={messages} isLoading={false} />)
+    render(
+      <ChatMessageList messagesEndRef={{ current: null }} messages={messages} isLoading={false} />
+    )
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(screen.getByText('Hi there')).toBeInTheDocument()
   })
@@ -54,18 +56,27 @@ describe('ChatMessageList', () => {
       createMessage({ role: 'system', content: 'You are a helpful assistant' }),
       createMessage({ role: 'user', content: 'Hello' }),
     ]
-    render(<ChatMessageList messages={messages} isLoading={false} />)
+    render(
+      <ChatMessageList messagesEndRef={{ current: null }} messages={messages} isLoading={false} />
+    )
     expect(screen.queryByText('You are a helpful assistant')).not.toBeInTheDocument()
     expect(screen.getByText('Hello')).toBeInTheDocument()
   })
 
   it('shows loading indicator when loading', () => {
-    render(<ChatMessageList messages={[]} isLoading={true} />)
+    render(<ChatMessageList messagesEndRef={{ current: null }} messages={[]} isLoading={true} />)
     expect(screen.getByText('正在思考...')).toBeInTheDocument()
   })
 
   it('shows completion text when loading with completion', () => {
-    render(<ChatMessageList messages={[]} isLoading={true} completion="partial" />)
+    render(
+      <ChatMessageList
+        messagesEndRef={{ current: null }}
+        messages={[]}
+        isLoading={true}
+        completion="partial"
+      />
+    )
     expect(screen.getByText('partial')).toBeInTheDocument()
     expect(screen.getByText('正在输入...')).toBeInTheDocument()
   })
@@ -75,7 +86,14 @@ describe('ChatMessageList', () => {
       createMessage({ role: 'user', content: 'Hello' }),
       createMessage({ role: 'assistant', content: 'Partial answer' }),
     ]
-    render(<ChatMessageList messages={messages} isLoading={true} completion="more" />)
+    render(
+      <ChatMessageList
+        messagesEndRef={{ current: null }}
+        messages={messages}
+        isLoading={true}
+        completion="more"
+      />
+    )
     // The last assistant message should be hidden, replaced by ChatLoadingIndicator
     expect(screen.queryByText('Partial answer')).not.toBeInTheDocument()
     expect(screen.getByText('more')).toBeInTheDocument()
@@ -86,24 +104,47 @@ describe('ChatMessageList', () => {
       createMessage({ role: 'user', content: 'Hello' }),
       createMessage({ role: 'assistant', content: 'Full answer' }),
     ]
-    render(<ChatMessageList messages={messages} isLoading={false} />)
+    render(
+      <ChatMessageList messagesEndRef={{ current: null }} messages={messages} isLoading={false} />
+    )
     expect(screen.getByText('Full answer')).toBeInTheDocument()
   })
 
   it('renders dialog variant', () => {
     const messages = [createMessage({ role: 'user', content: 'Hello' })]
-    render(<ChatMessageList messages={messages} isLoading={false} variant="dialog" />)
+    render(
+      <ChatMessageList
+        messagesEndRef={{ current: null }}
+        messages={messages}
+        isLoading={false}
+        variant="dialog"
+      />
+    )
     expect(screen.getByText('Hello')).toBeInTheDocument()
   })
 
   it('renders page variant', () => {
     const messages = [createMessage({ role: 'user', content: 'Hello' })]
-    render(<ChatMessageList messages={messages} isLoading={false} variant="page" />)
+    render(
+      <ChatMessageList
+        messagesEndRef={{ current: null }}
+        messages={messages}
+        isLoading={false}
+        variant="page"
+      />
+    )
     expect(screen.getByText('Hello')).toBeInTheDocument()
   })
 
   it('shows empty state in dialog variant', () => {
-    render(<ChatMessageList messages={[]} isLoading={false} variant="dialog" />)
+    render(
+      <ChatMessageList
+        messagesEndRef={{ current: null }}
+        messages={[]}
+        isLoading={false}
+        variant="dialog"
+      />
+    )
     expect(screen.getByText('输入问题开始与我对话')).toBeInTheDocument()
   })
 })

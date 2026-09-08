@@ -13,7 +13,7 @@ vi.mock('swr', async () => {
   const actual = await vi.importActual('swr')
   return {
     ...actual,
-    useSWR: (...args: unknown[]) => mockUseSWR(...args),
+    default: (...args: unknown[]) => mockUseSWR(...args),
   }
 })
 

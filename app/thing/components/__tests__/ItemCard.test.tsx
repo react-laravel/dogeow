@@ -1,18 +1,19 @@
+import { createItemFixture } from '@/app/thing/__tests__/fixtures'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import ItemCard from '../ItemCard'
 
-const mockItem = {
+const mockItem = createItemFixture({
   id: 1,
   name: 'Test Item',
   description: 'A test description',
-  category: { name: 'Electronics' },
+  category: { id: 1, name: 'Electronics' },
   tags: [{ id: 1, name: 'tag1', color: '#ff0000' }],
   status: 'active',
-  primary_image: null,
+  primary_image: undefined,
   images: [],
-  spot: null,
-}
+  spot: undefined,
+})
 
 describe('ItemCard', () => {
   it('renders item name', () => {
@@ -52,7 +53,7 @@ describe('ItemCard', () => {
   })
 
   it('shows Uncategorized when no category', () => {
-    const itemNoCat = { ...mockItem, category: null }
+    const itemNoCat = { ...mockItem, category: undefined }
     render(<ItemCard item={itemNoCat} onEdit={vi.fn()} onView={vi.fn()} />)
     expect(screen.getByText('未分类')).toBeDefined()
   })

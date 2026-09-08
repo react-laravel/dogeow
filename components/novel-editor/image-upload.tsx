@@ -1,4 +1,4 @@
-import { createImageUpload } from 'novel'
+import { createImageUpload } from '@/components/novel-editor/runtime'
 import { toast } from 'sonner'
 import { uploadImageToServer } from '@/app/ai/features/chat/hooks/uploadImage'
 

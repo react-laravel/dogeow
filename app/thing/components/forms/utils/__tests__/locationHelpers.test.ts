@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { updateLocationPath, handleLocationSelectLogic } from '../locationHelpers'
-import type { Location, LocationType } from '../formConstants'
-import type { LocationSelection } from '../../LocationComboboxSelectSimple'
+import type { Location, LocationType } from '../../formConstants'
+import type { LocationSelection } from '../../../LocationComboboxSelectSimple'
 
 const createArea = (id: number, name: string): Location => ({
   id,

@@ -27,10 +27,10 @@ describe('GeolocationDetector', () => {
   describe('detectByTimezone', () => {
     it('should return null when timezone is unavailable', () => {
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: undefined,
-        }) as unknown as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: '',
+      })
 
       try {
         const result = detector.detectByTimezone()
@@ -42,10 +42,10 @@ describe('GeolocationDetector', () => {
 
     it('should detect language from timezone', () => {
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Asia/Shanghai',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'Asia/Shanghai',
+      })
 
       try {
         const result = detector.detectByTimezone()
@@ -58,17 +58,16 @@ describe('GeolocationDetector', () => {
       }
     })
 
-    it('should detect Japanese from Tokyo timezone', () => {
+    it('should ignore unsupported Tokyo timezone', () => {
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Asia/Tokyo',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'Asia/Tokyo',
+      })
 
       try {
         const result = detector.detectByTimezone()
-        expect(result).not.toBeNull()
-        expect(result?.language).toBe('ja')
+        expect(result).toBeNull()
       } finally {
         Intl.DateTimeFormat.prototype.resolvedOptions = originalResolvedOptions
       }
@@ -76,10 +75,10 @@ describe('GeolocationDetector', () => {
 
     it('should detect English from New York timezone', () => {
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'America/New_York',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'America/New_York',
+      })
 
       try {
         const result = detector.detectByTimezone()
@@ -92,10 +91,10 @@ describe('GeolocationDetector', () => {
 
     it('should return null for unknown timezone', () => {
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Unknown/Timezone',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'Unknown/Timezone',
+      })
 
       try {
         const result = detector.detectByTimezone()

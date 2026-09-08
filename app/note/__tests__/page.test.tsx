@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { SWRConfig } from 'swr'
 import NotePage from '../page'
 
 // Mock dependencies
@@ -16,7 +17,7 @@ vi.mock('next/link', () => ({
 }))
 
 vi.mock('@/lib/api', () => ({
-  apiRequest: vi.fn(),
+  get: vi.fn(),
 }))
 
 vi.mock('@/lib/api/wiki', () => ({
@@ -67,22 +68,30 @@ describe('NotePage', () => {
   })
 
   it('should render loading state initially', async () => {
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockImplementation(
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     )
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     // Should show loading skeleton
     expect(screen.getAllByTestId('card')).toHaveLength(3)
   })
 
   it('should render empty state when no notes', async () => {
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue({ notes: [] })
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue({ notes: [] })
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('暂无笔记')).toBeInTheDocument()
@@ -112,10 +121,14 @@ describe('NotePage', () => {
       },
     ]
 
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue({ notes: mockNotes })
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue({ notes: mockNotes })
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Test Note 1')).toBeInTheDocument()
@@ -137,10 +150,14 @@ describe('NotePage', () => {
       },
     ]
 
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue(mockNotes)
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue(mockNotes)
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('只有标题的笔记')).toBeInTheDocument()
@@ -161,10 +178,14 @@ describe('NotePage', () => {
       },
     ]
 
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue({ notes: mockNotes })
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue({ notes: mockNotes })
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       const link = screen.getByTestId('link')
@@ -174,12 +195,16 @@ describe('NotePage', () => {
 
   it('should handle API errors gracefully', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockRejectedValue(new Error('API Error'))
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockRejectedValue(new Error('API Error'))
 
     const { toast } = await import('sonner')
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('获取笔记列表失败:', expect.any(Error))
@@ -202,10 +227,14 @@ describe('NotePage', () => {
       },
     ]
 
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue({ notes: mockNotes })
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue({ notes: mockNotes })
 
-    const { container } = render(<NotePage />)
+    const { container } = render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Draft Note')).toBeInTheDocument()
@@ -226,13 +255,17 @@ describe('NotePage', () => {
       },
     ]
 
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue({ notes: mockNotes })
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue({ notes: mockNotes })
 
     const { format } = await import('date-fns')
     vi.mocked(format).mockReturnValue('2024-01-01')
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(format).toHaveBeenCalled()
@@ -240,10 +273,14 @@ describe('NotePage', () => {
   })
 
   it('should handle empty notes array', async () => {
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue({ notes: [] })
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue({ notes: [] })
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('暂无笔记')).toBeInTheDocument()
@@ -251,10 +288,14 @@ describe('NotePage', () => {
   })
 
   it('should handle null API response', async () => {
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue(null)
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue(null)
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('暂无笔记')).toBeInTheDocument()
@@ -262,10 +303,14 @@ describe('NotePage', () => {
   })
 
   it('should handle undefined API response', async () => {
-    const { apiRequest } = await import('@/lib/api')
-    vi.mocked(apiRequest).mockResolvedValue(undefined)
+    const { get } = await import('@/lib/api')
+    vi.mocked(get).mockResolvedValue(undefined)
 
-    render(<NotePage />)
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <NotePage />
+      </SWRConfig>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('暂无笔记')).toBeInTheDocument()

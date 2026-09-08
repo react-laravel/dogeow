@@ -1,393 +1,115 @@
 'use client'
 
 import './novel-editor.css'
+import { useEffect, useMemo, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import {
-  EditorCommand,
-  EditorCommandEmpty,
-  EditorCommandItem,
-  EditorCommandList,
   EditorContent,
-  type EditorInstance,
   EditorRoot,
-  ImageResizer,
-  type JSONContent,
-  handleCommandNavigation,
+  EditorDragHandle,
   handleImageDrop,
   handleImagePaste,
-} from 'novel'
-import { useCallback, useEffect, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
-import { usePathname } from 'next/navigation'
+  type EditorInstance,
+  type JSONContent,
+} from './runtime'
 import { defaultExtensions } from './extensions'
+import { slashCommand } from './slash-command'
 import { ColorSelector } from './selectors/color-selector'
 import { LinkSelector } from './selectors/link-selector'
 import { MathSelector } from './selectors/math-selector'
 import { NodeSelector } from './selectors/node-selector'
+import { TextButtons } from './selectors/text-buttons'
 import { Separator } from './ui/separator'
-
 import GenerativeMenuSwitch from './generative/generative-menu-switch'
 import { uploadFn } from './image-upload'
-import { TextButtons } from './selectors/text-buttons'
-import { slashCommand, suggestionItems } from './slash-command'
 import { countWords, extractTextFromJSON } from '@/lib/helpers/wordCount'
-import { registerHighlightLanguages, hljs } from './highlightLanguages'
-
-// 注册高亮语言
-registerHighlightLanguages()
 
 const extensions = [...defaultExtensions, slashCommand]
-
-const createEmptyEditorContent = (): JSONContent => ({
-  type: 'doc',
-  content: [
-    {
-      type: 'paragraph',
-      content: [],
-    },
-  ],
-})
+const emptyContent = (): JSONContent => ({ type: 'doc', content: [{ type: 'paragraph' }] })
 
 interface TailwindAdvancedEditorProps {
   showStatusBar?: boolean
   onStatusChange?: (status: { saveStatus: string; wordCount?: number }) => void
 }
 
-const TailwindAdvancedEditor = ({
+export default function TailwindAdvancedEditor({
   showStatusBar = true,
   onStatusChange,
-}: TailwindAdvancedEditorProps) => {
+}: TailwindAdvancedEditorProps) {
   const pathname = usePathname()
-
-  const readInitialContent = useCallback((): JSONContent => {
-    if (typeof window === 'undefined') return createEmptyEditorContent()
-    if (pathname === '/note/new') return createEmptyEditorContent()
-    const stored = window.localStorage.getItem('novel-content')
-    if (stored) {
-      try {
-        return JSON.parse(stored) as JSONContent
-      } catch {
-        return createEmptyEditorContent()
-      }
+  const initialContent = useMemo((): JSONContent => {
+    if (typeof window === 'undefined' || pathname === '/note/new') return emptyContent()
+    try {
+      const stored = localStorage.getItem('novel-content')
+      return stored ? JSON.parse(stored) : emptyContent()
+    } catch {
+      return emptyContent()
     }
-    return createEmptyEditorContent()
   }, [pathname])
-
-  const [initialContent, setInitialContent] = useState<JSONContent | null>(() =>
-    readInitialContent()
-  )
   const [saveStatus, setSaveStatus] = useState('Saved')
-  const [charsCount, setCharsCount] = useState<number | undefined>(undefined)
-
+  const [charsCount, setCharsCount] = useState(0)
   const [openNode, setOpenNode] = useState(false)
   const [openColor, setOpenColor] = useState(false)
   const [openLink, setOpenLink] = useState(false)
   const [openAI, setOpenAI] = useState(false)
 
-  const [isTyping, setIsTyping] = useState(false)
-
-  useEffect(() => {
-    setInitialContent(readInitialContent())
-  }, [readInitialContent])
-
   useEffect(() => {
     onStatusChange?.({ saveStatus, wordCount: charsCount })
-  }, [charsCount, onStatusChange, saveStatus])
+  }, [saveStatus, charsCount, onStatusChange])
 
-  //Apply Codeblock Highlighting on the HTML from editor.getHTML()
-  const highlightCodeblocks = (content: string) => {
-    const doc = new DOMParser().parseFromString(content, 'text/html')
-    doc.querySelectorAll('pre code').forEach(el => {
-      if (el instanceof HTMLElement) {
-        hljs.highlightElement(el)
-      }
-    })
-    return new XMLSerializer().serializeToString(doc)
-  }
-
-  const debouncedUpdates = useDebouncedCallback(async (editor: EditorInstance) => {
-    // 保存当前光标位置和更多状态信息
-    const { from, to } = editor.state.selection
-    const isEditorFocused = editor.isFocused
-    const scrollTop = editor.view.dom.scrollTop
-
+  const persistDraft = (editor: EditorInstance) => {
     const json = editor.getJSON()
-    // 使用自定义的字数统计函数
-    const text = extractTextFromJSON(json)
-    const wordCount = countWords(text)
-    setCharsCount(wordCount)
-    window.localStorage.setItem('html-content', highlightCodeblocks(editor.getHTML()))
-    window.localStorage.setItem('novel-content', JSON.stringify(json))
-    window.localStorage.setItem('markdown', editor.storage.markdown.getMarkdown())
-    setSaveStatus('Saved')
-    setIsTyping(false)
-
-    // 应用代码高亮到当前编辑器中的代码块，但避免重复处理
-    const codeBlocks = editor.view.dom.querySelectorAll('pre code:not(.hljs)')
-    if (codeBlocks.length > 0) {
-      // 立即处理代码高亮，不使用 setTimeout
-      codeBlocks.forEach(block => {
-        if (block instanceof HTMLElement) {
-          try {
-            hljs.highlightElement(block)
-          } catch (error) {
-            console.warn('Failed to highlight code block:', error)
-          }
-        }
-      })
-
-      // 恢复光标位置和滚动位置
-      if (isEditorFocused) {
-        // 使用 nextTick 确保在下一个事件循环中恢复状态
-        Promise.resolve().then(() => {
-          try {
-            const docSize = editor.view.state.doc.content.size
-            if (from <= docSize && to <= docSize) {
-              editor.commands.focus()
-              editor.commands.setTextSelection({ from, to })
-              // 恢复滚动位置
-              editor.view.dom.scrollTop = scrollTop
-            } else {
-              editor.commands.focus()
-              editor.commands.setTextSelection({ from: docSize, to: docSize })
-            }
-          } catch (error) {
-            console.warn('Failed to restore editor state:', error)
-            // 至少保持焦点
-            try {
-              editor.commands.focus()
-            } catch {
-              // 忽略焦点恢复失败
-            }
-          }
-        })
-      }
+    setCharsCount(countWords(extractTextFromJSON(json)))
+    try {
+      // 保存按钮同步读取这些键；不能延迟写入，否则快速点击会丢掉最后输入的内容。
+      localStorage.setItem('novel-content', JSON.stringify(json))
+      localStorage.setItem('markdown', editor.getMarkdown())
+      localStorage.setItem('html-content', editor.getHTML())
+      setSaveStatus('Saved')
+    } catch {
+      setSaveStatus('Unsaved')
     }
-  }, 500)
-
-  useEffect(() => {
-    if (pathname === '/note/new') {
-      // 新建笔记页面：清空 localStorage，并重新初始化空白内容
-      window.localStorage.removeItem('novel-content')
-      window.localStorage.removeItem('html-content')
-      window.localStorage.removeItem('markdown')
-    }
-
-    // 添加全局复制事件监听器作为备选方案
-    const handleGlobalCopy = (e: ClipboardEvent) => {
-      console.log('Global copy event detected')
-
-      // 检查是否有选中的文本
-      const selection = window.getSelection()
-      if (!selection || selection.toString().trim() === '') {
-        return
-      }
-
-      const selectedText = selection.toString()
-      console.log('Selected text:', selectedText)
-
-      // 简单的格式检测和转换
-      if (
-        selectedText.includes('##') ||
-        selectedText.includes('**') ||
-        selectedText.includes('`')
-      ) {
-        console.log('Text already contains markdown formatting')
-        return
-      }
-
-      // 检查选中的元素是否有格式
-      const range = selection.getRangeAt(0)
-      const container = range.commonAncestorContainer
-      const parentElement =
-        container.nodeType === Node.TEXT_NODE ? container.parentElement : (container as Element)
-
-      if (parentElement) {
-        let markdownText = selectedText
-
-        // 检查父元素的标签和样式
-        if (parentElement.tagName === 'H1') {
-          markdownText = `# ${selectedText}`
-        } else if (parentElement.tagName === 'H2') {
-          markdownText = `## ${selectedText}`
-        } else if (parentElement.tagName === 'H3') {
-          markdownText = `### ${selectedText}`
-        } else if (
-          parentElement.tagName === 'STRONG' ||
-          window.getComputedStyle(parentElement).fontWeight === 'bold' ||
-          (parentElement as HTMLElement).style?.fontWeight === 'bold'
-        ) {
-          markdownText = `**${selectedText}**`
-        } else if (
-          parentElement.tagName === 'EM' ||
-          window.getComputedStyle(parentElement).fontStyle === 'italic' ||
-          (parentElement as HTMLElement).style?.fontStyle === 'italic'
-        ) {
-          markdownText = `*${selectedText}*`
-        } else if (parentElement.tagName === 'CODE') {
-          markdownText = `\`${selectedText}\``
-        }
-
-        if (markdownText !== selectedText) {
-          console.log('Converting to markdown:', markdownText)
-          e.clipboardData?.setData('text/plain', markdownText)
-          e.preventDefault()
-        }
-      }
-    }
-
-    document.addEventListener('copy', handleGlobalCopy)
-
-    return () => {
-      document.removeEventListener('copy', handleGlobalCopy)
-    }
-  }, [pathname])
-
-  if (!initialContent) return null
+  }
 
   return (
     <div className="relative w-full max-w-screen-lg">
       {showStatusBar && (
-        <div className="mb-2 flex justify-end gap-2 pr-1">
+        <div className="absolute top-5 right-5 z-10 flex items-center gap-2">
           <div className="bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm">
             {saveStatus}
           </div>
-          <div
-            className={
-              charsCount ? 'bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm' : 'hidden'
-            }
-          >
-            {charsCount} Words
-          </div>
+          {charsCount > 0 && (
+            <div className="bg-accent text-muted-foreground rounded-lg px-2 py-1 text-sm">
+              {charsCount} Words
+            </div>
+          )}
         </div>
       )}
-      <EditorRoot>
+      <EditorRoot key={pathname}>
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
           className="border-border/80 bg-background relative min-h-[500px] w-full max-w-screen-lg rounded-[24px] border p-5 shadow-sm sm:mb-[calc(20vh)]"
           editorProps={{
-            handleDOMEvents: {
-              keydown: (_view, event) => handleCommandNavigation(event),
-              copy: () => {
-                console.log('Copy event triggered in Novel Editor')
-                return false // 让默认的复制行为处理，但添加我们的逻辑
-              },
-            },
             handlePaste: (view, event) => handleImagePaste(view, event, uploadFn),
             handleDrop: (view, event, _slice, moved) =>
               handleImageDrop(view, event, moved, uploadFn),
             attributes: {
+              role: 'textbox',
+              'aria-label': '笔记正文',
+              'aria-multiline': 'true',
               class:
                 'prose prose-lg dark:prose-invert prose-headings:font-bold prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl font-sans focus:outline-none max-w-full',
             },
           }}
-          onUpdate={({ editor }) => {
-            if (!isTyping) {
-              setIsTyping(true)
-              setSaveStatus('Unsaved')
-            }
-            debouncedUpdates(editor)
-          }}
-          onCreate={({ editor }) => {
-            console.log('Editor created, adding copy listener')
-
-            // 添加全局复制事件监听器
-            const handleCopy = (e: ClipboardEvent) => {
-              console.log('Global copy event detected')
-
-              const selection = editor.state.selection
-              if (selection.empty) {
-                return
-              }
-
-              try {
-                // 获取当前完整的markdown
-                const fullMarkdown = editor.storage.markdown.getMarkdown()
-                console.log('Full markdown:', fullMarkdown)
-
-                // 获取选中的文本
-                const selectedText = editor.state.doc.textBetween(selection.from, selection.to)
-                console.log('Selected text:', selectedText)
-
-                // 检查选中内容是否有格式
-                const fragment = selection.content()
-                let hasFormatting = false
-
-                fragment.content.forEach(node => {
-                  if (node.marks && node.marks.length > 0) {
-                    hasFormatting = true
-                  }
-                  if (node.type.name !== 'text' && node.type.name !== 'paragraph') {
-                    hasFormatting = true
-                  }
-                })
-
-                if (hasFormatting && fullMarkdown.includes(selectedText)) {
-                  // 尝试从完整markdown中提取对应部分
-                  const lines = fullMarkdown.split('\n')
-                  const selectedLines = selectedText.split('\n')
-
-                  // 简单匹配：找到包含选中文本的行
-                  const matchingLines = lines.filter((line: string) =>
-                    selectedLines.some(
-                      (selectedLine: string) =>
-                        line.includes(selectedLine.trim()) && selectedLine.trim().length > 0
-                    )
-                  )
-
-                  if (matchingLines.length > 0) {
-                    const markdownResult = matchingLines.join('\n')
-                    console.log('Setting markdown to clipboard:', markdownResult)
-
-                    e.clipboardData?.setData('text/plain', markdownResult)
-                    e.preventDefault()
-                  }
-                }
-              } catch (error) {
-                console.error('Copy processing failed:', error)
-              }
-            }
-
-            // 添加事件监听器到编辑器DOM元素
-            const editorElement = editor.view.dom
-            editorElement.addEventListener('copy', handleCopy)
-
-            // 清理函数
-            editor.on('destroy', () => {
-              editorElement.removeEventListener('copy', handleCopy)
-            })
-          }}
-          slotAfter={<ImageResizer />}
+          onCreate={({ editor }) => persistDraft(editor)}
+          onUpdate={({ editor }) => persistDraft(editor)}
         >
-          <EditorCommand className="border-muted bg-background z-50 h-auto max-h-[330px] overflow-y-auto rounded-md border px-1 py-2 shadow-md transition-all">
-            <EditorCommandEmpty className="text-muted-foreground px-2">
-              No results
-            </EditorCommandEmpty>
-            <EditorCommandList>
-              {suggestionItems.map(item => (
-                <EditorCommandItem
-                  value={item.title}
-                  onCommand={val => item.command?.(val)}
-                  className="hover:bg-accent aria-selected:bg-accent flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm"
-                  key={item.title}
-                >
-                  <div className="border-muted bg-background flex h-10 w-10 items-center justify-center rounded-md border">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-muted-foreground text-xs">{item.description}</p>
-                  </div>
-                </EditorCommandItem>
-              ))}
-            </EditorCommandList>
-          </EditorCommand>
-
+          <EditorDragHandle />
           <GenerativeMenuSwitch open={openAI} onOpenChange={setOpenAI}>
             <Separator orientation="vertical" />
             <NodeSelector open={openNode} onOpenChange={setOpenNode} />
             <Separator orientation="vertical" />
-
             <LinkSelector open={openLink} onOpenChange={setOpenLink} />
             <Separator orientation="vertical" />
             <MathSelector />
@@ -401,7 +123,5 @@ const TailwindAdvancedEditor = ({
     </div>
   )
 }
-
-export default TailwindAdvancedEditor
 export { default as MarkdownPreview } from './markdown-preview'
 export { default as ReadonlyEditor } from './readonly'

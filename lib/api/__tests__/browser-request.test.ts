@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createBrowserRequestHeaders, executeBrowserRequestWithCsrf } from '../browser-request'
+import {
+  createBrowserRequestHeaders,
+  executeBrowserRequestWithCsrf,
+  getXsrfTokenFromCookie,
+} from '../browser-request'
 
 describe('browser-request helpers', () => {
   beforeEach(() => {
@@ -54,4 +58,13 @@ describe('browser-request helpers', () => {
     expect(executeRequest).toHaveBeenCalledTimes(2)
     expect(response.status).toBe(200)
   })
+})
+
+it('treats malformed cookie encoding as missing instead of throwing', () => {
+  Object.defineProperty(document, 'cookie', {
+    configurable: true,
+    writable: true,
+    value: 'XSRF-TOKEN=%E0%A4%A',
+  })
+  expect(getXsrfTokenFromCookie()).toBeNull()
 })

@@ -1,5 +1,5 @@
 import { CheckCheck, RefreshCcwDot } from 'lucide-react'
-import { useEditor } from 'novel'
+import { useEditor } from '@/components/novel-editor/runtime'
 import { CommandGroup, CommandItem, CommandSeparator } from '../ui/command'
 
 interface AICompletionCommandsProps {
@@ -27,7 +27,12 @@ const AICompletionCommands = ({
               // 使用原始选择范围，如果没有则使用当前选择
               const selection = originalSelection || editor.state.selection
               const { from, to } = selection
-              editor.chain().focus().deleteRange({ from, to }).insertContent(completion).run()
+              editor
+                .chain()
+                .focus()
+                .deleteRange({ from, to })
+                .insertContent(completion, { contentType: 'markdown' })
+                .run()
             }
             onDiscard()
           }}

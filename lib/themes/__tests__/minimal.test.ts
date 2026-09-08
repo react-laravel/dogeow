@@ -44,27 +44,27 @@ describe('minimal theme', () => {
 
   it('should have CSS variables', () => {
     expect(minimalTheme.styles.cssVariables).toBeDefined()
-    expect(minimalTheme.styles.cssVariables['--app-header-height']).toBe('48px')
+    expect(minimalTheme.styles.cssVariables?.['--app-header-height']).toBe('48px')
   })
 
   it('should have minimal component variants', () => {
     expect(minimalTheme.styles.componentVariants).toBeDefined()
-    expect(minimalTheme.styles.componentVariants.card).toBe('minimal')
-    expect(minimalTheme.styles.componentVariants.button).toBe('minimal')
-    expect(minimalTheme.styles.componentVariants.input).toBe('minimal')
-    expect(minimalTheme.styles.componentVariants.tile).toBe('minimal')
+    expect(minimalTheme.styles.componentVariants?.card).toBe('minimal')
+    expect(minimalTheme.styles.componentVariants?.button).toBe('minimal')
+    expect(minimalTheme.styles.componentVariants?.input).toBe('minimal')
+    expect(minimalTheme.styles.componentVariants?.tile).toBe('minimal')
   })
 
   it('should have component mappings', () => {
     expect(minimalTheme.components).toBeDefined()
-    expect(minimalTheme.components.TileCard).toBe('themes/minimal/TileCard')
+    expect(minimalTheme.components?.TileCard).toBe('themes/minimal/TileCard')
   })
 
   it('should have metadata with tags', () => {
     expect(minimalTheme.metadata).toBeDefined()
-    expect(minimalTheme.metadata.tags).toContain('minimal')
-    expect(minimalTheme.metadata.tags).toContain('clean')
-    expect(minimalTheme.metadata.tags).toContain('simple')
+    expect(minimalTheme.metadata?.tags).toContain('minimal')
+    expect(minimalTheme.metadata?.tags).toContain('clean')
+    expect(minimalTheme.metadata?.tags).toContain('simple')
   })
 
   it('should be different from default theme', () => {

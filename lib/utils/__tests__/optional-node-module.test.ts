@@ -8,12 +8,11 @@ const originalCwd = process.cwd
 describe('optional-node-module', () => {
   beforeEach(() => {
     // Simulate Node.js environment
-    // @ts-expect-error - clearing for test
-    global.window = undefined
+    vi.stubGlobal('window', undefined)
   })
 
   afterEach(() => {
-    global.window = originalWindow
+    vi.stubGlobal('window', originalWindow)
     // Restore process.getBuiltinModule
     Object.defineProperty(process, 'getBuiltinModule', {
       value: originalGetBuiltinModule,
@@ -25,13 +24,13 @@ describe('optional-node-module', () => {
 
   describe('loadOptionalNodeModule', () => {
     it('should return null in browser environment', () => {
-      global.window = {} as Window
+      vi.stubGlobal('window', {} as Window)
       const result = loadOptionalNodeModule('fs')
       expect(result).toBeNull()
     })
 
     it('should return null when getBuiltinModule is not available', () => {
-      global.window = undefined
+      vi.stubGlobal('window', undefined)
       Object.defineProperty(process, 'getBuiltinModule', {
         value: undefined,
         writable: true,
@@ -43,7 +42,7 @@ describe('optional-node-module', () => {
     })
 
     it('should return null when createRequire is not available', () => {
-      global.window = undefined
+      vi.stubGlobal('window', undefined)
       Object.defineProperty(process, 'getBuiltinModule', {
         value: () => ({}),
         writable: true,
@@ -55,7 +54,7 @@ describe('optional-node-module', () => {
     })
 
     it('should return module when successfully loaded', () => {
-      global.window = undefined
+      vi.stubGlobal('window', undefined)
       const mockModule = { hello: 'world', version: '1.0.0' }
       // createRequire returns a require function, which returns the module
       const mockRequire = vi.fn(() => mockModule)
@@ -75,7 +74,7 @@ describe('optional-node-module', () => {
     })
 
     it('should return null when require throws', () => {
-      global.window = undefined
+      vi.stubGlobal('window', undefined)
       const mockRequire = vi.fn(() => {
         throw new Error('Module not found')
       })
@@ -93,7 +92,7 @@ describe('optional-node-module', () => {
     })
 
     it('should type-cast the result', () => {
-      global.window = undefined
+      vi.stubGlobal('window', undefined)
       interface TestModule {
         version: string
       }

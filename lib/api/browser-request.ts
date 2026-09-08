@@ -15,7 +15,14 @@ export function getCookieValue(name: string): string | null {
 
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : null
+  if (!match) return null
+
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    // 损坏的 Cookie 应触发重新获取，不能让所有 API 请求抛出 URIError。
+    return null
+  }
 }
 
 export function getXsrfTokenFromCookie(): string | null {

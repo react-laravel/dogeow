@@ -215,7 +215,10 @@ describe('useAiChat model loading', () => {
     expect(fetchMock).toHaveBeenCalledWith('http://localhost:11434/api/tags', {
       cache: 'no-store',
     })
-    expect(fetchMock).toHaveBeenCalledWith('/api/ollama/models')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/ollama/models',
+      expect.objectContaining({ credentials: 'include', headers: expect.any(Headers) })
+    )
   })
 
   it('requests Ollama models through the server when access mode is server', async () => {
@@ -239,7 +242,10 @@ describe('useAiChat model loading', () => {
       expect(result.current.ollamaModels).toEqual([{ name: 'gemma4:e4b', supportsVision: false }])
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/ollama/models')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/ollama/models',
+      expect.objectContaining({ credentials: 'include', headers: expect.any(Headers) })
+    )
     expect(fetchMock).not.toHaveBeenCalledWith('http://localhost:11434/api/tags')
   })
 

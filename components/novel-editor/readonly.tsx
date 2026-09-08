@@ -13,10 +13,10 @@ import {
   TiptapUnderline,
   TiptapImage,
   TiptapLink,
-} from 'novel'
+} from '@/components/novel-editor/runtime'
 import { useEffect } from 'react'
 import { CodeBlock } from '@tiptap/extension-code-block'
-import { Markdown } from 'tiptap-markdown'
+import { Markdown } from '@tiptap/markdown'
 import { cx } from 'class-variance-authority'
 import { hljs, registerHighlightLanguages } from './highlightLanguages'
 
@@ -24,6 +24,8 @@ registerHighlightLanguages()
 
 const readonlyExtensions = [
   StarterKit.configure({
+    link: false,
+    underline: false,
     // 禁用内置的 codeBlock，因为我们要使用带高亮的版本
     codeBlock: false,
     bulletList: {
@@ -85,6 +87,7 @@ const readonlyExtensions = [
   TiptapImage.configure({
     allowBase64: true,
     HTMLAttributes: {
+      alt: '笔记图片',
       class: cx('rounded-lg border border-border my-6'),
     },
   }),
@@ -112,19 +115,10 @@ const readonlyExtensions = [
       throwOnError: false,
     },
   }),
-  Markdown.configure({
-    html: true,
-    tightLists: true,
-    tightListClass: 'tight',
-    bulletListMarker: '-',
-    linkify: false,
-    breaks: false,
-    transformPastedText: false,
-    transformCopiedText: false,
-  }),
+  Markdown,
   HighlightExtension,
   TiptapUnderline,
-] as any
+]
 
 interface ReadonlyEditorProps {
   content?: JSONContent | null
@@ -162,6 +156,7 @@ const ReadonlyEditor = ({ content, className }: ReadonlyEditorProps) => {
     <div className={`relative w-full px-4 ${className || ''}`}>
       <EditorRoot key={displayContent ? 'loaded' : 'empty'}>
         <EditorContent
+          immediatelyRender={false}
           initialContent={displayContent}
           extensions={readonlyExtensions}
           className="prose prose-neutral dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-h1:text-3xl prose-h1:mb-6 prose-h1:mt-8 prose-h2:text-2xl prose-h2:mb-4 prose-h2:mt-6 prose-h3:text-xl prose-h3:mb-3 prose-h3:mt-5 prose-p:leading-relaxed prose-p:text-foreground prose-p:mb-4 prose-strong:font-semibold prose-strong:text-foreground prose-em:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-muted prose-pre:border prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-6 prose-blockquote:py-2 prose-blockquote:my-6 prose-blockquote:italic prose-blockquote:text-muted-foreground prose-ul:space-y-1 prose-ol:space-y-1 prose-li:leading-relaxed prose-hr:my-8 prose-hr:border-t prose-hr:border-border prose-a:text-primary prose-a:underline prose-a:underline-offset-[3px] hover:prose-a:text-primary/80 prose-img:rounded-lg prose-img:border prose-img:border-border prose-img:my-6 max-w-none font-sans focus:outline-none"

@@ -6,7 +6,7 @@ describe('getWordAIRequestConfig', () => {
     localStorage.clear()
   })
 
-  it('uses ChatGPT with Codex Spark when no model was selected', () => {
+  it('uses the shared Codex default when no model was selected', () => {
     expect(getWordAIRequestConfig()).toEqual({
       provider: 'codex',
       model: WORD_AI_DEFAULT_MODEL,

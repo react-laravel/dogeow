@@ -1,23 +1,8 @@
-<!-- TRELLIS:START -->
+# 项目约定
 
-# Trellis Instructions
-
-These instructions are for AI assistants working in this project.
-
-This project is managed by Trellis. The working knowledge you need lives under `.trellis/`:
-
-- `.trellis/workflow.md` — development phases, when to create tasks, skill routing
-- `.trellis/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
-- `.trellis/workspace/` — per-developer journals and session traces
-- `.trellis/tasks/` — active and archived tasks (PRDs, research, jsonl context)
-
-If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.
-
-If you're using Codex or another agent-capable tool, additional project-scoped helpers may live in:
-
-- `.agents/skills/` — reusable Trellis skills
-- `.codex/agents/` — optional custom subagents
-
-Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
-
-<!-- TRELLIS:END -->
+- 本项目是 Next.js App Router / React / TypeScript 前端，对应 API 在 `../dogeow-api`。
+- 使用 npm。功能代码放在 `app/` 对应模块，共享 UI、hooks、状态分别在 `components/`、`hooks/`、`stores/`。
+- 远程数据使用 SWR 与 `lib/api/`，共享客户端状态使用 Zustand；认证沿用 `stores/authStore.ts` 和现有 API helpers。
+- UI 沿用 Tailwind CSS / Radix 组件，表单使用 React Hook Form / Zod。
+- 验证：`npm run type-check:app`（应用源码）、`npm run type-check`（含测试）、`npx eslint <修改文件>`、`npx vitest run <相关测试>`；构建使用 `npm run build`。
+- 中文沟通。API 契约变更需检查对应后端与调用方。

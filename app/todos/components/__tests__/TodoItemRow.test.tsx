@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TodoItemRow } from '../TodoItemRow'
-import type { TodoTask } from '../types'
+import type { TodoTask } from '../../types'
 
 // Mock @dnd-kit/sortable
 const mockSetNodeRef = vi.fn()
-const mockUseSortable = vi.fn(() => ({
+const mockUseSortable = vi.fn((..._args: unknown[]) => ({
   attributes: { role: 'button' },
   listeners: { onPointerDown: vi.fn() },
   setNodeRef: mockSetNodeRef,
@@ -30,7 +30,8 @@ const createTask = (overrides: Partial<TodoTask> = {}): TodoTask => ({
   id: 1,
   title: 'Test Todo',
   is_completed: false,
-  sort_order: 0,
+  todo_list_id: 1,
+  position: 0,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   ...overrides,
@@ -150,8 +151,8 @@ describe('TodoItemRow', () => {
 
   it('applies dragging class when isDragging is true', () => {
     mockUseSortable.mockReturnValueOnce({
-      attributes: {},
-      listeners: {},
+      attributes: { role: 'button' },
+      listeners: { onPointerDown: vi.fn() },
       setNodeRef: mockSetNodeRef,
       transform: null,
       transition: undefined,

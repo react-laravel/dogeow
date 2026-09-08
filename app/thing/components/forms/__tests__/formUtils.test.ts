@@ -184,6 +184,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: null,
       expiry_date: null,
@@ -226,6 +227,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: '',
       purchase_date: null,
       expiry_date: null,
@@ -246,6 +248,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: null,
       expiry_date: null,
@@ -266,6 +269,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: null,
       expiry_date: null,
@@ -285,6 +289,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: null,
       expiry_date: null,
@@ -313,6 +318,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: null,
       expiry_date: null,
@@ -334,6 +340,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: '2024-06-15T08:00:00.000Z',
       expiry_date: '2025-06-15T08:00:00.000Z',
@@ -355,6 +362,7 @@ describe('transformApiDataToFormData', () => {
     const apiData = {
       name: 'Test',
       description: '',
+      quantity: 1,
       status: 'active',
       purchase_date: null,
       expiry_date: null,

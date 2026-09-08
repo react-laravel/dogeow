@@ -26,10 +26,28 @@ describe('isIpAddress', () => {
     expect(isIpAddress('')).toBe(false)
     expect(isIpAddress('1.2.3')).toBe(false) // incomplete IP
     expect(isIpAddress('1.2.3.4.5')).toBe(false) // too many segments
+    expect(isIpAddress('999.1.1.1')).toBe(false)
+    expect(isIpAddress('face')).toBe(false)
+    expect(isIpAddress(':::')).toBe(false)
+    expect(isIpAddress('[::1]')).toBe(true)
   })
 })
 
 describe('getApiBaseUrl', () => {
+  it('uses the configured backend port for loopback development', () => {
+    const originalLocation = window.location
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://127.0.0.1:8100')
+    Object.defineProperty(window, 'location', {
+      value: { hostname: '127.0.0.1', origin: 'http://127.0.0.1:3100' },
+      configurable: true,
+    })
+    try {
+      expect(getApiBaseUrl()).toBe('http://127.0.0.1:8100')
+    } finally {
+      Object.defineProperty(window, 'location', { value: originalLocation, configurable: true })
+      vi.unstubAllEnvs()
+    }
+  })
   it('should use env variable when available', () => {
     const original = process.env.NEXT_PUBLIC_API_URL
     process.env.NEXT_PUBLIC_API_URL = 'https://api.example.com'

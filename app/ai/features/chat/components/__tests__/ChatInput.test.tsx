@@ -114,9 +114,11 @@ vi.mock('@/components/ui/dropdown-menu', () => {
         children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>,
         {
           ...props,
-          onClick: (event: React.MouseEvent) => {
+          onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
             setOpen(true)
-            ;(children as React.ReactElement).props.onClick?.(event)
+            ;(
+              children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>
+            ).props.onClick?.(event)
           },
         } as React.ButtonHTMLAttributes<HTMLButtonElement>
       )
@@ -158,6 +160,7 @@ vi.mock('@/components/ui/dropdown-menu', () => {
     </div>
   )
 
+  const RadioValueContext = React.createContext<((value: string) => void) | undefined>(undefined)
   const DropdownMenuRadioGroup = ({
     children,
     value,
@@ -165,30 +168,32 @@ vi.mock('@/components/ui/dropdown-menu', () => {
   }: {
     children: React.ReactNode
     value?: string
-    onValueChange?: (v: string) => void
+    onValueChange?: (value: string) => void
   }) => (
-    <div data-testid="radio-group" data-value={value}>
-      {children}
-    </div>
+    <RadioValueContext.Provider value={onValueChange}>
+      <div data-testid="radio-group" data-value={value}>
+        {children}
+      </div>
+    </RadioValueContext.Provider>
   )
-
   const DropdownMenuRadioItem = ({
     children,
     value,
-    className,
     ...props
-  }: React.HTMLAttributes<HTMLDivElement> & { value: string }) => (
-    <div
-      role="radio"
-      aria-checked={false}
-      data-value={value}
-      className={className}
-      {...props}
-      onClick={() => onValueChange?.(value)}
-    >
-      {children}
-    </div>
-  )
+  }: React.HTMLAttributes<HTMLDivElement> & { value: string }) => {
+    const onValueChange = React.useContext(RadioValueContext)
+    return (
+      <div
+        role="radio"
+        aria-checked={false}
+        data-value={value}
+        {...props}
+        onClick={() => onValueChange?.(value)}
+      >
+        {children}
+      </div>
+    )
+  }
 
   const DropdownMenuSeparator = () => <hr data-testid="dropdown-separator" />
 

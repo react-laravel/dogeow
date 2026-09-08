@@ -38,6 +38,10 @@ const NO_STORE_HEADERS = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
+  agentRules: false,
+  typescript: {
+    tsconfigPath: 'tsconfig.app.json',
+  },
   reactStrictMode: true,
   allowedDevOrigins: ['127.0.0.1'],
   env: {

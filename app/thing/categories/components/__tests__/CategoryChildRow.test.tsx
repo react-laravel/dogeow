@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CategoryChildRow } from '../CategoryChildRow'
-import type { Category } from '../../types'
+import type { Category } from '../../../types'
 
 const mockCategory: Category = {
   id: 2,

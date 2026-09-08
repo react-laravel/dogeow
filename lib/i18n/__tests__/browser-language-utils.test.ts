@@ -6,23 +6,13 @@ import {
   detectLanguageFromBrowser,
 } from '../browser-language-utils'
 
-// Mock the translations module (browser-language-utils imports SUPPORTED_LANGUAGES from it)
-vi.mock('../translations', () => ({
-  SUPPORTED_LANGUAGES: [
-    { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文' },
-    { code: 'zh-TW', name: 'Chinese (Traditional)', nativeName: '繁體中文' },
-    { code: 'en', name: 'English', nativeName: 'English' },
-    { code: 'ja', name: 'Japanese', nativeName: '日本語' },
-  ],
-}))
-
 describe('browser-language-utils', () => {
   describe('isSupportedLanguage', () => {
     it('should return true for supported languages', () => {
       expect(isSupportedLanguage('zh-CN')).toBe(true)
-      expect(isSupportedLanguage('zh-TW')).toBe(true)
+      expect(isSupportedLanguage('zh-TW')).toBe(false)
       expect(isSupportedLanguage('en')).toBe(true)
-      expect(isSupportedLanguage('ja')).toBe(true)
+      expect(isSupportedLanguage('ja')).toBe(false)
     })
 
     it('should return false for unsupported languages', () => {
@@ -46,10 +36,9 @@ describe('browser-language-utils', () => {
       expect(result[0].code).toBe('en')
     })
 
-    it('should return matching language for ja prefix', () => {
+    it('should reject unsupported ja prefix', () => {
       const result = getSupportedLanguagesByPrefix('ja')
-      expect(result).toHaveLength(1)
-      expect(result[0].code).toBe('ja')
+      expect(result).toEqual([])
     })
 
     it('should be case-insensitive', () => {
@@ -72,8 +61,8 @@ describe('browser-language-utils', () => {
     it('should return exact match for supported language', () => {
       expect(normalizeLanguageCode('zh-CN')).toBe('zh-CN')
       expect(normalizeLanguageCode('en')).toBe('en')
-      expect(normalizeLanguageCode('ja')).toBe('ja')
-      expect(normalizeLanguageCode('zh-TW')).toBe('zh-TW')
+      expect(normalizeLanguageCode('ja')).toBeNull()
+      expect(normalizeLanguageCode('zh-TW')).toBe('zh-CN')
     })
 
     it('should normalize zh-CN style codes', () => {
@@ -88,7 +77,7 @@ describe('browser-language-utils', () => {
     it('should handle prefix-only codes', () => {
       expect(normalizeLanguageCode('zh')).toBe('zh-CN')
       expect(normalizeLanguageCode('en')).toBe('en')
-      expect(normalizeLanguageCode('ja')).toBe('ja')
+      expect(normalizeLanguageCode('ja')).toBeNull()
     })
 
     it('should return null for unsupported codes', () => {

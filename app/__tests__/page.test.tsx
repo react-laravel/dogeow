@@ -35,6 +35,7 @@ vi.mock('@/app/configs', () => ({
   configs: {
     gridLayout: {
       templateAreas: '"thing nav"',
+      columns: 2,
     },
   },
 }))
@@ -50,7 +51,8 @@ vi.mock('@/components/themes/UIThemeProvider', () => ({
 }))
 
 vi.mock('@/stores/layoutStore', () => ({
-  useLayoutStore: () => ({ siteLayout: 'grid' as const }),
+  useLayoutStore: (selector: (state: { siteLayout: 'grid' }) => unknown) =>
+    selector({ siteLayout: 'grid' }),
 }))
 
 vi.mock('@/components/app/ThemedTileCard', () => ({

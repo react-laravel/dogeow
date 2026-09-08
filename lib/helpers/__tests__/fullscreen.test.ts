@@ -8,7 +8,7 @@ describe('fullscreen', () => {
 
   describe('fullscreen', () => {
     it('should throw when browser does not support fullscreen', () => {
-      const docElm = document.documentElement
+      const docElm = document.documentElement as unknown as Record<string, unknown>
       // Remove all fullscreen methods
       const originalRequest = docElm.requestFullscreen
       const originalWebkit = docElm.webkitRequestFullscreen

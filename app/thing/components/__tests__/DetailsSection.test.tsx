@@ -1,3 +1,4 @@
+import { createItemFormFixture } from '@/app/thing/__tests__/fixtures'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import DetailsSection from '../DetailsSection'
@@ -45,7 +46,7 @@ vi.mock('../LocationTreeSelect', () => ({
 }))
 
 const defaultProps = {
-  formData: { purchase_date: null, expiry_date: null, purchase_price: null },
+  formData: createItemFormFixture(),
   setFormData: vi.fn(),
   locationPath: '',
   selectedLocation: undefined,

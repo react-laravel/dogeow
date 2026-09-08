@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { post, del, uploadFile, handleApiError } from '@/lib/api'
+import { post, patch, del, uploadFile, handleApiError } from '@/lib/api'
 import useFileStore from '../store/useFileStore'
+import { isCloudFileCacheKey } from '../services/cache'
 import { UPLOAD_CONFIG } from '../constants'
 
 // 自定义 Hook: 文件夹创建
@@ -25,7 +26,7 @@ export function useCreateFolder() {
     {
       onSuccess: () => {
         // 刷新文件列表
-        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
+        void mutate(isCloudFileCacheKey)
         toast.success('文件夹创建成功')
         resetForm()
         setIsDialogOpen(false)
@@ -149,7 +150,7 @@ export function useFileUpload() {
         const failed = results.length - successful
 
         // 刷新文件列表
-        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
+        void mutate(isCloudFileCacheKey)
 
         if (successful > 0) {
           toast.success(
@@ -187,7 +188,7 @@ export function useFileUpload() {
 export function useDeleteFiles() {
   const [isDeleting, setIsDeleting] = useState(false)
   const { mutate } = useSWRConfig()
-  const { currentFolderId, selectedFiles, setSelectedFiles } = useFileStore()
+  const { selectedFiles, setSelectedFiles } = useFileStore()
 
   const deleteSelectedFiles = useCallback(async () => {
     if (selectedFiles.length === 0) return
@@ -211,7 +212,7 @@ export function useDeleteFiles() {
       const failed = results.length - successful
 
       // 刷新文件列表
-      mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
+      void mutate(isCloudFileCacheKey)
 
       if (successful > 0) {
         toast.success(
@@ -227,26 +228,32 @@ export function useDeleteFiles() {
         toast.error('删除失败')
       }
 
-      setSelectedFiles([])
+      // 只取消成功删除的项目，保留失败项和请求期间用户新选中的项目。
+      const deletedIds = new Set(
+        results.flatMap(result =>
+          result.status === 'fulfilled' && result.value.success ? [result.value.id] : []
+        )
+      )
+      setSelectedFiles(useFileStore.getState().selectedFiles.filter(id => !deletedIds.has(id)))
     } catch (error) {
       handleApiError(error)
     } finally {
       setIsDeleting(false)
     }
-  }, [selectedFiles, currentFolderId, mutate, setSelectedFiles])
+  }, [selectedFiles, mutate, setSelectedFiles])
 
   const deleteFile = useCallback(
     async (fileId: number) => {
       try {
         await del(`/cloud/files/${fileId}`)
         // 刷新文件列表
-        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
+        void mutate(isCloudFileCacheKey)
         toast.success('删除成功')
       } catch (error) {
         handleApiError(error)
       }
     },
-    [currentFolderId, mutate]
+    [mutate]
   )
 
   return {
@@ -260,7 +267,6 @@ export function useDeleteFiles() {
 export function useRenameFile() {
   const [isRenaming, setIsRenaming] = useState(false)
   const { mutate } = useSWRConfig()
-  const { currentFolderId } = useFileStore()
 
   const renameFile = useCallback(
     async (fileId: number, newName: string) => {
@@ -271,10 +277,10 @@ export function useRenameFile() {
 
       setIsRenaming(true)
       try {
-        await post(`/cloud/files/${fileId}/rename`, { name: newName.trim() })
+        await patch(`/cloud/files/${fileId}`, { name: newName.trim() })
 
         // 刷新文件列表
-        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
+        void mutate(isCloudFileCacheKey)
         toast.success('重命名成功')
         return true
       } catch (error) {
@@ -284,7 +290,7 @@ export function useRenameFile() {
         setIsRenaming(false)
       }
     },
-    [currentFolderId, mutate]
+    [mutate]
   )
 
   return {
@@ -297,7 +303,6 @@ export function useRenameFile() {
 export function useMoveFiles() {
   const [isMoving, setIsMoving] = useState(false)
   const { mutate } = useSWRConfig()
-  const { currentFolderId } = useFileStore()
 
   const moveFiles = useCallback(
     async (fileIds: number[], targetFolderId: number | null) => {
@@ -311,7 +316,7 @@ export function useMoveFiles() {
         })
 
         // 刷新当前和目标文件夹的文件列表
-        mutate(key => typeof key === 'string' && key.startsWith('/cloud/files'))
+        void mutate(isCloudFileCacheKey)
 
         toast.success(fileIds.length > 1 ? `已移动 ${fileIds.length} 个项目` : '移动成功')
         return true
@@ -322,7 +327,7 @@ export function useMoveFiles() {
         setIsMoving(false)
       }
     },
-    [currentFolderId, mutate]
+    [mutate]
   )
 
   return {

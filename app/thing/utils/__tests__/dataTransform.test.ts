@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   convertImagesToUploadedFormat,
+  type ImageUploadSource,
   buildLocationPath,
   hasDataChanged,
   tagsToIdStrings,
 } from '../dataTransform'
-import type { ItemImage, Tag } from '@/app/thing/types'
+import type { Tag } from '@/app/thing/types'
 
 describe('dataTransform', () => {
   describe('convertImagesToUploadedFormat', () => {
     it('should convert images with all fields', () => {
-      const images: ItemImage[] = [
+      const images: ImageUploadSource[] = [
         {
           id: 1,
           path: 'uploads/1/a.jpg',
@@ -33,7 +34,7 @@ describe('dataTransform', () => {
     })
 
     it('should handle null fields with empty string fallback', () => {
-      const images: ItemImage[] = [
+      const images: ImageUploadSource[] = [
         {
           id: 1,
           path: null,
@@ -53,7 +54,7 @@ describe('dataTransform', () => {
     })
 
     it('should handle mixed null and non-null fields', () => {
-      const images: ItemImage[] = [
+      const images: ImageUploadSource[] = [
         {
           id: 1,
           path: 'uploads/1/a.jpg',
@@ -76,7 +77,7 @@ describe('dataTransform', () => {
     })
 
     it('should convert multiple images', () => {
-      const images: ItemImage[] = [
+      const images: ImageUploadSource[] = [
         {
           id: 1,
           path: 'a.jpg',

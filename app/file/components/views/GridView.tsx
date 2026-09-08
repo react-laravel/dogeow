@@ -16,11 +16,12 @@ interface GridViewProps {
 }
 
 export default function GridView({ files }: GridViewProps) {
-  const { currentFolderId } = useFileStore()
+  const { currentFolderId, selectedFiles } = useFileStore()
   const { previewFile, previewType, previewUrl, previewContent, previewItem, closePreview } =
     useFilePreview()
-  const { getSWRKey, toggleSelection, handleItemClick, downloadFile, deleteFile } =
-    useGridViewActions({ currentFolderId })
+  const { toggleSelection, handleItemClick, downloadFile, deleteFile } = useGridViewActions({
+    currentFolderId,
+  })
   const { moveFiles } = useMoveFiles()
   const {
     selectedId: editingId,
@@ -30,6 +31,7 @@ export default function GridView({ files }: GridViewProps) {
     setFileName,
     setFileDescription,
     updateFile,
+    isSaving,
     closeEditDialog,
   } = useFileEdit()
 
@@ -150,7 +152,7 @@ export default function GridView({ files }: GridViewProps) {
             <FileGridItem
               key={file.id}
               file={file}
-              isSelected={false}
+              isSelected={selectedFiles.includes(file.id)}
               onSelect={toggleSelection}
               onClick={handleItemClickWithPreview}
               onDownload={downloadFile}
@@ -169,6 +171,7 @@ export default function GridView({ files }: GridViewProps) {
         onFileNameChange={setFileName}
         onFileDescriptionChange={setFileDescription}
         onSave={updateFile}
+        isSaving={isSaving}
         onClose={closeEditDialog}
       />
 

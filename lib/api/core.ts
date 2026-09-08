@@ -13,7 +13,6 @@ import {
 } from './browser-request'
 import {
   ApiRequestError,
-  type StandardApiResponse,
   unwrapApiPayload,
   handleApiError,
   validateAndNormalizeError,
@@ -97,7 +96,7 @@ const createTimeoutController = (isFormData: boolean) => {
     controller.abort()
   }, timeoutDuration)
 
-  return { controller, timeoutId, timeoutDuration }
+  return { controller, timeoutId }
 }
 
 /**
@@ -142,7 +141,7 @@ export async function apiRequest<T>(
   }
 
   const executeRequest = async (): Promise<Response> => {
-    const { controller, timeoutId, timeoutDuration } = createTimeoutController(isFormData)
+    const { controller, timeoutId } = createTimeoutController(isFormData)
     const echo = typeof window !== 'undefined' ? getEchoInstance() : null
     const socketId = typeof echo?.socketId === 'function' ? echo.socketId() : null
 
@@ -155,19 +154,12 @@ export async function apiRequest<T>(
       socketId,
     })
 
-    // 创建超时Promise
-    const timeoutPromise = new Promise<Response>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`请求超时 (${timeoutDuration / 1000}秒)`))
-      }, timeoutDuration)
-    })
-
-    // 竞争获取响应
-    const response = (await Promise.race([fetch(url, requestOptions), timeoutPromise])) as Response
-
-    clearTimeout(timeoutId)
-
-    return response
+    try {
+      return await fetch(url, requestOptions)
+    } finally {
+      // 成功、网络失败和超时都释放计时器，避免每个请求留下延迟任务。
+      clearTimeout(timeoutId)
+    }
   }
 
   try {

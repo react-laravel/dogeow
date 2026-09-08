@@ -20,8 +20,10 @@ describe('LocationDisplay', () => {
 
   it('renders full location path', () => {
     const spot = {
+      id: 1,
+      room_id: 1,
       name: 'Spot A',
-      room: { name: 'Room A', area: { name: 'Area A' } },
+      room: { id: 1, area_id: 1, name: 'Room A', area: { id: 1, name: 'Area A' } },
     }
     render(<LocationDisplay spot={spot} />)
     expect(screen.getByText('Area A > Room A > Spot A')).toBeDefined()
@@ -29,8 +31,10 @@ describe('LocationDisplay', () => {
 
   it('renders partial path with only area and room', () => {
     const spot = {
+      id: 1,
+      room_id: 1,
       name: '',
-      room: { name: 'Room A', area: { name: 'Area A' } },
+      room: { id: 1, area_id: 1, name: 'Room A', area: { id: 1, name: 'Area A' } },
     }
     render(<LocationDisplay spot={spot} />)
     expect(screen.getByText('Area A > Room A')).toBeDefined()
@@ -38,8 +42,10 @@ describe('LocationDisplay', () => {
 
   it('renders partial path with only area', () => {
     const spot = {
+      id: 1,
+      room_id: 1,
       name: '',
-      room: { name: '', area: { name: 'Area A' } },
+      room: { id: 1, area_id: 1, name: '', area: { id: 1, name: 'Area A' } },
     }
     render(<LocationDisplay spot={spot} />)
     expect(screen.getByText('Area A')).toBeDefined()

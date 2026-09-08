@@ -10,7 +10,7 @@ interface ApiItemData {
   purchase_date?: string | null
   expiry_date?: string | null
   purchase_price?: number | null
-  category_id?: string | number
+  category_id?: string | number | null
   spot_id?: string | number
   spot?: {
     room?: {

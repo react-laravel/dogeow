@@ -3,7 +3,7 @@ import { PopoverContent } from '@/components/tailwind/ui/popover'
 import { cn } from '@/lib/helpers'
 import { Popover, PopoverTrigger } from '@radix-ui/react-popover'
 import { Check, Trash } from 'lucide-react'
-import { useEditor } from 'novel'
+import { useEditor } from '@/components/novel-editor/runtime'
 import { useEffect, useRef, useState } from 'react'
 
 export function isValidUrl(url: string) {

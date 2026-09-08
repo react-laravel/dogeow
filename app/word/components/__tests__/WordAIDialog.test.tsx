@@ -1,4 +1,5 @@
 import React from 'react'
+import { WORD_AI_DEFAULT_MODEL } from '../../utils/aiRequest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WordAIDialog } from '../WordAIDialog'
@@ -66,7 +67,7 @@ describe('WordAIDialog', () => {
 
     expect(body).toMatchObject({
       provider: 'codex',
-      model: 'gpt-5.3-codex-spark',
+      model: WORD_AI_DEFAULT_MODEL,
       useChat: true,
     })
     expect(body.command).toContain('当前单词：fabricate')

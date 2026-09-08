@@ -40,7 +40,12 @@ export const useFileManagement = ({
   // 构建文件列表的 SWR key
   const filesKey =
     currentFolderId || searchQuery || sortField !== 'created_at' || sortDirection !== 'desc'
-      ? `/cloud/files?parent_id=${currentFolderId || ''}&search=${searchQuery}&sort_by=${sortField}&sort_direction=${sortDirection}`
+      ? `/cloud/files?${new URLSearchParams({
+          parent_id: currentFolderId?.toString() ?? '',
+          search: searchQuery,
+          sort_by: sortField,
+          sort_direction: sortDirection,
+        })}`
       : '/cloud/files'
 
   const {

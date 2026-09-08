@@ -17,7 +17,7 @@ describe('useNoteDialogs', () => {
     const { result } = renderHook(() => useNoteDialogs(createOptions))
 
     expect(result.current.showConfirmDialog).toBe(false)
-    expect(result.current.pendingAction).toBeUndefined()
+    expect(result.current.setPendingAction).toBeTypeOf('function')
     expect(result.current.globalDialogOpen).toBe(false)
   })
 
@@ -61,7 +61,10 @@ describe('useNoteDialogs', () => {
     await waitFor(() => {
       expect(result.current.showConfirmDialog).toBe(false)
     })
-    expect(result.current.pendingAction).toBeUndefined()
+    await act(async () => {
+      await result.current.handleLeave('discard')
+    })
+    expect(mockPending).toHaveBeenCalledTimes(1)
   })
 
   it('should handle leave without pending action', async () => {

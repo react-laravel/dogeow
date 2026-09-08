@@ -5,12 +5,15 @@
 
 // 判断是否是 IP 地址（支持 IPv4 和 IPv6，用于 Tailscale 等场景）
 export function isIpAddress(host: string): boolean {
-  // IPv4 正则
-  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/
-  // IPv6 正则（简化版本）
-  const ipv6Regex = /^(\[?[a-fA-F0-9:]+:?)+\]?$/
-
-  return ipv4Regex.test(host) || ipv6Regex.test(host)
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+    return host.split('.').every(part => Number(part) <= 255)
+  }
+  if (!host.includes(':')) return false
+  try {
+    return new URL(`http://${host.startsWith('[') ? host : `[${host}]`}`).hostname.startsWith('[')
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -27,6 +30,11 @@ export function getApiBaseUrl(): string {
   }
 
   const hostname = window.location.hostname
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL
+  if (configuredUrl && ['127.0.0.1', '::1', '[::1]'].includes(hostname)) {
+    // 本地多项目开发可能使用自定义端口，不能把 API 请求发回前端服务。
+    return configuredUrl
+  }
   if (isIpAddress(hostname)) {
     return window.location.origin.replace(':3000', ':8000')
   }

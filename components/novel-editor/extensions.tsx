@@ -1,4 +1,4 @@
-import { Markdown } from 'tiptap-markdown'
+import { Markdown } from '@tiptap/markdown'
 
 import {
   AIHighlight,
@@ -6,7 +6,6 @@ import {
   CodeBlockLowlight,
   Color,
   CustomKeymap,
-  GlobalDragHandle,
   HighlightExtension,
   HorizontalRule,
   Mathematics,
@@ -21,7 +20,7 @@ import {
   Twitter,
   UploadImagesPlugin,
   Youtube,
-} from 'novel'
+} from '@/components/novel-editor/runtime'
 
 import { MarkdownCopyExtension } from './extensions/markdown-copy'
 
@@ -43,6 +42,7 @@ const tiptapLink = TiptapLink.configure({
 const tiptapImage = TiptapImage.extend({
   addProseMirrorPlugins() {
     return [
+      ...(this.parent?.() ?? []),
       UploadImagesPlugin({
         imageClass: cx('opacity-40 rounded-lg border border-stone-200'),
       }),
@@ -50,7 +50,13 @@ const tiptapImage = TiptapImage.extend({
   },
 }).configure({
   allowBase64: true,
+  resize: {
+    enabled: true,
+    directions: ['bottom-left', 'bottom-right'],
+    alwaysPreserveAspectRatio: true,
+  },
   HTMLAttributes: {
+    alt: '笔记图片',
     class: cx('rounded-lg border border-muted'),
   },
 })
@@ -74,6 +80,8 @@ const horizontalRule = HorizontalRule.configure({
 })
 
 const starterKit = StarterKit.configure({
+  link: false,
+  underline: false,
   bulletList: {
     HTMLAttributes: {
       class: cx('list-disc list-outside leading-3 -mt-2'),
@@ -145,16 +153,7 @@ const mathematics = Mathematics.configure({
 
 const characterCount = CharacterCount.configure()
 
-const markdownExtension = Markdown.configure({
-  html: true,
-  tightLists: true,
-  tightListClass: 'tight',
-  bulletListMarker: '-',
-  linkify: false,
-  breaks: false,
-  transformPastedText: true, // 启用粘贴文本转换，将markdown转换为富文本
-  transformCopiedText: true, // 启用复制文本转换，将富文本转换为markdown
-})
+const markdownExtension = Markdown
 
 export const defaultExtensions = [
   starterKit,
@@ -172,10 +171,9 @@ export const defaultExtensions = [
   characterCount,
   TiptapUnderline,
   markdownExtension,
-  HighlightExtension,
+  HighlightExtension.configure({ multicolor: true }),
   TextStyle,
   Color,
   CustomKeymap,
-  GlobalDragHandle,
   MarkdownCopyExtension,
-] as any
+]

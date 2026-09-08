@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
 import { put } from '@/lib/api'
-import useFileStore from '../store/useFileStore'
+import { isCloudFileCacheKey } from '../services/cache'
 import { useFormModal } from '@/hooks/useFormModal'
 import type { CloudFile } from '../types'
 
@@ -19,6 +19,7 @@ interface UseFileEditReturn {
   setFileName: (name: string) => void
   setFileDescription: (description: string) => void
   updateFile: () => Promise<void>
+  isSaving: boolean
   closeEditDialog: () => void
   setEditingFile: (file: CloudFile | null) => void
 }
@@ -29,10 +30,9 @@ export function useFileEdit(): UseFileEditReturn {
 
   const [fileName, setFileName] = useState('')
   const [fileDescription, setFileDescription] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const savingRef = useRef(false)
   const { mutate } = useSWRConfig()
-  const { currentFolderId } = useFileStore()
-
-  const getSWRKey = `/cloud/files?parent_id=${currentFolderId || ''}`
 
   const closeEditDialog = useCallback(() => {
     closeModal()
@@ -42,19 +42,25 @@ export function useFileEdit(): UseFileEditReturn {
   }, [closeModal, setSelectedId])
 
   const updateFile = useCallback(async () => {
-    if (!selectedId || !fileName.trim()) return
+    if (!selectedId || !fileName.trim() || savingRef.current) return
+    savingRef.current = true
+    setIsSaving(true)
     try {
-      await put(`/cloud/files/${selectedId}`, {
-        name: fileName.trim(),
-        description: fileDescription.trim(),
-      })
-      mutate(key => typeof key === 'string' && key.startsWith(getSWRKey))
+      await put(
+        `/cloud/files/${selectedId}`,
+        { name: fileName.trim(), description: fileDescription.trim() },
+        { handleError: false }
+      )
+      void mutate(isCloudFileCacheKey)
       toast.success('更新成功')
       closeEditDialog()
     } catch {
       toast.error('更新失败')
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
     }
-  }, [selectedId, fileName, fileDescription, mutate, getSWRKey, closeEditDialog])
+  }, [selectedId, fileName, fileDescription, mutate, closeEditDialog])
 
   const setEditingFile = useCallback(
     (file: CloudFile | null) => {
@@ -82,6 +88,7 @@ export function useFileEdit(): UseFileEditReturn {
     setFileName,
     setFileDescription,
     updateFile,
+    isSaving,
     closeEditDialog,
     setEditingFile,
   }

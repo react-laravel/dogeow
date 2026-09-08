@@ -16,6 +16,6 @@ describe('InfoCard', () => {
 
   it('applies custom className', () => {
     const { container } = render(<InfoCard label="Test" value="val" className="extra-class" />)
-    expect(container.firstChild?.className).toContain('extra-class')
+    expect(container.firstElementChild?.className).toContain('extra-class')
   })
 })

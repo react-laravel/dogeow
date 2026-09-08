@@ -63,7 +63,7 @@ describe('ChatHeader', () => {
       buttons.find(btn => btn.querySelector('svg')?.getAttribute('data-lucide') === 'trash-2') ||
       buttons.find(btn => {
         // Look for button with disabled=false and onClick
-        return btn.className.includes('text-muted-foreground') && !btn.disabled
+        return btn.className.includes('text-muted-foreground') && !btn.hasAttribute('disabled')
       })
 
     if (clearButton) {

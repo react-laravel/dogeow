@@ -73,6 +73,7 @@ export const PreviewContent = memo<PreviewContentProps>(
       return (
         <div className="flex w-full min-w-0 max-w-full items-center justify-center overflow-hidden">
           <PreviewImage
+            key={previewUrl}
             src={previewUrl}
             alt={previewFile?.name ?? ''}
             onDownload={() => previewFile && onDownload(previewFile)}
@@ -97,7 +98,7 @@ export const PreviewContent = memo<PreviewContentProps>(
             <Button
               variant="link"
               className="h-auto p-0 text-sm"
-              onClick={() => window.open(previewUrl, '_blank')}
+              onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
             >
               在新窗口中打开
             </Button>{' '}
@@ -114,10 +115,10 @@ export const PreviewContent = memo<PreviewContentProps>(
       )
     }
 
-    if (previewType === PREVIEW_TYPES.TEXT && previewContent && !previewContent.startsWith('{')) {
+    if (previewType === PREVIEW_TYPES.TEXT && previewContent !== null) {
       return (
         <pre className="bg-muted h-full max-h-[60vh] w-full max-w-full overflow-auto rounded p-4 text-sm">
-          {previewContent}
+          {previewContent || '文件内容为空'}
         </pre>
       )
     }

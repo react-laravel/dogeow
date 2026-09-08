@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import type { Item } from '@/app/thing/types'
 import { ImageGallery } from '../ImageGallery'
 
 // Mock ThingImage
-vi.mock('../../ThingImage', () => ({
-  default: (props: any) => <img {...props} />,
+vi.mock('../../../ThingImage', () => ({
+  default: ({ priority: _priority, ...props }: any) => <img {...props} alt={props.alt ?? ''} />,
 }))
 
 vi.mock('@/components/ui/icons/image-placeholder', () => ({
@@ -12,15 +13,21 @@ vi.mock('@/components/ui/icons/image-placeholder', () => ({
 }))
 
 describe('ImageGallery', () => {
-  const images = [
+  const images: Item['images'] = [
     {
       id: 1,
+      path: 'image-1.jpg',
+      thumbnail_path: 'thumb-1.jpg',
+      is_primary: true,
       url: 'http://example.com/img1.jpg',
       thumbnail_url: 'http://example.com/thumb1.jpg',
       rmbg_status: 'done',
     },
     {
       id: 2,
+      path: 'image-2.jpg',
+      thumbnail_path: 'thumb-2.jpg',
+      is_primary: false,
       url: 'http://example.com/img2.jpg',
       thumbnail_url: 'http://example.com/thumb2.jpg',
       rmbg_status: 'done',
@@ -52,8 +59,15 @@ describe('ImageGallery', () => {
   })
 
   it('shows rmbg processing indicator', () => {
-    const processingImages = [
-      { id: 1, url: 'http://example.com/img1.jpg', rmbg_status: 'processing' },
+    const processingImages: Item['images'] = [
+      {
+        id: 1,
+        path: 'image-1.jpg',
+        thumbnail_path: 'thumb-1.jpg',
+        is_primary: true,
+        url: 'http://example.com/img1.jpg',
+        rmbg_status: 'processing',
+      },
     ]
     render(
       <ImageGallery

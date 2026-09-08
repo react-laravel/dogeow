@@ -56,10 +56,10 @@ describe('GeolocationStrategy', () => {
 
       // Mock Intl.DateTimeFormat
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Asia/Shanghai',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'Asia/Shanghai',
+      })
 
       try {
         const result = strategy.detect()
@@ -77,10 +77,10 @@ describe('GeolocationStrategy', () => {
       }
 
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Unknown/Timezone',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'Unknown/Timezone',
+      })
 
       try {
         const result = strategy.detect()
@@ -105,16 +105,16 @@ describe('GeolocationStrategy', () => {
       )
 
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Asia/Tokyo',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'America/New_York',
+      })
 
       try {
         const result = strategy.detect()
         // Should fall through to timezone detection since cache is expired
         expect(result).not.toBeNull()
-        expect(result?.language).toBe('ja')
+        expect(result?.language).toBe('en')
       } finally {
         Intl.DateTimeFormat.prototype.resolvedOptions = originalResolvedOptions
       }
@@ -129,10 +129,10 @@ describe('GeolocationStrategy', () => {
         },
       }
       const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
-      Intl.DateTimeFormat.prototype.resolvedOptions = () =>
-        ({
-          timeZone: 'Unknown/Timezone',
-        }) as Intl.DateTimeFormatOptions
+      Intl.DateTimeFormat.prototype.resolvedOptions = () => ({
+        ...originalResolvedOptions.call(new Intl.DateTimeFormat()),
+        timeZone: 'Unknown/Timezone',
+      })
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 

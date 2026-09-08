@@ -27,6 +27,7 @@ describe('NoteArticleDialog', () => {
     activeNode: {
       id: '1',
       title: 'Article Title',
+      slug: 'article-title',
       tags: ['tag1', 'tag2'],
       summary: 'Article summary',
     },
@@ -115,7 +116,7 @@ describe('NoteArticleDialog', () => {
     render(
       <NoteArticleDialog
         {...defaultProps}
-        activeNode={{ id: '1', title: 'No Tags', tags: [], summary: '' }}
+        activeNode={{ id: '1', slug: 'article', title: 'No Tags', tags: [], summary: '' }}
       />
     )
 
@@ -126,7 +127,7 @@ describe('NoteArticleDialog', () => {
     render(
       <NoteArticleDialog
         {...defaultProps}
-        activeNode={{ id: '1', title: 'No Summary', tags: [], summary: undefined }}
+        activeNode={{ id: '1', slug: 'article', title: 'No Summary', tags: [], summary: undefined }}
       />
     )
 

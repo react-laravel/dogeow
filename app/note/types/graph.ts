@@ -1,5 +1,5 @@
 import type { WikiNode } from '@/lib/api/wiki'
-import type { JSONContent } from 'novel'
+import type { JSONContent } from '@tiptap/core'
 
 export type NodeData = {
   id: string | number

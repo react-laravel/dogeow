@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useBreadcrumbs } from '../useBreadcrumbs'
 
 const { mockUseSWR } = vi.hoisted(() => {
-  const mockUseSWR = vi.fn(() => ({
+  const mockUseSWR = vi.fn((..._args: unknown[]) => ({
     data: undefined,
     error: undefined,
     isLoading: false,

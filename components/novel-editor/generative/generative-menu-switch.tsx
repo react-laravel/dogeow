@@ -1,4 +1,4 @@
-import { EditorBubble, removeAIHighlight, useEditor } from 'novel'
+import { EditorBubble, removeAIHighlight, useEditor } from '@/components/novel-editor/runtime'
 import { Fragment, type ReactNode, useEffect } from 'react'
 import { Button } from '../ui/button'
 import Magic from '../ui/icons/magic'
@@ -19,12 +19,12 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
   }, [open, editor])
   return (
     <EditorBubble
-      tippyOptions={{
+      options={{
         placement: open ? 'bottom-start' : 'top',
-        onHidden: () => {
+        onHide: () => {
           onOpenChange(false)
           if (editor) {
-            editor.chain().unsetHighlight().run()
+            removeAIHighlight(editor)
           }
         },
       }}

@@ -1,3 +1,4 @@
+import { createItemFixture } from '@/app/thing/__tests__/fixtures'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import ThingContent from '../ThingContent'
@@ -32,16 +33,16 @@ vi.mock('@/components/ui/button', () => ({
 }))
 
 const mockItems = [
-  {
+  createItemFixture({
     id: 1,
     name: 'Item 1',
     status: 'active',
     images: [],
-    primary_image: null,
-    category: { name: 'Cat1' },
+    primary_image: undefined,
+    category: { id: 1, name: 'Cat1' },
     tags: [],
-    spot: null,
-  },
+    spot: undefined,
+  }),
 ]
 
 describe('ThingContent', () => {

@@ -62,12 +62,30 @@ export function BottomNav({ items, className, isActive, ariaLabel = '页面导�
         {items.map(item => {
           const active = matcher(item, pathname)
           const itemClasses = cn(
-            'group flex h-13 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-xs transition-colors',
+            'group flex h-13 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             active
               ? 'bg-primary/10 text-primary'
               : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
             item.disabled && 'pointer-events-none opacity-50'
           )
+
+          if (item.disabled) {
+            return (
+              <li key={item.href} className="min-w-0">
+                <span
+                  role="link"
+                  aria-disabled="true"
+                  className={itemClasses}
+                  data-testid={item.testId}
+                >
+                  <span className="text-[1.05rem] leading-none">{item.icon}</span>
+                  <span className="max-w-full truncate leading-none whitespace-nowrap">
+                    {item.label}
+                  </span>
+                </span>
+              </li>
+            )
+          }
 
           if (item.onClick) {
             return (

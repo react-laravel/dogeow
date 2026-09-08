@@ -19,20 +19,31 @@ export function validateAuthToken(request: NextRequest): string | null {
     return null
   }
 
-  // Strip "Bearer" prefix (case-insensitive), then trim whitespace
-  const token = authHeader.replace(/^Bearer\s*/i, '').trim()
-
-  // Reject empty or all-whitespace tokens
-  if (!token) {
-    return null
-  }
-
-  return token
+  // 只接受完整的 Bearer 方案，不能把 Basic 或无前缀的凭据当成 Token。
+  return authHeader.match(/^Bearer\s+(\S+)\s*$/i)?.[1] ?? null
 }
 
 function getSessionCookie(request: NextRequest): string | null {
   const cookieHeader = request.headers.get('cookie')
   return cookieHeader && cookieHeader.trim().length > 0 ? cookieHeader : null
+}
+
+function validateCookieRequestOrigin(request: NextRequest): NextResponse | null {
+  if (!getSessionCookie(request) || ['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? 'GET')) {
+    return null
+  }
+
+  // Route Handler 没有 Server Action 的自动来源校验。Cookie 写请求必须来自本站。
+  try {
+    const origin = request.headers.get('origin')
+    if (origin && new URL(origin).origin === new URL(request.url).origin) {
+      return null
+    }
+  } catch {
+    // 无效或缺失的来源按校验失败处理。
+  }
+
+  return NextResponse.json({ error: '禁止访问', message: '请求来源不合法' }, { status: 403 })
 }
 
 /**
@@ -42,9 +53,11 @@ function getSessionCookie(request: NextRequest): string | null {
 async function validateRequestWithBackend({
   token,
   cookie,
+  request,
 }: {
   token?: string | null
   cookie?: string | null
+  request: NextRequest
 }): Promise<AuthenticatedUser | null> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -59,11 +72,15 @@ async function validateRequestWithBackend({
 
     if (cookie) {
       headers.Cookie = cookie
+      // Sanctum 通过可信前端来源启用会话中间件，单独转发 Cookie 不足以恢复会话。
+      if (request.url) headers.Origin = new URL(request.url).origin
     }
 
     const response = await fetch(`${apiBaseUrl}/api/user`, {
       method: 'GET',
       headers,
+      cache: 'no-store',
+      redirect: 'error',
       // Add signal to prevent hanging
       signal: AbortSignal.timeout(5000),
     })
@@ -72,11 +89,22 @@ async function validateRequestWithBackend({
       return null
     }
 
-    const data = await response.json()
+    const data: unknown = await response.json()
     // Laravel's AuthController returns ApiResponse::success($user), whose
     // production shape is { data: {...} }. Keep the older shapes compatible.
-    const user = data.user || data.data?.user || data.data || data
-    return { id: Number(user?.id), is_admin: Boolean(user?.is_admin) }
+    if (!data || typeof data !== 'object') return null
+    const payload = data as Record<string, unknown>
+    const nested = payload.data
+    const candidate =
+      payload.user ||
+      (nested && typeof nested === 'object' && 'user' in nested ? nested.user : nested) ||
+      payload
+    if (!candidate || typeof candidate !== 'object') return null
+    const user = candidate as Record<string, unknown>
+    if (typeof user.id !== 'number' && typeof user.id !== 'string') return null
+    const id = Number(user.id)
+    if (!Number.isSafeInteger(id) || id <= 0) return null
+    return { id, is_admin: user.is_admin === true || user.is_admin === 1 || user.is_admin === '1' }
   } catch {
     // Network errors or timeout - fail closed (deny access) for security
     return null
@@ -87,6 +115,15 @@ async function validateRequestWithBackend({
 // In production with multiple serverless instances, this is per-instance only
 const tokenValidationCache = new Map<string, { user: AuthenticatedUser; timestamp: number }>()
 const TOKEN_CACHE_TTL = 30 * 1000 // 30 seconds
+const MAX_TOKEN_CACHE_SIZE = 1000
+
+function cacheTokenUser(token: string, user: AuthenticatedUser): void {
+  if (tokenValidationCache.size >= MAX_TOKEN_CACHE_SIZE) {
+    const oldestKey = tokenValidationCache.keys().next().value
+    if (oldestKey) tokenValidationCache.delete(oldestKey)
+  }
+  tokenValidationCache.set(token, { user, timestamp: Date.now() })
+}
 
 /**
  * Clear expired cache entries
@@ -105,6 +142,8 @@ function cleanExpiredCache(): void {
  * Validates the token against the Laravel backend for security.
  */
 export async function requireAuth(request: NextRequest): Promise<NextResponse | null> {
+  const originError = validateCookieRequestOrigin(request)
+  if (originError) return originError
   const token = validateAuthToken(request)
   const cookie = getSessionCookie(request)
 
@@ -112,7 +151,8 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
     return NextResponse.json({ error: '未授权', message: '请先登录' }, { status: 401 })
   }
 
-  if (token) {
+  // Sanctum 优先使用 Cookie 身份，不得将其缓存到同时携带的任意 Token 下。
+  if (token && !cookie) {
     cleanExpiredCache()
     const cached = tokenValidationCache.get(token)
     if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
@@ -120,7 +160,7 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
     }
   }
 
-  const user = await validateRequestWithBackend({ token, cookie })
+  const user = await validateRequestWithBackend({ token, cookie, request })
   if (!user) {
     return NextResponse.json(
       { error: '未授权', message: '登录已失效，请重新登录' },
@@ -128,8 +168,8 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
     )
   }
 
-  if (token) {
-    tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  if (token && !cookie) {
+    cacheTokenUser(token, user)
   }
 
   return null
@@ -140,6 +180,8 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
  * Must be called after requireAuth() returns null (meaning user is authenticated).
  */
 export async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
+  const originError = validateCookieRequestOrigin(request)
+  if (originError) return originError
   const token = validateAuthToken(request)
   const cookie = getSessionCookie(request)
 
@@ -147,7 +189,7 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
     return NextResponse.json({ error: '未授权', message: '请先登录' }, { status: 401 })
   }
 
-  if (token) {
+  if (token && !cookie) {
     cleanExpiredCache()
     const cached = tokenValidationCache.get(token)
     if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
@@ -158,7 +200,7 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
     }
   }
 
-  const user = await validateRequestWithBackend({ token, cookie })
+  const user = await validateRequestWithBackend({ token, cookie, request })
   if (!user) {
     return NextResponse.json(
       { error: '未授权', message: '登录已失效，请重新登录' },
@@ -166,8 +208,8 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
     )
   }
 
-  if (token) {
-    tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  if (token && !cookie) {
+    cacheTokenUser(token, user)
   }
 
   if (!user.is_admin) {
@@ -179,6 +221,8 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
 
 /** Only the primary administrator account (user ID 1) may use AI resources. */
 export async function requireAiAccess(request: NextRequest): Promise<NextResponse | null> {
+  const originError = validateCookieRequestOrigin(request)
+  if (originError) return originError
   const token = validateAuthToken(request)
   const cookie = getSessionCookie(request)
 
@@ -186,7 +230,7 @@ export async function requireAiAccess(request: NextRequest): Promise<NextRespons
     return NextResponse.json({ error: '未授权', message: '请先登录' }, { status: 401 })
   }
 
-  if (token) {
+  if (token && !cookie) {
     cleanExpiredCache()
     const cached = tokenValidationCache.get(token)
     if (cached && Date.now() - cached.timestamp < TOKEN_CACHE_TTL) {
@@ -199,7 +243,7 @@ export async function requireAiAccess(request: NextRequest): Promise<NextRespons
     }
   }
 
-  const user = await validateRequestWithBackend({ token, cookie })
+  const user = await validateRequestWithBackend({ token, cookie, request })
   if (!user) {
     return NextResponse.json(
       { error: '未授权', message: '登录已失效，请重新登录' },
@@ -207,8 +251,8 @@ export async function requireAiAccess(request: NextRequest): Promise<NextRespons
     )
   }
 
-  if (token) {
-    tokenValidationCache.set(token, { user, timestamp: Date.now() })
+  if (token && !cookie) {
+    cacheTokenUser(token, user)
   }
 
   if (!canUseAi(user)) {

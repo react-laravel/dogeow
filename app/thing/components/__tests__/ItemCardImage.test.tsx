@@ -44,7 +44,7 @@ describe('ItemCardImage', () => {
         size={64}
       />
     )
-    expect(container.firstChild?.className).toContain('border-red-500')
+    expect(container.firstElementChild?.className).toContain('border-red-500')
   })
 
   it('applies status border color for damaged', () => {
@@ -57,7 +57,7 @@ describe('ItemCardImage', () => {
         size={64}
       />
     )
-    expect(container.firstChild?.className).toContain('border-orange-500')
+    expect(container.firstElementChild?.className).toContain('border-orange-500')
   })
 
   it('applies status border color for idle', () => {
@@ -70,7 +70,7 @@ describe('ItemCardImage', () => {
         size={64}
       />
     )
-    expect(container.firstChild?.className).toContain('border-amber-500')
+    expect(container.firstElementChild?.className).toContain('border-amber-500')
   })
 
   it('uses specified size', () => {
@@ -83,7 +83,7 @@ describe('ItemCardImage', () => {
         size={100}
       />
     )
-    const el = container.firstChild as HTMLElement
+    const el = container.firstElementChild as HTMLElement
     expect(el.style.width).toBe('100px')
     expect(el.style.height).toBe('100px')
   })

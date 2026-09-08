@@ -307,10 +307,10 @@ describe('theme types', () => {
           },
         },
       }
-      expect(theme.styles.componentVariants.card).toBe('glass')
-      expect(theme.styles.componentVariants.button).toBe('rounded')
-      expect(theme.styles.componentVariants.input).toBe('outlined')
-      expect(theme.styles.componentVariants.tile).toBe('large')
+      expect(theme.styles.componentVariants?.card).toBe('glass')
+      expect(theme.styles.componentVariants?.button).toBe('rounded')
+      expect(theme.styles.componentVariants?.input).toBe('outlined')
+      expect(theme.styles.componentVariants?.tile).toBe('large')
     })
 
     it('should support optional components mapping', () => {

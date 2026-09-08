@@ -5,7 +5,7 @@ import {
   getDefaultListPayload,
   type TodoListWithTasks,
 } from '../todoHelpers'
-import type { TodoList, TodoTask } from '../types'
+import type { TodoList, TodoTask } from '../../types'
 
 const makeTask = (overrides: Partial<TodoTask> = {}): TodoTask => ({
   id: 1,

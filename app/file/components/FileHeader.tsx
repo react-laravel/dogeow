@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, FolderPlus, Upload, Trash2, Loader2 } from 'lucide-react'
@@ -20,6 +21,7 @@ import { useSearchDebounce } from '@/hooks/useDebounce'
 import { SEARCH_CONFIG } from '../constants'
 
 export default function FileHeader() {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { searchQuery, setSearchQuery, selectedFiles } = useFileStore()
 
   const createFolderHook = useCreateFolder()
@@ -110,23 +112,26 @@ export default function FileHeader() {
         {renderCreateFolderDialog()}
 
         {/* 文件上传 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          hidden
+          aria-label="上传文件"
+          onChange={fileUploadHook.handleFileUpload}
+          multiple
+          disabled={fileUploadHook.isUploading}
+        />
         <Button
           variant="outline"
           size="sm"
           className="relative h-8"
           disabled={fileUploadHook.isUploading}
           title="上传文件"
+          onClick={() => fileInputRef.current?.click()}
+          loading={fileUploadHook.isUploading}
         >
-          <input
-            type="file"
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-            onChange={fileUploadHook.handleFileUpload}
-            multiple
-            disabled={fileUploadHook.isUploading}
-          />
           <Upload className="mr-2 h-4 w-4" />
           上传
-          {fileUploadHook.isUploading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
         </Button>
 
         {/* 批量删除按钮 */}

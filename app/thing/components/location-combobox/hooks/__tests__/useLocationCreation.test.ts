@@ -79,7 +79,12 @@ describe('useLocationCreation', () => {
     const area = await ctx.hook.handleCreateArea('厨房')
 
     expect(area).toEqual({ id: 2, name: '厨房' })
-    expect(apiRequest).toHaveBeenCalledWith('/areas', 'POST', { name: '厨房' })
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/areas',
+      'POST',
+      { name: '厨房' },
+      { handleError: false }
+    )
     expect(ctx.setSelectedAreaId).toHaveBeenCalledWith('2')
     expect(toast.success).toHaveBeenCalledWith('已创建区域 "厨房"')
 
@@ -120,10 +125,15 @@ describe('useLocationCreation', () => {
     const room = await ctx.hook.handleCreateRoom('书房')
 
     expect(room).toEqual({ id: 22, name: '书房', area_id: 1 })
-    expect(apiRequest).toHaveBeenCalledWith('/rooms', 'POST', {
-      name: '书房',
-      area_id: 1,
-    })
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/rooms',
+      'POST',
+      {
+        name: '书房',
+        area_id: 1,
+      },
+      { handleError: false }
+    )
     expect(ctx.setSelectedRoomId).toHaveBeenCalledWith('22')
     expect(toast.success).toHaveBeenCalledWith('已创建房间 "书房"')
 
@@ -166,10 +176,15 @@ describe('useLocationCreation', () => {
     const spot = await ctx.hook.handleCreateSpot('电视柜')
 
     expect(spot).toEqual({ id: 333, name: '电视柜', room_id: 11 })
-    expect(apiRequest).toHaveBeenCalledWith('/spots', 'POST', {
-      name: '电视柜',
-      room_id: 11,
-    })
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/spots',
+      'POST',
+      {
+        name: '电视柜',
+        room_id: 11,
+      },
+      { handleError: false }
+    )
     expect(ctx.setSelectedSpotId).toHaveBeenCalledWith('333')
 
     const updater = ctx.setSpots.mock.calls[0][0] as (prev: any[]) => any[]

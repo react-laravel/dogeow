@@ -20,6 +20,7 @@ interface EditFileDialogProps {
   onFileNameChange: (value: string) => void
   onFileDescriptionChange: (value: string) => void
   onSave: () => void
+  isSaving?: boolean
   onClose: () => void
 }
 
@@ -31,12 +32,13 @@ export const EditFileDialog = memo<EditFileDialogProps>(
     onFileNameChange,
     onFileDescriptionChange,
     onSave,
+    isSaving = false,
     onClose,
   }) => {
     if (!file) return null
 
     return (
-      <Dialog open={!!file} onOpenChange={open => !open && onClose()}>
+      <Dialog open={!!file} onOpenChange={open => !open && !isSaving && onClose()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>编辑{file.is_folder ? '文件夹' : '文件'}</DialogTitle>
@@ -47,6 +49,8 @@ export const EditFileDialog = memo<EditFileDialogProps>(
               <Input
                 id="edit-name"
                 value={fileName}
+                disabled={isSaving}
+                maxLength={255}
                 onChange={e => onFileNameChange(e.target.value)}
                 placeholder="请输入文件名"
               />
@@ -56,6 +60,7 @@ export const EditFileDialog = memo<EditFileDialogProps>(
               <Textarea
                 id="edit-description"
                 value={fileDescription}
+                disabled={isSaving}
                 onChange={e => onFileDescriptionChange(e.target.value)}
                 placeholder="请输入文件描述"
               />
@@ -63,13 +68,18 @@ export const EditFileDialog = memo<EditFileDialogProps>(
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">取消</Button>
-            </DialogClose>
-            <DialogClose asChild>
-              <Button onClick={onSave} disabled={!fileName.trim()}>
-                保存
+              <Button variant="outline" disabled={isSaving}>
+                取消
               </Button>
             </DialogClose>
+            <Button
+              onClick={onSave}
+              disabled={!fileName.trim()}
+              loading={isSaving}
+              loadingText="保存中"
+            >
+              保存
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

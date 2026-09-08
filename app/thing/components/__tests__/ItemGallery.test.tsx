@@ -1,24 +1,25 @@
+import { createItemFixture } from '@/app/thing/__tests__/fixtures'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import ItemGallery from '../ItemGallery'
 
 const mockItems = [
-  {
+  createItemFixture({
     id: 1,
     name: 'Item 1',
     status: 'active',
     images: [],
-    primary_image: null,
-    category: { name: 'Cat1' },
-  },
-  {
+    primary_image: undefined,
+    category: { id: 1, name: 'Cat1' },
+  }),
+  createItemFixture({
     id: 2,
     name: 'Item 2',
     status: 'active',
     images: [],
-    primary_image: null,
-    category: { name: 'Cat2' },
-  },
+    primary_image: undefined,
+    category: { id: 1, name: 'Cat2' },
+  }),
 ]
 
 describe('ItemGallery', () => {

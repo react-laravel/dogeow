@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CategoryTable } from '../CategoryTable'
-import type { Category, CategoryWithChildren } from '../../types'
+import type { Category } from '../../../types'
+import type { CategoryWithChildren } from '../../utils/buildCategoryTree'
 
 // Mock child components
 vi.mock('../CategoryParentRow', () => ({

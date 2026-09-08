@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
-import { del, put } from '@/lib/api'
+import { del } from '@/lib/api'
+import { isCloudFileCacheKey } from '../services/cache'
 import { downloadCloudFile } from '../services/api'
 import useFileStore from '../store/useFileStore'
 import type { CloudFile } from '../types'
@@ -64,13 +65,13 @@ export function useGridViewActions({
     async (file: CloudFile) => {
       try {
         await del(`/cloud/files/${file.id}`)
-        mutate(key => typeof key === 'string' && key.startsWith(getSWRKey()))
+        void mutate(isCloudFileCacheKey)
         toast.success('删除成功')
       } catch {
         toast.error('删除失败')
       }
     },
-    [mutate, getSWRKey]
+    [mutate]
   )
 
   return useMemo(

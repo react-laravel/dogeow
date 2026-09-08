@@ -3,10 +3,11 @@
  * 提供统一的国旗获取功能
  */
 
-// 语言代码到国旗的映射
-const LANGUAGE_FLAG_MAP: Record<string, string> = {
+import type { SupportedLanguage } from '@/lib/i18n/translations'
+
+// 与可选语言保持一致，新语言缺少图标时由类型检查提示。
+const LANGUAGE_FLAG_MAP: Record<SupportedLanguage, string> = {
   'zh-CN': '🇨🇳',
-  'zh-TW': '🇭🇰',
   en: '🇺🇸',
 }
 
@@ -17,7 +18,9 @@ const LANGUAGE_FLAG_MAP: Record<string, string> = {
  */
 export function getLanguageFlag(languageCode?: string): string {
   if (!languageCode) return '🌐'
-  return LANGUAGE_FLAG_MAP[languageCode] || '🌐'
+  return Object.hasOwn(LANGUAGE_FLAG_MAP, languageCode)
+    ? LANGUAGE_FLAG_MAP[languageCode as SupportedLanguage]
+    : '🌐'
 }
 
 /**
@@ -34,5 +37,5 @@ export function getSupportedLanguageCodes(): string[] {
  * @returns 是否支持国旗显示
  */
 export function hasLanguageFlag(languageCode: string): boolean {
-  return languageCode in LANGUAGE_FLAG_MAP
+  return Object.hasOwn(LANGUAGE_FLAG_MAP, languageCode)
 }

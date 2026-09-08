@@ -13,8 +13,8 @@ describe('timezone-map', () => {
       expect(TIMEZONE_LANGUAGE_MAP['Asia/Hong_Kong']).toBe('zh-CN')
       expect(TIMEZONE_LANGUAGE_MAP['Asia/Chongqing']).toBe('zh-CN')
       expect(TIMEZONE_LANGUAGE_MAP['Asia/Urumqi']).toBe('zh-CN')
-      expect(TIMEZONE_LANGUAGE_MAP['Asia/Taipei']).toBe('zh-TW')
-      expect(TIMEZONE_LANGUAGE_MAP['Asia/Tokyo']).toBe('ja')
+      expect(TIMEZONE_LANGUAGE_MAP['Asia/Taipei']).toBe('zh-CN')
+      expect(TIMEZONE_LANGUAGE_MAP['Asia/Tokyo']).toBeUndefined()
       expect(TIMEZONE_LANGUAGE_MAP['Asia/Seoul']).toBe('en')
     })
 
@@ -46,7 +46,7 @@ describe('timezone-map', () => {
   describe('getLanguageFromTimezone', () => {
     it('should return language for known timezones', () => {
       expect(getLanguageFromTimezone('Asia/Shanghai')).toBe('zh-CN')
-      expect(getLanguageFromTimezone('Asia/Tokyo')).toBe('ja')
+      expect(getLanguageFromTimezone('Asia/Tokyo')).toBeNull()
       expect(getLanguageFromTimezone('America/New_York')).toBe('en')
       expect(getLanguageFromTimezone('Europe/London')).toBe('en')
       expect(getLanguageFromTimezone('Australia/Sydney')).toBe('en')

@@ -1,3 +1,5 @@
+@import 'katex/dist/katex.min.css';
+
 /* Novel.js 编辑器专用样式 */
 @import 'highlight.js/styles/github-dark.css';
 
@@ -178,4 +180,32 @@
 
 .link:hover {
   color: rgba(var(--primary), 0.8);
+}
+
+/* Tiptap 3 提供缩放行为，应用负责手柄的可见样式和触控区域。 */
+.tiptap [data-resize-handle] {
+  width: 24px;
+  height: 24px;
+  z-index: 2;
+  touch-action: none;
+}
+
+.tiptap [data-resize-handle]::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.tiptap [data-resize-handle='bottom-left'] {
+  transform: translate(-50%, 50%);
+  cursor: nesw-resize;
+}
+
+.tiptap [data-resize-handle='bottom-right'] {
+  transform: translate(50%, 50%);
+  cursor: nwse-resize;
 }

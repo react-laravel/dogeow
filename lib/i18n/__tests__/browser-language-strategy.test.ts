@@ -31,7 +31,7 @@ describe('BrowserLanguageStrategy', () => {
       stubNavigator({
         languages: ['en', 'zh-CN'],
         language: 'en',
-      } as Navigator)
+      })
 
       const result = strategy.detect()
       expect(result).toEqual({ language: 'en', confidence: 0.95 })
@@ -41,7 +41,7 @@ describe('BrowserLanguageStrategy', () => {
       stubNavigator({
         languages: ['zh-HK', 'en-US'],
         language: 'zh-HK',
-      } as Navigator)
+      })
 
       const result = strategy.detect()
       expect(result).not.toBeNull()
@@ -51,19 +51,19 @@ describe('BrowserLanguageStrategy', () => {
 
     it('should fallback to navigator.language when languages not available', () => {
       stubNavigator({
-        language: 'ja',
-      } as Navigator)
+        language: 'en',
+      })
 
       const result = strategy.detect()
       expect(result).not.toBeNull()
-      expect(result?.language).toBe('ja')
+      expect(result?.language).toBe('en')
     })
 
     it('should return null for unsupported languages', () => {
       stubNavigator({
         languages: ['fr', 'de'],
         language: 'fr',
-      } as Navigator)
+      })
 
       const result = strategy.detect()
       expect(result).toBeNull()
@@ -71,11 +71,11 @@ describe('BrowserLanguageStrategy', () => {
 
     it('should handle errors gracefully', () => {
       stubNavigator({
-        get languages() {
+        get languages(): readonly string[] {
           throw new Error('Navigator error')
         },
         language: 'en',
-      } as unknown as Navigator)
+      })
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 

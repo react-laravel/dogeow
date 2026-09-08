@@ -4,8 +4,8 @@ import { Command, CommandInput } from '@/components/tailwind/ui/command'
 
 import { useCompletion } from '@ai-sdk/react'
 import { ArrowUp } from 'lucide-react'
-import { useEditor } from 'novel'
-import { addAIHighlight } from 'novel'
+import { useEditor } from '@/components/novel-editor/runtime'
+import { addAIHighlight } from '@/components/novel-editor/runtime'
 import { useState, useEffect } from 'react'
 import MarkdownPreview from '../markdown-preview'
 import { toast } from 'sonner'
@@ -106,7 +106,8 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
                 if (!editor) return
 
                 const slice = editor.state.selection.content()
-                const text = editor.storage.markdown.serializer.serialize(slice.content)
+                const text =
+                  editor.markdown?.serialize({ type: 'doc', content: slice.content.toJSON() }) ?? ''
 
                 complete(text, {
                   body: { option: 'zap', command: inputValue, text },

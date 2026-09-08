@@ -64,7 +64,25 @@ function Button({
           isDisabled && 'pointer-events-none opacity-50'
         )}
         disabled={isDisabled}
+        aria-disabled={isDisabled || undefined}
+        aria-busy={loading || undefined}
         tabIndex={resolvedTabIndex}
+        onClickCapture={event => {
+          if (isDisabled) {
+            event.preventDefault()
+            event.stopPropagation()
+            return
+          }
+          props.onClickCapture?.(event)
+        }}
+        onKeyDownCapture={event => {
+          if (isDisabled && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault()
+            event.stopPropagation()
+            return
+          }
+          props.onKeyDownCapture?.(event)
+        }}
       >
         {children}
       </Comp>
@@ -81,6 +99,7 @@ function Button({
         isDisabled && 'pointer-events-none opacity-50'
       )}
       disabled={isDisabled}
+      aria-busy={loading || undefined}
       tabIndex={resolvedTabIndex}
     >
       {loading && <LoadingSpinner size="sm" className="mr-2" aria-label="加载中" />}

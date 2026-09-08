@@ -19,13 +19,12 @@ import { getAuthTokenFromStorage } from '../storage'
 describe('storage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // @ts-expect-error - clearing for test
-    global.window = undefined
+    vi.stubGlobal('window', undefined)
   })
 
   describe('getAuthTokenFromStorage', () => {
     it('should return null in server environment (no window)', () => {
-      global.window = undefined
+      vi.stubGlobal('window', undefined)
       const result = getAuthTokenFromStorage()
       expect(result).toBeNull()
       expect(mockReadPersistedAuthToken).not.toHaveBeenCalled()
@@ -33,9 +32,9 @@ describe('storage', () => {
 
     it('should return token from localStorage via readPersistedAuthToken', () => {
       const mockStorage = {} as Storage
-      global.window = {
+      vi.stubGlobal('window', {
         localStorage: mockStorage,
-      } as Window
+      } as Window)
 
       mockReadPersistedAuthToken.mockReturnValue('test-token')
 
@@ -47,9 +46,9 @@ describe('storage', () => {
 
     it('should return null when readPersistedAuthToken returns null', () => {
       const mockStorage = {} as Storage
-      global.window = {
+      vi.stubGlobal('window', {
         localStorage: mockStorage,
-      } as Window
+      } as Window)
 
       mockReadPersistedAuthToken.mockReturnValue(null)
 
@@ -59,9 +58,9 @@ describe('storage', () => {
     })
 
     it('should catch errors from readPersistedAuthToken and return null', () => {
-      global.window = {
+      vi.stubGlobal('window', {
         localStorage: {},
-      } as Window
+      } as Window)
 
       mockReadPersistedAuthToken.mockImplementation(() => {
         throw new Error('localStorage access denied')

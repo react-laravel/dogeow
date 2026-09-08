@@ -1,3 +1,4 @@
+import { createItemFixture } from '@/app/thing/__tests__/fixtures'
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TimeInfo } from '../TimeInfo'
@@ -19,11 +20,11 @@ vi.mock('./InfoCard', () => ({
 }))
 
 describe('TimeInfo', () => {
-  const item = {
+  const item = createItemFixture({
     expiry_date: '2024-12-31',
     created_at: '2024-01-01',
     updated_at: '2024-06-01',
-  }
+  })
 
   it('renders expiry date when present', () => {
     render(<TimeInfo item={item} />)

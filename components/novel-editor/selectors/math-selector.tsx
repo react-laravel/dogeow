@@ -1,7 +1,7 @@
 import { Button } from '@/components/tailwind/ui/button'
 import { cn } from '@/lib/helpers'
 import { SigmaIcon } from 'lucide-react'
-import { useEditor } from 'novel'
+import { useEditor } from '@/components/novel-editor/runtime'
 
 export const MathSelector = () => {
   const { editor } = useEditor()

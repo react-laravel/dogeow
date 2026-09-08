@@ -11,7 +11,7 @@ import {
   TextIcon,
   TextQuote,
 } from 'lucide-react'
-import { EditorBubbleItem, useEditor } from 'novel'
+import { EditorBubbleItem, useEditor } from '@/components/novel-editor/runtime'
 
 import { Button } from '@/components/tailwind/ui/button'
 import { PopoverContent, PopoverTrigger } from '@/components/tailwind/ui/popover'

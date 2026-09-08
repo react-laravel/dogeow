@@ -176,7 +176,7 @@ describe('EditNotePage', () => {
       void firstShortcutsOptions?.onTogglePrivacy()
     })
 
-    expect(mockCreateMutation).toHaveBeenCalledWith('/notes/1', 'PUT')
+    expect(mockCreateMutation).toHaveBeenCalledWith('/notes/1', 'PUT', { handleError: false })
 
     currentRouteId = '2'
     currentLoaderState = {
@@ -533,7 +533,7 @@ describe('EditNotePage', () => {
       void firstShortcutsOptions?.onSave()
     })
 
-    expect(mockCreateMutation).toHaveBeenCalledWith('/notes/1', 'PUT')
+    expect(mockCreateMutation).toHaveBeenCalledWith('/notes/1', 'PUT', { handleError: false })
 
     currentRouteId = '2'
     currentLoaderState = {

@@ -14,9 +14,7 @@ vi.mock('@/stores/languageStore', () => ({
     currentLanguage: 'zh-CN',
     availableLanguages: [
       { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文', isDefault: true },
-      { code: 'zh-TW', name: 'Chinese (Traditional)', nativeName: '繁體中文', isDefault: false },
       { code: 'en', name: 'English', nativeName: 'English', isDefault: false },
-      { code: 'ja', name: 'Japanese', nativeName: '日本語', isDefault: false },
     ],
     setLanguage: mockSetLanguage,
     t: mockT,
@@ -55,7 +53,7 @@ describe('useTranslation', () => {
     expect(result.current.t).toBeDefined()
     expect(result.current.currentLanguage).toBe('zh-CN')
     expect(result.current.currentLanguageInfo).toBeDefined()
-    expect(result.current.availableLanguages).toHaveLength(4)
+    expect(result.current.availableLanguages).toHaveLength(2)
     expect(result.current.setLanguage).toBeDefined()
     expect(result.current.isLanguageLoaded).toBe(true)
   })
@@ -97,11 +95,9 @@ describe('useTranslation', () => {
   it('should provide availableLanguages', () => {
     const { result } = renderHook(() => useTranslation())
 
-    expect(result.current.availableLanguages).toHaveLength(4)
+    expect(result.current.availableLanguages).toHaveLength(2)
     expect(result.current.availableLanguages[0].code).toBe('zh-CN')
-    expect(result.current.availableLanguages[1].code).toBe('zh-TW')
-    expect(result.current.availableLanguages[2].code).toBe('en')
-    expect(result.current.availableLanguages[3].code).toBe('ja')
+    expect(result.current.availableLanguages[1].code).toBe('en')
   })
 })
 
@@ -158,7 +154,7 @@ describe('useTranslationWithLanguage', () => {
   it('should handle fallback with explicit language', () => {
     const { result } = renderHook(() => useTranslationWithLanguage())
 
-    const translation = result.current('test.key', 'ja', 'Fallback')
-    expect(translation).toBe('ja:test.key:Fallback')
+    const translation = result.current('test.key', 'en', 'Fallback')
+    expect(translation).toBe('en:test.key:Fallback')
   })
 })

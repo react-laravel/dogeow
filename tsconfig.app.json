@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "tsBuildInfoFile": ".next/cache/tsconfig.app.tsbuildinfo"
+  },
+  "exclude": [
+    "node_modules",
+    "releases",
+    "current",
+    ".build-staging.*",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "vitest.config*.ts",
+    "vitest.setup.tsx",
+    "types/vitest.d.ts"
+  ]
+}

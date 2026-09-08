@@ -1,15 +1,16 @@
+import { createItemFixture } from '@/app/thing/__tests__/fixtures'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { GalleryItem } from '../GalleryItem'
 
-const mockItem = {
+const mockItem = createItemFixture({
   id: 1,
   name: 'Test Item',
   status: 'active',
-  category: { name: 'Electronics' },
+  category: { id: 1, name: 'Electronics' },
   images: [],
-  primary_image: null,
-}
+  primary_image: undefined,
+})
 
 describe('GalleryItem', () => {
   it('renders item name', () => {
@@ -23,7 +24,7 @@ describe('GalleryItem', () => {
   })
 
   it('renders Uncategorized when no category', () => {
-    const itemNoCat = { ...mockItem, category: null }
+    const itemNoCat = { ...mockItem, category: undefined }
     render(<GalleryItem item={itemNoCat} imageSize={120} onClick={vi.fn()} />)
     expect(screen.getByText('Uncategorized')).toBeDefined()
   })
