@@ -59,10 +59,22 @@ function isPlayBreak(trimmed) {
   return /^\S{1,8}\s{2,}/.test(trimmed)
 }
 
-/**
- * @param {string[]} lines
- * @param {'paragraph' | 'play'} [mode]
- */
+const SENTENCE_END = /[。！？…」』"”]$/
+const PLAY_COMPLETE = /[。！？…）)]$/
+
+function isCompletePlayLine(trimmed) {
+  if (PLAY_COMPLETE.test(trimmed) && !trimmed.startsWith('〔')) return true
+  if (trimmed.startsWith('〔')) return false
+  if (/^\S{1,8}\s{2,}/.test(trimmed)) return PLAY_COMPLETE.test(trimmed)
+  return !trimmed.includes('，')
+}
+
+function isHardwrapComplete(trimmed) {
+  if (SENTENCE_END.test(trimmed)) return true
+  if (trimmed.startsWith('——') || trimmed.startsWith('—')) return true
+  return false
+}
+
 function flushJoined(buffer, paragraphs) {
   if (buffer.length === 0) return
   const paragraph = buffer.join('').replace(/[ \t]+/g, ' ').trim()
@@ -70,6 +82,10 @@ function flushJoined(buffer, paragraphs) {
   buffer.length = 0
 }
 
+/**
+ * @param {string[]} lines
+ * @param {'paragraph' | 'play' | 'hardwrap'} [mode]
+ */
 export function unwrapParagraphs(lines, mode = 'paragraph') {
   if (mode === 'play') {
     const paragraphs = []
@@ -84,7 +100,7 @@ export function unwrapParagraphs(lines, mode = 'paragraph') {
       }
       if (isJunkLine(trimmed) || trimmed === '完') continue
       const previous = buffer[buffer.length - 1]
-      if (buffer.length > 0 && (isPlayBreak(trimmed) || (previous && previous.length < 40))) {
+      if (buffer.length > 0 && (isPlayBreak(trimmed) || isCompletePlayLine(previous))) {
         flushJoined(buffer, paragraphs)
       }
       buffer.push(trimmed)
@@ -100,6 +116,8 @@ export function unwrapParagraphs(lines, mode = 'paragraph') {
     for (const line of lines) {
       const trimmed = line.trim()
       if (!trimmed) {
+        const previous = buffer[buffer.length - 1]
+        if (previous && !isHardwrapComplete(previous)) continue
         flushJoined(buffer, paragraphs)
         continue
       }

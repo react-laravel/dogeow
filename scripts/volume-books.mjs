@@ -81,7 +81,7 @@ export const VOLUME_BOOKS = {
     sourceUrl:
       'https://raw.githubusercontent.com/BlankRain/ebooks/master/平凡的世界-路遥_TXT小说天堂.txt',
     defaultVolumeName: '第一部',
-    expectedChapterCounts: [53, 54, 54],
+    expectedChapterCounts: [54, 54, 54],
     classify(line) {
       const combo = line.match(
         new RegExp(`^(第[一二三]部)\\s+(第[${CHAPTER_NUM}]+章)$`)
@@ -94,12 +94,13 @@ export const VOLUME_BOOKS = {
           number: chapterNumberFromTitle(combo[2]),
         }
       }
-      const chapter = line.match(new RegExp(`^第[${CHAPTER_NUM}]+章$`))
+      // 第一部有一处光秃秃的「第三十七」，没有「章」
+      const chapter = line.match(new RegExp(`^第([${CHAPTER_NUM}]+)章?$`))
       if (!chapter) return null
       return {
         type: 'chapter',
-        title: chapter[0],
-        number: chapterNumberFromTitle(chapter[0]),
+        title: `第${chapter[1]}章`,
+        number: chineseToNumber(chapter[1]),
       }
     },
   },

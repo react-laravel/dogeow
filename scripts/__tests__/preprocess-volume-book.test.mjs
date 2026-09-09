@@ -109,6 +109,28 @@ describe('volume book parser', () => {
     expect(parts[0].chapters.map(chapter => chapter.title)).toEqual(['第一章', '第二章'])
   })
 
+  it('treats a bare 第三十七 as 第三十七章', () => {
+    const spec = VOLUME_BOOKS.pingfandeshijie
+    const lines = [
+      '第一部 第一章',
+      '雨。',
+      '第三十六章',
+      '田润叶。',
+      '第三十七',
+      '孙少平在高中的最后一个学期开始了。',
+      '第三十八章',
+      '兰香。',
+    ]
+    const parts = parseVolumeBook(lines, spec)
+    expect(parts[0].chapters.map(chapter => chapter.title)).toEqual([
+      '第一章',
+      '第三十六章',
+      '第三十七章',
+      '第三十八章',
+    ])
+    expect(unwrapParagraphs(parts[0].chapters[2].lines)).toContain('孙少平在高中')
+  })
+
   it('keeps 雷雨 speeches as separate paragraphs', () => {
     const lines = [
       '姑奶奶甲（教堂尼姑）',
@@ -125,6 +147,7 @@ describe('volume book parser', () => {
     expect(text).toContain('姑甲 （和蔼地）请进来吧。')
     expect(text).toContain('老人 （点头）嗯。')
     expect(text).toContain('一位苍白的老年人走进来')
+    expect(text).toContain('帽子，头发斑白')
     expect(text).not.toContain('姑奶奶甲（教堂尼姑）姑奶奶乙')
     expect(text.split('\n\n').length).toBeGreaterThanOrEqual(5)
   })
@@ -135,14 +158,21 @@ describe('volume book parser', () => {
         '滚滚长江东逝水，浪花淘尽英雄。是非成败转头空。',
         '',
         '青山依旧在，几度夕阳红。白发渔樵江渚上，惯',
+        '',
         '看秋月春风。一壶浊酒喜相逢。古今多少事，都付',
+        '',
         '笑谈中。',
+        '',
+        '——调寄《临江仙》',
+        '',
+        '话说天下大势，分久必合，合久必分。',
       ],
       'hardwrap'
     )
     expect(text).toContain('惯看秋月春风')
     expect(text).toContain('都付笑谈中。')
-    expect(text.split('\n\n')).toHaveLength(2)
+    expect(text).not.toContain('临江仙》话说')
+    expect(text.split('\n\n')).toHaveLength(4)
   })
 
   it('starts a new volume on a bare 第N卷 heading', () => {

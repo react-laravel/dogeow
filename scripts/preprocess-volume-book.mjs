@@ -5,7 +5,9 @@
  * 用法:
  *   node scripts/preprocess-volume-book.mjs biancheng
  *   node scripts/preprocess-volume-book.mjs --all
+ *   node scripts/preprocess-volume-book.mjs --publish --all
  */
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,6 +21,7 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
+const API_ROOT = path.resolve(ROOT, '../dogeow-api')
 const BOOKS_DIR = path.join(ROOT, '../../Books')
 
 export async function ensureSource(spec) {
@@ -58,15 +61,26 @@ export async function preprocessBook(id) {
   return { spec, index, outDir }
 }
 
+function uploadBook(id) {
+  const result = spawnSync('php', ['artisan', 'books:upload', id], {
+    cwd: API_ROOT,
+    stdio: 'inherit',
+  })
+  if (result.status !== 0) {
+    throw new Error(`上传失败：php artisan books:upload ${id}`)
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
+  const publish = args.includes('--publish')
   const ids = args.includes('--all')
     ? VOLUME_BOOK_IDS
     : args.filter(arg => arg && !arg.startsWith('-'))
 
   if (ids.length === 0) {
     console.error(
-      `用法: node scripts/preprocess-volume-book.mjs <id>|--all\n可选 id: ${VOLUME_BOOK_IDS.join(', ')}`
+      `用法: node scripts/preprocess-volume-book.mjs <id>|--all [--publish]\n可选 id: ${VOLUME_BOOK_IDS.join(', ')}`
     )
     process.exit(1)
   }
@@ -77,6 +91,7 @@ async function main() {
     console.log(
       `已生成《${index.title}》${translator} ${index.totalVolumes} 卷、${index.totalChapters} 章 → ${outDir}`
     )
+    if (publish) uploadBook(id)
   }
 }
 
