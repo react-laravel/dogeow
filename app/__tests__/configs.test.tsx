@@ -92,6 +92,16 @@ describe('App Configs', () => {
         expect(tile.nameKey).toMatch(/^nav\.[a-zA-Z]+$/)
       })
     })
+
+    it('lists Anna Karenina as a volume book', () => {
+      const book = configs.books.find(item => item.id === 'annakarenina')
+      expect(book).toMatchObject({
+        kind: 'volume',
+        href: '/book/annakarenina',
+        nameKey: 'book.annakarenina',
+        fallbackTitle: '安娜·卡列尼娜',
+      })
+    })
   })
 
   describe('getTranslatedConfigs function', () => {

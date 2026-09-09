@@ -27,6 +27,8 @@ export const zh_CN = {
   'book.hongloumeng.desc': '中国古代四大名著之一，曹雪芹著',
   'book.luxun': '鲁迅全集',
   'book.luxun.desc': '鲁迅作品全集，共二十卷',
+  'book.annakarenina': '安娜·卡列尼娜',
+  'book.annakarenina.desc': '列夫·托尔斯泰著，草婴译，共八部',
   'book.select_description': '选择一本好书开始阅读',
   'book.start_reading': '开始阅读',
 
