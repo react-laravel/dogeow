@@ -182,3 +182,157 @@ describe('narration controls', () => {
     expect(result.current.activeHighlight?.role).toBe('original')
   })
 })
+
+class MockAudio {
+  src = ''
+  playbackRate = 1
+  paused = true
+  currentTime = 0
+  duration = 10
+  onended: (() => void) | null = null
+  onerror: (() => void) | null = null
+  ontimeupdate: (() => void) | null = null
+  play = vi.fn(async () => {
+    this.paused = false
+  })
+  pause = vi.fn(() => {
+    this.paused = true
+  })
+  load = vi.fn()
+  removeAttribute = vi.fn((name: string) => {
+    if (name === 'src') this.src = ''
+  })
+}
+
+describe('AI audio narration', () => {
+  const players: MockAudio[] = []
+
+  beforeEach(() => {
+    players.length = 0
+    vi.stubGlobal(
+      'Audio',
+      class extends MockAudio {
+        constructor() {
+          super()
+          players.push(this)
+        }
+      }
+    )
+  })
+
+  it('plays catalogued audio and skips paragraphs without a file', async () => {
+    const resolveAiAudioUrl = (pairIndex: number) =>
+      pairIndex === 0 ? null : `https://cdn.example/00${pairIndex}.mp3`
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl,
+      })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    expect(spoken).toHaveLength(0)
+    expect(players[0]?.src).toBe('https://cdn.example/001.mp3')
+    expect(result.current.activePairIndex).toBe(1)
+    expect(result.current.status).toBe('playing')
+  })
+
+  it('changes speed with playbackRate and keeps the same audio element', async () => {
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl: pairIndex => `https://cdn.example/${pairIndex}.mp3`,
+      })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    act(() => {
+      result.current.setRate(1.5)
+    })
+    expect(players).toHaveLength(1)
+    expect(players[0]?.playbackRate).toBe(1.5)
+    expect(spoken).toHaveLength(0)
+  })
+
+  it('pauses and resumes the same AI audio without restarting', async () => {
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl: pairIndex => `https://cdn.example/${pairIndex}.mp3`,
+      })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    act(() => {
+      result.current.pause()
+    })
+    expect(result.current.status).toBe('paused')
+    expect(players[0]?.pause).toHaveBeenCalled()
+    act(() => {
+      result.current.resume()
+    })
+    expect(result.current.status).toBe('playing')
+    expect(players[0]?.play).toHaveBeenCalledTimes(2)
+    expect(players).toHaveLength(1)
+  })
+
+  it('plays a short silence file for whitespace-only paragraphs', async () => {
+    const blankChapter: BookChapter = {
+      ...chapter,
+      pairs: [
+        { o: '  ', t: '' },
+        { o: '正文。', t: '' },
+      ],
+    }
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter: blankChapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl: pairIndex => `https://cdn.example/${pairIndex}.mp3`,
+      })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    expect(players[0]?.src).toBe('https://cdn.example/0.mp3')
+    expect(result.current.activePairIndex).toBe(0)
+    expect(result.current.status).toBe('playing')
+  })
+
+  it('returns false when the chapter has no AI audio', async () => {
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl: () => null,
+      })
+    )
+    await act(async () => {})
+    let started = true
+    act(() => {
+      started = result.current.start(0)
+    })
+    expect(started).toBe(false)
+    expect(players).toHaveLength(0)
+  })
+})

@@ -21,6 +21,7 @@ import { useAiDialogStore } from '@/stores/aiDialogStore'
 import useAuthStore from '@/stores/authStore'
 import { canUseAi } from '@/lib/ai/access'
 import { useBookNarration, type BookNarrationMode } from '@/app/book/hooks/useBookNarration'
+import { hasAiNarrationAudio, getAiNarrationPairUrl } from '@/app/book/utils/aiNarration'
 import { useNarrationEngine } from '@/app/book/utils/narrationEngine'
 import type { BookReaderConfig } from '@/app/book/types'
 import type { BaseReaderSettings } from '@/app/book/types/reader'
@@ -85,17 +86,32 @@ export function BookReader<
     bookTitle,
     renderContent,
     scrollStorageKey,
+    aiNarration,
   } = config
 
   // Re-render when OS color scheme changes while theme is `auto`
   const systemScheme = useSystemColorScheme()
   const themeStyle = getBookThemeStyle(settings.theme)
   const resolvedTheme = resolveBookTheme(settings.theme, systemScheme)
+  const resolveAiAudioUrl = useCallback(
+    (pairIndex: number) => {
+      if (!aiNarration) return null
+      return getAiNarrationPairUrl(aiNarration.bookId, aiNarration.chapterId, pairIndex)
+    },
+    [aiNarration]
+  )
+
   const narration = useBookNarration({
     chapter: narrationChapter ?? null,
     narrationMode,
     contentRef,
+    engine: narrationEngine,
+    resolveAiAudioUrl,
   })
+
+  const aiChapterReady = Boolean(
+    aiNarration && hasAiNarrationAudio(aiNarration.bookId, aiNarration.chapterId)
+  )
 
   useScrollSaver(contentRef, scrollStorageKey ?? 'book-reader', currentChapterId)
 
@@ -186,25 +202,25 @@ export function BookReader<
       addPositionBookmark,
       addCollection,
       onPlaySelection: selection => {
-        if (narrationEngine === 'ai') {
-          toast.info('没有语音 API，请改用系统 TTS')
-          return
-        }
         if (!narration.start(selection.pairIndex ?? 0)) {
-          toast.error('当前浏览器不支持听书，或章节还没有加载完成')
+          toast.error(
+            narrationEngine === 'ai'
+              ? '本章还没有 AI 朗读音频，请改用系统 TTS'
+              : '当前浏览器不支持听书，或章节还没有加载完成'
+          )
         }
       },
       onAskAi: handleOpenAiPanel,
     })
 
   const handleStartNarration = useCallback(() => {
-    if (narrationEngine === 'ai') {
-      toast.info('没有语音 API，请改用系统 TTS')
-      return
-    }
     const startPairIndex = getChapterContext().pairIndex ?? 0
     if (!narration.start(startPairIndex)) {
-      toast.error('当前浏览器不支持听书，或章节还没有加载完成')
+      toast.error(
+        narrationEngine === 'ai'
+          ? '本章还没有 AI 朗读音频，请改用系统 TTS'
+          : '当前浏览器不支持听书，或章节还没有加载完成'
+      )
     }
   }, [getChapterContext, narration, narrationEngine])
 
@@ -307,21 +323,22 @@ export function BookReader<
           narrationRate={narration.rate}
           onNarrationRateChange={narration.setRate}
           onNarrationSeek={index => {
-            if (narrationEngine === 'ai') return
             narration.start(index)
           }}
           narrationEngine={narrationEngine}
           onNarrationEngineChange={handleNarrationEngineChange}
           narrationUnavailableReason={
-            narrationEngine === 'ai'
-              ? 'AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS'
-              : !narration.supported
-                ? '当前浏览器不支持语音朗读'
-                : loading || !narrationChapter
-                  ? '章节正在加载，请稍候'
-                  : !narrationChapter.pairs.length
-                    ? '当前章节没有可朗读的内容'
-                    : undefined
+            loading || !narrationChapter
+              ? '章节正在加载，请稍候'
+              : !narrationChapter.pairs.length
+                ? '当前章节没有可朗读的内容'
+                : narrationEngine === 'ai'
+                  ? aiChapterReady
+                    ? undefined
+                    : '本章还没有 AI 朗读音频，请改用系统 TTS'
+                  : narration.supported
+                    ? undefined
+                    : '当前浏览器不支持语音朗读'
           }
           hideNarration={!hasNarration}
           narrationOriginalOnly={narrationOriginalOnly}

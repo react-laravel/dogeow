@@ -12,6 +12,7 @@ import {
   VOLUME_BOOK_DEFAULTS,
 } from '@/app/book/utils/registry'
 import { NarrationHighlightedText } from '@/app/book/components/NarrationHighlightedText'
+import { splitVolumeParagraphs } from '@/app/book/utils/volumeParagraphs'
 import { cn } from '@/lib/helpers'
 
 interface Volume {
@@ -96,7 +97,7 @@ export function VolumeBookReader({
 
   const contentParagraphs = useMemo(() => {
     if (!chapterContent) return []
-    return chapterContent.split(/\n{2,}/).filter(Boolean)
+    return splitVolumeParagraphs(chapterContent)
   }, [chapterContent])
 
   const narrationChapter = useMemo(
@@ -260,6 +261,7 @@ export function VolumeBookReader({
       hasNextChapter: hasNext,
       hasNarration: true,
       narrationChapter,
+      aiNarration: { bookId, chapterId: currentChapterId },
       hasTextSelection: true,
       hasPairDisplayMode: false,
       hasContentMode: false,
@@ -286,6 +288,7 @@ export function VolumeBookReader({
       hasPrev,
       hasNext,
       navigateChapter,
+      bookId,
       narrationChapter,
       storageKey,
       chapterSelectPlaceholder,

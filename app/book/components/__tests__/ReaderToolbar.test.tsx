@@ -136,7 +136,7 @@ describe('ReaderToolbar', () => {
         {...props}
         narrationEngine="tts"
         onNarrationEngineChange={changeEngine}
-        narrationUnavailableReason="AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS"
+        narrationUnavailableReason="本章还没有 AI 朗读音频，请改用系统 TTS"
       />
     )
     fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
@@ -149,14 +149,12 @@ describe('ReaderToolbar', () => {
         {...props}
         narrationEngine="ai"
         onNarrationEngineChange={vi.fn()}
-        narrationUnavailableReason="AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS"
+        narrationUnavailableReason="本章还没有 AI 朗读音频，请改用系统 TTS"
       />
     )
     fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
     expect(screen.getByRole('button', { name: '从当前位置开始听书' })).toBeDisabled()
-    expect(
-      screen.getByText('AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS')
-    ).toBeInTheDocument()
+    expect(screen.getByText('本章还没有 AI 朗读音频，请改用系统 TTS')).toBeInTheDocument()
   })
   it('hides narration for unsupported book types and keeps mark counts readable', () => {
     render(<ReaderToolbar {...props} hideNarration bookmarkCount={3} collectionCount={150} />)

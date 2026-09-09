@@ -81,6 +81,12 @@ export interface BookReaderConfig<ChapterId, Settings, BookMarkType> {
   /** 听书模式选择是否隐藏译文/全部（仅原文书） */
   narrationOriginalOnly?: boolean
 
+  /** 预生成 AI 朗读所在的书目与章节；缺音频时听书会提示改用系统 TTS */
+  aiNarration?: {
+    bookId: string
+    chapterId: string
+  } | null
+
   /** sessionStorage key for scroll position; omit to reset scroll on chapter change */
   scrollStorageKey?: string
 

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { BookChapter, SentencePair } from '@/app/book/utils/bilingualParse'
-import type { BookNarrationMode, BookNarrationStatus } from '@/app/book/types/narration'
+import type {
+  BookNarrationEngine,
+  BookNarrationMode,
+  BookNarrationStatus,
+} from '@/app/book/types/narration'
 import {
   scrollNarrationHighlightIntoView,
   scrollNarrationPairIntoView,
@@ -35,6 +39,8 @@ interface UseBookNarrationOptions {
   chapter: BookChapter | null
   narrationMode: BookNarrationMode
   contentRef: RefObject<HTMLDivElement | null>
+  engine?: BookNarrationEngine
+  resolveAiAudioUrl?: (pairIndex: number) => string | null
 }
 
 /** Approximate Chinese TTS pace at rate 1.0 (chars / second). */
@@ -84,6 +90,36 @@ export function getPairNarrationParts(
   }
 }
 
+function detachAudio(audio: HTMLAudioElement | null): void {
+  if (!audio) return
+  audio.onended = null
+  audio.onerror = null
+  audio.ontimeupdate = null
+  audio.pause()
+  audio.removeAttribute('src')
+  try {
+    audio.load()
+  } catch {
+    // ignore
+  }
+}
+
+function createAiAudio(options: {
+  url: string
+  rate: number
+  onEnded: () => void
+  onError: () => void
+  onTimeUpdate: (audio: HTMLAudioElement) => void
+}): HTMLAudioElement {
+  const audio = new Audio()
+  audio.playbackRate = options.rate
+  audio.src = options.url
+  audio.onended = options.onEnded
+  audio.onerror = options.onError
+  audio.ontimeupdate = () => options.onTimeUpdate(audio)
+  return audio
+}
+
 function getSpeechSynthesis(): SpeechSynthesis | null {
   if (typeof window === 'undefined') return null
   return window.speechSynthesis ?? null
@@ -128,7 +164,13 @@ function buildHighlightFromCharIndex(
   return { pairIndex, role: segment.role, start, end }
 }
 
-export function useBookNarration({ chapter, narrationMode, contentRef }: UseBookNarrationOptions) {
+export function useBookNarration({
+  chapter,
+  narrationMode,
+  contentRef,
+  engine = 'tts',
+  resolveAiAudioUrl,
+}: UseBookNarrationOptions) {
   const [status, setStatus] = useState<BookNarrationStatus>('idle')
   const [activePairIndex, setActivePairIndex] = useState<number | null>(null)
   const [activeText, setActiveText] = useState('')
@@ -150,6 +192,9 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
   const progressTimerRef = useRef<number | null>(null)
   const receivedBoundaryRef = useRef(false)
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const engineRef = useRef<BookNarrationEngine>(engine)
+  const resolveAiAudioUrlRef = useRef(resolveAiAudioUrl)
 
   useEffect(() => {
     chapterRef.current = chapter
@@ -170,6 +215,14 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
   useEffect(() => {
     narrationModeRef.current = narrationMode
   }, [narrationMode])
+
+  useEffect(() => {
+    engineRef.current = engine
+  }, [engine])
+
+  useEffect(() => {
+    resolveAiAudioUrlRef.current = resolveAiAudioUrl
+  }, [resolveAiAudioUrl])
 
   useEffect(() => {
     const synth = getSpeechSynthesis()
@@ -212,17 +265,19 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
     }
   }, [])
 
-  const discardCurrentUtterance = useCallback(() => {
+  const discardPlayback = useCallback(() => {
     clearProgressTimer()
     utteranceRef.current = null
     receivedBoundaryRef.current = false
     getSpeechSynthesis()?.cancel()
+    detachAudio(audioRef.current)
+    audioRef.current = null
   }, [clearProgressTimer])
 
   const stop = useCallback(() => {
     stoppedRef.current = true
     pendingResumeRef.current = null
-    discardCurrentUtterance()
+    discardPlayback()
     activeFullTextRef.current = ''
     activePairIndexRef.current = null
     activeHighlightRef.current = null
@@ -231,17 +286,18 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
     setActivePairIndex(null)
     setActiveText('')
     setActiveHighlight(null)
-  }, [discardCurrentUtterance])
+  }, [discardPlayback])
 
   const speakNext = useCallback(() => {
-    const synth = getSpeechSynthesis()
     const currentChapter = chapterRef.current
-    if (!synth || !currentChapter || stoppedRef.current) {
+    const usingAi = engineRef.current === 'ai'
+    const synth = getSpeechSynthesis()
+    if (!currentChapter || stoppedRef.current || (!usingAi && !synth)) {
       stop()
       return
     }
 
-    const pendingResume = pendingResumeRef.current
+    const pendingResume = usingAi ? null : pendingResumeRef.current
     pendingResumeRef.current = null
 
     let pairIndex: number
@@ -268,6 +324,74 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
 
     nextPairIndexRef.current = pairIndex + 1
 
+    const applyCharHighlight = (charIndex: number, charLength = HIGHLIGHT_WINDOW) => {
+      const highlight = buildHighlightFromCharIndex(pairIndex, segments, charIndex, charLength)
+      if (highlight) {
+        activeHighlightRef.current = highlight
+        setActiveHighlight(highlight)
+      }
+    }
+
+    if (usingAi) {
+      const url = resolveAiAudioUrlRef.current?.(pairIndex) ?? null
+      if (!url || startChar >= Math.max(text.length, 1)) {
+        speakNextRef.current()
+        return
+      }
+
+      clearProgressTimer()
+      detachAudio(audioRef.current)
+      const audio = createAiAudio({
+        url,
+        rate: rateRef.current,
+        onEnded: () => {
+          if (audioRef.current !== audio || stoppedRef.current) return
+          speakNextRef.current()
+        },
+        onError: () => {
+          if (audioRef.current !== audio || stoppedRef.current) return
+          speakNextRef.current()
+        },
+        onTimeUpdate: current => {
+          if (audioRef.current !== current || stoppedRef.current || !text.trim()) return
+          const duration = current.duration
+          if (!Number.isFinite(duration) || duration <= 0) return
+          const charIndex = Math.min(
+            Math.floor((current.currentTime / duration) * text.length),
+            Math.max(text.length - 1, 0)
+          )
+          applyCharHighlight(charIndex)
+        },
+      })
+      audioRef.current = audio
+
+      activeSegmentsRef.current = segments
+      activeFullTextRef.current = text
+      activePairIndexRef.current = pairIndex
+      setActivePairIndex(pairIndex)
+      setActiveText(text)
+      if (text.trim()) {
+        applyCharHighlight(0, Math.min(HIGHLIGHT_WINDOW, text.length))
+      } else {
+        activeHighlightRef.current = null
+        setActiveHighlight(null)
+      }
+      statusRef.current = 'playing'
+      setStatus('playing')
+      scrollActivePairIntoView(pairIndex)
+
+      void audio.play().catch(() => {
+        if (audioRef.current !== audio || stoppedRef.current) return
+        speakNextRef.current()
+      })
+      return
+    }
+
+    if (!synth) {
+      stop()
+      return
+    }
+
     if (!text.trim() || startChar >= text.length) {
       speakNextRef.current()
       return
@@ -284,14 +408,6 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
     utterance.volume = 1
     if (preferredVoiceRef.current) {
       utterance.voice = preferredVoiceRef.current
-    }
-
-    const applyCharHighlight = (charIndex: number, charLength = HIGHLIGHT_WINDOW) => {
-      const highlight = buildHighlightFromCharIndex(pairIndex, segments, charIndex, charLength)
-      if (highlight) {
-        activeHighlightRef.current = highlight
-        setActiveHighlight(highlight)
-      }
     }
 
     utterance.onboundary = event => {
@@ -365,21 +481,32 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
 
   const start = useCallback(
     (pairIndex = 0): boolean => {
-      const synth = getSpeechSynthesis()
       const currentChapter = chapterRef.current
-      if (!synth || !currentChapter || currentChapter.pairs.length === 0) return false
+      if (!currentChapter || currentChapter.pairs.length === 0) return false
 
-      preferredVoiceRef.current = pickChineseVoice(synth) ?? preferredVoiceRef.current
+      const usingAi = engineRef.current === 'ai'
+      if (usingAi) {
+        if (typeof Audio === 'undefined' || !resolveAiAudioUrlRef.current) return false
+        const startIndex = Math.max(0, Math.min(pairIndex, currentChapter.pairs.length - 1))
+        const hasAudio = currentChapter.pairs.some(
+          (_, index) => index >= startIndex && Boolean(resolveAiAudioUrlRef.current?.(index))
+        )
+        if (!hasAudio) return false
+      } else {
+        const synth = getSpeechSynthesis()
+        if (!synth) return false
+        preferredVoiceRef.current = pickChineseVoice(synth) ?? preferredVoiceRef.current
+      }
+
       // 旧语句 cancel 的回调可能延迟到新语句开始后，先解除它的归属。
       pendingResumeRef.current = null
-      utteranceRef.current = null
-      synth.cancel()
+      discardPlayback()
       stoppedRef.current = false
       nextPairIndexRef.current = Math.max(0, Math.min(pairIndex, currentChapter.pairs.length - 1))
       speakNext()
       return true
     },
-    [speakNext]
+    [discardPlayback, speakNext]
   )
 
   const replayFromCurrent = useCallback(() => {
@@ -387,23 +514,41 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
     if (!snapshot) return
     pendingResumeRef.current = snapshot
     stoppedRef.current = false
-    discardCurrentUtterance()
+    discardPlayback()
     speakNext()
-  }, [captureResume, discardCurrentUtterance, speakNext])
+  }, [captureResume, discardPlayback, speakNext])
 
   const pause = useCallback(() => {
     if (statusRef.current !== 'playing') return
+    if (engineRef.current === 'ai') {
+      audioRef.current?.pause()
+      statusRef.current = 'paused'
+      setStatus('paused')
+      return
+    }
     const snapshot = captureResume()
     if (!snapshot) return
     pendingResumeRef.current = snapshot
-    discardCurrentUtterance()
+    discardPlayback()
     statusRef.current = 'paused'
     setStatus('paused')
-  }, [captureResume, discardCurrentUtterance])
+  }, [captureResume, discardPlayback])
 
   const resume = useCallback(() => {
     if (statusRef.current !== 'paused') return
     stoppedRef.current = false
+    if (engineRef.current === 'ai') {
+      const audio = audioRef.current
+      if (audio?.src) {
+        audio.playbackRate = rateRef.current
+        void audio.play().catch(() => {
+          if (!stoppedRef.current) speakNextRef.current()
+        })
+        statusRef.current = 'playing'
+        setStatus('playing')
+        return
+      }
+    }
     if (!pendingResumeRef.current && activePairIndexRef.current != null) {
       nextPairIndexRef.current = activePairIndexRef.current
     }
@@ -416,6 +561,10 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
       const previous = rateRef.current
       rateRef.current = clamped
       setRateState(clamped)
+      if (engineRef.current === 'ai' && audioRef.current) {
+        audioRef.current.playbackRate = clamped
+        return
+      }
       if (previous !== clamped && statusRef.current === 'playing') replayFromCurrent()
     },
     [replayFromCurrent]
@@ -425,7 +574,7 @@ export function useBookNarration({ chapter, narrationMode, contentRef }: UseBook
 
   useEffect(() => {
     queueMicrotask(stop)
-  }, [chapter?.id, stop])
+  }, [chapter?.id, engine, stop])
 
   return {
     activeText,
