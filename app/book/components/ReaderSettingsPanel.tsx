@@ -111,7 +111,7 @@ export function ReaderSettingsPanel({
       theme={settings.theme}
       footer={
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-muted-foreground">只调整阅读样式，保留当前进度</span>
+          <span className="text-xs text-muted-foreground">所有书共用样式，进度仍按书保存</span>
           <Button
             variant="ghost"
             size="sm"
@@ -133,7 +133,7 @@ export function ReaderSettingsPanel({
             效果预览
           </p>
           <div
-            className="max-h-32 overflow-y-auto"
+            className="max-h-44 overflow-y-auto whitespace-pre-line"
             style={{
               fontSize: settings.fontSize,
               lineHeight: settings.lineHeight,
@@ -142,8 +142,11 @@ export function ReaderSettingsPanel({
           >
             <SentencePairBlock
               pair={{
-                o: '静下心来，读一段好文字。',
-                t: hasContentMode || hasPairDisplayMode ? '让阅读，慢慢成为一种日常。' : '',
+                o: '静下心来，读一段好文字。\n让阅读慢慢成为一种日常。\n行距拉开，读起来才更从容。',
+                t:
+                  hasContentMode || hasPairDisplayMode
+                    ? 'Settle in, and read a little.\nLet reading become an everyday habit.'
+                    : '',
               }}
               pairIndex={0}
               displayMode={hasPairDisplayMode ? settings.pairDisplayMode : 'muted'}

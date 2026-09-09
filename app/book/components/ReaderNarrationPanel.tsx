@@ -7,7 +7,11 @@ import { Slider } from '@/components/ui/slider'
 import { ReaderPanel } from './ReaderPanel'
 import { ReaderChoiceGroup } from './ReaderChoiceGroup'
 import type { BookTheme } from '@/app/book/types/reader'
-import type { BookNarrationMode, BookNarrationStatus } from '@/app/book/types/narration'
+import type {
+  BookNarrationEngine,
+  BookNarrationMode,
+  BookNarrationStatus,
+} from '@/app/book/types/narration'
 
 export interface ReaderNarrationControls {
   narrationStatus: BookNarrationStatus
@@ -25,6 +29,8 @@ export interface ReaderNarrationControls {
   onNarrationRateChange?: (rate: number) => void
   onNarrationSeek?: (pairIndex: number) => void
   narrationUnavailableReason?: string
+  narrationEngine?: BookNarrationEngine
+  onNarrationEngineChange?: (engine: BookNarrationEngine) => void
 }
 
 export function ReaderNarrationPanel({
@@ -55,6 +61,8 @@ export function ReaderNarrationPanel({
     onResumeNarration,
     onStopNarration,
     onNarrationModeChange,
+    narrationEngine = 'tts',
+    onNarrationEngineChange,
   } = controls
   const active = status !== 'idle'
   const [pendingParagraph, setPendingParagraph] = useState<number | null>(null)
@@ -155,6 +163,18 @@ export function ReaderNarrationPanel({
           )}
         </div>
         <div className="space-y-5 border-t border-border pt-5">
+          {onNarrationEngineChange && (
+            <ReaderChoiceGroup
+              label="朗读方式"
+              columns={2}
+              value={narrationEngine}
+              onChange={onNarrationEngineChange}
+              options={[
+                { value: 'tts', label: '系统 TTS' },
+                { value: 'ai', label: 'AI 朗读' },
+              ]}
+            />
+          )}
           {!narrationOriginalOnly && (
             <ReaderChoiceGroup
               label="朗读内容"
@@ -179,9 +199,9 @@ export function ReaderNarrationPanel({
               }))}
             />
           )}
-          {active && (
+          {active && !narrationOriginalOnly && (
             <p className="text-xs leading-5 text-muted-foreground">
-              内容与语速的调整从下一段起生效。
+              朗读内容的调整从下一段起生效。
             </p>
           )}
         </div>

@@ -66,6 +66,14 @@ describe('ReaderSettingsPanel', () => {
     expect(screen.getByText('1.8')).toBeInTheDocument()
   })
 
+  it('previews three lines so line height is visible', () => {
+    render(<ReaderSettingsPanel {...defaultProps} />)
+    const preview = screen.getByLabelText('阅读效果预览')
+    expect(preview.textContent).toMatch(
+      /静下心来，读一段好文字。\s*让阅读慢慢成为一种日常。\s*行距拉开，读起来才更从容。/
+    )
+  })
+
   it('does not render content when closed', () => {
     render(<ReaderSettingsPanel {...defaultProps} open={false} />)
     expect(screen.queryByText('阅读设置')).not.toBeInTheDocument()

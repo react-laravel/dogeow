@@ -25,6 +25,7 @@ export function getBookCoverSrc(bookId: string): string {
   return `/images/books/${bookId}.jpg`
 }
 
+/** Per-book progress and scroll identity. Appearance lives in BOOK_READER_PREFS_STORAGE_KEY. */
 export function getBookReaderStorageKey(bookId: string): string {
   return `dogeow-book-reader:${bookId}`
 }

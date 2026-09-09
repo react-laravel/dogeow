@@ -46,6 +46,7 @@ beforeEach(() => {
     'SpeechSynthesisUtterance',
     class {
       text: string
+      rate = 1
       constructor(text: string) {
         this.text = text
       }
@@ -68,24 +69,76 @@ afterEach(() => {
 })
 
 describe('narration controls', () => {
-  it('uses the chosen speed on the next paragraph without restarting the current one', async () => {
+  it('applies the chosen speed immediately by restarting the current paragraph', async () => {
     const contentRef = { current: null }
-    const { result, rerender } = renderHook(
-      ({ rate }) => useBookNarration({ chapter, narrationMode: 'original', contentRef, rate }),
-      { initialProps: { rate: 1 } }
+    const { result } = renderHook(() =>
+      useBookNarration({ chapter, narrationMode: 'original', contentRef })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    expect(spoken[0].rate).toBeCloseTo(0.92)
+    act(() => {
+      result.current.setRate(1.5)
+    })
+    expect(spoken).toHaveLength(2)
+    expect(spoken[1].rate).toBeCloseTo(0.92 * 1.5)
+    expect(spoken[1].text).toBe(chapter.pairs[0]?.o)
+    expect(result.current.status).toBe('playing')
+  })
+  it('keeps the current place when speed changes mid-paragraph', async () => {
+    const contentRef = { current: null }
+    const { result } = renderHook(() =>
+      useBookNarration({ chapter, narrationMode: 'original', contentRef })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(result.current.activeHighlight?.start).toBeGreaterThan(0)
+    act(() => {
+      result.current.setRate(1.25)
+    })
+    expect(
+      spoken[1].text.startsWith('原文有一些文字。') || spoken[1].text.length < spoken[0].text.length
+    ).toBe(true)
+    expect(spoken[1].rate).toBeCloseTo(0.92 * 1.25)
+  })
+  it('uses the new speed when resuming after a pause', async () => {
+    const contentRef = { current: null }
+    const { result } = renderHook(() =>
+      useBookNarration({ chapter, narrationMode: 'original', contentRef })
     )
     await act(async () => {})
     act(() => {
       result.current.start(0)
     })
     const first = spoken[0]
-    rerender({ rate: 1.5 })
-    expect(spoken).toHaveLength(1)
-    expect(first.rate).toBeCloseTo(0.92)
     act(() => {
+      result.current.pause()
+    })
+    expect(result.current.status).toBe('paused')
+    act(() => {
+      first.onerror?.(
+        Object.assign(new Event('error'), { error: 'interrupted' }) as SpeechSynthesisErrorEvent
+      )
       first.onend?.(new Event('end') as SpeechSynthesisEvent)
     })
+    expect(result.current.status).toBe('paused')
+    act(() => {
+      result.current.setRate(1.5)
+    })
+    expect(spoken).toHaveLength(1)
+    act(() => {
+      result.current.resume()
+    })
+    expect(result.current.status).toBe('playing')
     expect(spoken[1].rate).toBeCloseTo(0.92 * 1.5)
+    expect(spoken[1].text).toBe(chapter.pairs[0]?.o)
   })
   it('ignores cancellation events from a paragraph replaced by a seek', async () => {
     const { result } = renderHook(() =>

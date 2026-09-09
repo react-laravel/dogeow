@@ -1,19 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { BookAiChatPanel } from '../BookAiChatPanel'
 
-const { setPrompt, send, clear } = vi.hoisted(() => ({
+const { setPrompt, send, clear, chat } = vi.hoisted(() => ({
   setPrompt: vi.fn(),
   send: vi.fn(),
   clear: vi.fn(),
+  chat: { hasMessages: true, isLoading: false },
 }))
 vi.mock('@/app/ai/features/chat/hooks/useAiChat', () => ({
   useAiChat: () => ({
     prompt: '解释这段文字',
     setPrompt,
     messages: [],
-    hasMessages: true,
-    isLoading: false,
+    hasMessages: chat.hasMessages,
+    isLoading: chat.isLoading,
     handleSend: send,
     handleClear: clear,
   }),
@@ -26,6 +27,11 @@ vi.mock('@/app/ai/features/chat/components', () => ({
 }))
 
 describe('reader AI panel', () => {
+  beforeEach(() => {
+    chat.hasMessages = true
+    chat.isLoading = false
+  })
+
   it('prefills a selection without sending automatically and retains the expand action', () => {
     const expand = vi.fn()
     render(
@@ -50,5 +56,12 @@ describe('reader AI panel', () => {
     render(<BookAiChatPanel open seedPrompt={null} onClose={close} />)
     fireEvent.click(screen.getByRole('button', { name: '关闭AI 助理' }))
     expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('hides the idle hero until there is a reply', () => {
+    chat.hasMessages = false
+    render(<BookAiChatPanel open seedPrompt="选中的段落" onClose={vi.fn()} />)
+    expect(screen.queryByText('围绕选中文字展开讨论')).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'AI 问题' })).toBeInTheDocument()
   })
 })

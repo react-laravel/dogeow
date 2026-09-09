@@ -21,6 +21,7 @@ import { useAiDialogStore } from '@/stores/aiDialogStore'
 import useAuthStore from '@/stores/authStore'
 import { canUseAi } from '@/lib/ai/access'
 import { useBookNarration, type BookNarrationMode } from '@/app/book/hooks/useBookNarration'
+import { useNarrationEngine } from '@/app/book/utils/narrationEngine'
 import type { BookReaderConfig } from '@/app/book/types'
 import type { BaseReaderSettings } from '@/app/book/types/reader'
 import {
@@ -52,7 +53,7 @@ export function BookReader<
   const [panel, setPanel] = useState<'bookmarks' | 'collections' | 'settings' | null>(null)
   const [jumpRequest, setJumpRequest] = useState(0)
   const [narrationMode, setNarrationMode] = useState<BookNarrationMode>('original')
-  const [narrationRate, setNarrationRate] = useState(1)
+  const { engine: narrationEngine, setEngine: setNarrationEngine } = useNarrationEngine()
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [aiSeedPrompt, setAiSeedPrompt] = useState<string | null>(null)
 
@@ -93,7 +94,6 @@ export function BookReader<
   const narration = useBookNarration({
     chapter: narrationChapter ?? null,
     narrationMode,
-    rate: narrationRate,
     contentRef,
   })
 
@@ -186,6 +186,10 @@ export function BookReader<
       addPositionBookmark,
       addCollection,
       onPlaySelection: selection => {
+        if (narrationEngine === 'ai') {
+          toast.info('没有语音 API，请改用系统 TTS')
+          return
+        }
         if (!narration.start(selection.pairIndex ?? 0)) {
           toast.error('当前浏览器不支持听书，或章节还没有加载完成')
         }
@@ -194,11 +198,24 @@ export function BookReader<
     })
 
   const handleStartNarration = useCallback(() => {
+    if (narrationEngine === 'ai') {
+      toast.info('没有语音 API，请改用系统 TTS')
+      return
+    }
     const startPairIndex = getChapterContext().pairIndex ?? 0
     if (!narration.start(startPairIndex)) {
       toast.error('当前浏览器不支持听书，或章节还没有加载完成')
     }
-  }, [getChapterContext, narration])
+  }, [getChapterContext, narration, narrationEngine])
+
+  const handleNarrationEngineChange = useCallback(
+    (engine: typeof narrationEngine) => {
+      if (engine === narrationEngine) return
+      narration.stop()
+      setNarrationEngine(engine)
+    },
+    [narration, narrationEngine, setNarrationEngine]
+  )
 
   const handleAddCurrentBookmark = useCallback(() => {
     const context = getChapterContext()
@@ -287,19 +304,24 @@ export function BookReader<
           narrationPairIndex={narration.activePairIndex}
           narrationPairCount={narrationChapter?.pairs.length ?? 0}
           narrationPreview={narration.activeText}
-          narrationRate={narrationRate}
-          onNarrationRateChange={setNarrationRate}
+          narrationRate={narration.rate}
+          onNarrationRateChange={narration.setRate}
           onNarrationSeek={index => {
+            if (narrationEngine === 'ai') return
             narration.start(index)
           }}
+          narrationEngine={narrationEngine}
+          onNarrationEngineChange={handleNarrationEngineChange}
           narrationUnavailableReason={
-            !narration.supported
-              ? '当前浏览器不支持语音朗读'
-              : loading || !narrationChapter
-                ? '章节正在加载，请稍候'
-                : !narrationChapter.pairs.length
-                  ? '当前章节没有可朗读的内容'
-                  : undefined
+            narrationEngine === 'ai'
+              ? 'AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS'
+              : !narration.supported
+                ? '当前浏览器不支持语音朗读'
+                : loading || !narrationChapter
+                  ? '章节正在加载，请稍候'
+                  : !narrationChapter.pairs.length
+                    ? '当前章节没有可朗读的内容'
+                    : undefined
           }
           hideNarration={!hasNarration}
           narrationOriginalOnly={narrationOriginalOnly}

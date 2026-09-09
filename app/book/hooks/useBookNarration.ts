@@ -24,10 +24,16 @@ interface NarrationSegment {
   end: number
 }
 
+interface PendingResume {
+  pairIndex: number
+  startChar: number
+  text: string
+  segments: NarrationSegment[]
+}
+
 interface UseBookNarrationOptions {
   chapter: BookChapter | null
   narrationMode: BookNarrationMode
-  rate?: number
   contentRef: RefObject<HTMLDivElement | null>
 }
 
@@ -95,6 +101,15 @@ function pickChineseVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
   return zhVoices.find(voice => voice.localService) ?? zhVoices[0] ?? null
 }
 
+function charIndexFromHighlight(
+  highlight: BookNarrationHighlight | null,
+  segments: NarrationSegment[]
+): number {
+  if (!highlight) return 0
+  const segment = segments.find(item => item.role === highlight.role) ?? segments[0] ?? null
+  return (segment?.start ?? 0) + highlight.start
+}
+
 function buildHighlightFromCharIndex(
   pairIndex: number,
   segments: NarrationSegment[],
@@ -113,24 +128,25 @@ function buildHighlightFromCharIndex(
   return { pairIndex, role: segment.role, start, end }
 }
 
-export function useBookNarration({
-  chapter,
-  narrationMode,
-  rate = 1,
-  contentRef,
-}: UseBookNarrationOptions) {
+export function useBookNarration({ chapter, narrationMode, contentRef }: UseBookNarrationOptions) {
   const [status, setStatus] = useState<BookNarrationStatus>('idle')
   const [activePairIndex, setActivePairIndex] = useState<number | null>(null)
   const [activeText, setActiveText] = useState('')
   const [activeHighlight, setActiveHighlight] = useState<BookNarrationHighlight | null>(null)
+  const [rate, setRateState] = useState(1)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const nextPairIndexRef = useRef(0)
   const stoppedRef = useRef(true)
   const speakNextRef = useRef<() => void>(() => {})
   const chapterRef = useRef<BookChapter | null>(chapter)
   const narrationModeRef = useRef(narrationMode)
-  const rateRef = useRef(rate)
+  const rateRef = useRef(1)
+  const statusRef = useRef<BookNarrationStatus>('idle')
+  const activePairIndexRef = useRef<number | null>(null)
+  const activeHighlightRef = useRef<BookNarrationHighlight | null>(null)
+  const activeFullTextRef = useRef('')
   const activeSegmentsRef = useRef<NarrationSegment[]>([])
+  const pendingResumeRef = useRef<PendingResume | null>(null)
   const progressTimerRef = useRef<number | null>(null)
   const receivedBoundaryRef = useRef(false)
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
@@ -140,8 +156,16 @@ export function useBookNarration({
   }, [chapter])
 
   useEffect(() => {
-    rateRef.current = Math.max(0.5, Math.min(2, rate))
-  }, [rate])
+    statusRef.current = status
+  }, [status])
+
+  useEffect(() => {
+    activePairIndexRef.current = activePairIndex
+  }, [activePairIndex])
+
+  useEffect(() => {
+    activeHighlightRef.current = activeHighlight
+  }, [activeHighlight])
 
   useEffect(() => {
     narrationModeRef.current = narrationMode
@@ -176,18 +200,38 @@ export function useBookNarration({
     [contentRef]
   )
 
-  const stop = useCallback(() => {
-    const synth = getSpeechSynthesis()
-    stoppedRef.current = true
+  const captureResume = useCallback((): PendingResume | null => {
+    const pairIndex = activePairIndexRef.current
+    const text = activeFullTextRef.current
+    if (pairIndex == null || !text) return null
+    return {
+      pairIndex,
+      startChar: charIndexFromHighlight(activeHighlightRef.current, activeSegmentsRef.current),
+      text,
+      segments: activeSegmentsRef.current,
+    }
+  }, [])
+
+  const discardCurrentUtterance = useCallback(() => {
     clearProgressTimer()
     utteranceRef.current = null
     receivedBoundaryRef.current = false
-    synth?.cancel()
+    getSpeechSynthesis()?.cancel()
+  }, [clearProgressTimer])
+
+  const stop = useCallback(() => {
+    stoppedRef.current = true
+    pendingResumeRef.current = null
+    discardCurrentUtterance()
+    activeFullTextRef.current = ''
+    activePairIndexRef.current = null
+    activeHighlightRef.current = null
+    statusRef.current = 'idle'
     setStatus('idle')
     setActivePairIndex(null)
     setActiveText('')
     setActiveHighlight(null)
-  }, [clearProgressTimer])
+  }, [discardCurrentUtterance])
 
   const speakNext = useCallback(() => {
     const synth = getSpeechSynthesis()
@@ -197,17 +241,34 @@ export function useBookNarration({
       return
     }
 
-    const pairIndex = nextPairIndexRef.current
-    const pair = currentChapter.pairs[pairIndex]
-    if (!pair) {
-      stop()
-      return
+    const pendingResume = pendingResumeRef.current
+    pendingResumeRef.current = null
+
+    let pairIndex: number
+    let text: string
+    let segments: NarrationSegment[]
+    let startChar = 0
+
+    if (pendingResume) {
+      pairIndex = pendingResume.pairIndex
+      text = pendingResume.text
+      segments = pendingResume.segments
+      startChar = Math.max(0, Math.min(pendingResume.startChar, text.length))
+    } else {
+      pairIndex = nextPairIndexRef.current
+      const pair = currentChapter.pairs[pairIndex]
+      if (!pair) {
+        stop()
+        return
+      }
+      const parts = getPairNarrationParts(pair, narrationModeRef.current)
+      text = parts.text
+      segments = parts.segments
     }
 
-    const { text, segments } = getPairNarrationParts(pair, narrationModeRef.current)
     nextPairIndexRef.current = pairIndex + 1
 
-    if (!text.trim()) {
+    if (!text.trim() || startChar >= text.length) {
       speakNextRef.current()
       return
     }
@@ -215,7 +276,8 @@ export function useBookNarration({
     clearProgressTimer()
     receivedBoundaryRef.current = false
 
-    const utterance = new SpeechSynthesisUtterance(text)
+    const speakText = startChar > 0 ? text.slice(startChar) : text
+    const utterance = new SpeechSynthesisUtterance(speakText)
     utterance.lang = 'zh-CN'
     utterance.rate = SPEECH_RATE * rateRef.current
     utterance.pitch = 1
@@ -226,7 +288,10 @@ export function useBookNarration({
 
     const applyCharHighlight = (charIndex: number, charLength = HIGHLIGHT_WINDOW) => {
       const highlight = buildHighlightFromCharIndex(pairIndex, segments, charIndex, charLength)
-      if (highlight) setActiveHighlight(highlight)
+      if (highlight) {
+        activeHighlightRef.current = highlight
+        setActiveHighlight(highlight)
+      }
     }
 
     utterance.onboundary = event => {
@@ -236,12 +301,11 @@ export function useBookNarration({
       receivedBoundaryRef.current = true
       clearProgressTimer()
 
-      const charIndex = event.charIndex
       const charLength =
         'charLength' in event && typeof event.charLength === 'number' && event.charLength > 0
           ? event.charLength
           : HIGHLIGHT_WINDOW
-      applyCharHighlight(charIndex, charLength)
+      applyCharHighlight(startChar + event.charIndex, charLength)
     }
 
     utterance.onend = () => {
@@ -249,16 +313,21 @@ export function useBookNarration({
       clearProgressTimer()
       if (!stoppedRef.current) speakNextRef.current()
     }
-    utterance.onerror = () => {
+    utterance.onerror = event => {
       if (utteranceRef.current !== utterance) return
+      const error = 'error' in event ? String(event.error) : ''
+      if (error === 'interrupted' || error === 'canceled') return
       stop()
     }
 
     activeSegmentsRef.current = segments
+    activeFullTextRef.current = text
     utteranceRef.current = utterance
+    activePairIndexRef.current = pairIndex
     setActivePairIndex(pairIndex)
     setActiveText(text)
-    applyCharHighlight(0, Math.min(HIGHLIGHT_WINDOW, text.length))
+    applyCharHighlight(startChar, Math.min(HIGHLIGHT_WINDOW, text.length - startChar))
+    statusRef.current = 'playing'
     setStatus('playing')
     scrollActivePairIntoView(pairIndex)
 
@@ -272,7 +341,7 @@ export function useBookNarration({
 
       const elapsedSec = (performance.now() - startedAt) / 1000
       const charIndex = Math.min(
-        Math.floor(elapsedSec * charsPerSecond),
+        startChar + Math.floor(elapsedSec * charsPerSecond),
         Math.max(text.length - 1, 0)
       )
       applyCharHighlight(charIndex)
@@ -302,6 +371,7 @@ export function useBookNarration({
 
       preferredVoiceRef.current = pickChineseVoice(synth) ?? preferredVoiceRef.current
       // 旧语句 cancel 的回调可能延迟到新语句开始后，先解除它的归属。
+      pendingResumeRef.current = null
       utteranceRef.current = null
       synth.cancel()
       stoppedRef.current = false
@@ -312,59 +382,44 @@ export function useBookNarration({
     [speakNext]
   )
 
+  const replayFromCurrent = useCallback(() => {
+    const snapshot = captureResume()
+    if (!snapshot) return
+    pendingResumeRef.current = snapshot
+    stoppedRef.current = false
+    discardCurrentUtterance()
+    speakNext()
+  }, [captureResume, discardCurrentUtterance, speakNext])
+
   const pause = useCallback(() => {
-    const synth = getSpeechSynthesis()
-    if (!synth || status !== 'playing') return
-    clearProgressTimer()
-    synth.pause()
+    if (statusRef.current !== 'playing') return
+    const snapshot = captureResume()
+    if (!snapshot) return
+    pendingResumeRef.current = snapshot
+    discardCurrentUtterance()
+    statusRef.current = 'paused'
     setStatus('paused')
-  }, [clearProgressTimer, status])
+  }, [captureResume, discardCurrentUtterance])
 
   const resume = useCallback(() => {
-    const synth = getSpeechSynthesis()
-    if (!synth || status !== 'paused') return
+    if (statusRef.current !== 'paused') return
+    stoppedRef.current = false
+    if (!pendingResumeRef.current && activePairIndexRef.current != null) {
+      nextPairIndexRef.current = activePairIndexRef.current
+    }
+    speakNext()
+  }, [speakNext])
 
-    const utterance = utteranceRef.current
-    const highlight = activeHighlight
-    synth.resume()
-    setStatus('playing')
-
-    // Network voices often skip boundary events; keep estimating after resume.
-    if (!utterance || receivedBoundaryRef.current || !highlight) return
-
-    const pair = chapterRef.current?.pairs[highlight.pairIndex]
-    if (!pair) return
-
-    const text = utterance.text
-    const segments = activeSegmentsRef.current
-    if (!text) return
-
-    const resumedAt = performance.now()
-    const charsPerSecond = BASE_CHARS_PER_SECOND * utterance.rate
-    const activeSegment =
-      segments.find(segment => segment.role === highlight.role) ?? segments[0] ?? null
-    const resumeOffset = (activeSegment?.start ?? 0) + highlight.start
-
-    progressTimerRef.current = window.setInterval(() => {
-      if (stoppedRef.current || utteranceRef.current !== utterance || receivedBoundaryRef.current) {
-        clearProgressTimer()
-        return
-      }
-
-      const elapsedSec = (performance.now() - resumedAt) / 1000
-      const charIndex = Math.min(
-        Math.floor(resumeOffset + elapsedSec * charsPerSecond),
-        Math.max(text.length - 1, 0)
-      )
-      const next = buildHighlightFromCharIndex(
-        highlight.pairIndex,
-        segments,
-        charIndex,
-        HIGHLIGHT_WINDOW
-      )
-      if (next) setActiveHighlight(next)
-    }, PROGRESS_INTERVAL_MS)
-  }, [activeHighlight, clearProgressTimer, status])
+  const setRate = useCallback(
+    (nextRate: number) => {
+      const clamped = Math.max(0.5, Math.min(2, nextRate))
+      const previous = rateRef.current
+      rateRef.current = clamped
+      setRateState(clamped)
+      if (previous !== clamped && statusRef.current === 'playing') replayFromCurrent()
+    },
+    [replayFromCurrent]
+  )
 
   useEffect(() => stop, [stop])
 
@@ -377,6 +432,8 @@ export function useBookNarration({
     activePairIndex,
     activeHighlight,
     status,
+    rate,
+    setRate,
     start,
     pause,
     resume,

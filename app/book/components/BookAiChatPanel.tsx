@@ -59,6 +59,7 @@ export function BookAiChatPanel({
   } = useAiChat({ open })
 
   const appliedSeedRef = useRef<string | null>(null)
+  const hasThread = hasMessages || isLoading
 
   useEffect(() => {
     if (!open) {
@@ -80,7 +81,7 @@ export function BookAiChatPanel({
       description="围绕选中的文字提问，读懂每一段"
       theme={theme}
       bodyClassName="flex min-h-0 flex-col overflow-hidden p-0"
-      className="h-[78dvh] sm:h-auto"
+      className={hasThread ? 'h-[78dvh] sm:h-auto' : 'h-auto sm:top-auto'}
       headerAction={
         onExpand ? (
           <Button
@@ -95,15 +96,21 @@ export function BookAiChatPanel({
         ) : undefined
       }
     >
-      <ChatMessageList
-        messages={messages}
-        isLoading={isLoading}
-        completion={completion}
-        messagesEndRef={messagesEndRef}
-        variant="dialog"
-      />
+      {hasThread ? (
+        <ChatMessageList
+          messages={messages}
+          isLoading={isLoading}
+          completion={completion}
+          messagesEndRef={messagesEndRef}
+          variant="dialog"
+        />
+      ) : null}
 
-      <div className="relative shrink-0 border-t border-border p-3">
+      <div
+        className={
+          hasThread ? 'relative shrink-0 border-t border-border p-3' : 'relative shrink-0 p-3'
+        }
+      >
         {hasMessages && (
           <Button
             variant="secondary"

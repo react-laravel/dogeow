@@ -129,6 +129,35 @@ describe('ReaderToolbar', () => {
     fireEvent.click(screen.getByRole('radio', { name: '1.5×' }))
     expect(rate).toHaveBeenCalledWith(1.5)
   })
+  it('lets the listener choose system TTS or AI narration', () => {
+    const changeEngine = vi.fn()
+    render(
+      <ReaderToolbar
+        {...props}
+        narrationEngine="tts"
+        onNarrationEngineChange={changeEngine}
+        narrationUnavailableReason="AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS"
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'AI 朗读' }))
+    expect(changeEngine).toHaveBeenCalledWith('ai')
+  })
+  it('disables playback while AI narration is not available', () => {
+    render(
+      <ReaderToolbar
+        {...props}
+        narrationEngine="ai"
+        onNarrationEngineChange={vi.fn()}
+        narrationUnavailableReason="AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS"
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
+    expect(screen.getByRole('button', { name: '从当前位置开始听书' })).toBeDisabled()
+    expect(
+      screen.getByText('AI 朗读需要语音 API。ChatGPT 设备登录只能聊天，请用系统 TTS')
+    ).toBeInTheDocument()
+  })
   it('hides narration for unsupported book types and keeps mark counts readable', () => {
     render(<ReaderToolbar {...props} hideNarration bookmarkCount={3} collectionCount={150} />)
     expect(screen.queryByRole('button', { name: '打开听书控制' })).not.toBeInTheDocument()
