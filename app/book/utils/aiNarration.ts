@@ -58,7 +58,7 @@ export function getAiNarrationPairUrl(
   voice = DEFAULT_AI_NARRATION_VOICE,
   data: AiNarrationCatalog = catalog
 ): string | null {
-  if (!getAiNarrationPairIndexes(bookId, chapterId, data).includes(pairIndex)) {
+  if (!hasAiNarrationAudio(bookId, chapterId, data) || pairIndex < 0) {
     return null
   }
 

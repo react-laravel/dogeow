@@ -25,7 +25,10 @@ describe('ai narration catalog', () => {
     expect(getAiNarrationPairUrl('luxun', '0-0', 3, 'serena', catalog)).toBe(
       'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/003.mp3'
     )
-    expect(getAiNarrationPairUrl('luxun', '0-0', 1, 'serena', catalog)).toBeNull()
+    expect(getAiNarrationPairUrl('luxun', '0-0', 1, 'serena', catalog)).toBe(
+      'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/001.mp3'
+    )
+    expect(getAiNarrationPairUrl('luxun', '0-1', 0, 'serena', catalog)).toBeNull()
   })
 
   it('includes the first Lu Xun article in the committed catalog', () => {

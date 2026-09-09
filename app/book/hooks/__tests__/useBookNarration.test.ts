@@ -187,18 +187,32 @@ class MockAudio {
   src = ''
   playbackRate = 1
   paused = true
+  ended = false
   currentTime = 0
   duration = 10
+  playsInline = false
   onended: (() => void) | null = null
   onerror: (() => void) | null = null
   ontimeupdate: (() => void) | null = null
   play = vi.fn(async () => {
     this.paused = false
+    this.ended = false
   })
   pause = vi.fn(() => {
     this.paused = true
   })
   load = vi.fn()
+  setAttribute = vi.fn()
+  addEventListener(type: string, fn: () => void) {
+    if (type === 'ended') this.onended = fn
+    if (type === 'error') this.onerror = fn
+    if (type === 'timeupdate') this.ontimeupdate = fn
+  }
+  removeEventListener(type: string, fn: () => void) {
+    if (type === 'ended' && this.onended === fn) this.onended = null
+    if (type === 'error' && this.onerror === fn) this.onerror = null
+    if (type === 'timeupdate' && this.ontimeupdate === fn) this.ontimeupdate = null
+  }
   removeAttribute = vi.fn((name: string) => {
     if (name === 'src') this.src = ''
   })
@@ -289,6 +303,30 @@ describe('AI audio narration', () => {
     expect(result.current.status).toBe('playing')
     expect(players[0]?.play).toHaveBeenCalledTimes(2)
     expect(players).toHaveLength(1)
+  })
+
+  it('continues to the next clip on the same audio element when a file ends', async () => {
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl: pairIndex => `https://cdn.example/${pairIndex}.mp3`,
+      })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    expect(players[0]?.src).toBe('https://cdn.example/0.mp3')
+    act(() => {
+      players[0]?.onended?.()
+    })
+    expect(players).toHaveLength(1)
+    expect(players[0]?.src).toBe('https://cdn.example/1.mp3')
+    expect(result.current.activePairIndex).toBe(1)
+    expect(result.current.status).toBe('playing')
   })
 
   it('plays a short silence file for whitespace-only paragraphs', async () => {
