@@ -102,6 +102,43 @@ describe('App Configs', () => {
         fallbackTitle: '安娜·卡列尼娜',
       })
     })
+
+    it('lists the gaokao volume books', () => {
+      const ids = [
+        'biancheng',
+        'sishitongtang',
+        'hongyan',
+        'pingfandeshijie',
+        'leiyu',
+        'balishengmuyuan',
+        'laorenyuhai',
+        'ouyenigelangtai',
+        'lunyu',
+        'sanguoyanyi',
+      ] as const
+      const titles = {
+        biancheng: '边城',
+        sishitongtang: '四世同堂',
+        hongyan: '红岩',
+        pingfandeshijie: '平凡的世界',
+        leiyu: '雷雨',
+        balishengmuyuan: '巴黎圣母院',
+        laorenyuhai: '老人与海',
+        ouyenigelangtai: '欧也妮·葛朗台',
+        lunyu: '论语',
+        sanguoyanyi: '三国演义',
+      } as const
+
+      ids.forEach(id => {
+        const book = configs.books.find(item => item.id === id)
+        expect(book).toMatchObject({
+          kind: 'volume',
+          href: `/book/${id}`,
+          nameKey: `book.${id}`,
+          fallbackTitle: titles[id],
+        })
+      })
+    })
   })
 
   describe('getTranslatedConfigs function', () => {

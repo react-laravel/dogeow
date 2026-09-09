@@ -14,6 +14,8 @@
     "publish:hongloumeng": "npm run preprocess:hongloumeng && cd ../dogeow-api && php artisan books:upload-hongloumeng",
     "preprocess:annakarenina": "node scripts/preprocess-annakarenina.mjs",
     "publish:annakarenina": "npm run preprocess:annakarenina && cd ../dogeow-api && php artisan books:upload-annakarenina",
+    "preprocess:volume": "node scripts/preprocess-volume-book.mjs",
+    "publish:volume": "node scripts/preprocess-volume-book.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
