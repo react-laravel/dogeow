@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Maximize2, MessageSquarePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAiChat } from '@/app/ai/features/chat/hooks/useAiChat'
@@ -60,6 +60,21 @@ export function BookAiChatPanel({
 
   const appliedSeedRef = useRef<string | null>(null)
   const hasThread = hasMessages || isLoading
+  const [idleComposerMaxHeight, setIdleComposerMaxHeight] = useState(640)
+
+  useLayoutEffect(() => {
+    if (hasThread) return
+    const measure = () => {
+      const appHeader =
+        Number.parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--app-header-total-height')
+        ) || 56
+      setIdleComposerMaxHeight(Math.max(280, Math.floor(window.innerHeight - appHeader - 220)))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [hasThread, open])
 
   useEffect(() => {
     if (!open) {
@@ -147,7 +162,7 @@ export function BookAiChatPanel({
           onRemoveImage={removeImage}
           variant="dialog"
           placeholder="就选中的内容提问…"
-          textareaMaxHeight={hasThread ? 160 : 480}
+          textareaMaxHeight={hasThread ? 160 : idleComposerMaxHeight}
         />
       </div>
     </ReaderPanel>

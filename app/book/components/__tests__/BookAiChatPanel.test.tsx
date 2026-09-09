@@ -62,9 +62,8 @@ describe('reader AI panel', () => {
     chat.hasMessages = false
     render(<BookAiChatPanel open seedPrompt="选中的段落" onClose={vi.fn()} />)
     expect(screen.queryByText('围绕选中文字展开讨论')).not.toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'AI 问题' })).toHaveAttribute(
-      'data-textarea-max',
-      '480'
-    )
+    expect(
+      Number(screen.getByRole('textbox', { name: 'AI 问题' }).dataset.textareaMax)
+    ).toBeGreaterThan(200)
   })
 })

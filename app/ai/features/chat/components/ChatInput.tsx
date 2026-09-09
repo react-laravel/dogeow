@@ -81,7 +81,7 @@ export const ChatInput = React.memo<ChatInputProps>(
     React.useLayoutEffect(() => {
       const input = textareaRef.current
       if (!input) return
-      input.style.height = 'auto'
+      input.style.height = '0px'
       input.style.height = `${Math.min(Math.max(input.scrollHeight, 56), textareaMaxHeight)}px`
     }, [prompt, textareaMaxHeight, textareaRef])
 
@@ -132,7 +132,7 @@ export const ChatInput = React.memo<ChatInputProps>(
               placeholder={
                 placeholder || (images.length > 0 ? '询问关于图片的问题...' : '输入消息...')
               }
-              className="min-h-14 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-base shadow-none focus-visible:ring-0 focus-visible:outline-none"
+              className="min-h-14 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-base shadow-none [field-sizing:fixed] focus-visible:ring-0 focus-visible:outline-none"
               style={{ maxHeight: textareaMaxHeight }}
               rows={2}
             />
