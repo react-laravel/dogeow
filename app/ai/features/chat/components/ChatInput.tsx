@@ -38,6 +38,8 @@ interface ChatInputProps {
   onRemoveImage?: (index: number) => void
   variant?: 'dialog' | 'page'
   placeholder?: string
+  /** Cap for autosizing the composer. Defaults to 160px. */
+  textareaMaxHeight?: number
 }
 
 export const ChatInput = React.memo<ChatInputProps>(
@@ -66,6 +68,7 @@ export const ChatInput = React.memo<ChatInputProps>(
     onRemoveImage,
     variant = 'page',
     placeholder,
+    textareaMaxHeight = 160,
   }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
     const localInputRef = React.useRef<HTMLTextAreaElement>(null)
@@ -79,8 +82,8 @@ export const ChatInput = React.memo<ChatInputProps>(
       const input = textareaRef.current
       if (!input) return
       input.style.height = 'auto'
-      input.style.height = `${Math.min(Math.max(input.scrollHeight, 56), 160)}px`
-    }, [prompt, textareaRef])
+      input.style.height = `${Math.min(Math.max(input.scrollHeight, 56), textareaMaxHeight)}px`
+    }, [prompt, textareaMaxHeight, textareaRef])
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.nativeEvent.isComposing || event.keyCode === 229) return
@@ -129,7 +132,8 @@ export const ChatInput = React.memo<ChatInputProps>(
               placeholder={
                 placeholder || (images.length > 0 ? '询问关于图片的问题...' : '输入消息...')
               }
-              className="max-h-[min(10rem,calc(var(--chat-viewport-height,100dvh)*0.22))] min-h-14 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-base shadow-none focus-visible:ring-0 focus-visible:outline-none"
+              className="min-h-14 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-base shadow-none focus-visible:ring-0 focus-visible:outline-none"
+              style={{ maxHeight: textareaMaxHeight }}
               rows={2}
             />
             <div className="flex min-w-0 items-center gap-2 px-1 pb-1">

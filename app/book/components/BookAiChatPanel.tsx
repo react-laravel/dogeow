@@ -147,6 +147,7 @@ export function BookAiChatPanel({
           onRemoveImage={removeImage}
           variant="dialog"
           placeholder="就选中的内容提问…"
+          textareaMaxHeight={hasThread ? 160 : 480}
         />
       </div>
     </ReaderPanel>

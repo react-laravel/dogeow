@@ -50,32 +50,34 @@ vi.mock('@/hooks/useVoiceInput', () => ({
 }))
 
 // Mock Textarea to properly pass event handlers (overrides vitest.setup.tsx mock)
-vi.mock('@/components/ui/textarea', () => ({
-  Textarea: ({
-    onKeyDown,
-    onChange,
-    disabled,
-    value,
-    placeholder,
-    className,
-    rows,
-    id,
-    ...props
-  }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-    <textarea
-      data-testid="chat-textarea"
-      onKeyDown={onKeyDown}
-      onChange={onChange}
-      disabled={disabled}
-      value={value}
-      placeholder={placeholder}
-      className={className}
-      rows={rows}
-      id={id}
-      {...props}
-    />
-  ),
-}))
+vi.mock('@/components/ui/textarea', () => {
+  const Textarea = React.forwardRef<
+    HTMLTextAreaElement,
+    React.TextareaHTMLAttributes<HTMLTextAreaElement>
+  >(
+    (
+      { onKeyDown, onChange, disabled, value, placeholder, className, rows, id, style, ...props },
+      ref
+    ) => (
+      <textarea
+        ref={ref}
+        data-testid="chat-textarea"
+        onKeyDown={onKeyDown}
+        onChange={onChange}
+        disabled={disabled}
+        value={value}
+        placeholder={placeholder}
+        className={className}
+        rows={rows}
+        id={id}
+        style={style}
+        {...props}
+      />
+    )
+  )
+  Textarea.displayName = 'Textarea'
+  return { Textarea }
+})
 
 // Mock dropdown-menu
 vi.mock('@/components/ui/dropdown-menu', () => {
@@ -223,6 +225,19 @@ describe('ChatInput', () => {
   it('renders textarea', () => {
     render(<ChatInput {...defaultProps} />)
     expect(screen.getByPlaceholderText('输入消息...')).toBeInTheDocument()
+  })
+
+  it('grows with the prompt up to the given max height', () => {
+    Object.defineProperty(HTMLTextAreaElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() {
+        return 400
+      },
+    })
+    render(
+      <ChatInput {...defaultProps} prompt={'选中的长段落\n'.repeat(12)} textareaMaxHeight={480} />
+    )
+    expect(screen.getByTestId('chat-textarea')).toHaveStyle({ height: '400px', maxHeight: '480px' })
   })
 
   it('renders with custom placeholder', () => {

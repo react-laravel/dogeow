@@ -21,8 +21,8 @@ vi.mock('@/app/ai/features/chat/hooks/useAiChat', () => ({
 }))
 vi.mock('@/app/ai/features/chat/components', () => ({
   ChatMessageList: () => <p>围绕选中文字展开讨论</p>,
-  ChatInput: ({ prompt }: { prompt: string }) => (
-    <textarea aria-label="AI 问题" value={prompt} readOnly />
+  ChatInput: ({ prompt, textareaMaxHeight }: { prompt: string; textareaMaxHeight?: number }) => (
+    <textarea aria-label="AI 问题" value={prompt} readOnly data-textarea-max={textareaMaxHeight} />
   ),
 }))
 
@@ -62,6 +62,9 @@ describe('reader AI panel', () => {
     chat.hasMessages = false
     render(<BookAiChatPanel open seedPrompt="选中的段落" onClose={vi.fn()} />)
     expect(screen.queryByText('围绕选中文字展开讨论')).not.toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'AI 问题' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'AI 问题' })).toHaveAttribute(
+      'data-textarea-max',
+      '480'
+    )
   })
 })
