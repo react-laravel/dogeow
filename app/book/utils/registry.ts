@@ -20,6 +20,11 @@ export function getBookAssetBaseUrl(bookId: string): string {
   return `${ASSET_BASE}/${bookId}`
 }
 
+/** Local catalog covers stay on the app origin; chapter text is served from Upyun. */
+export function getBookCoverSrc(bookId: string): string {
+  return `/images/books/${bookId}.jpg`
+}
+
 export function getBookReaderStorageKey(bookId: string): string {
   return `dogeow-book-reader:${bookId}`
 }

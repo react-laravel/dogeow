@@ -6,23 +6,17 @@ import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { PageContainer } from '@/components/layout'
 import { BookOpen } from 'lucide-react'
+import { BookCover } from '@/app/book/components/BookCover'
+import type { BookCatalogEntry } from '@/app/book/utils/registry'
 
 export default function BookPage() {
   const { t } = useTranslation()
   const router = useRouter()
 
   const books = useMemo(() => {
-    const translated = configs.books as ReadonlyArray<{
-      id: string
-      nameKey: string
-      descriptionKey: string
-      href: string
-      color: string
-      icon: string
-    }>
-    return translated.map(book => ({
+    return (configs.books as BookCatalogEntry[]).map(book => ({
       ...book,
-      name: t(book.nameKey, book.id),
+      name: t(book.nameKey, book.fallbackTitle ?? book.id),
       description: t(book.descriptionKey, ''),
     }))
   }, [t])
@@ -45,21 +39,16 @@ export default function BookPage() {
               key={book.id}
               type="button"
               onClick={() => router.push(book.href)}
-              className="group border-border/60 bg-card hover:border-border hover:bg-accent/40 flex flex-col items-start gap-3 rounded-xl border p-5 text-left transition-all hover:scale-[0.98] active:scale-[0.97]"
+              className="group border-border/60 bg-card hover:border-border hover:bg-accent/40 flex items-start gap-4 rounded-xl border p-4 text-left transition-all hover:scale-[0.98] active:scale-[0.97] sm:p-5"
             >
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl"
-                style={{ backgroundColor: `${book.color}20` }}
-              >
-                {book.icon}
-              </div>
-              <div className="space-y-1">
+              <BookCover bookId={book.id} fallbackIcon={book.icon} color={book.color} />
+              <div className="min-w-0 flex-1 space-y-1">
                 <h2 className="text-foreground text-base font-medium">{book.name}</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">{book.description}</p>
-              </div>
-              <div className="text-muted-foreground mt-2 flex items-center gap-1 text-xs opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                <BookOpen className="h-3 w-3" />
-                <span>{t('book.start_reading', '开始阅读')}</span>
+                <div className="text-muted-foreground mt-2 flex items-center gap-1 text-xs opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                  <BookOpen className="h-3 w-3" />
+                  <span>{t('book.start_reading', '开始阅读')}</span>
+                </div>
               </div>
             </button>
           ))}
