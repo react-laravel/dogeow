@@ -40,7 +40,7 @@ export const zh_CN = {
   'book.leiyu': '雷雨',
   'book.leiyu.desc': '曹禺著，四幕话剧',
   'book.balishengmuyuan': '巴黎圣母院',
-  'book.balishengmuyuan.desc': '维克多·雨果著，中译本（至第八卷）',
+  'book.balishengmuyuan.desc': '维克多·雨果著，陈敬容译，共十一卷',
   'book.laorenyuhai': '老人与海',
   'book.laorenyuhai.desc': '海明威著',
   'book.ouyenigelangtai': '欧也妮·葛朗台',

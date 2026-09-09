@@ -42,7 +42,8 @@ export const en = {
   'book.leiyu': 'Thunderstorm',
   'book.leiyu.desc': "Cao Yu's four-act play",
   'book.balishengmuyuan': 'The Hunchback of Notre-Dame',
-  'book.balishengmuyuan.desc': "Victor Hugo's novel, Chinese translation (through Book VIII)",
+  'book.balishengmuyuan.desc':
+    "Victor Hugo's novel, Chen Jingrong's Chinese translation, eleven books",
   'book.laorenyuhai': 'The Old Man and the Sea',
   'book.laorenyuhai.desc': "Ernest Hemingway's novella",
   'book.ouyenigelangtai': 'Eugénie Grandet',

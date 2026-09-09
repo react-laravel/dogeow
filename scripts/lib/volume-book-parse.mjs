@@ -161,6 +161,11 @@ export function parseVolumeBook(lines, spec) {
     if (classified) {
       if (spec.skipTitles?.includes(classified.title)) continue
 
+      if (classified.type === 'volume') {
+        ensureVolume(classified.volumeName || classified.title)
+        continue
+      }
+
       if (classified.volumeName) {
         ensureVolume(classified.volumeName)
       }

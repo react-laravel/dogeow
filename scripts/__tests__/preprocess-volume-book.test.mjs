@@ -145,6 +145,27 @@ describe('volume book parser', () => {
     expect(text.split('\n\n')).toHaveLength(2)
   })
 
+  it('starts a new volume on a bare 第N卷 heading', () => {
+    const spec = VOLUME_BOOKS.balishengmuyuan
+    const lines = [
+      '第一卷',
+      '第一章 大厅',
+      '钟声齐鸣。',
+      '第二章 彼埃尔·格兰古瓦',
+      '诗人上场。',
+      '第二卷',
+      '第一章 从夏里德到席拉',
+      '夜色。',
+    ]
+    const parts = parseVolumeBook(lines, spec)
+    expect(parts.map(part => part.title)).toEqual(['第一卷', '第二卷'])
+    expect(parts[0].chapters.map(chapter => chapter.title)).toEqual([
+      '第一章 大厅',
+      '第二章 彼埃尔·格兰古瓦',
+    ])
+    expect(parts[1].chapters[0].title).toBe('第一章 从夏里德到席拉')
+  })
+
   it('writes volume index and chapter files', () => {
     const outDir = mkdtempSync(path.join(os.tmpdir(), 'volume-book-'))
     tempDirs.push(outDir)

@@ -124,25 +124,20 @@ export const VOLUME_BOOKS = {
     id: 'balishengmuyuan',
     title: '巴黎圣母院',
     author: '维克多·雨果',
+    translator: '陈敬容',
     sourceFile: '巴黎圣母院.txt',
-    sourceUrl:
-      'https://raw.githubusercontent.com/BlankRain/ebooks/master/巴黎圣母院_维克多·雨果_TXT小说天堂.txt',
-    defaultVolumeName: '第一卷 大厅',
-    skipUntil: /^巴黎圣母院（/,
-    expectedChapterCounts: [7, 7, 7, 6, 8, 5, 8, 6],
+    defaultVolumeName: '第一卷',
+    skipUntil: /^第一卷$/,
+    expectedChapterCounts: [6, 7, 2, 6, 2, 5, 8, 6, 6, 7, 4],
     classify(line) {
+      if (/^第[一二三四五六七八九十]+卷$/.test(line)) {
+        return { type: 'volume', volumeName: line, title: line }
+      }
       const match = line.match(
-        new RegExp(
-          `^巴黎圣母院（[一二三]）第([${CHAPTER_NUM}]+)卷\\s+(.+?)\\s*\\((\\d+)\\)\\s*$`
-        )
+        new RegExp(`^第([${CHAPTER_NUM}]+)章(?:\\s+(.+))?$`)
       )
       if (!match) return null
-      return {
-        type: 'volume-chapter',
-        volumeName: `第${match[1]}卷 ${match[2].trim()}`,
-        title: match[3],
-        number: Number(match[3]),
-      }
+      return { type: 'chapter', title: line, number: chineseToNumber(match[1]) }
     },
   },
 
