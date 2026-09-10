@@ -136,12 +136,27 @@ describe('ReaderToolbar', () => {
         {...props}
         narrationEngine="tts"
         onNarrationEngineChange={changeEngine}
-        narrationUnavailableReason="本章还没有 AI 朗读音频，请改用系统 TTS"
+        narrationUnavailableReason="本章还没有该音色的 AI 朗读，请改用系统 TTS 或换一个音色"
       />
     )
     fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
     fireEvent.click(screen.getByRole('radio', { name: 'AI 朗读' }))
     expect(changeEngine).toHaveBeenCalledWith('ai')
+  })
+  it('lets the listener choose Serena or Uncle Fu for AI narration', () => {
+    const changeVoice = vi.fn()
+    render(
+      <ReaderToolbar
+        {...props}
+        narrationEngine="ai"
+        narrationVoice="serena"
+        onNarrationEngineChange={vi.fn()}
+        onNarrationVoiceChange={changeVoice}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Uncle Fu' }))
+    expect(changeVoice).toHaveBeenCalledWith('uncle_fu')
   })
   it('disables playback while AI narration is not available', () => {
     render(
@@ -149,12 +164,14 @@ describe('ReaderToolbar', () => {
         {...props}
         narrationEngine="ai"
         onNarrationEngineChange={vi.fn()}
-        narrationUnavailableReason="本章还没有 AI 朗读音频，请改用系统 TTS"
+        narrationUnavailableReason="本章还没有该音色的 AI 朗读，请改用系统 TTS 或换一个音色"
       />
     )
     fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
     expect(screen.getByRole('button', { name: '从当前位置开始听书' })).toBeDisabled()
-    expect(screen.getByText('本章还没有 AI 朗读音频，请改用系统 TTS')).toBeInTheDocument()
+    expect(
+      screen.getByText('本章还没有该音色的 AI 朗读，请改用系统 TTS 或换一个音色')
+    ).toBeInTheDocument()
   })
   it('hides narration for unsupported book types and keeps mark counts readable', () => {
     render(<ReaderToolbar {...props} hideNarration bookmarkCount={3} collectionCount={150} />)

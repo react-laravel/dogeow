@@ -21,8 +21,15 @@ import { useAiDialogStore } from '@/stores/aiDialogStore'
 import useAuthStore from '@/stores/authStore'
 import { canUseAi } from '@/lib/ai/access'
 import { useBookNarration, type BookNarrationMode } from '@/app/book/hooks/useBookNarration'
-import { hasAiNarrationAudio, getAiNarrationPairUrl } from '@/app/book/utils/aiNarration'
+import {
+  buildAiNarrationPairUrl,
+  getAiNarrationPairUrl,
+  hasAiNarrationAudio,
+  type AiNarrationVoiceId,
+} from '@/app/book/utils/aiNarration'
+import { useAiNarrationManifest } from '@/app/book/hooks/useAiNarrationManifest'
 import { useNarrationEngine } from '@/app/book/utils/narrationEngine'
+import { useNarrationVoice } from '@/app/book/utils/narrationVoice'
 import type { BookReaderConfig } from '@/app/book/types'
 import type { BaseReaderSettings } from '@/app/book/types/reader'
 import {
@@ -55,6 +62,7 @@ export function BookReader<
   const [jumpRequest, setJumpRequest] = useState(0)
   const [narrationMode, setNarrationMode] = useState<BookNarrationMode>('original')
   const { engine: narrationEngine, setEngine: setNarrationEngine } = useNarrationEngine()
+  const { voice: narrationVoice, setVoice: setNarrationVoice } = useNarrationVoice()
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [aiSeedPrompt, setAiSeedPrompt] = useState<string | null>(null)
 
@@ -93,12 +101,32 @@ export function BookReader<
   const systemScheme = useSystemColorScheme()
   const themeStyle = getBookThemeStyle(settings.theme)
   const resolvedTheme = resolveBookTheme(settings.theme, systemScheme)
+  const aiManifest = useAiNarrationManifest(
+    aiNarration?.bookId,
+    aiNarration ? String(aiNarration.chapterId) : undefined,
+    narrationVoice
+  )
+
   const resolveAiAudioUrl = useCallback(
     (pairIndex: number) => {
       if (!aiNarration) return null
-      return getAiNarrationPairUrl(aiNarration.bookId, aiNarration.chapterId, pairIndex)
+      if (aiManifest.available) {
+        if (aiManifest.pairSet.size > 0 && !aiManifest.pairSet.has(pairIndex)) return null
+        return buildAiNarrationPairUrl(
+          aiNarration.bookId,
+          String(aiNarration.chapterId),
+          pairIndex,
+          narrationVoice
+        )
+      }
+      return getAiNarrationPairUrl(
+        aiNarration.bookId,
+        String(aiNarration.chapterId),
+        pairIndex,
+        narrationVoice
+      )
     },
-    [aiNarration]
+    [aiManifest.available, aiManifest.pairSet, aiNarration, narrationVoice]
   )
 
   const narration = useBookNarration({
@@ -110,7 +138,9 @@ export function BookReader<
   })
 
   const aiChapterReady = Boolean(
-    aiNarration && hasAiNarrationAudio(aiNarration.bookId, aiNarration.chapterId)
+    aiNarration &&
+    (aiManifest.available ||
+      hasAiNarrationAudio(aiNarration.bookId, String(aiNarration.chapterId), narrationVoice))
   )
 
   useScrollSaver(contentRef, scrollStorageKey ?? 'book-reader', currentChapterId)
@@ -205,7 +235,7 @@ export function BookReader<
         if (!narration.start(selection.pairIndex ?? 0)) {
           toast.error(
             narrationEngine === 'ai'
-              ? '本章还没有 AI 朗读音频，请改用系统 TTS'
+              ? '本章还没有该音色的 AI 朗读，请改用系统 TTS 或换一个音色'
               : '当前浏览器不支持听书，或章节还没有加载完成'
           )
         }
@@ -218,7 +248,7 @@ export function BookReader<
     if (!narration.start(startPairIndex)) {
       toast.error(
         narrationEngine === 'ai'
-          ? '本章还没有 AI 朗读音频，请改用系统 TTS'
+          ? '本章还没有该音色的 AI 朗读，请改用系统 TTS 或换一个音色'
           : '当前浏览器不支持听书，或章节还没有加载完成'
       )
     }
@@ -231,6 +261,15 @@ export function BookReader<
       setNarrationEngine(engine)
     },
     [narration, narrationEngine, setNarrationEngine]
+  )
+
+  const handleNarrationVoiceChange = useCallback(
+    (voice: AiNarrationVoiceId) => {
+      if (voice === narrationVoice) return
+      narration.stop()
+      setNarrationVoice(voice)
+    },
+    [narration, narrationVoice, setNarrationVoice]
   )
 
   const handleAddCurrentBookmark = useCallback(() => {
@@ -327,15 +366,19 @@ export function BookReader<
           }}
           narrationEngine={narrationEngine}
           onNarrationEngineChange={handleNarrationEngineChange}
+          narrationVoice={narrationVoice}
+          onNarrationVoiceChange={handleNarrationVoiceChange}
           narrationUnavailableReason={
             loading || !narrationChapter
               ? '章节正在加载，请稍候'
               : !narrationChapter.pairs.length
                 ? '当前章节没有可朗读的内容'
                 : narrationEngine === 'ai'
-                  ? aiChapterReady
-                    ? undefined
-                    : '本章还没有 AI 朗读音频，请改用系统 TTS'
+                  ? aiManifest.isLoading && !aiChapterReady
+                    ? '正在检查 AI 朗读音频'
+                    : aiChapterReady
+                      ? undefined
+                      : '本章还没有该音色的 AI 朗读，请改用系统 TTS 或换一个音色'
                   : narration.supported
                     ? undefined
                     : '当前浏览器不支持语音朗读'

@@ -12,6 +12,7 @@ import type {
   BookNarrationMode,
   BookNarrationStatus,
 } from '@/app/book/types/narration'
+import { AI_NARRATION_VOICES, type AiNarrationVoiceId } from '@/app/book/utils/aiNarration'
 
 export interface ReaderNarrationControls {
   narrationStatus: BookNarrationStatus
@@ -31,6 +32,8 @@ export interface ReaderNarrationControls {
   narrationUnavailableReason?: string
   narrationEngine?: BookNarrationEngine
   onNarrationEngineChange?: (engine: BookNarrationEngine) => void
+  narrationVoice?: AiNarrationVoiceId
+  onNarrationVoiceChange?: (voice: AiNarrationVoiceId) => void
 }
 
 export function ReaderNarrationPanel({
@@ -63,6 +66,8 @@ export function ReaderNarrationPanel({
     onNarrationModeChange,
     narrationEngine = 'tts',
     onNarrationEngineChange,
+    narrationVoice = 'serena',
+    onNarrationVoiceChange,
   } = controls
   const active = status !== 'idle'
   const [pendingParagraph, setPendingParagraph] = useState<number | null>(null)
@@ -173,6 +178,18 @@ export function ReaderNarrationPanel({
                 { value: 'tts', label: '系统 TTS' },
                 { value: 'ai', label: 'AI 朗读' },
               ]}
+            />
+          )}
+          {narrationEngine === 'ai' && onNarrationVoiceChange && (
+            <ReaderChoiceGroup
+              label="AI 音色"
+              columns={2}
+              value={narrationVoice}
+              onChange={onNarrationVoiceChange}
+              options={AI_NARRATION_VOICES.map(item => ({
+                value: item.id,
+                label: item.label,
+              }))}
             />
           )}
           {!narrationOriginalOnly && (

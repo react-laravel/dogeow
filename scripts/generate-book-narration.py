@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-"""Generate Qwen3-TTS narration that lines up with VolumeBookReader paragraphs.
+"""Generate Qwen3-TTS narration aligned with the book reader.
 
 Usage:
   ./scripts/generate-book-narration.sh --book luxun --chapter 0-0
-  ./scripts/generate-book-narration.sh --book luxun --all
-  ./scripts/generate-book-narration.sh --book luxun --chapter 0-0 --dry-run
-  ./scripts/generate-book-narration.sh --book luxun --chapter 0-0 --publish
-
-The reader splits chapter text with /\\n{2,}/ and keeps whitespace-only parts
-so indexes stay stable. This script uses the same split, writes 1.0x MP3
-files, fills blank parts with a short silence, and updates
-app/book/data/ai-narration.json.
+  ./scripts/generate-book-narration.sh --book luxun --all --voices Serena,Uncle_Fu
+  ./scripts/generate-book-narration.sh --all-books --voices Serena,Uncle_Fu --publish-each
 """
 from __future__ import annotations
 
@@ -85,7 +79,45 @@ def list_chapters(index: dict) -> list[tuple[str, str, str]]:
                     str(chapter.get("file") or ""),
                 )
             )
-    return chapters
+    if chapters:
+        return chapters
+    for chapter in index.get("chapters") or []:
+        chapters.append(
+            (
+                str(chapter.get("id") or ""),
+                str(chapter.get("title") or chapter.get("name") or ""),
+                str(chapter.get("file") or ""),
+            )
+        )
+    return [item for item in chapters if item[0] and item[2]]
+
+
+def load_paragraphs(source: Path) -> list[str]:
+    if source.suffix.lower() == ".json":
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+        pairs = payload.get("pairs") if isinstance(payload, dict) else None
+        if isinstance(pairs, list):
+            return [str(pair.get("o") or "") if isinstance(pair, dict) else "" for pair in pairs]
+        raise ValueError(f"JSON 章节没有 pairs：{source}")
+    return split_volume_paragraphs(source.read_text(encoding="utf-8-sig"))
+
+
+def discover_books() -> list[str]:
+    books_root = ROOT / "public" / "books"
+    ids = []
+    for path in sorted(books_root.iterdir()):
+        if path.is_dir() and (path / "index.json").is_file() and re.fullmatch(r"[a-z0-9]+", path.name):
+            ids.append(path.name)
+    return ids
+
+
+def book_size(book_id: str) -> int:
+    book_dir = ROOT / "public" / "books" / book_id
+    try:
+        chapters = list_chapters(load_index(book_dir))
+    except Exception:
+        return 0
+    return len(chapters)
 
 
 def write_silence_mp3(mp3_path: Path, seconds: float = BLANK_SILENCE_SECONDS) -> None:
@@ -162,19 +194,29 @@ def cleanup_sidecars(path: Path) -> None:
 
 
 def update_catalog(book_id: str, chapter_id: str, title: str, pairs: list[int], voice: str) -> None:
-    data = {"voice": voice.lower(), "chapters": {}}
+    data: dict = {
+        "defaultVoice": "serena",
+        "voices": ["serena", "uncle_fu"],
+        "chapters": {},
+    }
     if CATALOG_PATH.is_file():
         try:
             loaded = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
-                data["voice"] = str(loaded.get("voice") or voice).lower()
-                chapters = loaded.get("chapters")
-                if isinstance(chapters, dict):
-                    data["chapters"] = chapters
+                if isinstance(loaded.get("chapters"), dict):
+                    data["chapters"] = loaded["chapters"]
+                if isinstance(loaded.get("voices"), list) and loaded["voices"]:
+                    data["voices"] = loaded["voices"]
         except json.JSONDecodeError:
             pass
 
-    data["chapters"][f"{book_id}:{chapter_id}"] = {"title": title, "pairs": pairs}
+    key = f"{book_id}:{chapter_id}"
+    entry = data["chapters"].get(key) if isinstance(data["chapters"].get(key), dict) else {}
+    voices = entry.get("voices") if isinstance(entry.get("voices"), dict) else {}
+    if not voices and isinstance(entry.get("pairs"), list):
+        voices = {"serena": entry["pairs"]}
+    voices[voice.lower()] = pairs
+    data["chapters"][key] = {"title": title, "voices": voices}
     CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CATALOG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -219,7 +261,7 @@ def generate_chapter(
     if not source.is_file():
         raise FileNotFoundError(f"找不到章节文件：{source}")
 
-    paragraphs = split_volume_paragraphs(source.read_text(encoding="utf-8-sig"))
+    paragraphs = load_paragraphs(source)
     dest_dir = book_dir / "audio" / voice.lower() / chapter_id
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -310,80 +352,102 @@ def publish_audio(book_id: str) -> None:
         raise RuntimeError(f"上传失败：php artisan books:upload {book_id} --audio")
 
 
+def parse_voices(raw: str) -> list[str]:
+    voices = []
+    for item in raw.split(","):
+        name = item.strip()
+        if not name:
+            continue
+        if name.lower() == "uncle_fu":
+            name = "Uncle_Fu"
+        voices.append(name)
+    return voices or ["Serena"]
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="为分卷书目生成与阅读器对齐的 Serena 朗读音频")
-    parser.add_argument("--book", required=True, help="书籍 id，例如 luxun")
-    parser.add_argument("--chapter", help="章节 id，例如 0-0")
+    parser = argparse.ArgumentParser(description="为书目生成与阅读器对齐的 Qwen3-TTS 朗读音频")
+    parser.add_argument("--book", help="书籍 id，例如 luxun；可与 --all-books 一起省略")
+    parser.add_argument("--all-books", action="store_true", help="生成 public/books 下全部书目")
+    parser.add_argument("--chapter", help="章节 id，例如 0-0 或 1")
     parser.add_argument("--all", action="store_true", help="生成该书全部章节")
-    parser.add_argument("--limit", type=int, default=0, help="最多生成前 N 章（可与 --all 一起用）")
-    parser.add_argument("--voice", default="Serena", help="Qwen3-TTS 音色，默认 Serena")
+    parser.add_argument("--limit", type=int, default=0, help="每本书最多生成前 N 章")
+    parser.add_argument("--voice", help="单个音色，例如 Serena")
+    parser.add_argument(
+        "--voices",
+        default="Serena,Uncle_Fu",
+        help="逗号分隔音色，默认 Serena,Uncle_Fu",
+    )
     parser.add_argument("--language", default="Chinese")
     parser.add_argument("--dry-run", action="store_true", help="只列出分段，不调用模型")
-    parser.add_argument("--publish", action="store_true", help="生成后上传又拍云 audio 目录")
+    parser.add_argument("--publish", action="store_true", help="全部完成后上传又拍云")
+    parser.add_argument("--publish-each", action="store_true", help="每本书生成后立刻上传")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    if not args.chapter and not args.all:
-        raise SystemExit("请指定 --chapter 0-0，或使用 --all 生成全书。")
-    if not re.fullmatch(r"[a-z0-9]+", args.book):
+    voices = [args.voice] if args.voice else parse_voices(args.voices)
+    book_ids = discover_books() if args.all_books or not args.book else [args.book]
+    if not book_ids:
+        raise SystemExit("没有可生成的书目。")
+    if args.book and not re.fullmatch(r"[a-z0-9]+", args.book):
         raise SystemExit(f"无效的书籍 id：{args.book}")
+    if not args.all_books and not args.book:
+        raise SystemExit("请指定 --book luxun，或使用 --all-books。")
+    if not args.all_books and not args.chapter and not args.all:
+        raise SystemExit("请指定 --chapter 0-0，或使用 --all / --all-books。")
 
-    book_dir = ROOT / "public" / "books" / args.book
-    index = load_index(book_dir)
-    chapters = list_chapters(index)
-    if not chapters:
-        raise SystemExit(f"索引里没有章节：{book_dir / 'index.json'}")
-
-    selected: list[tuple[str, str, str]]
-    if args.chapter:
-        parse_chapter_id(args.chapter)
-        selected = [item for item in chapters if item[0] == args.chapter]
-        if not selected:
-            raise SystemExit(f"找不到章节 {args.chapter}")
-    else:
-        selected = chapters
-
-    if args.limit and args.limit > 0:
-        selected = selected[: args.limit]
+    if args.all_books:
+        book_ids = sorted(book_ids, key=book_size)
 
     reader = None
     if not args.dry_run:
         tts_root = resolve_tts_root()
         print(f"使用本地 TTS：{tts_root}", flush=True)
+        print(f"音色：{', '.join(voices)}", flush=True)
         reader = load_reader(tts_root)
 
-    summaries = []
-    for chapter_id, title, relative_file in selected:
-        summaries.append(
-            generate_chapter(
-                reader,
-                book_id=args.book,
-                book_dir=book_dir,
-                chapter_id=chapter_id,
-                title=title,
-                relative_file=relative_file,
-                voice=args.voice,
-                language=args.language,
-                dry_run=args.dry_run,
-            )
-        )
+    for book_id in book_ids:
+        book_dir = ROOT / "public" / "books" / book_id
+        index = load_index(book_dir)
+        chapters = list_chapters(index)
+        if not chapters:
+            print(f"跳过 {book_id}：没有章节", flush=True)
+            continue
 
-    print("\n完成：")
-    for item in summaries:
-        print(
-            f"  {item['chapterId']} {item['title']} · "
-            f"{item['audio']} 段音频 / {item['paragraphs']} 段正文 "
-            f"(新生成 {item['generated']}，已存在 {item['skipped']}，空白 {item['blank']})"
-        )
+        selected = chapters
+        if args.chapter and not args.all_books:
+            selected = [item for item in chapters if item[0] == args.chapter]
+            if not selected:
+                raise SystemExit(f"找不到章节 {args.chapter}")
+        if args.limit and args.limit > 0:
+            selected = selected[: args.limit]
 
-    if args.publish:
-        if args.dry_run:
-            print("dry-run 跳过上传。", flush=True)
-        else:
-            print("\n正在上传又拍云…", flush=True)
-            publish_audio(args.book)
+        print(f"\n======== {book_id} · {len(selected)} 章 ========", flush=True)
+        summaries = []
+        for voice in voices:
+            for chapter_id, title, relative_file in selected:
+                print(f"\n[{book_id}] {voice} {chapter_id} {title}", flush=True)
+                summaries.append(
+                    generate_chapter(
+                        reader,
+                        book_id=book_id,
+                        book_dir=book_dir,
+                        chapter_id=chapter_id,
+                        title=title,
+                        relative_file=relative_file,
+                        voice=voice,
+                        language=args.language,
+                        dry_run=args.dry_run,
+                    )
+                )
+
+        generated = sum(item["generated"] for item in summaries)
+        skipped = sum(item["skipped"] for item in summaries)
+        print(f"\n{book_id} 完成：新生成 {generated}，已存在 {skipped}", flush=True)
+        if (args.publish or args.publish_each) and not args.dry_run:
+            print(f"正在上传 {book_id} …", flush=True)
+            publish_audio(book_id)
 
 
 if __name__ == "__main__":

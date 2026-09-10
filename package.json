@@ -18,6 +18,7 @@
     "publish:volume": "node scripts/preprocess-volume-book.mjs --publish",
     "narration:generate": "./scripts/generate-book-narration.sh",
     "narration:publish": "./scripts/generate-book-narration.sh --publish",
+    "narration:all": "./scripts/generate-book-narration.sh --all-books --voices Serena,Uncle_Fu --publish-each",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

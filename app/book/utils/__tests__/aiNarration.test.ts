@@ -7,9 +7,16 @@ import {
 } from '../aiNarration'
 
 const catalog: AiNarrationCatalog = {
-  voice: 'serena',
+  defaultVoice: 'serena',
+  voices: ['serena', 'uncle_fu'],
   chapters: {
-    'luxun:0-0': { title: '一件小事', pairs: [0, 3, 21] },
+    'luxun:0-0': {
+      title: '一件小事',
+      voices: {
+        serena: [0, 3, 21],
+        uncle_fu: [0, 3, 21],
+      },
+    },
   },
 }
 
@@ -20,10 +27,13 @@ describe('ai narration catalog', () => {
   })
 
   it('builds CDN urls only for catalogued pairs', () => {
-    expect(hasAiNarrationAudio('luxun', '0-0', catalog)).toBe(true)
-    expect(hasAiNarrationAudio('luxun', '0-1', catalog)).toBe(false)
+    expect(hasAiNarrationAudio('luxun', '0-0', 'serena', catalog)).toBe(true)
+    expect(hasAiNarrationAudio('luxun', '0-1', 'serena', catalog)).toBe(false)
     expect(getAiNarrationPairUrl('luxun', '0-0', 3, 'serena', catalog)).toBe(
       'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/003.mp3'
+    )
+    expect(getAiNarrationPairUrl('luxun', '0-0', 3, 'uncle_fu', catalog)).toBe(
+      'https://upyun.dogeow.com/books/luxun/audio/uncle_fu/0-0/003.mp3'
     )
     expect(getAiNarrationPairUrl('luxun', '0-0', 1, 'serena', catalog)).toBe(
       'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/001.mp3'
