@@ -143,20 +143,26 @@ describe('ReaderToolbar', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'AI 朗读' }))
     expect(changeEngine).toHaveBeenCalledWith('ai')
   })
-  it('lets the listener choose Serena or Uncle Fu for AI narration', () => {
+  it.each([
+    ['Vivian · 明亮女声', 'vivian'],
+    ['Serena · 温柔女声', 'serena'],
+    ['Uncle Fu · 成熟男声', 'uncle_fu'],
+  ] as const)('selects the requested preset %s', (label, voice) => {
     const changeVoice = vi.fn()
     render(
       <ReaderToolbar
         {...props}
         narrationEngine="ai"
-        narrationVoice="serena"
+        narrationVoice={voice === 'serena' ? 'vivian' : 'serena'}
         onNarrationEngineChange={vi.fn()}
         onNarrationVoiceChange={changeVoice}
       />
     )
     fireEvent.click(screen.getByRole('button', { name: '打开听书控制' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'Uncle Fu' }))
-    expect(changeVoice).toHaveBeenCalledWith('uncle_fu')
+    fireEvent.click(screen.getByRole('radio', { name: label }))
+    expect(changeVoice).toHaveBeenCalledWith(voice)
+    expect(screen.queryByRole('radio', { name: '青年男声' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: '青年女声' })).not.toBeInTheDocument()
   })
   it('disables playback while AI narration is not available', () => {
     render(

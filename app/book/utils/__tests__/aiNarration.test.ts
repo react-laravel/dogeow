@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   getAiNarrationPairUrl,
+  getAiNarrationManifestUrl,
+  buildAiNarrationPairUrl,
   hasAiNarrationAudio,
   padNarrationPairIndex,
   type AiNarrationCatalog,
@@ -8,6 +10,7 @@ import {
 
 const catalog: AiNarrationCatalog = {
   defaultVoice: 'serena',
+  audioReleases: { luxun: 'presets-1.7b-v1' },
   voices: ['serena', 'uncle_fu'],
   chapters: {
     'luxun:0-0': {
@@ -30,24 +33,37 @@ describe('ai narration catalog', () => {
     expect(hasAiNarrationAudio('luxun', '0-0', 'serena', catalog)).toBe(true)
     expect(hasAiNarrationAudio('luxun', '0-1', 'serena', catalog)).toBe(false)
     expect(getAiNarrationPairUrl('luxun', '0-0', 3, 'serena', catalog)).toBe(
-      'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/003.mp3'
+      'https://upyun.dogeow.com/books/luxun/audio/presets-1.7b-v1/serena/0-0/003.mp3'
     )
     expect(getAiNarrationPairUrl('luxun', '0-0', 3, 'uncle_fu', catalog)).toBe(
-      'https://upyun.dogeow.com/books/luxun/audio/uncle_fu/0-0/003.mp3'
+      'https://upyun.dogeow.com/books/luxun/audio/presets-1.7b-v1/uncle_fu/0-0/003.mp3'
     )
     expect(getAiNarrationPairUrl('luxun', '0-0', 1, 'serena', catalog)).toBe(
-      'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/001.mp3'
+      'https://upyun.dogeow.com/books/luxun/audio/presets-1.7b-v1/serena/0-0/001.mp3'
     )
     expect(getAiNarrationPairUrl('luxun', '0-1', 0, 'serena', catalog)).toBeNull()
   })
 
-  it('includes the first Lu Xun article in the committed catalog', () => {
-    expect(hasAiNarrationAudio('luxun', '0-0')).toBe(true)
-    expect(getAiNarrationPairUrl('luxun', '0-0', 3)).toBe(
-      'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/003.mp3'
+  it('ignores the previous release catalog until the new cloud manifest is available', () => {
+    expect(hasAiNarrationAudio('luxun', '0-0')).toBe(false)
+    expect(getAiNarrationPairUrl('luxun', '0-0', 3)).toBeNull()
+    expect(hasAiNarrationAudio('luxun', '0-0', 'serena', { ...catalog, audioReleases: {} })).toBe(
+      false
     )
-    expect(getAiNarrationPairUrl('luxun', '0-0', 1)).toBe(
-      'https://upyun.dogeow.com/books/luxun/audio/serena/0-0/001.mp3'
+  })
+
+  it.each(['vivian', 'serena', 'uncle_fu'])('uses the new recording release for %s', voice => {
+    expect(getAiNarrationManifestUrl('luxun', '0-3', voice)).toBe(
+      `https://upyun.dogeow.com/books/luxun/audio/presets-1.7b-v1/${voice}/0-3/manifest.json`
+    )
+    expect(buildAiNarrationPairUrl('luxun', '0-3', 5, voice)).toBe(
+      `https://upyun.dogeow.com/books/luxun/audio/presets-1.7b-v1/${voice}/0-3/005.mp3`
+    )
+  })
+
+  it('keeps other books on their existing audio paths', () => {
+    expect(buildAiNarrationPairUrl('hongloumeng', '1', 5, 'serena')).toBe(
+      'https://upyun.dogeow.com/books/hongloumeng/audio/serena/1/005.mp3'
     )
   })
 })

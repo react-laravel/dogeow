@@ -183,7 +183,7 @@ export function ReaderNarrationPanel({
           {narrationEngine === 'ai' && onNarrationVoiceChange && (
             <ReaderChoiceGroup
               label="AI 音色"
-              columns={2}
+              columns={3}
               value={narrationVoice}
               onChange={onNarrationVoiceChange}
               options={AI_NARRATION_VOICES.map(item => ({
