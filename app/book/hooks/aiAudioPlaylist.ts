@@ -12,41 +12,38 @@ export function createAiPlaylistAudio(): HTMLAudioElement {
   return audio
 }
 
-export function bindAiPlaylistAudio(
+export function attachAiClip(
   audio: HTMLAudioElement,
   handlers: {
-    shouldIgnore: () => boolean
     onEnded: () => void
     onError: () => void
     onTimeUpdate: (audio: HTMLAudioElement) => void
   }
-): { arm: () => void; unbind: () => void } {
-  let advancing = false
+): () => void {
+  let settled = false
 
-  const advance = (fromError = false) => {
-    if (handlers.shouldIgnore() || advancing) return
-    advancing = true
-    if (fromError) handlers.onError()
-    else handlers.onEnded()
+  const settle = (callback: () => void) => {
+    if (settled) return
+    settled = true
+    cleanup()
+    callback()
   }
 
-  const onEnded = () => advance()
+  const onEnded = () => settle(handlers.onEnded)
   const onPause = () => {
-    if (audio.ended) advance()
+    if (audio.ended) settle(handlers.onEnded)
   }
-  const onError = () => advance(true)
-  const onTimeUpdate = () => {
-    if (handlers.shouldIgnore()) return
-    handlers.onTimeUpdate(audio)
-    const duration = audio.duration
-    if (
-      Number.isFinite(duration) &&
-      duration > 0 &&
-      !audio.paused &&
-      audio.currentTime >= Math.max(duration - 0.08, 0)
-    ) {
-      advance()
-    }
+  const onError = () => {
+    if (audio.error?.code === 1) return
+    settle(handlers.onError)
+  }
+  const onTimeUpdate = () => handlers.onTimeUpdate(audio)
+
+  const cleanup = () => {
+    audio.removeEventListener('ended', onEnded)
+    audio.removeEventListener('pause', onPause)
+    audio.removeEventListener('error', onError)
+    audio.removeEventListener('timeupdate', onTimeUpdate)
   }
 
   audio.addEventListener('ended', onEnded)
@@ -54,17 +51,9 @@ export function bindAiPlaylistAudio(
   audio.addEventListener('error', onError)
   audio.addEventListener('timeupdate', onTimeUpdate)
 
-  return {
-    arm: () => {
-      advancing = false
-    },
-    unbind: () => {
-      advancing = true
-      audio.removeEventListener('ended', onEnded)
-      audio.removeEventListener('pause', onPause)
-      audio.removeEventListener('error', onError)
-      audio.removeEventListener('timeupdate', onTimeUpdate)
-    },
+  return () => {
+    settled = true
+    cleanup()
   }
 }
 

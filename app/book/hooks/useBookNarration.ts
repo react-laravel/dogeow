@@ -13,7 +13,7 @@ import {
   scrollNarrationPairIntoView,
 } from '@/app/book/utils/scroll'
 import {
-  bindAiPlaylistAudio,
+  attachAiClip,
   createAiPlaylistAudio,
   loadAiPlaylistUrl,
   resetAiPlaylistSrc,
@@ -169,7 +169,7 @@ export function useBookNarration({
   const receivedBoundaryRef = useRef(false)
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const audioBindRef = useRef<{ arm: () => void; unbind: () => void } | null>(null)
+  const audioBindRef = useRef<(() => void) | null>(null)
   const engineRef = useRef<BookNarrationEngine>(engine)
   const resolveAiAudioUrlRef = useRef(resolveAiAudioUrl)
 
@@ -247,6 +247,8 @@ export function useBookNarration({
     utteranceRef.current = null
     receivedBoundaryRef.current = false
     getSpeechSynthesis()?.cancel()
+    audioBindRef.current?.()
+    audioBindRef.current = null
     if (audioRef.current) resetAiPlaylistSrc(audioRef.current)
   }, [clearProgressTimer])
 
@@ -318,38 +320,35 @@ export function useBookNarration({
       clearProgressTimer()
       if (!audioRef.current) audioRef.current = createAiPlaylistAudio()
       const audio = audioRef.current
-      if (!audioBindRef.current) {
-        audioBindRef.current = bindAiPlaylistAudio(audio, {
-          shouldIgnore: () => stoppedRef.current,
-          onEnded: () => {
-            if (!stoppedRef.current) speakNextRef.current()
-          },
-          onError: () => {
-            if (!stoppedRef.current) speakNextRef.current()
-          },
-          onTimeUpdate: current => {
-            const fullText = activeFullTextRef.current
-            const currentPairIndex = activePairIndexRef.current
-            if (currentPairIndex == null || !fullText.trim()) return
-            const duration = current.duration
-            if (!Number.isFinite(duration) || duration <= 0) return
-            const charIndex = Math.min(
-              Math.floor((current.currentTime / duration) * fullText.length),
-              Math.max(fullText.length - 1, 0)
-            )
-            const highlight = buildHighlightFromCharIndex(
-              currentPairIndex,
-              activeSegmentsRef.current,
-              charIndex
-            )
-            if (highlight) {
-              activeHighlightRef.current = highlight
-              setActiveHighlight(highlight)
-            }
-          },
-        })
-      }
-      audioBindRef.current.arm()
+      audioBindRef.current?.()
+      audioBindRef.current = attachAiClip(audio, {
+        onEnded: () => {
+          if (!stoppedRef.current) speakNextRef.current()
+        },
+        onError: () => {
+          if (!stoppedRef.current) speakNextRef.current()
+        },
+        onTimeUpdate: current => {
+          const fullText = activeFullTextRef.current
+          const currentPairIndex = activePairIndexRef.current
+          if (currentPairIndex == null || !fullText.trim()) return
+          const duration = current.duration
+          if (!Number.isFinite(duration) || duration <= 0) return
+          const charIndex = Math.min(
+            Math.floor((current.currentTime / duration) * fullText.length),
+            Math.max(fullText.length - 1, 0)
+          )
+          const highlight = buildHighlightFromCharIndex(
+            currentPairIndex,
+            activeSegmentsRef.current,
+            charIndex
+          )
+          if (highlight) {
+            activeHighlightRef.current = highlight
+            setActiveHighlight(highlight)
+          }
+        },
+      })
       loadAiPlaylistUrl(audio, url, rateRef.current)
 
       activeSegmentsRef.current = segments
@@ -560,7 +559,7 @@ export function useBookNarration({
   useEffect(
     () => () => {
       stop()
-      audioBindRef.current?.unbind()
+      audioBindRef.current?.()
       audioBindRef.current = null
       audioRef.current = null
     },

@@ -32,7 +32,8 @@ BLANK_SILENCE_SECONDS = 0.4
 
 
 def split_volume_paragraphs(text: str) -> list[str]:
-    """Match `text.split(/\\n{2,}/).filter(Boolean)` in VolumeBookReader."""
+    """Match `splitVolumeParagraphs` in the reader, including CRLF chapter files."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     return [part for part in re.split(r"\n{2,}", text) if part]
 
 
