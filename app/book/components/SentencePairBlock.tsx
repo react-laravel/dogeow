@@ -97,7 +97,7 @@ export const SentencePairBlock = memo(function SentencePairBlock({
     <section
       className={cn(
         gapClass,
-        isNarrating && 'rounded-md bg-current/5 px-2 py-1 ring-1 ring-current/15 transition-colors'
+        isNarrating && 'rounded-sm bg-amber-200/40 px-1.5 py-0.5 transition-colors'
       )}
       data-pair-index={pairIndex}
     >

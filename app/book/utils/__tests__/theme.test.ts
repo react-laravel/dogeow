@@ -18,9 +18,11 @@ describe('getNarrationHighlightStyle', () => {
     const light = getNarrationHighlightStyle('light')
     const green = getNarrationHighlightStyle('green')
     const dark = getNarrationHighlightStyle('dark')
+    const sepia = getNarrationHighlightStyle('sepia')
 
     expect(light.backgroundColor).toBeTruthy()
     expect(green.backgroundColor).not.toBe(light.backgroundColor)
     expect(dark.backgroundColor).not.toBe(light.backgroundColor)
+    expect(sepia.backgroundColor).toContain('240, 210, 130')
   })
 })

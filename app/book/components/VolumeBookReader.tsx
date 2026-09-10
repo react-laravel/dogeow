@@ -218,8 +218,7 @@ export function VolumeBookReader({
                     data-pair-index={index}
                     className={cn(
                       'mb-4 whitespace-pre-wrap last:mb-0',
-                      isNarrating &&
-                        'rounded-md bg-current/5 px-2 py-1 ring-1 ring-current/15 transition-colors'
+                      isNarrating && 'rounded-sm bg-amber-200/40 px-1.5 py-0.5 transition-colors'
                     )}
                   >
                     <NarrationHighlightedText

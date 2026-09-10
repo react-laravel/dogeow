@@ -83,7 +83,7 @@ describe('SentencePairBlock', () => {
   it('applies narrating class when isNarrating is true', () => {
     const { container } = render(<SentencePairBlock {...defaultProps} isNarrating={true} />)
     const section = container.querySelector('section')
-    expect(section?.className).toContain('rounded-md')
+    expect(section?.className).toContain('bg-amber-200/40')
   })
 
   it('renders with card display mode', () => {

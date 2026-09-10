@@ -54,6 +54,79 @@ def load_reader(tts_root: Path):
     return Reader()
 
 
+def speak_paragraph(reader, text: str, voice: str, language: str, wav_path: Path) -> None:
+    """Match the 127.0.0.1:7860 Qwen3 path: generate_custom_voice, empty instruct."""
+    import time
+
+    import mlx.core as mx
+    import numpy as np
+    from mlx_audio.audio_io import write
+    from mlx_audio.tts.utils import load_model
+    from tts import MODEL, text_segments  # type: ignore
+
+    cleanup_sidecars(wav_path)
+    if reader.model is None:
+        print("正在加载本地模型，首次运行可能稍久……", flush=True)
+        started = time.perf_counter()
+        reader.model = load_model(str(MODEL))
+        print(f"模型已加载，用时 {time.perf_counter() - started:.1f} 秒。", flush=True)
+
+    segments = list(text_segments(text))
+    chunks = []
+    started = time.perf_counter()
+    generate_custom = getattr(reader.model, "generate_custom_voice", None)
+    for index, segment in enumerate(segments, 1):
+        print(f"正在生成 {index}/{len(segments)} 段 · {voice} · {language}", flush=True)
+        if generate_custom:
+            results = generate_custom(
+                text=segment,
+                speaker=voice,
+                language=language,
+                instruct=None,
+                max_tokens=4096,
+            )
+        else:
+            results = reader.model.generate(
+                text=segment,
+                voice=voice,
+                lang_code=language,
+                max_tokens=4096,
+                verbose=False,
+            )
+        for result in results:
+            chunks.append(np.asarray(result.audio, dtype=np.float32).reshape(-1))
+    if not chunks:
+        raise RuntimeError("模型没有返回音频。")
+    audio = np.concatenate(chunks)
+    if not audio.size or not np.isfinite(audio).all() or np.max(np.abs(audio)) < 1e-5:
+        raise RuntimeError("生成的音频为空、静音或含有无效数值。")
+    seconds = len(audio) / reader.model.sample_rate
+    elapsed = time.perf_counter() - started
+    wav_path.parent.mkdir(parents=True, exist_ok=True)
+    write(str(wav_path), audio, reader.model.sample_rate, format="wav")
+    wav_path.with_suffix(".txt").write_text(text + "\n", encoding="utf-8")
+    wav_path.with_suffix(".json").write_text(
+        json.dumps(
+            {
+                "voice": voice,
+                "language": language,
+                "instruct": "",
+                "interface": "q3tts-mlx-demo-local",
+                "sample_rate": reader.model.sample_rate,
+                "audio_seconds": seconds,
+                "generation_seconds": elapsed,
+                "peak_mlx_memory_gb": mx.get_peak_memory() / 1e9,
+                "segments": len(segments),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"已保存：{wav_path}\n音频 {seconds:.1f} 秒，生成用时 {elapsed:.1f} 秒。", flush=True)
+
+
 def load_index(book_dir: Path) -> dict:
     index_path = book_dir / "index.json"
     if not index_path.is_file():
@@ -256,6 +329,7 @@ def generate_chapter(
     voice: str,
     language: str,
     dry_run: bool,
+    overwrite: bool = False,
 ) -> dict:
     source = book_dir / relative_file
     if not source.is_file():
@@ -285,7 +359,7 @@ def generate_chapter(
                     "silence": True,
                 }
             )
-            if mp3_path.is_file() and mp3_path.stat().st_size > 0:
+            if not overwrite and mp3_path.is_file() and mp3_path.stat().st_size > 0:
                 skipped += 1
                 print(f"  {stem} 空白，已有静音，跳过", flush=True)
                 continue
@@ -298,7 +372,7 @@ def generate_chapter(
             continue
 
         pair_entries.append({"index": index, "file": mp3_path.name, "chars": len(paragraph.strip())})
-        if mp3_path.is_file() and mp3_path.stat().st_size > 0:
+        if not overwrite and mp3_path.is_file() and mp3_path.stat().st_size > 0:
             skipped += 1
             print(f"  {stem} 已有 MP3，跳过", flush=True)
             continue
@@ -310,7 +384,7 @@ def generate_chapter(
         wav_path = dest_dir / f"{stem}.generating.wav"
         cleanup_sidecars(wav_path)
         print(f"  {stem} 正在生成 · {len(paragraph.strip())} 字", flush=True)
-        reader.speak(paragraph.strip(), voice, language, wav_path)
+        speak_paragraph(reader, paragraph.strip(), voice, language, wav_path)
         convert_wav_to_mp3(wav_path, mp3_path)
         generating_json = wav_path.with_suffix(".json")
         if generating_json.is_file():
@@ -378,6 +452,7 @@ def parse_args() -> argparse.Namespace:
         help="逗号分隔音色，默认 Serena,Uncle_Fu",
     )
     parser.add_argument("--language", default="Chinese")
+    parser.add_argument("--overwrite", action="store_true", help="覆盖已有 MP3")
     parser.add_argument("--dry-run", action="store_true", help="只列出分段，不调用模型")
     parser.add_argument("--publish", action="store_true", help="全部完成后上传又拍云")
     parser.add_argument("--publish-each", action="store_true", help="每本书生成后立刻上传")
@@ -439,6 +514,7 @@ def main() -> None:
                         voice=voice,
                         language=args.language,
                         dry_run=args.dry_run,
+                        overwrite=args.overwrite,
                     )
                 )
 

@@ -90,8 +90,8 @@ export function getNarrationHighlightStyle(theme: BookTheme): CSSProperties {
       }
     case 'sepia':
       return {
-        backgroundColor: 'rgba(180, 120, 40, 0.28)',
-        boxShadow: 'inset 0 -0.12em 0 0 rgba(140, 90, 30, 0.45)',
+        backgroundColor: 'rgba(240, 210, 130, 0.55)',
+        boxShadow: 'inset 0 -0.12em 0 0 rgba(214, 164, 64, 0.45)',
       }
     case 'green':
       return {
