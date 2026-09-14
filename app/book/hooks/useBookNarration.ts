@@ -321,6 +321,7 @@ export function useBookNarration({
       if (!audioRef.current) audioRef.current = createAiPlaylistAudio()
       const audio = audioRef.current
       audioBindRef.current?.()
+      // AI 音频无字级时间轴；中英混排下按字符线性映射会严重漂移，只保留段落高亮。
       audioBindRef.current = attachAiClip(audio, {
         onEnded: () => {
           if (!stoppedRef.current) speakNextRef.current()
@@ -328,40 +329,16 @@ export function useBookNarration({
         onError: () => {
           if (!stoppedRef.current) speakNextRef.current()
         },
-        onTimeUpdate: current => {
-          const fullText = activeFullTextRef.current
-          const currentPairIndex = activePairIndexRef.current
-          if (currentPairIndex == null || !fullText.trim()) return
-          const duration = current.duration
-          if (!Number.isFinite(duration) || duration <= 0) return
-          const charIndex = Math.min(
-            Math.floor((current.currentTime / duration) * fullText.length),
-            Math.max(fullText.length - 1, 0)
-          )
-          const highlight = buildHighlightFromCharIndex(
-            currentPairIndex,
-            activeSegmentsRef.current,
-            charIndex
-          )
-          if (highlight) {
-            activeHighlightRef.current = highlight
-            setActiveHighlight(highlight)
-          }
-        },
       })
       loadAiPlaylistUrl(audio, url, rateRef.current)
 
       activeSegmentsRef.current = segments
       activeFullTextRef.current = text
       activePairIndexRef.current = pairIndex
+      activeHighlightRef.current = null
       setActivePairIndex(pairIndex)
       setActiveText(text)
-      if (text.trim()) {
-        applyCharHighlight(0, Math.min(HIGHLIGHT_WINDOW, text.length))
-      } else {
-        activeHighlightRef.current = null
-        setActiveHighlight(null)
-      }
+      setActiveHighlight(null)
       statusRef.current = 'playing'
       setStatus('playing')
       scrollActivePairIntoView(pairIndex)

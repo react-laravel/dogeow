@@ -71,4 +71,17 @@ describe('attachAiClip', () => {
     expect(firstEnded).not.toHaveBeenCalled()
     expect(secondEnded).toHaveBeenCalledOnce()
   })
+
+  it('allows omitting onTimeUpdate', () => {
+    const audio = fakeAudio()
+    const onEnded = vi.fn()
+    attachAiClip(audio as unknown as HTMLAudioElement, {
+      onEnded,
+      onError: vi.fn(),
+    })
+    audio.emit('timeupdate')
+    audio.ended = true
+    audio.emit('ended')
+    expect(onEnded).toHaveBeenCalledOnce()
+  })
 })

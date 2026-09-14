@@ -256,6 +256,32 @@ describe('AI audio narration', () => {
     expect(result.current.status).toBe('playing')
   })
 
+  it('keeps only paragraph highlight for AI audio (no char karaoke)', async () => {
+    const { result } = renderHook(() =>
+      useBookNarration({
+        chapter,
+        narrationMode: 'original',
+        contentRef: { current: null },
+        engine: 'ai',
+        resolveAiAudioUrl: pairIndex => `https://cdn.example/${pairIndex}.mp3`,
+      })
+    )
+    await act(async () => {})
+    act(() => {
+      result.current.start(0)
+    })
+    expect(result.current.activePairIndex).toBe(0)
+    expect(result.current.activeHighlight).toBeNull()
+    act(() => {
+      const player = players[0]
+      if (!player) throw new Error('missing player')
+      player.currentTime = 4
+      player.ontimeupdate?.()
+    })
+    expect(result.current.activeHighlight).toBeNull()
+    expect(result.current.activePairIndex).toBe(0)
+  })
+
   it('changes speed with playbackRate and keeps the same audio element', async () => {
     const { result } = renderHook(() =>
       useBookNarration({

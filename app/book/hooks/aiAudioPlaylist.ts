@@ -17,7 +17,7 @@ export function attachAiClip(
   handlers: {
     onEnded: () => void
     onError: () => void
-    onTimeUpdate: (audio: HTMLAudioElement) => void
+    onTimeUpdate?: (audio: HTMLAudioElement) => void
   }
 ): () => void {
   let settled = false
@@ -37,19 +37,19 @@ export function attachAiClip(
     if (audio.error?.code === 1) return
     settle(handlers.onError)
   }
-  const onTimeUpdate = () => handlers.onTimeUpdate(audio)
+  const onTimeUpdate = handlers.onTimeUpdate ? () => handlers.onTimeUpdate?.(audio) : null
 
   const cleanup = () => {
     audio.removeEventListener('ended', onEnded)
     audio.removeEventListener('pause', onPause)
     audio.removeEventListener('error', onError)
-    audio.removeEventListener('timeupdate', onTimeUpdate)
+    if (onTimeUpdate) audio.removeEventListener('timeupdate', onTimeUpdate)
   }
 
   audio.addEventListener('ended', onEnded)
   audio.addEventListener('pause', onPause)
   audio.addEventListener('error', onError)
-  audio.addEventListener('timeupdate', onTimeUpdate)
+  if (onTimeUpdate) audio.addEventListener('timeupdate', onTimeUpdate)
 
   return () => {
     settled = true

@@ -5,6 +5,8 @@ Usage:
   ./scripts/generate-book-narration.sh --book luxun --chapter 0-0
   ./scripts/generate-book-narration.sh --book luxun --all --voices Serena,Uncle_Fu
   ./scripts/generate-book-narration.sh --all-books --voices Serena,Uncle_Fu --publish-each
+  ./scripts/generate-book-narration.sh --status
+  ./scripts/generate-book-narration.sh --dashboard
 """
 from __future__ import annotations
 
@@ -14,7 +16,21 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+from narration_progress import (
+    chapter_has_audio,
+    instruct_for_paragraph,
+    is_chapter_published,
+    mark_chapter_published,
+    order_book_ids,
+    parse_book_list,
+    print_status,
+    serve_dashboard,
+    update_live,
+    watch_status,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 API_ROOT = ROOT.parent / "dogeow-api"
@@ -22,6 +38,10 @@ CATALOG_PATH = ROOT / "app" / "book" / "data" / "ai-narration.json"
 DEFAULT_TTS_ROOT = Path(
     "/Users/sam/Documents/Codex/2026-09-10/https-github-com-blaizzy-mlx-audio/outputs/mlx-audio"
 )
+# 与 app/book/utils/aiNarration.ts 的 AI_NARRATION_RELEASES 保持一致
+AUDIO_RELEASES = {
+    "luxun": "presets-1.7b-v1",
+}
 BLANK_SILENCE_SECONDS = 0.4
 
 
@@ -54,8 +74,14 @@ def load_reader(tts_root: Path):
     return Reader()
 
 
-def speak_paragraph(reader, text: str, voice: str, language: str, wav_path: Path) -> None:
-    """Match the 127.0.0.1:7860 Qwen3 path: generate_custom_voice, empty instruct."""
+def speak_paragraph(
+    reader, text: str, voice: str, language: str, wav_path: Path, instruct: str | None = None
+) -> None:
+    """Match the 127.0.0.1:7860 Qwen3 path: generate_custom_voice.
+
+    Body paragraphs use empty instruct. Chapter titles use a calm speaking prompt
+    so four-character headings are not drawn out.
+    """
     import time
 
     import mlx.core as mx
@@ -75,24 +101,17 @@ def speak_paragraph(reader, text: str, voice: str, language: str, wav_path: Path
     chunks = []
     started = time.perf_counter()
     generate_custom = getattr(reader.model, "generate_custom_voice", None)
+    if generate_custom is None:
+        raise RuntimeError("当前模型没有 generate_custom_voice，无法与 127.0.0.1:7860 对齐。")
     for index, segment in enumerate(segments, 1):
         print(f"正在生成 {index}/{len(segments)} 段 · {voice} · {language}", flush=True)
-        if generate_custom:
-            results = generate_custom(
-                text=segment,
-                speaker=voice,
-                language=language,
-                instruct=None,
-                max_tokens=4096,
-            )
-        else:
-            results = reader.model.generate(
-                text=segment,
-                voice=voice,
-                lang_code=language,
-                max_tokens=4096,
-                verbose=False,
-            )
+        results = generate_custom(
+            text=segment,
+            speaker=voice,
+            language=language,
+            instruct=instruct,
+            max_tokens=4096,
+        )
         for result in results:
             chunks.append(np.asarray(result.audio, dtype=np.float32).reshape(-1))
     if not chunks:
@@ -104,13 +123,13 @@ def speak_paragraph(reader, text: str, voice: str, language: str, wav_path: Path
     elapsed = time.perf_counter() - started
     wav_path.parent.mkdir(parents=True, exist_ok=True)
     write(str(wav_path), audio, reader.model.sample_rate, format="wav")
-    wav_path.with_suffix(".txt").write_text(text + "\n", encoding="utf-8")
+    wav_path.with_suffix(".txt").write_text(text.strip() + "\n", encoding="utf-8")
     wav_path.with_suffix(".json").write_text(
         json.dumps(
             {
                 "voice": voice,
                 "language": language,
-                "instruct": "",
+                "instruct": instruct or "",
                 "interface": "q3tts-mlx-demo-local",
                 "sample_rate": reader.model.sample_rate,
                 "audio_seconds": seconds,
@@ -330,6 +349,8 @@ def generate_chapter(
     language: str,
     dry_run: bool,
     overwrite: bool = False,
+    on_progress=None,
+    only_pair: int | None = None,
 ) -> dict:
     source = book_dir / relative_file
     if not source.is_file():
@@ -363,15 +384,25 @@ def generate_chapter(
                 skipped += 1
                 print(f"  {stem} 空白，已有静音，跳过", flush=True)
                 continue
+            if only_pair is not None and index != only_pair:
+                skipped += 1
+                print(f"  {stem} 未指定，跳过", flush=True)
+                continue
             if dry_run:
                 print(f"  {stem} 空白，将生成 {BLANK_SILENCE_SECONDS:.1f}s 静音", flush=True)
                 continue
+            if on_progress:
+                on_progress(index, len(paragraphs), "生成静音")
             print(f"  {stem} 空白，正在生成 {BLANK_SILENCE_SECONDS:.1f}s 静音", flush=True)
             write_silence_mp3(mp3_path)
             generated += 1
             continue
 
         pair_entries.append({"index": index, "file": mp3_path.name, "chars": len(paragraph.strip())})
+        if only_pair is not None and index != only_pair:
+            skipped += 1
+            print(f"  {stem} 未指定，跳过", flush=True)
+            continue
         if not overwrite and mp3_path.is_file() and mp3_path.stat().st_size > 0:
             skipped += 1
             print(f"  {stem} 已有 MP3，跳过", flush=True)
@@ -383,8 +414,15 @@ def generate_chapter(
 
         wav_path = dest_dir / f"{stem}.generating.wav"
         cleanup_sidecars(wav_path)
-        print(f"  {stem} 正在生成 · {len(paragraph.strip())} 字", flush=True)
-        speak_paragraph(reader, paragraph.strip(), voice, language, wav_path)
+        if on_progress:
+            on_progress(index, len(paragraphs), "生成中")
+        instruct = instruct_for_paragraph(paragraph, title)
+        print(
+            f"  {stem} 正在生成 · {len(paragraph.strip())} 字"
+            + (" · 标题口吻" if instruct else ""),
+            flush=True,
+        )
+        speak_paragraph(reader, paragraph.strip(), voice, language, wav_path, instruct=instruct)
         convert_wav_to_mp3(wav_path, mp3_path)
         generating_json = wav_path.with_suffix(".json")
         if generating_json.is_file():
@@ -416,14 +454,29 @@ def generate_chapter(
     }
 
 
-def publish_audio(book_id: str) -> None:
-    result = subprocess.run(
-        ["php", "artisan", "books:upload", book_id, "--audio"],
-        cwd=API_ROOT,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"上传失败：php artisan books:upload {book_id} --audio")
+def audio_upload_prefix(book_id: str) -> str:
+    release = AUDIO_RELEASES.get(book_id)
+    if release:
+        return f"books/{book_id}/audio/{release}"
+    return f"books/{book_id}/audio"
+
+
+def publish_audio(book_id: str, chapter_id: str | None = None, attempts: int = 5) -> None:
+    prefix = audio_upload_prefix(book_id)
+    command = ["php", "artisan", "books:upload", book_id, "--audio", f"--prefix={prefix}"]
+    if chapter_id:
+        command.append(f"--chapter={chapter_id}")
+    detail = " ".join(command)
+    last_code = 1
+    for attempt in range(1, max(1, attempts) + 1):
+        result = subprocess.run(command, cwd=API_ROOT, check=False)
+        last_code = result.returncode
+        if result.returncode == 0:
+            return
+        wait = min(30, 3 * attempt)
+        print(f"上传失败（第 {attempt}/{attempts} 次），{wait}s 后重试：{detail}", flush=True)
+        time.sleep(wait)
+    raise RuntimeError(f"上传失败：{detail}（exit={last_code}）")
 
 
 def parse_voices(raw: str) -> list[str]:
@@ -441,7 +494,8 @@ def parse_voices(raw: str) -> list[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="为书目生成与阅读器对齐的 Qwen3-TTS 朗读音频")
     parser.add_argument("--book", help="书籍 id，例如 luxun；可与 --all-books 一起省略")
-    parser.add_argument("--all-books", action="store_true", help="生成 public/books 下全部书目")
+    parser.add_argument("--books", help="逗号分隔书目，按给定顺序一本一本生成，例如 luxun,laorenyuhai")
+    parser.add_argument("--all-books", action="store_true", help="生成 public/books 下全部书目（鲁迅优先）")
     parser.add_argument("--chapter", help="章节 id，例如 0-0 或 1")
     parser.add_argument("--all", action="store_true", help="生成该书全部章节")
     parser.add_argument("--limit", type=int, default=0, help="每本书最多生成前 N 章")
@@ -453,75 +507,133 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--language", default="Chinese")
     parser.add_argument("--overwrite", action="store_true", help="覆盖已有 MP3")
+    parser.add_argument("--pair", type=int, default=-1, help="只生成该段，例如 0 表示标题段")
     parser.add_argument("--dry-run", action="store_true", help="只列出分段，不调用模型")
     parser.add_argument("--publish", action="store_true", help="全部完成后上传又拍云")
-    parser.add_argument("--publish-each", action="store_true", help="每本书生成后立刻上传")
+    parser.add_argument("--publish-each", action="store_true", help="每章双音色生成后立刻上传该章")
+    parser.add_argument("--status", action="store_true", help="打印进度表后退出")
+    parser.add_argument("--watch", action="store_true", help="定时刷新进度表")
+    parser.add_argument("--dashboard", action="store_true", help="打开本地进度看板")
+    parser.add_argument("--interval", type=int, default=0, help="--watch 默认 30 秒，--dashboard 默认 5 秒")
+    parser.add_argument("--port", type=int, default=7861, help="看板端口，默认 7861")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if args.status:
+        print_status()
+        return
+    if args.watch:
+        watch_status(args.interval or 30)
+        return
+    if args.dashboard:
+        serve_dashboard(args.port, args.interval or 5)
+        return
+
     voices = [args.voice] if args.voice else parse_voices(args.voices)
-    book_ids = discover_books() if args.all_books or not args.book else [args.book]
+    if args.books:
+        book_ids = parse_book_list(args.books)
+    elif args.all_books or not args.book:
+        book_ids = discover_books()
+    else:
+        book_ids = [args.book]
     if not book_ids:
         raise SystemExit("没有可生成的书目。")
-    if args.book and not re.fullmatch(r"[a-z0-9]+", args.book):
-        raise SystemExit(f"无效的书籍 id：{args.book}")
-    if not args.all_books and not args.book:
-        raise SystemExit("请指定 --book luxun，或使用 --all-books。")
-    if not args.all_books and not args.chapter and not args.all:
-        raise SystemExit("请指定 --chapter 0-0，或使用 --all / --all-books。")
+    for book_id in book_ids:
+        if not re.fullmatch(r"[a-z0-9]+", book_id):
+            raise SystemExit(f"无效的书籍 id：{book_id}")
+    if not args.all_books and not args.book and not args.books:
+        raise SystemExit("请指定 --book luxun、--books luxun,laorenyuhai，或 --all-books。")
+    if not args.all_books and not args.books and not args.chapter and not args.all:
+        raise SystemExit("请指定 --chapter 0-0，或使用 --all / --all-books / --books。")
 
-    if args.all_books:
-        book_ids = sorted(book_ids, key=book_size)
+    if args.all_books and not args.books:
+        book_ids = order_book_ids(book_ids, book_size)
 
     reader = None
     if not args.dry_run:
         tts_root = resolve_tts_root()
         print(f"使用本地 TTS：{tts_root}", flush=True)
         print(f"音色：{', '.join(voices)}", flush=True)
+        print(f"顺序：{' → '.join(book_ids)}", flush=True)
         reader = load_reader(tts_root)
 
     for book_id in book_ids:
         book_dir = ROOT / "public" / "books" / book_id
         index = load_index(book_dir)
+        book_title = str(index.get("title") or book_id)
         chapters = list_chapters(index)
         if not chapters:
             print(f"跳过 {book_id}：没有章节", flush=True)
             continue
 
         selected = chapters
-        if args.chapter and not args.all_books:
+        if args.chapter and not args.all_books and not args.books:
             selected = [item for item in chapters if item[0] == args.chapter]
             if not selected:
                 raise SystemExit(f"找不到章节 {args.chapter}")
         if args.limit and args.limit > 0:
             selected = selected[: args.limit]
 
-        print(f"\n======== {book_id} · {len(selected)} 章 ========", flush=True)
+        print(f"\n======== {book_title} · {len(selected)} 章 ========", flush=True)
         summaries = []
-        for voice in voices:
-            for chapter_id, title, relative_file in selected:
+        for chapter_id, title, relative_file in selected:
+            chapter_generated = 0
+            for voice in voices:
                 print(f"\n[{book_id}] {voice} {chapter_id} {title}", flush=True)
-                summaries.append(
-                    generate_chapter(
-                        reader,
-                        book_id=book_id,
-                        book_dir=book_dir,
-                        chapter_id=chapter_id,
-                        title=title,
-                        relative_file=relative_file,
-                        voice=voice,
-                        language=args.language,
-                        dry_run=args.dry_run,
-                        overwrite=args.overwrite,
+
+                def on_progress(index: int, total: int, phase: str, voice=voice, chapter_id=chapter_id, title=title) -> None:
+                    update_live(
+                        {
+                            "bookId": book_id,
+                            "bookTitle": book_title,
+                            "voice": voice,
+                            "chapterId": chapter_id,
+                            "chapterTitle": title,
+                            "pairIndex": index,
+                            "pairCount": total,
+                            "phase": phase,
+                        }
                     )
+
+                result = generate_chapter(
+                    reader,
+                    book_id=book_id,
+                    book_dir=book_dir,
+                    chapter_id=chapter_id,
+                    title=title,
+                    relative_file=relative_file,
+                    voice=voice,
+                    language=args.language,
+                    dry_run=args.dry_run,
+                    overwrite=args.overwrite,
+                    on_progress=None if args.dry_run else on_progress,
+                    only_pair=args.pair if args.pair >= 0 else None,
                 )
+                chapter_generated += result["generated"]
+                summaries.append(result)
+            if args.publish_each and not args.dry_run:
+                if chapter_has_audio(book_dir, chapter_id, [item.lower() for item in voices]):
+                    if chapter_generated > 0 or not is_chapter_published(book_dir, chapter_id):
+                        print(f"正在上传 {book_id} {chapter_id} …", flush=True)
+                        update_live(
+                            {
+                                "bookId": book_id,
+                                "bookTitle": book_title,
+                                "voice": voices[-1],
+                                "chapterId": chapter_id,
+                                "chapterTitle": title,
+                                "phase": "上传又拍云",
+                            }
+                        )
+                        publish_audio(book_id, chapter_id)
+                        mark_chapter_published(book_dir, chapter_id, [item.lower() for item in voices])
 
         generated = sum(item["generated"] for item in summaries)
         skipped = sum(item["skipped"] for item in summaries)
         print(f"\n{book_id} 完成：新生成 {generated}，已存在 {skipped}", flush=True)
-        if (args.publish or args.publish_each) and not args.dry_run:
+        if args.publish and not args.publish_each and not args.dry_run:
             print(f"正在上传 {book_id} …", flush=True)
             publish_audio(book_id)
 
@@ -530,7 +642,11 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n已中断。", file=sys.stderr)
+        print("\n已中断。已有 MP3 会保留，下次从断点续跑。", file=sys.stderr)
+        try:
+            update_live({"phase": "已中断，下次从已有 MP3 续跑"}, running=False)
+        except Exception:
+            pass
         sys.exit(130)
     except Exception as error:
         print(f"运行失败：{error}", file=sys.stderr)

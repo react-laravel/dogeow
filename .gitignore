@@ -52,6 +52,9 @@ next-env.d.ts
 # 书籍预处理 JSON（部署到又拍云，不纳入前端仓库）
 /public/books/
 
+# 听书 TTS 进度看板
+/.narration/
+
 # PM2
 logs/
 
