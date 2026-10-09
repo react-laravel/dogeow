@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from narration_progress import (  # noqa: E402
     TITLE_INSTRUCT,
+    discover_books,
     instruct_for_paragraph,
     is_chapter_published,
     mark_chapter_published,
@@ -41,6 +42,22 @@ class NarrationProgressTest(unittest.TestCase):
         self.assertIn("instruct_for_paragraph", text)
         self.assertNotIn("不要阴郁", text)
         self.assertIn("generate_custom_voice", text)
+
+    def test_text_only_books_are_left_out_of_narration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spoken = root / "lunyu"
+            spoken.mkdir()
+            (spoken / "index.json").write_text('{"title":"论语","volumes":[]}\n', encoding="utf-8")
+            quiet = root / "yijing"
+            quiet.mkdir()
+            (quiet / "index.json").write_text(
+                '{"title":"易经","narration":false,"volumes":[]}\n',
+                encoding="utf-8",
+            )
+            self.assertEqual(discover_books(root), ["lunyu"])
+            snapshot = scan_progress(root)
+            self.assertEqual([book["id"] for book in snapshot["books"]], ["lunyu"])
 
     def test_scan_and_published_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

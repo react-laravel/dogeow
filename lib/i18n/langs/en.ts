@@ -50,6 +50,9 @@ export const en = {
   'book.ouyenigelangtai.desc': "Balzac's novel",
   'book.lunyu': 'The Analects',
   'book.lunyu.desc': 'Sayings of Confucius and his disciples, twenty books',
+  'book.yijing': 'The Book of Changes',
+  'book.yijing.desc':
+    'The Zhouyi: thirty upper hexagrams, thirty-four lower hexagrams, and the appended commentaries',
   'book.sanguoyanyi': 'Romance of the Three Kingdoms',
   'book.sanguoyanyi.desc': "Luo Guanzhong's novel, 120 chapters",
   'book.select_description': 'Select a book and start reading',

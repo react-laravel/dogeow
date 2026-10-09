@@ -47,6 +47,8 @@ export const zh_CN = {
   'book.ouyenigelangtai.desc': '巴尔扎克著',
   'book.lunyu': '论语',
   'book.lunyu.desc': '孔子及其弟子言行录，共二十篇',
+  'book.yijing': '易经',
+  'book.yijing.desc': '《周易》经传：上经三十卦、下经三十四卦，并系辞、说卦、序卦、杂卦',
   'book.sanguoyanyi': '三国演义',
   'book.sanguoyanyi.desc': '罗贯中著，一百二十回',
   'book.select_description': '选择一本好书开始阅读',

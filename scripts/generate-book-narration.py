@@ -21,6 +21,7 @@ from pathlib import Path
 
 from narration_progress import (
     chapter_has_audio,
+    discover_books,
     instruct_for_paragraph,
     is_chapter_published,
     mark_chapter_published,
@@ -192,15 +193,6 @@ def load_paragraphs(source: Path) -> list[str]:
             return [str(pair.get("o") or "") if isinstance(pair, dict) else "" for pair in pairs]
         raise ValueError(f"JSON 章节没有 pairs：{source}")
     return split_volume_paragraphs(source.read_text(encoding="utf-8-sig"))
-
-
-def discover_books() -> list[str]:
-    books_root = ROOT / "public" / "books"
-    ids = []
-    for path in sorted(books_root.iterdir()):
-        if path.is_dir() and (path / "index.json").is_file() and re.fullmatch(r"[a-z0-9]+", path.name):
-            ids.append(path.name)
-    return ids
 
 
 def book_size(book_id: str) -> int:

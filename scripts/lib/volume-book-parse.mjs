@@ -60,6 +60,8 @@ function isPlayBreak(trimmed) {
 }
 
 const SENTENCE_END = /[。！？…」』"”]$/
+const REFLOW_UNIT_START = /^(《|[初上用][九六]|[六九][二三四五]|[\u4e00-\u9fff]{1,4}：)/
+const TRIGRAM_POSITION = /^[\u4e00-\u9fff]下[\u4e00-\u9fff]上$/
 const PLAY_COMPLETE = /[。！？…）)]$/
 
 function isCompletePlayLine(trimmed) {
@@ -75,6 +77,10 @@ function isHardwrapComplete(trimmed) {
   return false
 }
 
+function isReflowComplete(trimmed) {
+  return SENTENCE_END.test(trimmed) || TRIGRAM_POSITION.test(trimmed)
+}
+
 function flushJoined(buffer, paragraphs) {
   if (buffer.length === 0) return
   const paragraph = buffer.join('').replace(/[ \t]+/g, ' ').trim()
@@ -84,7 +90,7 @@ function flushJoined(buffer, paragraphs) {
 
 /**
  * @param {string[]} lines
- * @param {'paragraph' | 'play' | 'hardwrap'} [mode]
+ * @param {'paragraph' | 'play' | 'hardwrap' | 'reflow'} [mode]
  */
 export function unwrapParagraphs(lines, mode = 'paragraph') {
   if (mode === 'play') {
@@ -122,6 +128,23 @@ export function unwrapParagraphs(lines, mode = 'paragraph') {
         continue
       }
       if (isJunkLine(trimmed) || trimmed === '完') continue
+      buffer.push(trimmed)
+    }
+    flushJoined(buffer, paragraphs)
+    return paragraphs.join('\n\n')
+  }
+
+  if (mode === 'reflow') {
+    const paragraphs = []
+    /** @type {string[]} */
+    const buffer = []
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || isJunkLine(trimmed) || trimmed === '完') continue
+      const previous = buffer[buffer.length - 1]
+      if (previous && (isReflowComplete(previous) || REFLOW_UNIT_START.test(trimmed))) {
+        flushJoined(buffer, paragraphs)
+      }
       buffer.push(trimmed)
     }
     flushJoined(buffer, paragraphs)
@@ -204,9 +227,15 @@ export function parseVolumeBook(lines, spec) {
       continue
     }
 
-    if (currentChapter && !isJunkLine(line)) {
-      currentChapter.lines.push(line)
+    if (!currentChapter || isJunkLine(line)) continue
+    if (typeof spec.rewriteLine === 'function') {
+      const rewritten = spec.rewriteLine(line)
+      if (typeof rewritten === 'string' && rewritten.trim()) {
+        currentChapter.lines.push(rewritten.trim())
+      }
+      continue
     }
+    currentChapter.lines.push(line)
   }
 
   closeChapter()
@@ -248,6 +277,7 @@ export function buildIndex(spec, parts) {
     title: spec.title,
     author: spec.author,
     ...(spec.translator ? { translator: spec.translator } : {}),
+    ...(spec.narration === false ? { narration: false } : {}),
     totalVolumes: parts.length,
     totalChapters: parts.reduce((sum, part) => sum + part.chapters.length, 0),
     volumes: parts.map((part, partIndex) => {

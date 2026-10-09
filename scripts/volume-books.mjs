@@ -200,6 +200,38 @@ export const VOLUME_BOOKS = {
     },
   },
 
+  yijing: {
+    id: 'yijing',
+    title: '易经',
+    author: '周文王、周公、孔子',
+    sourceFile: '周易.txt',
+    sourceUrl:
+      'https://raw.githubusercontent.com/garychowcmu/daizhigev20/master/%E6%98%93%E8%97%8F/%E6%98%93%E7%BB%8F/%E5%91%A8%E6%98%93.txt',
+    defaultVolumeName: '上经',
+    skipUntil: /^01[.．]\s*乾/,
+    unwrap: 'reflow',
+    narration: false,
+    expectedChapterCounts: [30, 34, 5],
+    rewriteLine(line) {
+      const trimmed = line.trim()
+      if (/^[ⅰⅱⅲⅳⅴⅵⅶⅷ]+$/.test(trimmed)) return ''
+      const composed = trimmed.match(/^[ⅰⅱⅲⅳⅴⅵⅶⅷ]+（(.+)）$/)
+      if (composed) return composed[1]
+      return trimmed
+    },
+    classify(line) {
+      if (line === '下经') return { type: 'volume', volumeName: '下经', title: '下经' }
+      const commentary = line === '系辞' ? '系辞上' : line
+      if (/^(系辞上|系辞下|说卦|序卦|杂卦)$/.test(commentary)) {
+        const number = { 系辞上: 1, 系辞下: 2, 说卦: 3, 序卦: 4, 杂卦: 5 }[commentary]
+        return { type: 'chapter', volumeName: '易传', title: commentary, number }
+      }
+      const match = line.match(/^(\d{1,2})[.．]\s*([^（(]+)/)
+      if (!match) return null
+      return { type: 'chapter', title: match[2].trim(), number: Number(match[1]) }
+    },
+  },
+
   sanguoyanyi: {
     id: 'sanguoyanyi',
     title: '三国演义',

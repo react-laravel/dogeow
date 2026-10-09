@@ -149,11 +149,24 @@ def paragraph_count(source: Path) -> int:
     return len(split_volume_paragraphs(source.read_text(encoding="utf-8-sig")))
 
 
+def index_skips_narration(index_path: Path) -> bool:
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return isinstance(payload, dict) and payload.get("narration") is False
+
+
 def discover_books(books_root: Path = BOOKS_ROOT) -> list[str]:
     ids = []
     for path in sorted(books_root.iterdir()):
-        if path.is_dir() and (path / "index.json").is_file() and re.fullmatch(r"[a-z0-9]+", path.name):
-            ids.append(path.name)
+        if not path.is_dir() or not (path / "index.json").is_file():
+            continue
+        if not re.fullmatch(r"[a-z0-9]+", path.name):
+            continue
+        if index_skips_narration(path / "index.json"):
+            continue
+        ids.append(path.name)
     return ids
 
 

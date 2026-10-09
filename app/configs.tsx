@@ -354,6 +354,17 @@ export const configs = {
       fallbackTitle: '论语',
     },
     {
+      id: 'yijing',
+      kind: 'volume' as const,
+      nameKey: 'book.yijing',
+      descriptionKey: 'book.yijing.desc',
+      href: '/book/yijing',
+      color: '#1e3a2f',
+      icon: '☯️',
+      chapterSelectPlaceholder: '选择卦',
+      fallbackTitle: '易经',
+    },
+    {
       id: 'sanguoyanyi',
       kind: 'volume' as const,
       nameKey: 'book.sanguoyanyi',

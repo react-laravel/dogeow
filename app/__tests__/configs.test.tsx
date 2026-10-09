@@ -114,6 +114,7 @@ describe('App Configs', () => {
         'laorenyuhai',
         'ouyenigelangtai',
         'lunyu',
+        'yijing',
         'sanguoyanyi',
       ] as const
       const titles = {
@@ -126,6 +127,7 @@ describe('App Configs', () => {
         laorenyuhai: '老人与海',
         ouyenigelangtai: '欧也妮·葛朗台',
         lunyu: '论语',
+        yijing: '易经',
         sanguoyanyi: '三国演义',
       } as const
 

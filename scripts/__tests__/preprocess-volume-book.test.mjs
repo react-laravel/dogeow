@@ -42,7 +42,7 @@ describe('volume book parser', () => {
     tempDirs.length = 0
   })
 
-  it('lists the ten gaokao volume books', () => {
+  it('lists the volume books', () => {
     expect(VOLUME_BOOK_IDS).toEqual([
       'biancheng',
       'sishitongtang',
@@ -53,6 +53,7 @@ describe('volume book parser', () => {
       'laorenyuhai',
       'ouyenigelangtai',
       'lunyu',
+      'yijing',
       'sanguoyanyi',
     ])
   })
@@ -194,6 +195,56 @@ describe('volume book parser', () => {
       '第二章 彼埃尔·格兰古瓦',
     ])
     expect(parts[1].chapters[0].title).toBe('第一章 从夏里德到席拉')
+  })
+
+  it('reflows wrapped 易经 lines and keeps the trigram position apart', () => {
+    const text = unwrapParagraphs(
+      ['ⅰ（乾下乾上）', '《彖》曰：保合大和，乃利贞。首出庶', '物，万国咸宁。', '《象》曰：天行健。'],
+      'reflow'
+    )
+    expect(text).toContain('首出庶物，万国咸宁。')
+    expect(text.split('\n\n')[0]).toBe('ⅰ（乾下乾上）')
+    expect(text).toContain('《象》曰：天行健。')
+  })
+
+  it('splits 易经 into upper, lower, and commentary', () => {
+    const spec = {
+      ...VOLUME_BOOKS.yijing,
+      expectedChapterCounts: [1, 1, 2],
+    }
+    const lines = [
+      '上经',
+      '下经',
+      '系辞上',
+      '01. 乾（卦一）',
+      'ⅰ',
+      'ⅰ（乾下乾上）',
+      '《乾》：元，亨，利，贞。',
+      '《彖》曰：首出庶',
+      '物，万国咸宁。',
+      '下经',
+      '31. 咸（卦三十一）',
+      'ⅶ',
+      'ⅶ（艮下兑上）',
+      '咸：亨。利贞。取女吉。',
+      '系辞',
+      '天尊地卑，乾坤定矣。',
+      '杂卦',
+      '《乾》刚《坤》柔。',
+    ]
+    const parts = parseVolumeBook(lines, spec)
+    assertExpectedStructure(parts, spec)
+    expect(parts.map(part => part.title)).toEqual(['上经', '下经', '易传'])
+    expect(parts[0].chapters[0].title).toBe('乾')
+    expect(parts[2].chapters.map(chapter => chapter.title)).toEqual(['系辞上', '杂卦'])
+    const qian = unwrapParagraphs(parts[0].chapters[0].lines, spec.unwrap)
+    expect(qian).toContain('乾下乾上')
+    expect(qian).not.toMatch(/^ⅰ/m)
+    expect(qian).toContain('首出庶物，万国咸宁。')
+    const xian = unwrapParagraphs(parts[1].chapters[0].lines, spec.unwrap)
+    expect(xian).toContain('艮下兑上')
+    expect(xian).not.toContain('艮下兑上咸')
+    expect(xian).toContain('咸：亨。利贞。取女吉。')
   })
 
   it('writes volume index and chapter files', () => {
