@@ -42,7 +42,7 @@ export function buildLocationPathById(
 
   if (type === 'area') {
     const area = areas.find(a => a.id === id)
-    return area?.name || (t !== undefined ? t(unknownAreaKey) : '')
+    return area?.name || t(unknownAreaKey)
   }
 
   if (type === 'room') {

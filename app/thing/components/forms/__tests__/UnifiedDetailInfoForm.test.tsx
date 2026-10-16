@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import UnifiedDetailInfoForm from '../UnifiedDetailInfoForm'
 
 vi.mock('@/components/ui/card', () => ({

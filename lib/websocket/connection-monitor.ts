@@ -26,7 +26,6 @@ class WebSocketConnectionMonitor {
   private lastError: ConnectionError | null = null
   private isRetrying = false
   private listeners: Array<(monitor: ConnectionMonitor) => void> = []
-  private reconnectTimeout: NodeJS.Timeout | null = null
   private errorHandler: WebSocketErrorHandler
 
   constructor() {
@@ -74,7 +73,6 @@ class WebSocketConnectionMonitor {
         this.lastError = null
         this.isRetrying = false
         this.errorHandler.resetRetryCount()
-        this.clearReconnectTimeout()
         console.log('🔥 ConnectionMonitor: 状态已更新为connected')
       })
 
@@ -86,8 +84,6 @@ class WebSocketConnectionMonitor {
       echo.connector.pusher.connection.bind('disconnected', () => {
         console.log('🔥 ConnectionMonitor: 连接断开事件触发')
         this.updateStatus('disconnected')
-        // 暂时禁用自动重连以避免循环
-        // this.scheduleReconnect()
       })
 
       echo.connector.pusher.connection.bind('error', (error: unknown) => {
@@ -143,27 +139,6 @@ class WebSocketConnectionMonitor {
     this.notifyListeners()
   }
 
-  private scheduleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      return
-    }
-
-    this.clearReconnectTimeout()
-
-    // 指数退避：1秒、2秒、4秒、8秒、16秒
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 16000)
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectAttempts++
-      this.updateStatus('reconnecting')
-
-      const echo = getEchoInstance()
-      if (echo) {
-        echo.connector.pusher.connect()
-      }
-    }, delay)
-  }
-
   private scheduleReconnectWithErrorHandler() {
     this.errorHandler.scheduleRetry(() => {
       const echo = getEchoInstance()
@@ -171,13 +146,6 @@ class WebSocketConnectionMonitor {
         echo.connector.pusher.connect()
       }
     })
-  }
-
-  private clearReconnectTimeout() {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout)
-      this.reconnectTimeout = null
-    }
   }
 
   private notifyListeners() {
@@ -224,7 +192,6 @@ class WebSocketConnectionMonitor {
     this.lastError = null
     this.isRetrying = false
     this.errorHandler.resetRetryCount()
-    this.clearReconnectTimeout()
 
     const echo = getEchoInstance()
     if (echo) {
@@ -234,7 +201,6 @@ class WebSocketConnectionMonitor {
   }
 
   public destroy() {
-    this.clearReconnectTimeout()
     this.errorHandler.destroy()
     this.listeners = []
   }

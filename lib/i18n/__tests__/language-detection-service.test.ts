@@ -1,280 +1,203 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LanguageDetectionService } from '../language-detection-service'
+import { GeolocationDetector } from '../geolocation-detector'
 
-// Mock navigator properties
-const mockNavigator = {
-  languages: ['en-US', 'en'],
-  language: 'en-US',
-  userLanguage: undefined,
-  systemLanguage: undefined,
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+let service: LanguageDetectionService
+let timezone = 'America/New_York'
+
+function mockBrowser(languages = ['en-US', 'en'], userAgent = 'unknown') {
+  vi.stubGlobal('navigator', { languages, language: languages[0] ?? '', userAgent })
 }
 
-// Mock Intl.DateTimeFormat
-const mockDateTimeFormat = () => ({
-  resolvedOptions: () => ({
-    timeZone: 'America/New_York',
-  }),
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-10-16T00:00:00Z'))
+  localStorage.clear()
+  timezone = 'America/New_York'
+  mockBrowser()
+  vi.spyOn(Intl, 'DateTimeFormat').mockReturnValue({
+    resolvedOptions: () => ({ timeZone: timezone }),
+  } as Intl.DateTimeFormat)
+  vi.spyOn(GeolocationDetector.prototype, 'detectByIP').mockResolvedValue(null)
+  service = LanguageDetectionService.getInstance()
+  service.clearCache()
 })
 
-describe('LanguageDetectionService', () => {
-  let service: LanguageDetectionService
+afterEach(() => {
+  service.clearCache()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
 
-  beforeEach(() => {
-    service = LanguageDetectionService.getInstance()
+describe('LanguageDetectionService public behavior', () => {
+  it('returns the same service instance', () => {
+    expect(LanguageDetectionService.getInstance()).toBe(service)
+  })
+
+  it('reuses a fresh detection result', async () => {
+    const first = await service.detectLanguage()
+    mockBrowser(['zh-CN'])
+    expect(await service.detectLanguage()).toBe(first)
+  })
+
+  it('redetects after the cache expires', async () => {
+    await service.detectLanguage()
+    mockBrowser(['zh-CN'])
+    vi.setSystemTime(Date.now() + 25 * 60 * 60 * 1000)
+
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'zh-CN',
+      method: 'browser',
+    })
+  })
+
+  it('gives a supported stored preference priority over browser language', async () => {
+    localStorage.setItem('dogeow-language-preference', 'zh-CN')
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'zh-CN',
+      method: 'stored_preference',
+      confidence: 1,
+    })
+  })
+
+  it('keeps detections with and without stored preference separate', async () => {
+    localStorage.setItem('dogeow-language-preference', 'zh-CN')
+    await service.detectLanguage()
+
+    expect(await service.detectLanguage({ ignoreStoredPreference: true })).toMatchObject({
+      language: 'en',
+      method: 'browser',
+    })
+  })
+
+  it('ignores an unsupported stored preference', async () => {
+    localStorage.setItem('dogeow-language-preference', 'ja')
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'en',
+      method: 'browser',
+    })
+  })
+
+  it.each([
+    ['en', 'en', 0.95],
+    ['zh-CN', 'zh-CN', 0.95],
+    ['zh', 'zh-CN', 0.8],
+    ['zh-TW', 'zh-CN', 0.8],
+    ['en-US', 'en', 0.8],
+  ])(
+    'detects browser language %s through the active strategy',
+    async (browser, language, confidence) => {
+      mockBrowser([browser as string])
+      expect(await service.detectLanguage()).toMatchObject({
+        language,
+        confidence,
+        method: 'browser',
+      })
+    }
+  )
+
+  it.each([
+    ['America/New_York', 'en'],
+    ['Asia/Shanghai', 'zh-CN'],
+  ])('falls back to timezone %s when browser language is unsupported', async (zone, language) => {
+    mockBrowser(['xx'])
+    timezone = zone
+    expect(await service.detectLanguage()).toMatchObject({
+      language,
+      method: 'geolocation',
+      confidence: 0.75,
+    })
+  })
+
+  it('uses cached geolocation before consulting the current timezone', async () => {
+    mockBrowser(['xx'])
+    localStorage.setItem(
+      'dogeow-geo-language',
+      JSON.stringify({ language: 'zh-CN', timestamp: Date.now() - 1000 })
+    )
+
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'zh-CN',
+      method: 'geolocation',
+    })
+  })
+
+  it('falls back to the user agent after browser and timezone detection fail', async () => {
+    mockBrowser([], 'Mozilla/5.0 (en) AppleWebKit/537.36')
+    timezone = 'Etc/Unknown'
+
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'en',
+      method: 'user_agent',
+      confidence: 0.6,
+    })
+  })
+
+  it('honors legacy navigator language properties in the user-agent fallback', async () => {
+    mockBrowser([])
+    vi.stubGlobal('navigator', { ...navigator, userLanguage: 'zh-CN' })
+    timezone = 'Etc/Unknown'
+
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'zh-CN',
+      method: 'user_agent',
+    })
+  })
+
+  it('uses the default language when every detection strategy is unavailable', async () => {
+    mockBrowser([])
+    timezone = 'Etc/Unknown'
+
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'zh-CN',
+      method: 'default',
+      confidence: 0.5,
+    })
+  })
+
+  it('forceRedetect ignores a previously cached result', async () => {
+    await service.detectLanguage()
+    mockBrowser(['zh-CN'])
+
+    expect(await service.forceRedetect()).toMatchObject({
+      language: 'zh-CN',
+      method: 'browser',
+    })
+  })
+
+  it('reports detection statistics and clears the cache through the public API', async () => {
+    await service.detectLanguage()
+    expect(service.getDetectionStats()).toMatchObject({
+      cacheSize: 1,
+      lastDetection: Date.now(),
+      hasActivePromise: false,
+    })
+
     service.clearCache()
-
-    // Reset mocks
-    vi.clearAllMocks()
-
-    // Mock global objects
-    Object.defineProperty(global, 'navigator', {
-      value: mockNavigator,
-      writable: true,
+    expect(service.getDetectionStats()).toMatchObject({
+      cacheSize: 0,
+      lastDetection: undefined,
     })
+  })
 
-    Object.defineProperty(global, 'Intl', {
-      value: { DateTimeFormat: mockDateTimeFormat },
-      writable: true,
-    })
-
-    Object.defineProperty(global, 'localStorage', {
-      value: {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
+  it('falls back safely when reading browser languages throws', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal('navigator', {
+      get languages() {
+        throw new Error('Browser languages unavailable')
       },
-      writable: true,
     })
+
+    expect(await service.detectLanguage()).toMatchObject({
+      language: 'en',
+      method: 'geolocation',
+    })
+    expect(errorLog).toHaveBeenCalled()
   })
 
-  describe('getInstance', () => {
-    it('should return the same instance', () => {
-      const instance1 = LanguageDetectionService.getInstance()
-      const instance2 = LanguageDetectionService.getInstance()
-      expect(instance1).toBe(instance2)
-    })
-  })
-
-  describe('detectLanguage', () => {
-    it('should return cached result if available', async () => {
-      // Mock cache with recent result
-      const mockResult = {
-        language: 'en' as const,
-        confidence: 0.9,
-        method: 'browser' as const,
-        timestamp: Date.now(),
-      }
-
-      // Manually set cache
-      ;(service as any).cache.set('language-detection:with-pref', mockResult)
-
-      const result = await service.detectLanguage()
-      expect(result).toEqual(mockResult)
-    })
-
-    it('should perform detection if cache is stale', async () => {
-      // Mock cache with old result
-      const oldResult = {
-        language: 'en' as const,
-        confidence: 0.9,
-        method: 'browser' as const,
-        timestamp: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
-      }
-
-      ;(service as any).cache.set('language-detection:with-pref', oldResult)
-
-      const result = await service.detectLanguage()
-      expect(result.language).toBe('en')
-      expect(result.method).toBe('browser')
-    })
-
-    it('should ignore stored preference when requested', async () => {
-      const mockLocalStorage = {
-        getItem: vi.fn().mockReturnValue('en'),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      }
-
-      Object.defineProperty(global, 'localStorage', {
-        value: mockLocalStorage,
-        writable: true,
-      })
-
-      Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, languages: ['zh-CN'], language: 'zh-CN' },
-        writable: true,
-      })
-
-      const result = await service.detectLanguage({ ignoreStoredPreference: true })
-      expect(result.language).toBe('zh-CN')
-      expect(result.method).toBe('browser')
-    })
-  })
-
-  describe('browser language detection', () => {
-    it('should detect exact language match', () => {
-      const result = (service as any).detectBrowserLanguage()
-      expect(result.language).toBe('en')
-      expect(result.confidence).toBeGreaterThanOrEqual(0.8)
-      expect(result.method).toBe('browser')
-    })
-
-    it('should handle language prefix matching', () => {
-      // Mock navigator with 'zh' language
-      Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, languages: ['zh'], language: 'zh' },
-        writable: true,
-      })
-
-      const result = (service as any).detectBrowserLanguage()
-      expect(result.language).toBe('zh-CN')
-      expect(result.confidence).toBeGreaterThan(0.6)
-    })
-
-    it('should handle region-specific matching', () => {
-      // Mock navigator with 'zh-TW' language
-      Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, languages: ['zh-TW'], language: 'zh-TW' },
-        writable: true,
-      })
-
-      const result = (service as any).detectBrowserLanguage()
-      expect(result.language).toBe('zh-CN')
-      expect(result.confidence).toBeGreaterThanOrEqual(0.8)
-    })
-  })
-
-  describe('geolocation detection', () => {
-    it('should detect language from timezone', async () => {
-      const result = await (service as any).detectByGeolocation()
-      expect(result.language).toBe('en')
-      expect(result.confidence).toBe(0.75)
-      expect(result.method).toBe('geolocation')
-    })
-
-    it('should handle different timezones', async () => {
-      // Mock different timezone
-      Object.defineProperty(global, 'Intl', {
-        value: {
-          DateTimeFormat: () => ({
-            resolvedOptions: () => ({ timeZone: 'Asia/Shanghai' }),
-          }),
-        },
-        writable: true,
-      })
-
-      const result = await (service as any).detectByGeolocation()
-      expect(result.language).toBe('zh-CN')
-    })
-  })
-
-  describe('user agent detection', () => {
-    it('should detect language from user agent', () => {
-      // Mock user agent with English
-      Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, userAgent: 'Mozilla/5.0 (en) AppleWebKit/537.36' },
-        writable: true,
-      })
-
-      const result = (service as any).detectByUserAgent()
-      expect(result.language).toBe('en')
-      expect(result.confidence).toBe(0.6)
-      expect(result.method).toBe('user_agent')
-    })
-
-    it('should handle navigator properties', () => {
-      // Mock navigator with userLanguage
-      Object.defineProperty(global, 'navigator', {
-        value: { ...mockNavigator, userLanguage: 'en' },
-        writable: true,
-      })
-
-      const result = (service as any).detectByUserAgent()
-      expect(result.language).toBe('en')
-    })
-  })
-
-  describe('stored preference', () => {
-    it('should return stored preference if available', () => {
-      // Mock localStorage with stored preference
-      const mockLocalStorage = {
-        getItem: vi.fn().mockReturnValue('en'),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      }
-
-      Object.defineProperty(global, 'localStorage', {
-        value: mockLocalStorage,
-        writable: true,
-      })
-
-      const result = (service as any).getStoredPreference()
-      expect(result).toBe('en')
-    })
-
-    it('should return null if no stored preference', () => {
-      // Mock localStorage without stored preference
-      const mockLocalStorage = {
-        getItem: vi.fn().mockReturnValue(null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      }
-
-      Object.defineProperty(global, 'localStorage', {
-        value: mockLocalStorage,
-        writable: true,
-      })
-
-      const result = (service as any).getStoredPreference()
-      expect(result).toBeNull()
-    })
-  })
-
-  describe('utility methods', () => {
-    it('should check if language is supported', () => {
-      expect((service as any).isSupportedLanguage('zh-CN')).toBe(true)
-      expect((service as any).isSupportedLanguage('zh-TW')).toBe(false)
-      expect((service as any).isSupportedLanguage('en')).toBe(true)
-      expect((service as any).isSupportedLanguage('ja')).toBe(false)
-      expect((service as any).isSupportedLanguage('fr')).toBe(false)
-    })
-
-    it('should normalize language codes', () => {
-      expect((service as any).normalizeLanguageCode('zh-CN')).toBe('zh-CN')
-      expect((service as any).normalizeLanguageCode('zh')).toBe('zh-CN')
-      expect((service as any).normalizeLanguageCode('en-US')).toBe('en')
-      expect((service as any).normalizeLanguageCode('invalid')).toBeNull()
-    })
-
-    it('should get detection statistics', () => {
-      const stats = service.getDetectionStats()
-      expect(stats).toHaveProperty('cacheSize')
-      expect(stats).toHaveProperty('lastDetection')
-    })
-  })
-
-  describe('error handling', () => {
-    it('should handle detection errors gracefully', async () => {
-      // Mock navigator to throw error
-      Object.defineProperty(global, 'navigator', {
-        value: {
-          get languages() {
-            throw new Error('Test error')
-          },
-          language: 'en',
-        },
-        writable: true,
-      })
-
-      const result = await service.detectLanguage()
-      expect(result.language).toBe('en')
-      expect(result.confidence).toBe(0.75)
-      expect(result.method).toBe('geolocation')
-    })
+  it('shares the result between simultaneous detection requests', async () => {
+    const [first, second] = await Promise.all([service.detectLanguage(), service.detectLanguage()])
+    expect(second).toBe(first)
   })
 })

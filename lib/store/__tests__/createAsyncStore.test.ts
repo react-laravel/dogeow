@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { act } from '@testing-library/react'
 import { createAsyncSlice, isAsyncReady, isCacheValid, selectAsyncState } from '../createAsyncStore'
 
@@ -126,6 +126,15 @@ describe('createAsyncStore', () => {
   })
 
   describe('isCacheValid', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-16T00:00:00Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     it('should return false when lastFetch is undefined', () => {
       expect(isCacheValid(undefined)).toBe(false)
     })

@@ -27,6 +27,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Next.js build outputs
+        uses: actions/cache@v5
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-next-build-node-${{ matrix.node-version }}-${{ hashFiles('package-lock.json', 'next.config.*', 'tsconfig*.json', 'postcss.config.*') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-next-build-node-${{ matrix.node-version }}-${{ hashFiles('package-lock.json', 'next.config.*', 'tsconfig*.json', 'postcss.config.*') }}-
+
       - name: Run type check
         run: npm run type-check
 
@@ -60,12 +68,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm run test:ci
-
-      - name: Generate coverage report
-        run: npm run test:coverage
-        continue-on-error: true
+      - name: Run tests with coverage
+        run: npm run test:ci -- --coverage
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -124,9 +128,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Next.js analysis outputs
+        uses: actions/cache@v5
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-next-analyze-node-${{ matrix.node-version }}-${{ hashFiles('package-lock.json', 'next.config.*', 'tsconfig*.json', 'postcss.config.*') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-next-analyze-node-${{ matrix.node-version }}-${{ hashFiles('package-lock.json', 'next.config.*', 'tsconfig*.json', 'postcss.config.*') }}-
+
       - name: Build with analyzer enabled
-        # use the new npm script so env handling is consistent; allow failures
-        run: npm run analyze
+        run: npm run analyze -- --output
         continue-on-error: true
         env:
           CI: true
@@ -135,5 +146,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bundle-analyzer-report
-          path: .next/analyze
+          path: .next/diagnostics/analyze
           retention-days: 30

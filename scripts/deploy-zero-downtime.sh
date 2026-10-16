@@ -271,7 +271,7 @@ if [ -L "$CURRENT_LINK" ] || [ -d "$CURRENT_LINK" ]; then
   npm ci
   if [ -n "$RUN_ANALYZE" ]; then
     log "构建并执行 bundle 分析"
-    npx next build && npm run analyze
+    npx next build && npm run analyze -- --output
   else
     npx next build
   fi
@@ -316,7 +316,7 @@ copy_deploy_snapshot "$BUILD_STAGING"
 cd "$BUILD_STAGING"
 npm ci
 if [ -n "$RUN_ANALYZE" ]; then
-  npx next build && npm run analyze
+  npx next build && npm run analyze -- --output
 else
   npx next build
 fi

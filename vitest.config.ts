@@ -69,7 +69,6 @@ export default defineConfig({
         'app/thing/components/CreateTagDialog.tsx',
         'app/thing/components/LoadingState.tsx',
         'app/thing/components/EnhancedSearchInput.tsx',
-        'app/thing/components/ItemDetailModal.tsx',
         'app/thing/components/ItemRelationSelector.tsx',
         'app/thing/components/ItemRelationsDisplay.tsx',
         'app/thing/components/filters/BasicFilters.tsx',

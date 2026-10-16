@@ -3,15 +3,10 @@
  * 使用多种策略检测用户首选语言，实现缓存和置信度评分
  */
 import type { SupportedLanguage } from './translations'
-import {
-  detectLanguageFromBrowser,
-  isSupportedLanguage,
-  normalizeLanguageCode,
-} from './browser-language-utils'
+import { normalizeLanguageCode } from './browser-language-utils'
 import { LanguageDetectionCache, DETECTION_CONFIG, createDefaultResult } from './language-cache'
 import { GeolocationDetector } from './geolocation-detector'
 import { BrowserLanguageStrategy } from './strategies/BrowserLanguageStrategy'
-import { GeolocationStrategy } from './strategies/GeolocationStrategy'
 import { StoredPreferenceStrategy } from './strategies/StoredPreferenceStrategy'
 
 // ===== 导出类型 =====
@@ -61,7 +56,6 @@ export class LanguageDetectionService {
   private cache: LanguageDetectionCache
   private geoDetector: GeolocationDetector
   private browserStrategy: BrowserLanguageStrategy
-  private geoStrategy: GeolocationStrategy
   private storedStrategy: StoredPreferenceStrategy
   private logger: Logger
   private detectionPromise: Promise<LanguageDetectionResult> | null = null
@@ -70,7 +64,6 @@ export class LanguageDetectionService {
     this.cache = new LanguageDetectionCache()
     this.geoDetector = new GeolocationDetector()
     this.browserStrategy = new BrowserLanguageStrategy()
-    this.geoStrategy = new GeolocationStrategy()
     this.storedStrategy = new StoredPreferenceStrategy()
     this.logger = this.createLogger()
   }
@@ -217,44 +210,6 @@ export class LanguageDetectionService {
       .catch(() => {})
 
     return null
-  }
-
-  private detectBrowserLanguage(): LanguageDetectionResult | null {
-    if (typeof window === 'undefined') return null
-
-    const browserLanguages = navigator.languages || [navigator.language]
-    const result = detectLanguageFromBrowser([...browserLanguages])
-    if (!result) return null
-
-    return {
-      ...result,
-      method: 'browser',
-      timestamp: Date.now(),
-    }
-  }
-
-  private detectByGeolocation(): LanguageDetectionResult | null {
-    const result = this.geoStrategy.detect()
-    if (!result) return null
-
-    return {
-      ...result,
-      method: 'geolocation',
-      timestamp: Date.now(),
-    }
-  }
-
-  private getStoredPreference(): SupportedLanguage | null {
-    const result = this.storedStrategy.detect()
-    return result?.language ?? null
-  }
-
-  private isSupportedLanguage(lang: string): lang is SupportedLanguage {
-    return isSupportedLanguage(lang)
-  }
-
-  private normalizeLanguageCode(lang: string): SupportedLanguage | null {
-    return normalizeLanguageCode(lang)
   }
 
   private detectByUserAgent(): LanguageDetectionResult {

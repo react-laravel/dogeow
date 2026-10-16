@@ -43,11 +43,6 @@ export default function GridView({ files }: GridViewProps) {
     event.dataTransfer.effectAllowed = 'move'
   }, [])
 
-  const handleDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }, [])
-
   const handleDragEnter = useCallback((folderId: number) => {
     setDragOverFolderId(folderId)
   }, [])

@@ -119,10 +119,6 @@ export function useBrowserOllamaAddress() {
   }
 }
 
-function getBrowserOllamaTagsUrl(): string {
-  return `${getBrowserOllamaBaseUrl()}/api/tags`
-}
-
 function getBrowserOllamaChatUrl(): string {
   return `${getBrowserOllamaBaseUrl()}/api/chat`
 }

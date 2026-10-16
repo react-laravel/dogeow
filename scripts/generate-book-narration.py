@@ -154,13 +154,6 @@ def load_index(book_dir: Path) -> dict:
     return json.loads(index_path.read_text(encoding="utf-8"))
 
 
-def parse_chapter_id(chapter_id: str) -> tuple[int, int]:
-    parts = chapter_id.split("-")
-    if len(parts) != 2 or not all(part.isdigit() for part in parts):
-        raise ValueError(f"无效的章节编号：{chapter_id}，应为 vol-chapter，例如 0-0")
-    return int(parts[0]), int(parts[1])
-
-
 def list_chapters(index: dict) -> list[tuple[str, str, str]]:
     chapters = []
     for vol_idx, volume in enumerate(index.get("volumes") or []):
