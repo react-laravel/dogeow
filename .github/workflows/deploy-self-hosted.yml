@@ -1,57 +1,68 @@
-# 推送 main 后在国内自托管 Runner 上通过 Deployer 执行零停机部署。
-# 前提：目标服务器配好 Node.js / npm / PM2 / Nginx。
-# 详情见 docs/DEPLOYMENT.md。
-name: Deploy (Self-hosted)
+name: Deploy Next frontend to C
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      validate_only:
+        description: Build and verify C without replacing its current Next release
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
 
 concurrency:
-  group: deploy-production
+  group: deploy-dogeow-next-c
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: self-hosted
+    timeout-minutes: 40
+    env:
+      HOME: /var/www
+      NEXT_TELEMETRY_DISABLED: '1'
+      NODE_OPTIONS: --max-old-space-size=1536
+      DOGEOW_CI_BUILD_ENV_FILE: /var/lib/main-sites-ci/dogeow-next.env
     steps:
       - uses: actions/checkout@v5
-
-      - name: Ensure Deployer phar present
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.16.0
+          cache: npm
+      - name: Install locked build dependencies
+        run: npm ci
+      - name: Load public build settings
         run: |
           set -euo pipefail
-          DEP_BIN="$HOME/.deployer/dep.phar"
-          DEP_VERSION="7.5.7"
-          if [ ! -f "$DEP_BIN" ]; then
-            mkdir -p "$(dirname "$DEP_BIN")"
-            curl -fsSL "https://deployer.org/releases/v${DEP_VERSION}/deployer.phar" -o "$DEP_BIN"
-            chmod +x "$DEP_BIN"
+          test -r "$DOGEOW_CI_BUILD_ENV_FILE"
+          if grep -qEv '^(#|[[:space:]]*$|NEXT_PUBLIC_[A-Za-z0-9_]+=)' "$DOGEOW_CI_BUILD_ENV_FILE"; then
+            echo 'CI build environment must contain only NEXT_PUBLIC_ assignments' >&2
+            exit 1
           fi
-          php "$DEP_BIN" --version
-
-      - name: Deploy production
-        run: |
-          set -euo pipefail
-          unset RUNNER_TRACKING_ID
-          php "$HOME/.deployer/dep.phar" deploy production -v
+          cp "$DOGEOW_CI_BUILD_ENV_FILE" .env.production.local
+          chmod 600 .env.production.local
+      - name: Build and package minimal runtime
         env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          APP_ROOT: ${{ secrets.APP_ROOT }}
-          PM2_APP: ${{ secrets.PM2_APP }}
-          DOGEOW_API_CURRENT_PATH: ${{ secrets.DOGEOW_API_CURRENT_PATH }}
-          DEPLOY_USER: www-data
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      - name: Notify dogeow deployment
-        if: success()
-        env:
-          APP_NAME: dogeow
-          APP_URL: https://next.dogeow.com
         run: |
-          set -euo pipefail
-          php /var/www/dogeow-api/current/artisan notify:deploy "$APP_NAME" \
-            --title="部署完成：$APP_NAME" \
-            --body="react-laravel/$APP_NAME 已通过 GitHub self-hosted runner 部署成功（${GITHUB_SHA::7}）" \
-            --url="$APP_URL" \
-            --no-interaction || true
+          npm run build
+          node scripts/package-runtime.mjs
+          du -sh .deploy-runtime
+      - name: Validate or publish C
+        env:
+          VALIDATE_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.validate_only }}
+          C_DEPLOY_SSH_KEY: ${{ secrets.C_DEPLOY_SSH_KEY }}
+          C_DEPLOY_KNOWN_HOSTS: ${{ secrets.C_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ "$VALIDATE_ONLY" = true ]; then
+            bash scripts/deploy-to-c.sh --check-only
+          else
+            bash scripts/deploy-to-c.sh
+          fi
+      - name: Remove temporary environment and upload bundle
+        if: always()
+        run: rm -rf .deploy-runtime .env.production.local

@@ -45,7 +45,9 @@
     "test:changed": "vitest --changed --run",
     "test:related": "vitest --related --run",
     "test:ci": "vitest --config vitest.config.ci.ts --run",
-    "type-check:app": "tsc --noEmit --project tsconfig.app.json"
+    "type-check:app": "tsc --noEmit --project tsconfig.app.json",
+    "package:runtime": "node scripts/package-runtime.mjs",
+    "deploy:c": "bash scripts/deploy-to-c.sh"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.136",

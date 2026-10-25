@@ -38,6 +38,10 @@ const NO_STORE_HEADERS = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  outputFileTracingRoot: __dirname,
+  // Build on A's two-core runner; C only receives the minimal runtime.
+  experimental: { cpus: 1 },
   agentRules: false,
   typescript: {
     tsconfigPath: 'tsconfig.app.json',
