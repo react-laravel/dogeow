@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,6 +5,13 @@ import ImageUploader from '../ImageUploader'
 import { UploadedImage } from '../../types'
 import { toast } from 'sonner'
 import { post } from '@/lib/api'
+import { waitForRmbgStatus } from '../../utils/rmbg'
+
+vi.mock('../../utils/rmbgRealtime', () => ({
+  waitForRmbgStatus: vi.fn(),
+  extractUploadUserId: vi.fn(() => 7),
+  subscribeRmbgStatusUpdates: vi.fn(),
+}))
 
 // Mock dependencies
 vi.mock('sonner', () => ({
@@ -57,6 +63,7 @@ describe('ImageUploader', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    window.localStorage.clear()
   })
 
   describe('渲染', () => {
@@ -196,6 +203,42 @@ describe('ImageUploader', () => {
   })
 
   describe('上传', () => {
+    it('旧本地偏好和受控true均不会重新启用去背景请求或等待', async () => {
+      window.localStorage.setItem('thing_remove_bg_enabled', '1')
+      const user = userEvent.setup()
+      const response: UploadedImage[] = [
+        {
+          path: 'uploads/7/new.jpg',
+          url: 'https://example.com/new.jpg',
+          thumbnail_path: 'uploads/7/new-thumb.jpg',
+          thumbnail_url: 'https://example.com/new-thumb.jpg',
+          origin_path: 'uploads/7/new-origin.jpg',
+          rmbg_status: 'pending',
+        },
+      ]
+      vi.mocked(post).mockResolvedValueOnce(response)
+      const { container } = render(
+        <ImageUploader
+          onImagesChange={mockOnImagesChange}
+          removeBgEnabled={true}
+          onRemoveBgChange={vi.fn()}
+        />
+      )
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+      await user.upload(fileInput, new File(['image'], 'normal.jpg', { type: 'image/jpeg' }))
+
+      await waitFor(() => expect(post).toHaveBeenCalled())
+      const form = vi.mocked(post).mock.calls[0][1] as FormData
+      expect(form.has('remove_bg')).toBe(false)
+      expect(form.getAll('images[]')).toHaveLength(1)
+      expect(waitForRmbgStatus).not.toHaveBeenCalled()
+      expect(toast.success).toHaveBeenCalledWith('图片上传成功')
+      expect(mockOnImagesChange).toHaveBeenLastCalledWith([
+        expect.objectContaining({ origin_path: 'uploads/7/new-origin.jpg' }),
+      ])
+    })
+
     it('应该在上传成功后合并图片并回调', async () => {
       const user = userEvent.setup()
       const uploadedImages: UploadedImage[] = [

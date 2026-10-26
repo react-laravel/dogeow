@@ -4,9 +4,10 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { AlertCircle } from 'lucide-react'
+import { AUTOMATIC_RMBG_ENABLED } from '../utils/rmbg'
 
 const IMAGE_UPLOAD_HELP_TEXT =
-  '支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10 张。点击图片可设为主图。勾选「上传时自动去背景」后，会异步去背景；无需等待完成即可创建物品，去背景完成后会自动替换物品图片，原图会保留。'
+  '支持JPG、PNG、GIF格式，每张图片不超过20MB，最多上传10 张。点击图片可设为主图。'
 
 interface ImageUploadHeaderProps {
   label?: string
@@ -41,17 +42,19 @@ export function ImageUploadHeader({
         </Popover>
       </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        <Switch
-          id="thing-remove-bg"
-          checked={removeBgEnabled}
-          onCheckedChange={onRemoveBgChange}
-          disabled={removeBgDisabled}
-        />
-        <Label htmlFor="thing-remove-bg" className="text-sm font-normal whitespace-nowrap">
-          上传时自动去背景
-        </Label>
-      </div>
+      {AUTOMATIC_RMBG_ENABLED ? (
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <Switch
+            id="thing-remove-bg"
+            checked={removeBgEnabled}
+            onCheckedChange={onRemoveBgChange}
+            disabled={removeBgDisabled}
+          />
+          <Label htmlFor="thing-remove-bg" className="text-sm font-normal whitespace-nowrap">
+            上传时自动去背景
+          </Label>
+        </div>
+      ) : null}
     </div>
   )
 }

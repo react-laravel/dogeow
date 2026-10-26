@@ -28,6 +28,7 @@ import ThingImage from './ThingImage'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
+  AUTOMATIC_RMBG_ENABLED,
   applyRmbgResult,
   extractUploadUserId,
   getRemoveBgPreference,
@@ -162,9 +163,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     getRemoveBgPreference()
   )
   const isRemoveBgControlled = onRemoveBgChange !== undefined
-  const removeBgEnabled = isRemoveBgControlled
-    ? (removeBgEnabledProp ?? false)
-    : internalRemoveBgEnabled
+  const removeBgEnabled =
+    AUTOMATIC_RMBG_ENABLED &&
+    (isRemoveBgControlled ? (removeBgEnabledProp ?? false) : internalRemoveBgEnabled)
   const userId = useAuthStore(state => state.user?.id)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [images, setImages] = useState<UploadedImage[]>(() =>
@@ -329,7 +330,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   return (
     <div className="space-y-3">
-      {showRemoveBgToggle ? (
+      {AUTOMATIC_RMBG_ENABLED && showRemoveBgToggle ? (
         <div className="flex items-center justify-end gap-2">
           <Switch
             id="thing-remove-bg-inline"

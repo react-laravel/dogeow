@@ -1,6 +1,7 @@
 import type { RmbgStatus, UploadedImage } from '../types'
 
 export const THING_REMOVE_BG_STORAGE_KEY = 'thing_remove_bg_enabled'
+export const AUTOMATIC_RMBG_ENABLED = false
 
 export type RmbgStatusResponse = {
   status: RmbgStatus | 'unknown'
@@ -14,7 +15,7 @@ export type RmbgStatusResponse = {
 }
 
 export function getRemoveBgPreference(): boolean {
-  if (typeof window === 'undefined') {
+  if (!AUTOMATIC_RMBG_ENABLED || typeof window === 'undefined') {
     return false
   }
 
@@ -26,7 +27,10 @@ export function setRemoveBgPreference(enabled: boolean): void {
     return
   }
 
-  window.localStorage.setItem(THING_REMOVE_BG_STORAGE_KEY, enabled ? '1' : '0')
+  window.localStorage.setItem(
+    THING_REMOVE_BG_STORAGE_KEY,
+    AUTOMATIC_RMBG_ENABLED && enabled ? '1' : '0'
+  )
 }
 
 export function applyRmbgResult(image: UploadedImage, result: RmbgStatusResponse): UploadedImage {
