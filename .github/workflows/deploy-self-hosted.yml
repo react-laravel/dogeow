@@ -20,13 +20,11 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      HOME: /var/www
       NEXT_TELEMETRY_DISABLED: '1'
-      NODE_OPTIONS: --max-old-space-size=1536
-      DOGEOW_CI_BUILD_ENV_FILE: /var/lib/main-sites-ci/dogeow-next.env
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -36,15 +34,9 @@ jobs:
       - name: Install locked build dependencies
         run: npm ci
       - name: Load public build settings
-        run: |
-          set -euo pipefail
-          test -r "$DOGEOW_CI_BUILD_ENV_FILE"
-          if grep -qEv '^(#|[[:space:]]*$|NEXT_PUBLIC_[A-Za-z0-9_]+=)' "$DOGEOW_CI_BUILD_ENV_FILE"; then
-            echo 'CI build environment must contain only NEXT_PUBLIC_ assignments' >&2
-            exit 1
-          fi
-          cp "$DOGEOW_CI_BUILD_ENV_FILE" .env.production.local
-          chmod 600 .env.production.local
+        env:
+          C_NEXT_PUBLIC_BUILD_ENV: ${{ secrets.C_NEXT_PUBLIC_BUILD_ENV }}
+        run: node scripts/write-public-build-env.mjs
       - name: Build and package minimal runtime
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
