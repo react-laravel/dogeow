@@ -2,7 +2,7 @@ import https from 'node:https'
 import { checkServerIdentity } from 'node:tls'
 
 const hosts = process.argv.slice(2)
-if (!hosts.length || hosts.some(host => !['next.dogeow.com', 'next2.dogeow.com'].includes(host))) {
+if (!hosts.length || hosts.some(host => host !== 'next.dogeow.com')) {
   throw new Error('Expected the configured Next domains.')
 }
 function request(host, path, method = 'GET') {

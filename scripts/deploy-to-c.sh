@@ -41,4 +41,4 @@ else
   ssh -F "$auth_dir/config" main-sites-c \
     "sudo -n /usr/local/sbin/deploy-main-sites dogeow-next $revision"
 fi
-node scripts/verify-server-c.mjs next.dogeow.com next2.dogeow.com
+node scripts/verify-server-c.mjs next.dogeow.com

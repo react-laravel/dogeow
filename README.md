@@ -40,7 +40,7 @@ npm run analyze         # 生成 bundle 分析报告 (next experimental-analyze)
 
 ## Next frontend on server C
 
-`next.dogeow.com` and `next2.dogeow.com` now run on `120.26.21.64`. The Laravel
+`next.dogeow.com` now runs on `120.26.21.64`. The Laravel
 API, database, Redis and existing self-hosted build runner stay on server A.
 The frontend workflow builds with Node 24.16.0 and the existing npm lockfile,
 then uploads only a standalone runtime with current static/public assets.
