@@ -27,7 +27,7 @@ const TILE_CLASSES = {
   LOCK_ICON:
     'absolute top-2 right-2 z-[3] flex h-6 w-6 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm',
   CONTENT: 'relative z-[2] flex items-center gap-2.5',
-  TITLE: 'text-base font-medium leading-tight sm:text-lg',
+  TITLE: 'text-base font-semibold leading-tight tracking-tight sm:text-lg',
   SKELETON_OVERLAY: 'absolute inset-0 z-[4] animate-pulse bg-muted/80',
   GLASS_AURORA:
     'pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.42),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.18),transparent_32%)] dark:hidden',
@@ -230,9 +230,7 @@ export const TileCard = memo(
 
           <span
             className={`${TILE_CLASSES.TITLE} ${usesDecoratedCover ? 'text-white' : 'text-foreground'}`}
-            style={
-              usesDecoratedCover ? { textShadow: '0 1px 2px rgba(255, 255, 255, 0.2)' } : undefined
-            }
+            style={usesDecoratedCover ? { textShadow: '0 1px 3px rgba(0, 0, 0, 0.35)' } : undefined}
           >
             {tileName}
           </span>

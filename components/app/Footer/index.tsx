@@ -7,8 +7,8 @@ import FooterLinks from './FooterLinks'
 
 export default function Footer() {
   return (
-    <footer className="border-border/60 bg-card/35 mt-auto border-t px-[var(--page-gutter)] py-6 backdrop-blur-sm">
-      <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-2.5 text-center">
+    <footer className="mt-auto px-[var(--page-gutter)] pt-10 pb-8">
+      <div className="border-border/60 mx-auto flex w-full max-w-5xl flex-col items-center gap-3 border-t pt-6 text-center">
         <FooterLinks />
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <BuiltBy />

@@ -89,15 +89,16 @@ export function HomePage() {
 
   return (
     <>
-      <PageContainer className="space-y-6 py-5 sm:py-8">
-        <header className="max-w-3xl space-y-2">
-          <div className="bg-primary/12 text-primary inline-flex rounded-full px-3 py-1 text-xs font-semibold tracking-wide">
+      <PageContainer className="space-y-7 py-6 sm:space-y-9 sm:py-10">
+        <header className="max-w-3xl space-y-3">
+          <div className="bg-primary/10 text-primary ring-primary/20 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wide ring-1 ring-inset">
+            <span aria-hidden className="bg-primary size-1.5 rounded-full" />
             {t('home.eyebrow', '数字后花园')}
           </div>
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="text-foreground text-[1.75rem] leading-tight font-bold tracking-tight text-balance sm:text-4xl">
             {t('home.title', 'DogeOW - 个人工具和游戏平台')}
           </h1>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-6 sm:text-base">
+          <p className="text-muted-foreground max-w-2xl text-sm leading-6 text-pretty sm:text-base sm:leading-7">
             {t('home.description', '一个以自用和测试为主的个人工具平台，欢迎来到我的数字后花园！')}
           </p>
         </header>

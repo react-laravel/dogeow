@@ -2,8 +2,9 @@
 
 import { memo, useMemo, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { Lock } from 'lucide-react'
+import { ChevronRight, Lock } from 'lucide-react'
 import type { Tile } from '@/app/types'
+import { tileTintStyle } from '@/components/app/tileStyles'
 import { useTranslation } from '@/hooks/useTranslation'
 import { PERFORMANCE } from '@/lib/constants'
 import { projectCoverAsset } from '@/lib/helpers/assets'
@@ -38,10 +39,10 @@ const ListCard = memo(({ tile, projectCoverMode, needsLogin, onClick }: Magazine
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 outline-none hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] ${
+      className={`group relative flex w-full items-center gap-3.5 overflow-hidden rounded-2xl border p-3.5 text-left transition-[transform,box-shadow,border-color,background-color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.99] motion-reduce:transition-none sm:p-4 ${
         showPreview
-          ? 'min-h-28 border-white/15 shadow-[0_18px_40px_rgba(15,23,42,0.18)]'
-          : 'bg-card/70 border-border backdrop-blur-[1px] hover:bg-accent/80'
+          ? `${showImagePreview ? 'min-h-24 sm:min-h-28' : ''} border-white/15 shadow-[0_14px_32px_-16px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-18px_rgba(15,23,42,0.55)]`
+          : 'bg-card/85 border-border/70 shadow-[var(--surface-shadow)] backdrop-blur-xl hover:border-primary/30 hover:shadow-[var(--surface-shadow-hover)]'
       }`}
       style={showPreview && !showImagePreview ? { backgroundColor: tile.color } : undefined}
       aria-label={tileName}
@@ -64,18 +65,17 @@ const ListCard = memo(({ tile, projectCoverMode, needsLogin, onClick }: Magazine
           style={{
             background: showImagePreview
               ? 'linear-gradient(90deg, rgba(15,23,42,0.72) 0%, rgba(15,23,42,0.36) 45%, rgba(15,23,42,0.18) 100%)'
-              : `linear-gradient(135deg, ${tile.color} 0%, ${tile.color}cc 100%)`,
+              : `linear-gradient(135deg, color-mix(in oklab, ${tile.color} 88%, black) 0%, color-mix(in oklab, ${tile.color} 70%, black) 100%)`,
           }}
         />
       )}
 
       {/* 图标 */}
       <div
-        className={`relative z-[2] flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${
-          showPreview
-            ? 'bg-black/20 text-white backdrop-blur-[2px]'
-            : 'bg-transparent text-foreground dark:text-white'
+        className={`relative z-[2] flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${
+          showPreview ? 'bg-black/20 text-white backdrop-blur-[2px]' : ''
         }`}
+        style={showPreview ? undefined : tileTintStyle(tile.color)}
       >
         {tile.icon && (
           <div className="flex h-5 w-5 items-center justify-center sm:h-6 sm:w-6">{tile.icon}</div>
@@ -100,6 +100,12 @@ const ListCard = memo(({ tile, projectCoverMode, needsLogin, onClick }: Magazine
             <Lock className={`h-3 w-3 ${showPreview ? 'text-white' : 'text-muted-foreground'}`} />
           </div>
         )}
+        <ChevronRight
+          aria-hidden
+          className={`size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none ${
+            showPreview ? 'text-white/80' : 'text-muted-foreground/70'
+          }`}
+        />
       </div>
     </button>
   )
@@ -123,7 +129,7 @@ export const MagazineLayout = memo(
     if (tiles.length === 0) return null
 
     return (
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
         {tiles.map(tile => {
           const tileStatus = getTileStatus(tile)
           return (

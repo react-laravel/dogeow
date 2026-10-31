@@ -113,7 +113,7 @@ describe('Home Page', () => {
   it('should render with correct container classes', () => {
     render(<Home />)
 
-    const container = document.querySelector('[class*="space-y-6"]')
+    const container = document.querySelector('[class*="space-y-7"]')
     expect(container).toBeInTheDocument()
   })
 

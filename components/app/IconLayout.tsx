@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { Lock } from 'lucide-react'
 import type { Tile } from '@/app/types'
+import { tileSolidStyle, tileTintStyle } from '@/components/app/tileStyles'
 import { useTranslation } from '@/hooks/useTranslation'
 import { PERFORMANCE } from '@/lib/constants'
 import { projectCoverAsset } from '@/lib/helpers/assets'
@@ -24,6 +25,7 @@ interface IconTileProps {
   onClick: () => void
 }
 
+/** 启动器风格的应用图标：圆角方形图标 + 下方名称，不再嵌套卡片 */
 const IconTile = memo(({ tile, index, projectCoverMode, needsLogin, onClick }: IconTileProps) => {
   const { t } = useTranslation()
   const [imageError, setImageError] = useState(false)
@@ -36,72 +38,65 @@ const IconTile = memo(({ tile, index, projectCoverMode, needsLogin, onClick }: I
     () => (projectCoverMode === 'image' ? tile.cover || `${tile.name}.png` : null),
     [projectCoverMode, tile.cover, tile.name]
   )
-  const showImagePattern = !!coverImage && !imageError
+  const showImage = !!coverImage && !imageError
   const handleImageError = useCallback(() => setImageError(true), [])
 
-  const shellClassName = useMemo(() => {
-    const baseClassName =
-      'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-muted/45 transition-transform duration-200 group-hover:scale-[1.02] group-active:scale-[0.98]'
-
-    if (projectCoverMode === 'image') {
-      return baseClassName
-    }
-
-    if (projectCoverMode === 'color') {
-      return baseClassName
-    }
-
-    return `${baseClassName} border border-border/60`
-  }, [projectCoverMode])
+  // 图片模式加载失败时退回纯色，避免出现空白方块
+  const shellStyle = useMemo(() => {
+    if (showImage) return undefined
+    return projectCoverMode === 'none' ? tileTintStyle(tile.color) : tileSolidStyle(tile.color)
+  }, [projectCoverMode, showImage, tile.color])
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="app-surface app-surface-interactive group flex min-w-0 flex-col gap-2 p-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      className="group flex w-full min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       aria-label={tileName}
     >
-      <div
-        className={shellClassName}
-        style={projectCoverMode === 'color' ? { backgroundColor: tile.color } : undefined}
-      >
-        {showImagePattern && (
-          <>
-            <Image
-              src={projectCoverAsset(coverImage)}
-              alt={`${tileName} icon pattern`}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 20vw, 120px"
-              loading={index < 3 ? 'eager' : 'lazy'}
-              fetchPriority={index < 3 ? 'high' : 'auto'}
-              onError={handleImageError}
-              quality={PERFORMANCE.IMAGE_QUALITY}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/18 via-transparent to-white/8" />
-          </>
-        )}
-
-        {projectCoverMode !== 'image' && (
-          <div
-            className={`relative z-[1] flex h-8 w-8 items-center justify-center sm:h-10 sm:w-10 ${
-              projectCoverMode === 'none'
-                ? 'text-foreground dark:text-white'
-                : 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.28)]'
-            }`}
-          >
-            {tile.icon}
-          </div>
-        )}
+      <div className="relative w-full max-w-[4.25rem] sm:max-w-[5rem]">
+        <div
+          className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[28%] transition-[transform,box-shadow] duration-200 ease-out group-hover:-translate-y-1 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 ${
+            showImage
+              ? 'bg-muted shadow-[0_8px_22px_-12px_rgb(0_0_0/0.45)] ring-1 ring-black/5 ring-inset dark:ring-white/10'
+              : ''
+          }`}
+          style={shellStyle}
+        >
+          {showImage ? (
+            <>
+              <Image
+                src={projectCoverAsset(coverImage)}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 68px, 80px"
+                loading={index < 3 ? 'eager' : 'lazy'}
+                fetchPriority={index < 3 ? 'high' : 'auto'}
+                onError={handleImageError}
+                quality={PERFORMANCE.IMAGE_QUALITY}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/12 via-transparent to-black/10" />
+            </>
+          ) : (
+            <div
+              className={`relative z-[1] flex size-7 items-center justify-center sm:size-8 [&>svg]:size-full [&>svg]:stroke-[1.75] ${
+                projectCoverMode === 'none' ? '' : 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]'
+              }`}
+            >
+              {tile.icon}
+            </div>
+          )}
+        </div>
 
         {needsLogin && (
-          <div className="absolute top-2 right-2 z-[2] flex h-5 w-5 items-center justify-center rounded-full bg-black/55">
-            <Lock className="h-3 w-3 text-white" />
+          <div className="bg-background text-muted-foreground ring-border absolute -top-1 -right-1 z-[2] flex size-5 items-center justify-center rounded-full shadow-sm ring-1">
+            <Lock className="size-2.5" aria-hidden />
           </div>
         )}
       </div>
 
-      <span className="line-clamp-2 flex min-h-9 items-center justify-center px-1 text-xs font-medium leading-4 text-foreground sm:text-sm">
+      <span className="text-foreground/85 group-hover:text-foreground line-clamp-2 px-0.5 text-xs leading-4 font-medium transition-colors sm:text-[13px]">
         {tileName}
       </span>
     </button>
@@ -112,7 +107,7 @@ IconTile.displayName = 'IconTile'
 
 export const IconLayout = memo(
   ({ tiles, projectCoverMode, getTileStatus, handleTileClick }: IconLayoutProps) => (
-    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+    <div className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-x-3 sm:gap-y-4">
       {tiles.map((tile, index) => {
         const tileStatus = getTileStatus(tile)
 
